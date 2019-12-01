@@ -15,6 +15,7 @@ lazy val `monix-bio` = project.in(file("."))
   .aggregate(core)
 
 lazy val core = project.in(file("core"))
+  .settings(libraryDependencies += "io.monix" %% "monix-execution" % monixVersion % "compile->compile;test->test")
   .settings(commonSettings, releaseSettings)
   .settings(
     name := "monix-bio"

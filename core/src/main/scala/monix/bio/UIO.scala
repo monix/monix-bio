@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-package monix
+package monix.bio
 
-package object bio {
-  type UIO[+A] = WRYYY[Nothing, A]
-  type Task[+A] = WRYYY[Throwable, A]
+object UIO {
+  def apply[A](a: => A): UIO[A] =
+    WRYYY.suspend(WRYYY.pure(a))
 }

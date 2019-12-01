@@ -15,9 +15,25 @@
  * limitations under the License.
  */
 
-package monix
+package monix.bio.internal
 
-package object bio {
-  type UIO[+A] = WRYYY[Nothing, A]
-  type Task[+A] = WRYYY[Throwable, A]
+import monix.bio.WRYYY
+import monix.bio.WRYYY.{Context, ContextSwitch, Options}
+
+private[bio] object TaskExecuteWithOptions {
+  /**
+    * Implementation for `Task.executeWithOptions`
+    */
+  def apply[E, A](self: WRYYY[E, A], f: Options => Options): WRYYY[E, A] =
+    ContextSwitch(self, enable(f), disable)
+
+  private[this] def enable(f: Options => Options): Context => Context =
+    ctx => {
+      val opts2 = f(ctx.options)
+      if (opts2 != ctx.options) ctx.withOptions(opts2)
+      else ctx
+    }
+
+  private[this] val disable: (Any, Any, Context, Context) => Context =
+    (_, _, old, current) => current.withOptions(old.options)
 }
