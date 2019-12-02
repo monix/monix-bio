@@ -1,0 +1,89 @@
+package monix.bio
+
+import cats.effect.CancelToken
+import monix.bio.internal.TaskConnection
+
+import scala.concurrent.Promise
+
+/** `Fiber` represents the (pure) result of a [[Task]] being started concurrently
+  * and that can be either joined or cancelled.
+  *
+  * You can think of fibers as being lightweight threads, a fiber being a
+  * concurrency primitive for doing cooperative multi-tasking.
+  *
+  * For example a `Fiber` value is the result of evaluating [[WRYYY.start]]:
+  *
+  * {{{
+  *   val task = Task.evalAsync(println("Hello!"))
+  *
+  *   val forked: Task[Fiber[Unit]] = task.start
+  * }}}
+  *
+  * Usage example:
+  *
+  * {{{
+  *   val launchMissiles = Task(println("Missiles launched!"))
+  *   val runToBunker = Task(println("Run Lola run!"))
+  *
+  *   for {
+  *     fiber <- launchMissiles.start
+  *     _ <- runToBunker.onErrorHandleWith { error =>
+  *       // Retreat failed, cancel launch (maybe we should
+  *       // have retreated to our bunker before the launch?)
+  *       fiber.cancel.flatMap(_ => Task.raiseError(error))
+  *     }
+  *     aftermath <- fiber.join
+  *   } yield {
+  *     aftermath
+  *   }
+  * }}}
+  */
+trait Fiber[E, A] extends cats.effect.Fiber[WRYYY[E, ?], A] {
+  /**
+    * Triggers the cancellation of the fiber.
+    *
+    * Returns a new task that will complete when the cancellation is
+    * sent (but not when it is observed or acted upon).
+    *
+    * Note that if the background process that's evaluating the result
+    * of the underlying fiber is already complete, then there's nothing
+    * to cancel.
+    */
+  def cancel: CancelToken[WRYYY[E, ?]]
+
+  /** Returns a new task that will await for the completion of the
+    * underlying fiber, (asynchronously) blocking the current run-loop
+    * until that result is available.
+    */
+  def join: WRYYY[E, A]
+}
+
+object Fiber {
+  /**
+    * Builds a [[Fiber]] value out of a `task` and its cancelation token.
+    */
+  def apply[E, A](task: WRYYY[E, A], cancel: CancelToken[WRYYY[E, ?]]): Fiber[E, A] =
+    new Tuple(task, cancel)
+
+  // TODO: test, completely new function, perhaps we can use CancelablePromise?
+  // TODO: should we use trampolined scheduler?
+  def fromPromise[E, A](p: Promise[Either[E, A]], conn: TaskConnection[E]): Fiber[E, A] = {
+    val join = WRYYY.Async[E, A] { (ctx, cb) =>
+      // Short-circuit for already completed `Future`
+      p.future.value match {
+        case Some(value) =>
+          cb(value.get)
+        case None =>
+          // Cancellation needs to be linked to the active task
+          ctx.connection.push(conn.cancel)(ctx.scheduler)
+          p.future.onComplete { r =>
+            ctx.connection.pop()
+            cb(r.get)
+          }(ctx.scheduler)
+      }
+    }
+    new Tuple(join, conn.cancel)
+  }
+
+  private final case class Tuple[E, A](join: WRYYY[E, A], cancel: CancelToken[WRYYY[E, ?]]) extends Fiber[E, A]
+}

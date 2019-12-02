@@ -28,7 +28,7 @@ private[bio] object TaskExecuteWithModel {
     * Implementation for `Task.executeWithModel`
     */
   def apply[E, A](self: WRYYY[E, A], em: ExecutionModel): WRYYY[E, A] = {
-    val start = (context: Context, cb: Callback[E, A]) => {
+    val start = (context: Context[E], cb: Callback[E, A]) => {
       val context2 = context.withExecutionModel(em)
       val frame = context2.frameRef
 

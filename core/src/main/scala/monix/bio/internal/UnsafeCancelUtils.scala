@@ -21,12 +21,10 @@ import cats.effect.CancelToken
 import monix.bio.{Task, WRYYY}
 import monix.catnap.CancelableF
 import monix.execution.{Cancelable, Scheduler}
-import monix.execution.internal.Platform
 
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
-// TODO: check if cancel never throws
 private[bio] object UnsafeCancelUtils {
 
   /**
@@ -40,8 +38,8 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def cancelAllUnsafe(
-    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]): CancelToken[Task] = {
+  private[internal] def cancelAllUnsafe[E](
+    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]): CancelToken[WRYYY[E, ?]] = {
 
     if (cursor.isEmpty)
       WRYYY.unit
@@ -55,13 +53,13 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def unsafeCancel(
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[Task] = {
+  private[internal] def unsafeCancel[E](
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[WRYYY[E, ?]] = {
 
     task match {
-      case ref: Task[Unit] @unchecked =>
+      case ref: WRYYY[E, Unit] @unchecked =>
         ref
-      case ref: CancelableF[Task] @unchecked =>
+      case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
         ref.cancel()
@@ -76,14 +74,16 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def getToken(task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[Task] =
+  private[internal] def getToken[E](task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[WRYYY[E, ?]] =
     task match {
-      case ref: Task[Unit] @unchecked =>
+      case ref: WRYYY[E, Unit] @unchecked =>
         ref
-      case ref: CancelableF[Task] @unchecked =>
+      case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
-        WRYYY.delay(ref.cancel())
+        // TODO: handle error in cancel as fatal error
+        WRYYY.suspend(WRYYY.pure(ref.cancel()))
+//        WRYYY.delay(ref.cancel())
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -114,26 +114,28 @@ private[bio] object UnsafeCancelUtils {
   }
 
   // Optimization for `cancelAll`
-  private final class CancelAllFrame(cursor: Iterator[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ])
-      extends StackFrame[Throwable, Unit, Task[Unit]] {
+  private final class CancelAllFrame[E](cursor: Iterator[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ])
+      extends StackFrame[E, Unit, WRYYY[E, Unit]] {
 
-    private[this] val errors = ListBuffer.empty[Throwable]
+    private[this] val errors = ListBuffer.empty[E]
+    // TODO: do something with this
+    private[this] val fatalErrors = ListBuffer.empty[Throwable]
 
-    def loop(): CancelToken[Task] = {
-      var task: Task[Unit] = null
+    def loop(): CancelToken[WRYYY[E, ?]] = {
+      var task: WRYYY[E, Unit] = null
 
       while ((task eq null) && cursor.hasNext) {
         cursor.next() match {
-          case ref: Task[Unit] @unchecked =>
+          case ref: WRYYY[E, Unit] @unchecked =>
             task = ref
-          case ref: CancelableF[Task] @unchecked =>
+          case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
             task = ref.cancel
           case ref: Cancelable =>
             try {
               ref.cancel()
             } catch {
               case NonFatal(e) =>
-                errors += e
+                fatalErrors += e
             }
           case other =>
             // $COVERAGE-OFF$
@@ -149,15 +151,17 @@ private[bio] object UnsafeCancelUtils {
           case Nil =>
             WRYYY.unit
           case first :: rest =>
-            WRYYY.raiseError(Platform.composeErrors(first, rest: _*))
+            // TODO: do a composite error, handle fatalErrors
+            WRYYY.raiseError(first)
+//            WRYYY.raiseError(Platform.composeErrors(first, rest: _*))
         }
       }
     }
 
-    def apply(a: Unit): Task[Unit] =
+    def apply(a: Unit): WRYYY[E, Unit] =
       loop()
 
-    def recover(e: Throwable): Task[Unit] = {
+    def recover(e: E): WRYYY[E, Unit] = {
       errors += e
       loop()
     }

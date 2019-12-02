@@ -19,23 +19,41 @@ package monix.bio.internal
 
 import monix.bio.UIO
 import monix.bio.WRYYY.{Async, Context}
-import monix.execution.schedulers.TracingScheduler
-import monix.execution.{Callback, Scheduler}
+import monix.execution.Callback
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 
-// TODO: should it be UIO or RejectedExecutionException?
-private[bio] object TaskShift {
-  /**
-    * Implementation for `Task.shift`
-    */
-  def apply(ec: ExecutionContext): UIO[Unit] = {
+private[bio] object TaskSleep {
+  /** Implementation for `Task.sleep`. */
+  def apply(timespan: Duration): UIO[Unit] =
     Async[Nothing, Unit](
-      new Register(ec),
+      new Register(timespan),
       trampolineBefore = false,
-      trampolineAfter = false,
-      restoreLocals = false
+      trampolineAfter = false
     )
+
+  // Implementing Async's "start" via `ForkedStart` in order to signal
+  // that this is a task that forks on evaluation.
+  //
+  // N.B. the contract is that the injected callback gets called after
+  // a full async boundary!
+  private final class Register(timespan: Duration) extends ForkedRegister[Nothing, Unit] {
+    def apply(ctx: Context[Nothing], cb: Callback[Nothing, Unit]): Unit = {
+      implicit val s = ctx.scheduler
+      val c = TaskConnectionRef[Nothing]()
+      ctx.connection.push(c.cancel)
+
+//      try {
+        c := ctx.scheduler.scheduleOnce(
+          timespan.length,
+          timespan.unit,
+          new SleepRunnable(ctx, cb)
+        )
+//      } catch {
+//        case e: RejectedExecutionException =>
+//          Callback.signalErrorTrampolined(cb, e)
+//      }
+    }
   }
 
   // Implementing Async's "start" via `ForkedStart` in order to signal
@@ -43,33 +61,12 @@ private[bio] object TaskShift {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register(ec: ExecutionContext) extends ForkedRegister[Nothing, Unit] {
-    def apply(context: Context[Nothing], cb: Callback[Nothing, Unit]): Unit = {
-      val ec2 =
-        if (ec eq null) {
-          context.scheduler
-        } else if (context.options.localContextPropagation) {
-          ec match {
-            case sc: Scheduler if sc.features.contains(Scheduler.TRACING) =>
-              sc
-            case _ =>
-              TracingScheduler(ec)
-          }
-        } else {
-          ec
-        }
-
-//      try {
-        ec2.execute(new Runnable {
-          def run(): Unit = {
-            context.frameRef.reset()
-            cb.onSuccess(())
-          }
-        })
-//      } catch {
-//        case e: RejectedExecutionException =>
-//          Callback.signalErrorTrampolined(cb, e)
-//      }
+  private final class SleepRunnable(ctx: Context[Nothing], cb: Callback[Nothing, Unit]) extends Runnable {
+    def run(): Unit = {
+      ctx.connection.pop()
+      // We had an async boundary, as we must reset the frame
+      ctx.frameRef.reset()
+      cb.onSuccess(())
     }
   }
 }

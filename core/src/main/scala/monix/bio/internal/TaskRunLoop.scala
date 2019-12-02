@@ -18,12 +18,11 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
+import monix.bio.WRYYY
 import monix.bio.WRYYY.{Async, Context, ContextSwitch, Error, Eval, FlatMap, Map, Now, Suspend}
-import monix.execution.Callback
-import monix.bio.{Task, WRYYY}
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
-import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
+import monix.execution.{Callback, CancelableFuture, ExecutionModel, Scheduler}
 
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
@@ -33,7 +32,7 @@ private[bio] object TaskRunLoop {
   type Bind = Any => WRYYY[Any, Any]
   type CallStack = ChunkedArrayStack[Bind]
 
-  final case class CustomException[E](e: E) extends Exception(e.toString, null, true, false)
+  final case class WrappedException[E](e: E) extends Exception(e.toString, null, true, false)
 
   /** Starts or resumes evaluation of the run-loop from where it left
     * off. This is the complete run-loop.
@@ -43,7 +42,7 @@ private[bio] object TaskRunLoop {
     */
   def startFull[E, A](
     source: WRYYY[E, A],
-    contextInit: Context,
+    contextInit: Context[E],
     cb: Callback[E, A],
     rcb: TaskRestartCallback,
     bFirst: Bind,
@@ -60,7 +59,7 @@ private[bio] object TaskRunLoop {
     var currentIndex = frameIndex
 
     // Can change due to ContextSwitch
-    var context = contextInit
+    var context = contextInit.asInstanceOf[Context[Any]]
     var em = context.scheduler.executionModel
 
     do {
@@ -192,7 +191,7 @@ private[bio] object TaskRunLoop {
     */
   def restartAsync[E, A](
     source: WRYYY[E, A],
-    context: Context,
+    context: Context[E],
     cb: Callback[E, A],
     rcb: TaskRestartCallback,
     bindCurrent: Bind,
@@ -242,7 +241,7 @@ private[bio] object TaskRunLoop {
     opts: WRYYY.Options,
     // TODO: should it be [E, A]?
     cb: Callback[Any, A],
-    isCancelable: Boolean = true): CancelToken[Task] = {
+    isCancelable: Boolean = true): CancelToken[WRYYY[E, ?]] = {
 
     var current = source.asInstanceOf[WRYYY[Any, Any]]
     var bFirst: Bind = null
@@ -418,7 +417,7 @@ private[bio] object TaskRunLoop {
 
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
-              case null => throw CustomException(error)
+              case null => throw WrappedException(error)
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
@@ -521,7 +520,7 @@ private[bio] object TaskRunLoop {
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
-                return CancelableFuture.failed(CustomException(error))
+                return CancelableFuture.failed(WrappedException(error))
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
@@ -572,7 +571,7 @@ private[bio] object TaskRunLoop {
 
   private[internal] def executeAsyncTask(
     task: WRYYY.Async[Any, Any],
-    context: Context,
+    context: Context[Any],
     cb: Callback[Any, Any],
     rcb: TaskRestartCallback,
     bFirst: Bind,
@@ -598,7 +597,7 @@ private[bio] object TaskRunLoop {
   /** Called when we hit the first async boundary in
     * [[startLight]].
     */
-  private def goAsyncForLightCB(
+  private def goAsyncForLightCB[E](
     source: Current,
     scheduler: Scheduler,
     opts: WRYYY.Options,
@@ -607,21 +606,21 @@ private[bio] object TaskRunLoop {
     bRest: CallStack,
     nextFrame: FrameIndex,
     isCancelable: Boolean,
-    forceFork: Boolean): CancelToken[Task] = {
+    forceFork: Boolean): CancelToken[WRYYY[E, ?]] = {
 
     val context = Context(
       scheduler,
       opts,
-      if (isCancelable) TaskConnection()
+      if (isCancelable) TaskConnection[E]()
       else TaskConnection.uncancelable)
 
     if (!forceFork) source match {
       case async: Async[Any, Any] =>
-        executeAsyncTask(async, context, cb, null, bFirst, bRest, 1)
+        executeAsyncTask(async, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, 1)
       case _ =>
-        startFull(source, context, cb, null, bFirst, bRest, nextFrame)
+        startFull(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, nextFrame)
     } else {
-      restartAsync(source, context, cb, null, bFirst, bRest)
+      restartAsync(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest)
     }
     context.connection.cancel
   }
@@ -638,7 +637,7 @@ private[bio] object TaskRunLoop {
 
     val p = Promise[A]()
     val cb = Callback.fromPromise(p).asInstanceOf[Callback[Any, Any]]
-    val context = Context(scheduler, opts)
+    val context = Context[Any](scheduler, opts)
     val current = source.asInstanceOf[WRYYY[E, A]]
 
     if (!forceFork) source match {
@@ -663,7 +662,7 @@ private[bio] object TaskRunLoop {
     nextFrame: FrameIndex,
     forceFork: Boolean): Either[WRYYY[E, A], A] = {
 
-    val ctx = Context(scheduler, opts)
+    val ctx = Context[Any](scheduler, opts)
     val start: Start[Any, Any] =
       if (!forceFork) {
         ctx.frameRef := nextFrame
@@ -673,7 +672,7 @@ private[bio] object TaskRunLoop {
       }
 
     Left(
-      Async(
+      Async[E, A](
         start.asInstanceOf[Start[E, A]],
         trampolineBefore = false,
         trampolineAfter = false
@@ -721,7 +720,7 @@ private[bio] object TaskRunLoop {
   private def frameStart(em: ExecutionModel): FrameIndex =
     em.nextFrameIndex(0)
 
-  private final class RestoreContext(old: Context, restore: (Any, Any, Context, Context) => Context)
+  private final class RestoreContext(old: Context[Any], restore: (Any, Any, Context[Any], Context[Any]) => Context[Any])
       extends StackFrame[Any, Any, WRYYY[Any, Any]] {
 
     def apply(a: Any): WRYYY[Any, Any] =

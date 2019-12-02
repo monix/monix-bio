@@ -31,7 +31,7 @@ private[bio] object TaskDoOnCancel {
     if (callback eq WRYYY.unit) {
       self
     } else {
-      val start = (context: Context, onFinish: Callback[E, A]) => {
+      val start = (context: Context[E], onFinish: Callback[E, A]) => {
         implicit val s = context.scheduler
         implicit val o = context.options
 
@@ -42,7 +42,7 @@ private[bio] object TaskDoOnCancel {
     }
   }
 
-  private final class CallbackThatPops[E, A](ctx: WRYYY.Context, cb: Callback[E, A])
+  private final class CallbackThatPops[E, A](ctx: WRYYY.Context[E], cb: Callback[E, A])
     extends Callback[E, A] with TrampolinedRunnable {
 
     private[this] var isActive = true

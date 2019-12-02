@@ -20,4 +20,19 @@ package monix.bio
 object UIO {
   def apply[A](a: => A): UIO[A] =
     WRYYY.suspend(WRYYY.pure(a))
+
+  def eval[A](a: => A): UIO[A] =
+    apply(a)
+
+  def evalAsync[A](a: => A): UIO[A] =
+    WRYYY.suspend(WRYYY.pure(a)).executeAsync
+
+  def suspend[A](fa: => UIO[A]): UIO[A] =
+    WRYYY.suspend(fa)
+
+  val never: UIO[Nothing] =
+    WRYYY.never
+
+  val unit: UIO[Unit] =
+    WRYYY.unit
 }

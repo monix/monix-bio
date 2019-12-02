@@ -23,7 +23,7 @@ import monix.execution.Callback
 package object internal {
 
   /** Handy alias for building `Task.Async` nodes. */
-  private[bio] type Start[+E, +A] = (Context, Callback[E, A]) => Unit
+  private[bio] type Start[E, A] = (Context[E], Callback[E, A]) => Unit
 
   /** Internal API: A run-loop frame index is a number representing the current
     * run-loop cycle, being incremented whenever a `flatMap` evaluation happens.

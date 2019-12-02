@@ -17,19 +17,20 @@
 
 package monix.bio
 
-import java.util.concurrent.RejectedExecutionException
-
-import cats.effect.{CancelToken, Fiber => _}
-import monix.bio.internal.{FrameIndexRef, StackFrame, TaskConnection, TaskDoOnCancel, TaskEvalAsync, TaskExecuteWithModel, TaskExecuteWithOptions, TaskRunLoop, TaskShift, UnsafeCancelUtils}
+import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
+import monix.bio.instances.{CatsConcurrentEffectForTask, CatsConcurrentForTask, CatsParallelForTask, Newtype2}
+import monix.bio.internal._
 import monix.execution.annotations.UnsafeBecauseImpure
 import monix.execution.internal.Platform
+import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
-import monix.execution.schedulers.TracingScheduler
+import monix.execution.schedulers.{TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
-import Platform.fusionMaxStackDepth
-import monix.bio
 
+import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{FiniteDuration, TimeUnit}
+import scala.util.{Failure, Success, Try}
 
 sealed abstract class WRYYY[+E, +A] extends Serializable {
   import WRYYY._
@@ -329,7 +330,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  final def runAsyncF(cb: Either[E, A] => Unit)(implicit s: Scheduler): CancelToken[Task] =
+  final def runAsyncF[E1 >: E](cb: Either[E1, A] => Unit)(implicit s: Scheduler): CancelToken[WRYYY[E1, ?]] =
     runAsyncOptF(cb)(s, WRYYY.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
@@ -367,7 +368,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncOptF(cb: Either[E, A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[Task] = {
+  def runAsyncOptF[E1 >: E](cb: Either[E1, A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[WRYYY[E1, ?]] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop.startLight(this, s, opts2, Callback.fromAttempt(cb).asInstanceOf[Callback[Any, A]]) // TODO: should it be E,A?
@@ -380,6 +381,13 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   final def flatMap[E1 >: E, B](f: A => WRYYY[E1, B]): WRYYY[E1, B] =
     FlatMap(this, f)
+
+  /** Given a source Task that emits another Task, this function
+    * flattens the result, returning a Task equivalent to the emitted
+    * Task by the source.
+    */
+  final def flatten[E1 >: E, B](implicit ev: A <:< WRYYY[E1, B]): WRYYY[E1, B] =
+    flatMap(a => a)
 
   /** Returns a new `Task` that applies the mapping function to
     * the element emitted by the source.
@@ -586,6 +594,12 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     }
   }
 
+  /** Creates a new [[Task]] that will expose any triggered error
+    * from the source.
+    */
+  final def attempt: UIO[Either[E, A]] =
+    FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
+
   /** Runs this task first and then, when successful, the given task.
     * Returns the result of the given task.
     *
@@ -598,6 +612,407 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   final def >>[E1 >: E, B](tb: => WRYYY[E1, B]): WRYYY[E1, B] =
     this.flatMap(_ => tb)
+
+  /** Returns a task that treats the source task as the acquisition of a resource,
+    * which is then exploited by the `use` function and then `released`.
+    *
+    * The `bracket` operation is the equivalent of the
+    * `try {} catch {} finally {}` statements from mainstream languages.
+    *
+    * The `bracket` operation installs the necessary exception handler to release
+    * the resource in the event of an exception being raised during the computation,
+    * or in case of cancellation.
+    *
+    * If an exception is raised, then `bracket` will re-raise the exception
+    * ''after'' performing the `release`. If the resulting task gets cancelled,
+    * then `bracket` will still perform the `release`, but the yielded task
+    * will be non-terminating (equivalent with [[Task.never]]).
+    *
+    * Example:
+    *
+    * {{{
+    *   import java.io._
+    *
+    *   def readFile(file: File): Task[String] = {
+    *     // Opening a file handle for reading text
+    *     val acquire = Task.eval(new BufferedReader(
+    *       new InputStreamReader(new FileInputStream(file), "utf-8")
+    *     ))
+    *
+    *     acquire.bracket { in =>
+    *       // Usage part
+    *       Task.eval {
+    *         // Yes, ugly Java, non-FP loop;
+    *         // side-effects are suspended though
+    *         var line: String = null
+    *         val buff = new StringBuilder()
+    *         do {
+    *           line = in.readLine()
+    *           if (line != null) buff.append(line)
+    *         } while (line != null)
+    *         buff.toString()
+    *       }
+    *     } { in =>
+    *       // The release part
+    *       Task.eval(in.close())
+    *     }
+    *   }
+    * }}}
+    *
+    * Note that in case of cancellation the underlying implementation cannot
+    * guarantee that the computation described by `use` doesn't end up
+    * executed concurrently with the computation from `release`. In the example
+    * above that ugly Java loop might end up reading from a `BufferedReader`
+    * that is already closed due to the task being cancelled, thus triggering
+    * an error in the background with nowhere to go but in
+    * [[monix.execution.Scheduler.reportFailure Scheduler.reportFailure]].
+    *
+    * In this particular example, given that we are just reading from a file,
+    * it doesn't matter. But in other cases it might matter, as concurrency
+    * on top of the JVM when dealing with I/O might lead to corrupted data.
+    *
+    * For those cases you might want to do synchronization (e.g. usage of
+    * locks and semaphores) and you might want to use [[bracketE]], the
+    * version that allows you to differentiate between normal termination
+    * and cancellation.
+    *
+    * $bracketErrorNote
+    *
+    * @see [[bracketCase]] and [[bracketE]]
+    *
+    * @param use is a function that evaluates the resource yielded by the source,
+    *        yielding a result that will get generated by the task returned
+    *        by this `bracket` function
+    *
+    * @param release is a function that gets called after `use` terminates,
+    *        either normally or in error, or if it gets cancelled, receiving
+    *        as input the resource that needs to be released
+    */
+  final def bracket[E1 >: E, B](use: A => WRYYY[E1, B])(release: A => UIO[Unit]): WRYYY[E1, B] =
+    bracketCase(use)((a, _) => release(a))
+
+  /** Returns a new task that treats the source task as the
+    * acquisition of a resource, which is then exploited by the `use`
+    * function and then `released`, with the possibility of
+    * distinguishing between normal termination and cancelation, such
+    * that an appropriate release of resources can be executed.
+    *
+    * The `bracketCase` operation is the equivalent of
+    * `try {} catch {} finally {}` statements from mainstream languages
+    * when used for the acquisition and release of resources.
+    *
+    * The `bracketCase` operation installs the necessary exception handler
+    * to release the resource in the event of an exception being raised
+    * during the computation, or in case of cancelation.
+    *
+    * In comparison with the simpler [[bracket]] version, this one
+    * allows the caller to differentiate between normal termination,
+    * termination in error and cancelation via an `ExitCase`
+    * parameter.
+    *
+    * @see [[bracket]] and [[bracketE]]
+    *
+    * @param use is a function that evaluates the resource yielded by
+    *        the source, yielding a result that will get generated by
+    *        this function on evaluation
+    *
+    * @param release is a function that gets called after `use`
+    *        terminates, either normally or in error, or if it gets
+    *        canceled, receiving as input the resource that needs that
+    *        needs release, along with the result of `use`
+    *        (cancelation, error or successful result)
+    */
+  final def bracketCase[E1 >: E, B](use: A => WRYYY[E1, B])(release: (A, ExitCase[E1]) => UIO[Unit]): WRYYY[E1, B] =
+    TaskBracket.exitCase(this, use, release)
+
+  /** Returns a task that treats the source task as the acquisition of a resource,
+    * which is then exploited by the `use` function and then `released`, with
+    * the possibility of distinguishing between normal termination and cancellation,
+    * such that an appropriate release of resources can be executed.
+    *
+    * The `bracketE` operation is the equivalent of `try {} catch {} finally {}`
+    * statements from mainstream languages.
+    *
+    * The `bracketE` operation installs the necessary exception handler to release
+    * the resource in the event of an exception being raised during the computation,
+    * or in case of cancellation.
+    *
+    * In comparison with the simpler [[bracket]] version, this one allows the
+    * caller to differentiate between normal termination and cancellation.
+    *
+    * The `release` function receives as input:
+    *
+    *  - `Left(None)` in case of cancellation
+    *  - `Left(Some(error))` in case `use` terminated with an error
+    *  - `Right(b)` in case of success
+    *
+    * $bracketErrorNote
+    *
+    * @see [[bracket]] and [[bracketCase]]
+    *
+    * @param use is a function that evaluates the resource yielded by the source,
+    *        yielding a result that will get generated by this function on
+    *        evaluation
+    *
+    * @param release is a function that gets called after `use` terminates,
+    *        either normally or in error, or if it gets cancelled, receiving
+    *        as input the resource that needs that needs release, along with
+    *        the result of `use` (cancellation, error or successful result)
+    */
+  final def bracketE[E1 >: E, B](use: A => WRYYY[E1, B])(release: (A, Either[Option[E1], B]) => UIO[Unit]): WRYYY[E1, B] =
+    TaskBracket.either(this, use, release)
+
+  /**
+    * Executes the given `finalizer` when the source is finished,
+    * either in success or in error, or if canceled.
+    *
+    * This variant of [[guaranteeCase]] evaluates the given `finalizer`
+    * regardless of how the source gets terminated:
+    *
+    *  - normal completion
+    *  - completion in error
+    *  - cancellation
+    *
+    * As best practice, it's not a good idea to release resources
+    * via `guaranteeCase` in polymorphic code. Prefer [[bracket]]
+    * for the acquisition and release of resources.
+    *
+    * @see [[guaranteeCase]] for the version that can discriminate
+    *      between termination conditions
+    *
+    * @see [[bracket]] for the more general operation
+    */
+  final def guarantee(finalizer: UIO[Unit]): WRYYY[E, A] =
+    guaranteeCase(_ => finalizer)
+
+  /**
+    * Executes the given `finalizer` when the source is finished,
+    * either in success or in error, or if canceled, allowing
+    * for differentiating between exit conditions.
+    *
+    * This variant of [[guarantee]] injects an ExitCase in
+    * the provided function, allowing one to make a difference
+    * between:
+    *
+    *  - normal completion
+    *  - completion in error
+    *  - cancellation
+    *
+    * As best practice, it's not a good idea to release resources
+    * via `guaranteeCase` in polymorphic code. Prefer [[bracketCase]]
+    * for the acquisition and release of resources.
+    *
+    * @see [[guarantee]] for the simpler version
+    *
+    * @see [[bracketCase]] for the more general operation
+    */
+  final def guaranteeCase(finalizer: ExitCase[E] => UIO[Unit]): WRYYY[E, A] =
+    TaskBracket.guaranteeCase(this, finalizer)
+
+  /** Returns a task that waits for the specified `timespan` before
+    * executing and mirroring the result of the source.
+    *
+    * In this example we're printing to standard output, but before
+    * doing that we're introducing a 3 seconds delay:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   Task(println("Hello!"))
+    *     .delayExecution(3.seconds)
+    * }}}
+    *
+    * This operation is also equivalent with:
+    *
+    * {{{
+    *   Task.sleep(3.seconds).flatMap(_ => Task(println("Hello!")))
+    * }}}
+    *
+    * See [[WRYYY.sleep]] for the operation that describes the effect
+    * and [[WRYYY.delayResult]] for the version that evaluates the
+    * task on time, but delays the signaling of the result.
+    *
+    * @param timespan is the time span to wait before triggering
+    *        the evaluation of the task
+    */
+  final def delayExecution(timespan: FiniteDuration): WRYYY[E, A] =
+    WRYYY.sleep(timespan).flatMap(_ => this)
+
+  /** Returns a task that executes the source immediately on `runAsync`,
+    * but before emitting the `onSuccess` result for the specified
+    * duration.
+    *
+    * Note that if an error happens, then it is streamed immediately
+    * with no delay.
+    *
+    * See [[delayExecution]] for delaying the evaluation of the
+    * task with the specified duration. The [[delayResult]] operation
+    * is effectively equivalent with:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   Task(1 + 1)
+    *     .flatMap(a => Task.now(a).delayExecution(3.seconds))
+    * }}}
+    *
+    * Or if we are to use the [[WRYYY.sleep]] describing just the
+    * effect, this operation is equivalent with:
+    *
+    * {{{
+    *   Task(1 + 1).flatMap(a => Task.sleep(3.seconds).map(_ => a))
+    * }}}
+    *
+    * Thus in this example 3 seconds will pass before the result
+    * is being generated by the source, plus another 5 seconds
+    * before it is finally emitted:
+    *
+    * {{{
+    *   Task(1 + 1)
+    *     .delayExecution(3.seconds)
+    *     .delayResult(5.seconds)
+    * }}}
+    *
+    * @param timespan is the time span to sleep before signaling
+    *        the result, but after the evaluation of the source
+    */
+  final def delayResult(timespan: FiniteDuration): WRYYY[E, A] =
+    flatMap(a => WRYYY.sleep(timespan).map(_ => a))
+
+  /** Overrides the default [[monix.execution.Scheduler Scheduler]],
+    * possibly forcing an asynchronous boundary before execution
+    * (if `forceAsync` is set to `true`, the default).
+    *
+    * When a `Task` is executed with [[Task.runAsync]] or [[Task.runToFuture]],
+    * it needs a `Scheduler`, which is going to be injected in all
+    * asynchronous tasks processed within the `flatMap` chain,
+    * a `Scheduler` that is used to manage asynchronous boundaries
+    * and delayed execution.
+    *
+    * This scheduler passed in `runAsync` is said to be the "default"
+    * and `executeOn` overrides that default.
+    *
+    * {{{
+    *   import monix.execution.Scheduler
+    *   import java.io.{BufferedReader, FileInputStream, InputStreamReader}
+    *
+    *   /** Reads the contents of a file using blocking I/O. */
+    *   def readFile(path: String): Task[String] = Task.eval {
+    *     val in = new BufferedReader(
+    *       new InputStreamReader(new FileInputStream(path), "utf-8"))
+    *
+    *     val buffer = new StringBuffer()
+    *     var line: String = null
+    *     do {
+    *       line = in.readLine()
+    *       if (line != null) buffer.append(line)
+    *     } while (line != null)
+    *
+    *     buffer.toString
+    *   }
+    *
+    *   // Building a Scheduler meant for blocking I/O
+    *   val io = Scheduler.io()
+    *
+    *   // Building the Task reference, specifying that `io` should be
+    *   // injected as the Scheduler for managing async boundaries
+    *   readFile("path/to/file").executeOn(io, forceAsync = true)
+    * }}}
+    *
+    * In this example we are using [[Task.eval]], which executes the
+    * given `thunk` immediately (on the current thread and call stack).
+    *
+    * By calling `executeOn(io)`, we are ensuring that the used
+    * `Scheduler` (injected in [[Task.cancelable0[A](register* async tasks]])
+    * will be `io`, a `Scheduler` that we intend to use for blocking
+    * I/O actions. And we are also forcing an asynchronous boundary
+    * right before execution, by passing the `forceAsync` parameter as
+    * `true` (which happens to be the default value).
+    *
+    * Thus, for our described function that reads files using Java's
+    * blocking I/O APIs, we are ensuring that execution is entirely
+    * managed by an `io` scheduler, executing that logic on a thread
+    * pool meant for blocking I/O actions.
+    *
+    * Note that in case `forceAsync = false`, then the invocation will
+    * not introduce any async boundaries of its own and will not
+    * ensure that execution will actually happen on the given
+    * `Scheduler`, that depending of the implementation of the `Task`.
+    * For example:
+    *
+    * {{{
+    *   Task.eval("Hello, " + "World!")
+    *     .executeOn(io, forceAsync = false)
+    * }}}
+    *
+    * The evaluation of this task will probably happen immediately
+    * (depending on the configured
+    * [[monix.execution.ExecutionModel ExecutionModel]]) and the
+    * given scheduler will probably not be used at all.
+    *
+    * However in case we would use [[Task.apply]], which ensures
+    * that execution of the provided thunk will be async, then
+    * by using `executeOn` we'll indeed get a logical fork on
+    * the `io` scheduler:
+    *
+    * {{{
+    *   Task("Hello, " + "World!").executeOn(io, forceAsync = false)
+    * }}}
+    *
+    * Also note that overriding the "default" scheduler can only
+    * happen once, because it's only the "default" that can be
+    * overridden.
+    *
+    * Something like this won't have the desired effect:
+    *
+    * {{{
+    *   val io1 = Scheduler.io()
+    *   val io2 = Scheduler.io()
+    *
+    *   Task(1 + 1).executeOn(io1).executeOn(io2)
+    * }}}
+    *
+    * In this example the implementation of `task` will receive
+    * the reference to `io1` and will use it on evaluation, while
+    * the second invocation of `executeOn` will create an unnecessary
+    * async boundary (if `forceAsync = true`) or be basically a
+    * costly no-op. This might be confusing but consider the
+    * equivalence to these functions:
+    *
+    * {{{
+    *   import scala.concurrent.ExecutionContext
+    *
+    *   val io11 = Scheduler.io()
+    *   val io22 = Scheduler.io()
+    *
+    *   def sayHello(ec: ExecutionContext): Unit =
+    *     ec.execute(new Runnable {
+    *       def run() = println("Hello!")
+    *     })
+    *
+    *   def sayHello2(ec: ExecutionContext): Unit =
+    *     // Overriding the default `ec`!
+    *     sayHello(io11)
+    *
+    *   def sayHello3(ec: ExecutionContext): Unit =
+    *     // Overriding the default no longer has the desired effect
+    *     // because sayHello2 is ignoring it!
+    *     sayHello2(io22)
+    * }}}
+    *
+    * @param s is the [[monix.execution.Scheduler Scheduler]] to use
+    *        for overriding the default scheduler and for forcing
+    *        an asynchronous boundary if `forceAsync` is `true`
+    * @param forceAsync indicates whether an asynchronous boundary
+    *        should be forced right before the evaluation of the
+    *        `Task`, managed by the provided `Scheduler`
+    * @return a new `Task` that mirrors the source on evaluation,
+    *         but that uses the provided scheduler for overriding
+    *         the default and possibly force an extra asynchronous
+    *         boundary on execution
+    */
+  final def executeOn(s: Scheduler, forceAsync: Boolean = true): WRYYY[E, A] =
+    TaskExecuteOn(this, s, forceAsync)
 
   /** Returns a new `Task` that will mirror the source, but that will
     * execute the given `callback` if the task gets canceled before
@@ -650,6 +1065,34 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   final def onErrorRecover[E1 >: E, U >: A](pf: PartialFunction[E, U]): WRYYY[E1, U] =
     onErrorRecoverWith(pf.andThen(nowConstructor))
 
+  /** Start execution of the source suspended in the `Task` context.
+    *
+    * This can be used for non-deterministic / concurrent execution.
+    * The following code is more or less equivalent with
+    * [[Task.parMap2]] (minus the behavior on error handling and
+    * cancellation):
+    *
+    * {{{
+    *   def par2[A, B](ta: Task[A], tb: Task[B]): Task[(A, B)] =
+    *     for {
+    *       fa <- ta.start
+    *       fb <- tb.start
+    *        a <- fa.join
+    *        b <- fb.join
+    *     } yield (a, b)
+    * }}}
+    *
+    * Note in such a case usage of [[Task.parMap2 parMap2]]
+    * (and [[Task.parMap3 parMap3]], etc.) is still recommended
+    * because of behavior on error and cancellation — consider that
+    * in the example above, if the first task finishes in error,
+    * the second task doesn't get cancelled.
+    *
+    * This operation forces an asynchronous boundary before execution
+    */
+  final def start: UIO[Fiber[E @uV, A @uV]] =
+    TaskStart.forked(this)
+
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `map` functions, which get executed depending
     * on whether the result is successful or if it ends in error.
@@ -695,9 +1138,32 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   def redeemWith[E1, B](recover: E => WRYYY[E1, B], bind: A => WRYYY[E1, B]): WRYYY[E1, B] =
     WRYYY.FlatMap(this, new StackFrame.RedeemWith(recover, bind))
+
+  /** Makes the source `Task` uninterruptible such that a `cancel` signal
+    * (e.g. [[Fiber.cancel]]) has no effect.
+    *
+    * {{{
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   val uncancelable = Task
+    *     .eval(println("Hello!"))
+    *     .delayExecution(10.seconds)
+    *     .uncancelable
+    *     .runToFuture
+    *
+    *   // No longer works
+    *   uncancelable.cancel()
+    *
+    *   // After 10 seconds
+    *   // => Hello!
+    * }}}
+    */
+  final def uncancelable: WRYYY[E, A] =
+    TaskCancellation.uncancelable(this)
 }
 
-object WRYYY {
+object WRYYY extends TaskInstancesLevel1 {
 
   /** Lifts the given thunk in the `Task` context, processing it synchronously
     * when the task gets evaluated.
@@ -740,6 +1206,33 @@ object WRYYY {
   def defer[E, A](fa: => WRYYY[E, A]): WRYYY[E, A] =
     Suspend(fa _)
 
+  /** Defers the creation of a `Task` by using the provided
+    * function, which has the ability to inject a needed
+    * [[monix.execution.Scheduler Scheduler]].
+    *
+    * Example:
+    * {{{
+    *   import scala.concurrent.duration.MILLISECONDS
+    *
+    *   def measureLatency[A](source: Task[A]): Task[(A, Long)] =
+    *     Task.deferAction { implicit s =>
+    *       // We have our Scheduler, which can inject time, we
+    *       // can use it for side-effectful operations
+    *       val start = s.clockRealTime(MILLISECONDS)
+    *
+    *       source.map { a =>
+    *         val finish = s.clockRealTime(MILLISECONDS)
+    *         (a, finish - start)
+    *       }
+    *     }
+    * }}}
+    *
+    * @param f is the function that's going to be called when the
+    *        resulting `Task` gets evaluated
+    */
+  def deferAction[E, A](f: Scheduler => WRYYY[E, A]): WRYYY[E, A] =
+    TaskDeferAction(f)
+
   /** Alias for [[defer]]. */
   def suspend[E, A](fa: => WRYYY[E, A]): WRYYY[E, A] =
     Suspend(fa _)
@@ -773,6 +1266,31 @@ object WRYYY {
 
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
+
+  /** Builds a [[Task]] instance out of a Scala `Try`. */
+  def fromTry[A](a: Try[A]): Task[A] =
+    a match {
+      case Success(v) => Now(v)
+      case Failure(ex) => Error(ex)
+    }
+
+  /** Builds a [[Task]] instance out of a Scala `Either`. */
+  def fromEither[E, A](a: Either[E, A]): WRYYY[E, A] =
+    a match {
+      case Right(v) => Now(v)
+      case Left(ex) => Error(ex)
+    }
+
+  /** Keeps calling `f` until it returns a `Right` result.
+    *
+    * Based on Phil Freeman's
+    * [[http://functorial.com/stack-safety-for-free/index.pdf Stack Safety for Free]].
+    */
+  def tailRecM[E, A, B](a: A)(f: A => WRYYY[E, Either[A, B]]): WRYYY[E, B] =
+    WRYYY.defer(f(a)).flatMap {
+      case Left(continueA) => tailRecM(continueA)(f)
+      case Right(b) => WRYYY.now(b)
+    }
 
   /** A `Task[Unit]` provided for convenience. */
   val unit: UIO[Unit] = Now(())
@@ -809,9 +1327,101 @@ object WRYYY {
     * want to fine tune the cancelation boundaries.
     */
   val cancelBoundary: UIO[Unit] =
-    WRYYY.Async { (ctx, cb) =>
+    WRYYY.Async[Nothing, Unit] { (ctx, cb) =>
       if (!ctx.connection.isCanceled) cb.onSuccess(())
     }
+
+  /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
+  def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
+    TaskFromFuture.fromCancelablePromise(p)
+
+  /** Creates a new `Task` that will sleep for the given duration,
+    * emitting a tick when that time span is over.
+    *
+    * As an example on evaluation this will print "Hello!" after
+    * 3 seconds:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   Task.sleep(3.seconds).flatMap { _ =>
+    *     Task.eval(println("Hello!"))
+    *   }
+    * }}}
+    *
+    * See [[WRYYY.delayExecution]] for this operation described as
+    * a method on `Task` references or [[WRYYY.delayResult]] for the
+    * helper that triggers the evaluation of the source on time, but
+    * then delays the result.
+    */
+  def sleep(timespan: FiniteDuration): UIO[Unit] =
+    TaskSleep.apply(timespan)
+
+  /** Run two `Task` actions concurrently, and return the first to
+    * finish, either in success or error. The loser of the race is
+    * cancelled.
+    *
+    * The two tasks are executed in parallel, the winner being the
+    * first that signals a result.
+    *
+    * As an example, this would be equivalent with [[Task.timeout]]:
+    * {{{
+    *   import scala.concurrent.duration._
+    *   import scala.concurrent.TimeoutException
+    *
+    *   // some long running task
+    *   val myTask = Task(42)
+    *
+    *   val timeoutError = Task
+    *     .raiseError(new TimeoutException)
+    *     .delayExecution(5.seconds)
+    *
+    *   Task.race(myTask, timeoutError)
+    * }}}
+    *
+    * Similarly [[Task.timeoutTo]] is expressed in terms of `race`.
+    *
+    * $parallelismNote
+    *
+    * @see [[racePair]] for a version that does not cancel
+    *     the loser automatically on successful results and [[raceMany]]
+    *     for a version that races a whole list of tasks.
+    */
+  def race[E, A, B](fa: WRYYY[E, A], fb: WRYYY[E, B]): WRYYY[E, Either[A, B]] =
+    TaskRace(fa, fb)
+
+  /** Run two `Task` actions concurrently, and returns a pair
+    * containing both the winner's successful value and the loser
+    * represented as a still-unfinished task.
+    *
+    * If the first task completes in error, then the result will
+    * complete in error, the other task being cancelled.
+    *
+    * On usage the user has the option of cancelling the losing task,
+    * this being equivalent with plain [[race]]:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   val ta = Task.sleep(2.seconds).map(_ => "a")
+    *   val tb = Task.sleep(3.seconds).map(_ => "b")
+    *
+    *   // `tb` is going to be cancelled as it returns 1 second after `ta`
+    *   Task.racePair(ta, tb).flatMap {
+    *     case Left((a, taskB)) =>
+    *       taskB.cancel.map(_ => a)
+    *     case Right((taskA, b)) =>
+    *       taskA.cancel.map(_ => b)
+    *   }
+    * }}}
+    *
+    * $parallelismNote
+    *
+    * @see [[race]] for a simpler version that cancels the loser
+    *      immediately or [[raceMany]] that races collections of tasks.
+    */
+  def racePair[E, A, B](fa: WRYYY[E, A], fb: WRYYY[E, B]): WRYYY[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
+    TaskRacePair(fa, fb)
 
   /** Asynchronous boundary described as an effectful `Task` that
     * can be used in `flatMap` chains to "shift" the continuation
@@ -840,23 +1450,42 @@ object WRYYY {
   def shift(ec: ExecutionContext): UIO[Unit] =
     TaskShift(ec)
 
+  /** Yields a task that on evaluation will process the given tasks
+    * in parallel, then apply the given mapping function on their results.
+    *
+    * Example:
+    * {{{
+    *   val task1 = Task(1 + 1)
+    *   val task2 = Task(2 + 2)
+    *
+    *   // Yields 6
+    *   Task.mapBoth(task1, task2)((a, b) => a + b)
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    */
+  def mapBoth[E, A1, A2, R](fa1: WRYYY[E, A1], fa2: WRYYY[E, A2])(f: (A1, A2) => R): WRYYY[E, R] =
+    TaskMapBoth(fa1, fa2)(f)
+
   /** Returns the current [[WRYYY.Options]] configuration, which determine the
     * task's run-loop behavior.
     *
     * @see [[WRYYY.executeWithOptions]]
     */
-  val readOptions: Task[Options] =
-    WRYYY.Async((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
+  val readOptions: UIO[Options] =
+    WRYYY.Async[Nothing, Options]((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
 
   /** Internal API — The `Context` under which [[Task]] is supposed to be executed.
     *
     * This has been hidden in version 3.0.0-RC2, becoming an internal
     * implementation detail. Soon to be removed or changed completely.
     */
-  private[bio] final case class Context(
+  private[bio] final case class Context[E](
     private val schedulerRef: Scheduler,
     options: Options,
-    connection: TaskConnection,
+    connection: TaskConnection[E],
     frameRef: FrameIndexRef) {
 
     val scheduler: Scheduler = {
@@ -873,25 +1502,25 @@ object WRYYY {
     def executionModel: ExecutionModel =
       schedulerRef.executionModel
 
-    def withScheduler(s: Scheduler): Context =
+    def withScheduler(s: Scheduler): Context[E] =
       new Context(s, options, connection, frameRef)
 
-    def withExecutionModel(em: ExecutionModel): Context =
+    def withExecutionModel(em: ExecutionModel): Context[E] =
       new Context(schedulerRef.withExecutionModel(em), options, connection, frameRef)
 
-    def withOptions(opts: Options): Context =
+    def withOptions(opts: Options): Context[E] =
       new Context(schedulerRef, opts, connection, frameRef)
 
-    def withConnection(conn: TaskConnection): Context =
+    def withConnection[E1 >: E](conn: TaskConnection[E1]): Context[E1] =
       new Context(schedulerRef, options, conn, frameRef)
   }
 
   private[bio] object Context {
 
-    def apply(scheduler: Scheduler, options: Options): Context =
-      apply(scheduler, options, TaskConnection())
+    def apply[E](scheduler: Scheduler, options: Options): Context[E] =
+      apply(scheduler, options, TaskConnection[E]())
 
-    def apply(scheduler: Scheduler, options: Options, connection: TaskConnection): Context = {
+    def apply[E](scheduler: Scheduler, options: Options, connection: TaskConnection[E]): Context[E] = {
       val em = scheduler.executionModel
       val frameRef = FrameIndexRef(em)
       new Context(scheduler, options, connection, frameRef)
@@ -1026,7 +1655,7 @@ object WRYYY {
     *        evaluating the `register` function
     */
   private[monix] final case class Async[E, +A](
-    register: (Context, Callback[E, A]) => Unit,
+    register: (Context[E], Callback[E, A]) => Unit,
     trampolineBefore: Boolean = false,
     trampolineAfter: Boolean = true,
     restoreLocals: Boolean = true)
@@ -1038,19 +1667,47 @@ object WRYYY {
     */
   private[monix] final case class ContextSwitch[E, A](
     source: WRYYY[E, A],
-    modify: Context => Context,
-    restore: (A, E, Context, Context) => Context)
+    modify: Context[E] => Context[E],
+    restore: (A, E, Context[E], Context[E]) => Context[E])
       extends WRYYY[E, A]
+
+  /**
+    * Internal API — starts the execution of a Task with a guaranteed
+    * asynchronous boundary.
+    */
+  private[monix] def unsafeStartAsync[E, A](source: WRYYY[E, A], context: Context[E], cb: Callback[E, A]): Unit =
+    TaskRunLoop.restartAsync(source, context, cb, null, null, null)
+
+  /** Internal API — a variant of [[unsafeStartAsync]] that tries to
+    * detect if the `source` is known to fork and in such a case it
+    * avoids creating an extraneous async boundary.
+    */
+  private[monix] def unsafeStartEnsureAsync[E, A](source: WRYYY[E, A], context: Context[E], cb: Callback[E, A]): Unit = {
+    if (ForkedRegister.detect(source))
+      unsafeStartNow(source, context, cb)
+    else
+      unsafeStartAsync(source, context, cb)
+  }
+
+  /**
+    * Internal API — starts the execution of a Task with a guaranteed
+    * trampolined async boundary.
+    */
+  private[monix] def unsafeStartTrampolined[E, A](source: WRYYY[E, A], context: Context[E], cb: Callback[E, A]): Unit =
+    context.scheduler.execute(new TrampolinedRunnable {
+      def run(): Unit =
+        TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
+    })
 
   /**
     * Internal API - starts the immediate execution of a Task.
     */
-  private[monix] def unsafeStartNow[E, A](source: WRYYY[E, A], context: Context, cb: Callback[E, A]): Unit =
+  private[monix] def unsafeStartNow[E, A](source: WRYYY[E, A], context: Context[E], cb: Callback[E, A]): Unit =
     TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
 
   /** Internal, reusable reference. */
   private[this] val neverRef: Async[Nothing, Nothing] =
-    Async((_, _) => (), trampolineBefore = false, trampolineAfter = false)
+    Async[Nothing, Nothing]((_, _) => (), trampolineBefore = false, trampolineAfter = false)
 
   /** Internal, reusable reference. */
   private val nowConstructor: Any => UIO[Nothing] =
@@ -1065,4 +1722,223 @@ object WRYYY {
     def apply(a: A): UIO[B] = new Now(fs(a))
     def recover(e: E): UIO[B] = new Now(fe(e))
   }
+
+  /** Used as optimization by [[WRYYY.attempt]]. */
+  private object AttemptTask extends StackFrame[Any, Any, UIO[Either[Any, Any]]] {
+    override def apply(a: Any): UIO[Either[Any, Any]] =
+      new Now(new Right(a))
+    override def recover(e: Any): UIO[Either[Any, Any]] =
+      new Now(new Left(e))
+  }
+
+  /** Used as optimization by [[WRYYY.materialize]]. */
+  private object MaterializeTask extends StackFrame[Throwable, Any, UIO[Try[Any]]] {
+    override def apply(a: Any): UIO[Try[Any]] =
+      new Now(new Success(a))
+    override def recover(e: Throwable): UIO[Try[Any]] =
+      new Now(new Failure(e))
+  }
+}
+
+private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel0 {
+  /** Global instance for `cats.effect.Async` and for `cats.effect.Concurrent`.
+    *
+    * Implied are also `cats.CoflatMap`, `cats.Applicative`, `cats.Monad`,
+    * `cats.MonadError` and `cats.effect.Sync`.
+    *
+    * As trivia, it's named "catsAsync" and not "catsConcurrent" because
+    * it represents the `cats.effect.Async` lineage, up until
+    * `cats.effect.Effect`, which imposes extra restrictions, in our case
+    * the need for a `Scheduler` to be in scope (see [[WRYYY.catsEffect]]).
+    * So by naming the lineage, not the concrete sub-type implemented, we avoid
+    * breaking compatibility whenever a new type class (that we can implement)
+    * gets added into Cats.
+    *
+    * Seek more info about Cats, the standard library for FP, at:
+    *
+    *  - [[https://typelevel.org/cats/ typelevel/cats]]
+    *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
+    */
+  implicit def catsAsync: CatsConcurrentForTask =
+    CatsConcurrentForTask
+
+  /** Global instance for `cats.Parallel`.
+    *
+    * The `Parallel` type class is useful for processing
+    * things in parallel in a generic way, usable with
+    * Cats' utils and syntax:
+    *
+    * {{{
+    *   import cats.syntax.all._
+    *   import scala.concurrent.duration._
+    *
+    *   val taskA = Task.sleep(1.seconds).map(_ => "a")
+    *   val taskB = Task.sleep(2.seconds).map(_ => "b")
+    *   val taskC = Task.sleep(3.seconds).map(_ => "c")
+    *
+    *   // Returns "abc" after 3 seconds
+    *   (taskA, taskB, taskC).parMapN { (a, b, c) =>
+    *     a + b + c
+    *   }
+    * }}}
+    *
+    * Seek more info about Cats, the standard library for FP, at:
+    *
+    *  - [[https://typelevel.org/cats/ typelevel/cats]]
+    *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
+    */
+  implicit def catsParallel[E]: CatsParallelForTask[E] =
+    new CatsParallelForTask
+
+  // TODO: implement CatsMonoid
+}
+
+private[bio] abstract class TaskInstancesLevel0 extends TaskParallelNewtype {
+  /** Global instance for `cats.effect.Effect` and for
+    * `cats.effect.ConcurrentEffect`.
+    *
+    * Implied are `cats.CoflatMap`, `cats.Applicative`, `cats.Monad`,
+    * `cats.MonadError`, `cats.effect.Sync` and `cats.effect.Async`.
+    *
+    * Note this is different from
+    * [[monix.bio.WRYYY.catsAsync TWRYYYsk.catsAsync]] because we need an
+    * implicit [[monix.execution.Scheduler Scheduler]] in scope in
+    * order to trigger the execution of a `Task`. It's also lower
+    * priority in order to not trigger conflicts, because
+    * `Effect <: Async` and `ConcurrentEffect <: Concurrent with Effect`.
+    *
+    * As trivia, it's named "catsEffect" and not "catsConcurrentEffect"
+    * because it represents the `cats.effect.Effect` lineage, as in the
+    * minimum that this value will support in the future. So by naming the
+    * lineage, not the concrete sub-type implemented, we avoid breaking
+    * compatibility whenever a new type class (that we can implement)
+    * gets added into Cats.
+    *
+    * Seek more info about Cats, the standard library for FP, at:
+    *
+    *  - [[https://typelevel.org/cats/ typelevel/cats]]
+    *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
+    *
+    * @param s is a [[monix.execution.Scheduler Scheduler]] that needs
+    *        to be available in scope
+    */
+  implicit def catsEffect(
+                           implicit s: Scheduler,
+                           opts: WRYYY.Options = WRYYY.defaultOptions): CatsConcurrentEffectForTask = {
+
+    new CatsConcurrentEffectForTask
+  }
+
+  // TODO: implement catsSemigroup
+}
+
+private[bio] abstract class TaskParallelNewtype extends TaskContextShift {
+  /** Newtype encoding for a `Task` data type that has a [[cats.Applicative]]
+    * capable of doing parallel processing in `ap` and `map2`, needed
+    * for implementing `cats.Parallel`.
+    *
+    * Helpers are provided for converting back and forth in `Par.apply`
+    * for wrapping any `Task` value and `Par.unwrap` for unwrapping.
+    *
+    * The encoding is based on the "newtypes" project by
+    * Alexander Konovalov, chosen because it's devoid of boxing issues and
+    * a good choice until opaque types will land in Scala.
+    */
+  type Par[+E, +A] = Par.Type[E, A]
+
+  /** Newtype encoding, see the [[WRYYY.Par]] type alias
+    * for more details.
+    */
+  object Par extends Newtype2[WRYYY]
+}
+
+private[bio] abstract class TaskContextShift extends TaskTimers {
+  /**
+    * Default, pure, globally visible `cats.effect.ContextShift`
+    * implementation that shifts the evaluation to `Task`'s default
+    * [[monix.execution.Scheduler Scheduler]]
+    * (that's being injected in [[WRYYY.runToFuture]]).
+    */
+  implicit val contextShift: ContextShift[WRYYY[Any, ?]] =
+    new ContextShift[WRYYY[Any, ?]] {
+      override def shift: WRYYY[Any, Unit] =
+        WRYYY.shift
+      override def evalOn[A](ec: ExecutionContext)(fa: WRYYY[Any, A]): WRYYY[Any, A] =
+        ec match {
+          case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
+          case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
+        }
+
+    }
+
+  /** Builds a `cats.effect.ContextShift` instance, given a
+    * [[monix.execution.Scheduler Scheduler]] reference.
+    */
+  def contextShift(s: Scheduler): ContextShift[WRYYY[Any, ?]] =
+    new ContextShift[WRYYY[Any, ?]] {
+      override def shift: WRYYY[Any, Unit] =
+        WRYYY.shift(s)
+      override def evalOn[A](ec: ExecutionContext)(fa: WRYYY[Any, A]): WRYYY[Any, A] =
+        ec match {
+          case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
+          case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
+        }
+
+    }
+}
+
+private[bio] abstract class TaskTimers extends TaskClocks {
+
+  /**
+    * Default, pure, globally visible `cats.effect.Timer`
+    * implementation that defers the evaluation to `Task`'s default
+    * [[monix.execution.Scheduler Scheduler]]
+    * (that's being injected in [[WRYYY.runToFuture]]).
+    */
+  implicit val timer: Timer[WRYYY[Any, ?]] =
+    new Timer[WRYYY[Any, ?]] {
+      override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
+        WRYYY.sleep(duration)
+      override def clock: Clock[WRYYY[Any, ?]] =
+        WRYYY.clock
+    }
+
+  /** Builds a `cats.effect.Timer` instance, given a
+    * [[monix.execution.Scheduler Scheduler]] reference.
+    */
+  def timer(s: Scheduler): Timer[WRYYY[Any, ?]] =
+    new Timer[WRYYY[Any, ?]] {
+      override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
+        WRYYY.sleep(duration).executeOn(s)
+      override def clock: Clock[WRYYY[Any, ?]]=
+        WRYYY.clock(s)
+    }
+}
+
+private[bio] abstract class TaskClocks {
+  /**
+    * Default, pure, globally visible `cats.effect.Clock`
+    * implementation that defers the evaluation to `Task`'s default
+    * [[monix.execution.Scheduler Scheduler]]
+    * (that's being injected in [[WRYYY.runToFuture]]).
+    */
+  val clock: Clock[WRYYY[Any, ?]] =
+    new Clock[WRYYY[Any, ?]] {
+      override def realTime(unit: TimeUnit): WRYYY[Any, Long] =
+        WRYYY.deferAction(sc => WRYYY.now(sc.clockRealTime(unit)))
+      override def monotonic(unit: TimeUnit): Task[Long] =
+        WRYYY.deferAction(sc => WRYYY.now(sc.clockMonotonic(unit)))
+    }
+
+  /**
+    * Builds a `cats.effect.Clock` instance, given a
+    * [[monix.execution.Scheduler Scheduler]] reference.
+    */
+  def clock(s: Scheduler): Clock[WRYYY[Any, ?]] =
+    new Clock[WRYYY[Any, ?]] {
+      override def realTime(unit: TimeUnit): WRYYY[Any, Long] =
+        WRYYY.eval(s.clockRealTime(unit))
+      override def monotonic(unit: TimeUnit): WRYYY[Any, Long] =
+        WRYYY.eval(s.clockMonotonic(unit))
+    }
 }

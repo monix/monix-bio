@@ -25,15 +25,16 @@ private[bio] object TaskExecuteWithOptions {
     * Implementation for `Task.executeWithOptions`
     */
   def apply[E, A](self: WRYYY[E, A], f: Options => Options): WRYYY[E, A] =
-    ContextSwitch(self, enable(f), disable)
+    ContextSwitch[E, A](self, enable(f), disable)
 
-  private[this] def enable(f: Options => Options): Context => Context =
+  private[this] def enable[E](f: Options => Options): Context[E] => Context[E] =
     ctx => {
       val opts2 = f(ctx.options)
       if (opts2 != ctx.options) ctx.withOptions(opts2)
       else ctx
     }
 
-  private[this] val disable: (Any, Any, Context, Context) => Context =
+  // TODO: check if can be val again
+  private[this] def disable[E]: (Any, E, Context[E], Context[E]) => Context[E] =
     (_, _, old, current) => current.withOptions(old.options)
 }
