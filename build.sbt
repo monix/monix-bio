@@ -1,32 +1,28 @@
-val compilerOptions = Seq(
-  "-deprecation",
-  "-encoding",
-  "UTF-8",
-  "-feature",
-  "-language:existentials",
-  "-language:higherKinds",
-  "-unchecked",
-  "-Ywarn-dead-code",
-  "-Ywarn-numeric-widen"
-)
+val monixVersion = "3.1.0"
+val minitestVersion = "2.7.0"
+val catsVersion = "2.0.0"
+val catsEffectVersion = "2.0.0"
 
 lazy val `monix-bio` = project.in(file("."))
-  .settings(commonSettings, releaseSettings, skipOnPublishSettings)
-  .aggregate(core)
+  .settings(crossSettings, releaseSettings, skipOnPublishSettings)
+  .aggregate(coreJVM, coreJS)
 
-lazy val core = project.in(file("core"))
-  .settings(libraryDependencies += "io.monix" %% "monix-execution" % monixVersion % "compile->compile;test->test")
-  .settings(commonSettings, releaseSettings)
-  .settings(
+lazy val coreCommon =
+  crossSettings ++ crossVersionSharedSources ++ testSettings ++ Seq(
     name := "monix-bio"
   )
+
+lazy val coreJVM = project.in(file("core/jvm"))
+  .settings(coreCommon)
+
+lazy val coreJS = project.in(file("core/js"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(scalaJSSettings)
+  .settings(coreCommon)
 
 lazy val contributors = Seq(
   "Avasil" -> "Piotr Gawrys"
 )
-
-val monixVersion = "3.1.0"
-val minitestVersion = "2.7.0"
 
 def priorTo2_13(scalaVersion: String): Boolean =
   CrossVersion.partialVersion(scalaVersion) match {
@@ -35,7 +31,7 @@ def priorTo2_13(scalaVersion: String): Boolean =
   }
 
 // General Settings
-lazy val commonSettings = Seq(
+lazy val sharedSettings = Seq(
   organization := "io.monix",
 
   scalaVersion := "2.13.1",
@@ -61,6 +57,75 @@ lazy val commonSettings = Seq(
     "io.monix" %% "minitest" % minitestVersion % Test,
     "io.monix" %% "minitest-laws" % minitestVersion % Test
   )
+)
+
+val compilerOptions = Seq(
+  "-deprecation",
+  "-encoding",
+  "UTF-8",
+  "-feature",
+  "-language:existentials",
+  "-language:higherKinds",
+  "-unchecked",
+  "-Ywarn-dead-code",
+  "-Ywarn-numeric-widen"
+)
+
+lazy val crossSettings = sharedSettings ++ Seq(
+  unmanagedSourceDirectories in Compile += {
+    baseDirectory.value.getParentFile / "shared" / "src" / "main" / "scala"
+  },
+  unmanagedSourceDirectories in Test += {
+    baseDirectory.value.getParentFile / "shared" / "src" / "test" / "scala"
+  }
+)
+
+def scalaPartV = Def setting (CrossVersion partialVersion scalaVersion.value)
+
+lazy val crossVersionSharedSources: Seq[Setting[_]] =
+  Seq(Compile, Test).map { sc =>
+    (unmanagedSourceDirectories in sc) ++= {
+      (unmanagedSourceDirectories in sc).value.flatMap { dir =>
+        Seq(
+          scalaPartV.value match {
+            case Some((2, y)) if y == 11 => new File(dir.getPath + "_2.11")
+            case Some((2, y)) if y == 12 => new File(dir.getPath + "_2.12")
+            case Some((2, y)) if y >= 13 => new File(dir.getPath + "_2.13")
+          },
+
+          scalaPartV.value match {
+            case Some((2, n)) if n >= 12 => new File(dir.getPath + "_2.12+")
+            case _                       => new File(dir.getPath + "_2.12-")
+          },
+
+          scalaPartV.value match {
+            case Some((2, n)) if n >= 13 => new File(dir.getPath + "_2.13+")
+            case _                       => new File(dir.getPath + "_2.13-")
+          },
+        )
+      }
+    }
+  }
+
+lazy val testSettings = Seq(
+  testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
+  libraryDependencies ++= Seq(
+    "io.monix" %%% "minitest-laws" % minitestVersion % Test,
+    "org.typelevel" %%% "cats-laws" % catsVersion % Test,
+    "org.typelevel" %%% "cats-effect-laws" % catsEffectVersion % Test
+  )
+)
+
+lazy val scalaJSSettings = Seq(
+  // Use globally accessible (rather than local) source paths in JS source maps
+  scalacOptions += {
+    val tagOrHash =
+      if (isSnapshot.value) git.gitHeadCommit.value.get
+      else s"v${git.baseVersion.value}"
+    val l = (baseDirectory in LocalRootProject).value.toURI.toString
+    val g = s"https://raw.githubusercontent.com/monix/monix-bio/$tagOrHash/"
+    s"-P:scalajs:mapSourceURI:$l->$g"
+  }
 )
 
 lazy val releaseSettings = {
@@ -153,3 +218,8 @@ lazy val skipOnPublishSettings = Seq(
   publishArtifact := false,
   publishTo := None
 )
+
+/* The BaseVersion setting represents the in-development (upcoming) version,
+ * as an alternative to SNAPSHOTS.
+ */
+git.baseVersion := (version in ThisBuild).value

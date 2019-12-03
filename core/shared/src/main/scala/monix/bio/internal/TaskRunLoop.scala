@@ -460,7 +460,7 @@ private[bio] object TaskRunLoop {
 
           case FatalError(error) =>
             findFatalErrorHandler[Any](bFirst, bRest) match {
-              case null => throw WrappedException(error)
+              case null => throw error
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
@@ -563,12 +563,15 @@ private[bio] object TaskRunLoop {
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
-                return CancelableFuture.failed(WrappedException(error))
+                error match {
+                  case t: Throwable => return CancelableFuture.failed(t)
+                  case _ => return CancelableFuture.failed(WrappedException(error))
+                }
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = Error(e) }
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -576,7 +579,7 @@ private[bio] object TaskRunLoop {
           case FatalError(error) =>
             findFatalErrorHandler[Any](bFirst, bRest) match {
               case null =>
-                return CancelableFuture.failed(WrappedException(error))
+                return CancelableFuture.failed(error)
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {

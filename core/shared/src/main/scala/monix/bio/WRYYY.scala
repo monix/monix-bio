@@ -19,24 +19,18 @@ package monix.bio
 
 import cats.Parallel
 import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
-import monix.bio.instances.{
-  CatsBaseForTask,
-  CatsConcurrentEffectForTask,
-  CatsConcurrentForTask,
-  CatsParallelForTask,
-  Newtype2
-}
+import monix.bio.instances.{CatsBaseForTask, CatsConcurrentEffectForTask, CatsConcurrentForTask, CatsParallelForTask, Newtype2}
 import monix.bio.internal._
-import monix.execution.annotations.UnsafeBecauseImpure
+import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
 import monix.execution.internal.Platform
 import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
-import monix.execution.schedulers.{TracingScheduler, TrampolinedRunnable}
+import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
 
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, TimeUnit}
+import scala.concurrent.duration.{Duration, FiniteDuration, TimeUnit}
 import scala.util.{Failure, Success, Try}
 
 sealed abstract class WRYYY[+E, +A] extends Serializable {
@@ -384,6 +378,16 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     }
   }
 
+  /** Returns a failed projection of this task.
+    *
+    * The failed projection is a `Task` holding a value of type `Throwable`,
+    * emitting the error yielded by the source, in case the source fails,
+    * otherwise if the source succeeds the result will fail with a
+    * `NoSuchElementException`.
+    */
+  final def failed: UIO[E] =
+    FlatMap(this, WRYYY.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
+
   /** Creates a new Task by applying a function to the successful result
     * of the source Task, and returns a task equivalent to the result
     * of the function.
@@ -602,6 +606,170 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
       TaskRunLoop
         .startLight(this, s, opts2, Callback.fromAttempt(cb).asInstanceOf[Callback[Any, A]], isCancelable = false)
     }
+  }
+
+  /** Executes the source until completion, or until the first async
+    * boundary, whichever comes first.
+    *
+    * This operation is mean to be compliant with
+    * `cats.effect.Effect.runSyncStep`, but without suspending the
+    * evaluation in `IO`.
+    *
+    * WARNING: This method is a partial function, throwing exceptions
+    * in case errors happen immediately (synchronously).
+    *
+    * Usage sample:
+    * {{{
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.util._
+    *   import scala.util.control.NonFatal
+    *
+    *   try Task(42).runSyncStep match {
+    *     case Right(a) => println("Success: " + a)
+    *     case Left(task) =>
+    *       task.runToFuture.onComplete {
+    *         case Success(a) => println("Async success: " + a)
+    *         case Failure(e) => println("Async error: " + e)
+    *       }
+    *   } catch {
+    *     case NonFatal(e) =>
+    *       println("Error: " + e)
+    *   }
+    * }}}
+    *
+    * Obviously the purpose of this method is to be used for
+    * optimizations.
+    *
+    * $unsafeRun
+    *
+    * @see [[runSyncUnsafe]], the blocking execution mode that can
+    *      only work on top of the JVM.
+    *
+    * @param s $schedulerDesc
+    * @return $runSyncStepReturn
+    */
+  @UnsafeBecauseImpure
+  final def runSyncStep(implicit s: Scheduler): Either[WRYYY[E, A], A] =
+    runSyncStepOpt(s, defaultOptions)
+
+  /** A variant of [[runSyncStep]] that takes an implicit
+    * [[WRYYY.Options]] from the current scope.
+    *
+    * This helps in tuning the evaluation model of task.
+    *
+    * $unsafeRun
+    *
+    * @see [[runSyncStep]]
+    *
+    * @param s $schedulerDesc
+    * @param opts $optionsDesc
+    * @return $runSyncStepReturn
+    */
+  @UnsafeBecauseImpure
+  final def runSyncStepOpt(implicit s: Scheduler, opts: Options): Either[WRYYY[E, A], A] = {
+    val opts2 = opts.withSchedulerFeatures
+    Local.bindCurrentIf(opts2.localContextPropagation) {
+      TaskRunLoop.startStep(this, s, opts2)
+    }
+  }
+
+  /** Evaluates the source task synchronously and returns the result
+    * immediately or blocks the underlying thread until the result is
+    * ready.
+    *
+    * '''WARNING:''' blocking operations are unsafe and incredibly
+    * error prone on top of the JVM. It's a good practice to not block
+    * any threads and use the asynchronous `runAsync` methods instead.
+    *
+    * In general prefer to use the asynchronous [[WRYYY.runAsync]] or
+    * [[WRYYY.runToFuture]] and to structure your logic around asynchronous
+    * actions in a non-blocking way. But in case you're blocking only once, in
+    * `main`, at the "edge of the world" so to speak, then it's OK.
+    *
+    * Sample:
+    * {{{
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   Task(42).runSyncUnsafe(3.seconds)
+    * }}}
+    *
+    * This is equivalent with:
+    * {{{
+    *   import scala.concurrent.Await
+    *
+    *   Await.result[Int](Task(42).runToFuture, 3.seconds)
+    * }}}
+    *
+    * Some implementation details:
+    *
+    *  - blocking the underlying thread is done by triggering Scala's
+    *    `BlockingContext` (`scala.concurrent.blocking`), just like
+    *    Scala's `Await.result`
+    *  - the `timeout` is mandatory, just like when using Scala's
+    *    `Await.result`, in order to make the caller aware that the
+    *    operation is dangerous and that setting a `timeout` is good
+    *    practice
+    *  - the loop starts in an execution mode that ignores
+    *    [[monix.execution.ExecutionModel.BatchedExecution BatchedExecution]] or
+    *    [[monix.execution.ExecutionModel.AlwaysAsyncExecution AlwaysAsyncExecution]],
+    *    until the first asynchronous boundary. This is because we want to block
+    *    the underlying thread for the result, in which case preserving
+    *    fairness by forcing (batched) async boundaries doesn't do us any good,
+    *    quite the contrary, the underlying thread being stuck until the result
+    *    is available or until the timeout exception gets triggered.
+    *
+    * Not supported on top of JavaScript engines and trying to use it
+    * with Scala.js will trigger a compile time error.
+    *
+    * For optimizations on top of JavaScript you can use
+    * [[runSyncStep]] instead.
+    *
+    * $unsafeRun
+    *
+    * @param timeout $runSyncUnsafeTimeout
+    * @param s $schedulerDesc
+    * @param permit $runSyncUnsafePermit
+    */
+  @UnsafeBecauseImpure
+  @UnsafeBecauseBlocking
+  final def runSyncUnsafe(timeout: Duration = Duration.Inf)(implicit s: Scheduler, permit: CanBlock): A =
+    runSyncUnsafeOpt(timeout)(s, defaultOptions, permit)
+
+  /** Variant of [[runSyncUnsafe]] that takes a [[WRYYY.Options]]
+    * implicitly from the scope in order to tune the evaluation model
+    * of the task.
+    *
+    * This allows you to specify options such as:
+    *
+    *  - enabling support for [[TaskLocal]]
+    *  - disabling auto-cancelable run-loops
+    *
+    * See the description of [[runAsyncOpt]] for an example of
+    * customizing the default [[WRYYY.Options]].
+    *
+    * $unsafeRun
+    *
+    * @see [[runSyncUnsafe]]
+    *
+    * @param timeout $runSyncUnsafeTimeout
+    * @param s $schedulerDesc
+    * @param opts $optionsDesc
+    * @param permit $runSyncUnsafePermit
+    */
+  @UnsafeBecauseImpure
+  @UnsafeBecauseBlocking
+  final def runSyncUnsafeOpt(timeout: Duration = Duration.Inf)(
+    implicit s: Scheduler,
+    opts: Options,
+    permit: CanBlock
+  ): A = {
+    /*_*/
+    val opts2 = opts.withSchedulerFeatures
+    Local.bindCurrentIf(opts2.localContextPropagation) {
+      TaskRunSyncUnsafe(this, timeout, s, opts2)
+    }
+    /*_*/
   }
 
   /** Creates a new [[Task]] that will expose any triggered error
@@ -1037,6 +1205,16 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   final def doOnCancel(callback: UIO[Unit]): WRYYY[E, A] =
     TaskDoOnCancel(this, callback)
+
+  /** Creates a new [[Task]] that will expose any triggered error from
+    * the source.
+    */
+  final def materialize: UIO[Try[A]] =
+    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[A]]])
+
+  /** Dematerializes the source's result from a `Try`. */
+  final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B] =
+    this.asInstanceOf[UIO[Try[B]]].flatMap(fromTry)
 
   /** Creates a new task that will try recovering from an error by
     * matching it with another task using the given partial function.
@@ -1735,9 +1913,21 @@ object WRYYY extends TaskInstancesLevel0 {
   private val nowConstructor: Any => UIO[Nothing] =
     ((a: Any) => new Now(a)).asInstanceOf[Any => UIO[Nothing]]
 
-  /** Internal, reusable reference. */
+
   private def raiseConstructor[E]: E => WRYYY[E, Nothing] =
-    (e: E) => new Error(e) // TODO: reuse it
+    raiseConstructorRef.asInstanceOf[E => WRYYY[E, Nothing]]
+
+  /** Internal, reusable reference. */
+  private val raiseConstructorRef: Any => WRYYY[Any, Nothing] =
+    e => new Error(e)
+
+  /** Used as optimization by [[WRYYY.failed]]. */
+  private object Failed extends StackFrame[Any, Any, UIO[Any]] {
+    def apply(a: Any): UIO[Any] =
+      FatalError(new NoSuchElementException("failed"))
+    def recover(e: Any): UIO[Any] =
+      Now(e)
+  }
 
   /** Used as optimization by [[WRYYY.redeem]]. */
   private final class Redeem[E, A, B](fe: E => B, fs: A => B) extends StackFrame[E, A, UIO[B]] {
