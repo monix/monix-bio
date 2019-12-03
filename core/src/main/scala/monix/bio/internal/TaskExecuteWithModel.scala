@@ -24,6 +24,7 @@ import monix.execution.ExecutionModel
 import monix.execution.ExecutionModel.{AlwaysAsyncExecution, BatchedExecution, SynchronousExecution}
 
 private[bio] object TaskExecuteWithModel {
+
   /**
     * Implementation for `Task.executeWithModel`
     */

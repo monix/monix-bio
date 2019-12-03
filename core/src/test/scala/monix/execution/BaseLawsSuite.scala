@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.execution
 
 import cats.Eq
@@ -15,6 +32,7 @@ import scala.concurrent.{ExecutionException, Future}
 import scala.util.{Failure, Success, Try}
 
 trait BaseLawsSuite extends SimpleTestSuite with Checkers with ArbitraryInstances {
+
   override lazy val checkConfig: Parameters =
     Parameters.default
       .withMinSuccessfulTests(if (Platform.isJVM) 100 else 10)
@@ -47,6 +65,7 @@ trait BaseLawsSuite extends SimpleTestSuite with Checkers with ArbitraryInstance
 }
 
 trait ArbitraryInstances extends ArbitraryInstancesBase {
+
   /** Syntax for equivalence in tests. */
   implicit def isEqListToProp[A](list: List[IsEq[A]])(implicit A: Eq[A]): Prop =
     Prop(list.forall(isEq => A.eqv(isEq.lhs, isEq.rhs)))
@@ -54,6 +73,7 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
   implicit def equalityCancelableFuture[A](implicit A: Eq[A], ec: TestScheduler): Eq[CancelableFuture[A]] =
     new Eq[CancelableFuture[A]] {
       val inst = equalityFuture[A]
+
       def eqv(x: CancelableFuture[A], y: CancelableFuture[A]) =
         inst.eqv(x, y)
     }
@@ -83,8 +103,10 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 }
 
 trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils {
+
   implicit def equalityFuture[A](implicit A: Eq[A], ec: TestScheduler): Eq[Future[A]] =
     new Eq[Future[A]] {
+
       def eqv(x: Future[A], y: Future[A]): Boolean = {
         silenceSystemErr {
           // Executes the whole pending queue of runnables
@@ -115,6 +137,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
     }
 
   implicit lazy val equalityThrowable = new Eq[Throwable] {
+
     override def eqv(x: Throwable, y: Throwable): Boolean = {
       val ex1 = extractEx(x)
       val ex2 = extractEx(y)
@@ -144,6 +167,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
 
   implicit def cogenForThrowable: Cogen[Throwable] =
     Cogen[String].contramap(_.toString)
+
   implicit def cogenForFuture[A]: Cogen[Future[A]] =
     Cogen[Unit].contramap(_ => ())
 }

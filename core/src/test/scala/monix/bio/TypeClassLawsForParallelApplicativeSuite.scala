@@ -17,23 +17,22 @@
 
 package monix.bio
 
-object UIO {
+import cats.Applicative
+import cats.laws.discipline.ApplicativeTests
+import monix.catnap.internal.ParallelApplicative
+import monix.bio.instances.CatsParallelForTask
 
-  def apply[A](a: => A): UIO[A] =
-    WRYYY.suspend(WRYYY.pure(a))
+object TypeClassLawsForParallelApplicativeSuite extends BaseLawsSuite {
 
-  def eval[A](a: => A): UIO[A] =
-    apply(a)
+  implicit val ap: Applicative[Task] =
+    ParallelApplicative(new CatsParallelForTask[Throwable])
 
-  def evalAsync[A](a: => A): UIO[A] =
-    WRYYY.suspend(WRYYY.pure(a)).executeAsync
+  test("instance is valid") {
+    val ev = implicitly[Applicative[Task]]
+    assertEquals(ev, ap)
+  }
 
-  def suspend[A](fa: => UIO[A]): UIO[A] =
-    WRYYY.suspend(fa)
-
-  val never: UIO[Nothing] =
-    WRYYY.never
-
-  val unit: UIO[Unit] =
-    WRYYY.unit
+  checkAllAsync("ParallelApplicative[Task]") { implicit ec =>
+    ApplicativeTests[Task].applicative[Int, Int, Int]
+  }
 }

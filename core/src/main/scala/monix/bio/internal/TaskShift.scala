@@ -26,6 +26,7 @@ import scala.concurrent.ExecutionContext
 
 // TODO: should it be UIO or RejectedExecutionException?
 private[bio] object TaskShift {
+
   /**
     * Implementation for `Task.shift`
     */
@@ -44,6 +45,7 @@ private[bio] object TaskShift {
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
   private final class Register(ec: ExecutionContext) extends ForkedRegister[Nothing, Unit] {
+
     def apply(context: Context[Nothing], cb: Callback[Nothing, Unit]): Unit = {
       val ec2 =
         if (ec eq null) {
@@ -60,12 +62,12 @@ private[bio] object TaskShift {
         }
 
 //      try {
-        ec2.execute(new Runnable {
-          def run(): Unit = {
-            context.frameRef.reset()
-            cb.onSuccess(())
-          }
-        })
+      ec2.execute(new Runnable {
+        def run(): Unit = {
+          context.frameRef.reset()
+          cb.onSuccess(())
+        }
+      })
 //      } catch {
 //        case e: RejectedExecutionException =>
 //          Callback.signalErrorTrampolined(cb, e)

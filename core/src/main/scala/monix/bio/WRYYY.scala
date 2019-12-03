@@ -17,8 +17,15 @@
 
 package monix.bio
 
+import cats.Parallel
 import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
-import monix.bio.instances.{CatsConcurrentEffectForTask, CatsConcurrentForTask, CatsParallelForTask, Newtype2}
+import monix.bio.instances.{
+  CatsBaseForTask,
+  CatsConcurrentEffectForTask,
+  CatsConcurrentForTask,
+  CatsParallelForTask,
+  Newtype2
+}
 import monix.bio.internal._
 import monix.execution.annotations.UnsafeBecauseImpure
 import monix.execution.internal.Platform
@@ -368,10 +375,12 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncOptF[E1 >: E](cb: Either[E1, A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[WRYYY[E1, ?]] = {
+  def runAsyncOptF[E1 >: E](
+    cb: Either[E1, A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[WRYYY[E1, ?]] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
-      TaskRunLoop.startLight(this, s, opts2, Callback.fromAttempt(cb).asInstanceOf[Callback[Any, A]]) // TODO: should it be E,A?
+      TaskRunLoop
+        .startLight(this, s, opts2, Callback.fromAttempt(cb).asInstanceOf[Callback[Any, A]]) // TODO: should it be E,A?
     }
   }
 
@@ -590,7 +599,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   def runAsyncUncancelableOpt(cb: Either[E, A] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): Unit = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
-      TaskRunLoop.startLight(this, s, opts2, Callback.fromAttempt(cb).asInstanceOf[Callback[Any, A]], isCancelable = false)
+      TaskRunLoop
+        .startLight(this, s, opts2, Callback.fromAttempt(cb).asInstanceOf[Callback[Any, A]], isCancelable = false)
     }
   }
 
@@ -759,7 +769,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        as input the resource that needs that needs release, along with
     *        the result of `use` (cancellation, error or successful result)
     */
-  final def bracketE[E1 >: E, B](use: A => WRYYY[E1, B])(release: (A, Either[Option[E1], B]) => UIO[Unit]): WRYYY[E1, B] =
+  final def bracketE[E1 >: E, B](use: A => WRYYY[E1, B])(
+    release: (A, Either[Option[E1], B]) => UIO[Unit]): WRYYY[E1, B] =
     TaskBracket.either(this, use, release)
 
   /**
@@ -1163,7 +1174,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     TaskCancellation.uncancelable(this)
 }
 
-object WRYYY extends TaskInstancesLevel1 {
+object WRYYY extends TaskInstancesLevel0 {
 
   /** Lifts the given thunk in the `Task` context, processing it synchronously
     * when the task gets evaluated.
@@ -1199,6 +1210,9 @@ object WRYYY extends TaskInstancesLevel1 {
     */
   def raiseError[E](ex: E): WRYYY[E, Nothing] =
     Error(ex)
+
+  def raiseFatalError(ex: Throwable): UIO[Nothing] =
+    FatalError(ex)
 
   /** Promote a non-strict value representing a Task to a Task of the
     * same type.
@@ -1475,7 +1489,8 @@ object WRYYY extends TaskInstancesLevel1 {
     * @see [[WRYYY.executeWithOptions]]
     */
   val readOptions: UIO[Options] =
-    WRYYY.Async[Nothing, Options]((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
+    WRYYY
+      .Async[Nothing, Options]((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
 
   /** Internal API — The `Context` under which [[Task]] is supposed to be executed.
     *
@@ -1620,6 +1635,9 @@ object WRYYY extends TaskInstancesLevel1 {
   /** [[Task]] state describing an immediate exception. */
   private[bio] final case class Error[E](e: E) extends WRYYY[E, Nothing]
 
+  /** [[Task]] state describing an immediate exception. */
+  private[bio] final case class FatalError(e: Throwable) extends WRYYY[Nothing, Nothing]
+
   /** [[WRYYY]] state describing an non-strict synchronous value. */
   private[bio] final case class Eval[+A](thunk: () => A) extends WRYYY[Throwable, A]
 
@@ -1682,7 +1700,10 @@ object WRYYY extends TaskInstancesLevel1 {
     * detect if the `source` is known to fork and in such a case it
     * avoids creating an extraneous async boundary.
     */
-  private[monix] def unsafeStartEnsureAsync[E, A](source: WRYYY[E, A], context: Context[E], cb: Callback[E, A]): Unit = {
+  private[monix] def unsafeStartEnsureAsync[E, A](
+    source: WRYYY[E, A],
+    context: Context[E],
+    cb: Callback[E, A]): Unit = {
     if (ForkedRegister.detect(source))
       unsafeStartNow(source, context, cb)
     else
@@ -1695,6 +1716,7 @@ object WRYYY extends TaskInstancesLevel1 {
     */
   private[monix] def unsafeStartTrampolined[E, A](source: WRYYY[E, A], context: Context[E], cb: Callback[E, A]): Unit =
     context.scheduler.execute(new TrampolinedRunnable {
+
       def run(): Unit =
         TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
     })
@@ -1725,22 +1747,27 @@ object WRYYY extends TaskInstancesLevel1 {
 
   /** Used as optimization by [[WRYYY.attempt]]. */
   private object AttemptTask extends StackFrame[Any, Any, UIO[Either[Any, Any]]] {
+
     override def apply(a: Any): UIO[Either[Any, Any]] =
       new Now(new Right(a))
+
     override def recover(e: Any): UIO[Either[Any, Any]] =
       new Now(new Left(e))
   }
 
   /** Used as optimization by [[WRYYY.materialize]]. */
   private object MaterializeTask extends StackFrame[Throwable, Any, UIO[Try[Any]]] {
+
     override def apply(a: Any): UIO[Try[Any]] =
       new Now(new Success(a))
+
     override def recover(e: Throwable): UIO[Try[Any]] =
       new Now(new Failure(e))
   }
 }
 
-private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel0 {
+private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
+
   /** Global instance for `cats.effect.Async` and for `cats.effect.Concurrent`.
     *
     * Implied are also `cats.CoflatMap`, `cats.Applicative`, `cats.Monad`,
@@ -1787,13 +1814,14 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel0 {
     *  - [[https://typelevel.org/cats/ typelevel/cats]]
     *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
     */
-  implicit def catsParallel[E]: CatsParallelForTask[E] =
-    new CatsParallelForTask
+  implicit def catsParallel[E]: Parallel.Aux[WRYYY[E, ?], WRYYY.Par[E, ?]] =
+    new CatsParallelForTask[E]
 
   // TODO: implement CatsMonoid
 }
 
-private[bio] abstract class TaskInstancesLevel0 extends TaskParallelNewtype {
+private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
+
   /** Global instance for `cats.effect.Effect` and for
     * `cats.effect.ConcurrentEffect`.
     *
@@ -1823,16 +1851,22 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskParallelNewtype {
     *        to be available in scope
     */
   implicit def catsEffect(
-                           implicit s: Scheduler,
-                           opts: WRYYY.Options = WRYYY.defaultOptions): CatsConcurrentEffectForTask = {
-
+    implicit s: Scheduler,
+    opts: WRYYY.Options = WRYYY.defaultOptions): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
 
   // TODO: implement catsSemigroup
 }
 
+private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
+
+  implicit def monadError[E]: CatsBaseForTask[E] =
+    new CatsBaseForTask[E]
+}
+
 private[bio] abstract class TaskParallelNewtype extends TaskContextShift {
+
   /** Newtype encoding for a `Task` data type that has a [[cats.Applicative]]
     * capable of doing parallel processing in `ap` and `map2`, needed
     * for implementing `cats.Parallel`.
@@ -1853,16 +1887,22 @@ private[bio] abstract class TaskParallelNewtype extends TaskContextShift {
 }
 
 private[bio] abstract class TaskContextShift extends TaskTimers {
+
   /**
     * Default, pure, globally visible `cats.effect.ContextShift`
     * implementation that shifts the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[WRYYY.runToFuture]]).
     */
-  implicit val contextShift: ContextShift[WRYYY[Any, ?]] =
+  implicit def contextShift[E]: ContextShift[WRYYY[E, ?]] =
+    contextShiftAny.asInstanceOf[ContextShift[WRYYY[E, ?]]]
+
+  implicit val contextShiftAny: ContextShift[WRYYY[Any, ?]] =
     new ContextShift[WRYYY[Any, ?]] {
+
       override def shift: WRYYY[Any, Unit] =
         WRYYY.shift
+
       override def evalOn[A](ec: ExecutionContext)(fa: WRYYY[Any, A]): WRYYY[Any, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
@@ -1876,8 +1916,10 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
     */
   def contextShift(s: Scheduler): ContextShift[WRYYY[Any, ?]] =
     new ContextShift[WRYYY[Any, ?]] {
+
       override def shift: WRYYY[Any, Unit] =
         WRYYY.shift(s)
+
       override def evalOn[A](ec: ExecutionContext)(fa: WRYYY[Any, A]): WRYYY[Any, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
@@ -1895,10 +1937,15 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[WRYYY.runToFuture]]).
     */
-  implicit val timer: Timer[WRYYY[Any, ?]] =
+  implicit def timer[E]: Timer[WRYYY[E, ?]] =
+    timerAny.asInstanceOf[Timer[WRYYY[E, ?]]]
+
+  implicit val timerAny: Timer[WRYYY[Any, ?]] =
     new Timer[WRYYY[Any, ?]] {
+
       override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
         WRYYY.sleep(duration)
+
       override def clock: Clock[WRYYY[Any, ?]] =
         WRYYY.clock
     }
@@ -1908,24 +1955,32 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     */
   def timer(s: Scheduler): Timer[WRYYY[Any, ?]] =
     new Timer[WRYYY[Any, ?]] {
+
       override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
         WRYYY.sleep(duration).executeOn(s)
-      override def clock: Clock[WRYYY[Any, ?]]=
+
+      override def clock: Clock[WRYYY[Any, ?]] =
         WRYYY.clock(s)
     }
 }
 
 private[bio] abstract class TaskClocks {
+
   /**
     * Default, pure, globally visible `cats.effect.Clock`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[WRYYY.runToFuture]]).
     */
-  val clock: Clock[WRYYY[Any, ?]] =
+  implicit def clock[E]: Clock[WRYYY[E, ?]] =
+    clockAny.asInstanceOf[Clock[WRYYY[E, ?]]]
+
+  val clockAny: Clock[WRYYY[Any, ?]] =
     new Clock[WRYYY[Any, ?]] {
+
       override def realTime(unit: TimeUnit): WRYYY[Any, Long] =
         WRYYY.deferAction(sc => WRYYY.now(sc.clockRealTime(unit)))
+
       override def monotonic(unit: TimeUnit): Task[Long] =
         WRYYY.deferAction(sc => WRYYY.now(sc.clockMonotonic(unit)))
     }
@@ -1936,8 +1991,10 @@ private[bio] abstract class TaskClocks {
     */
   def clock(s: Scheduler): Clock[WRYYY[Any, ?]] =
     new Clock[WRYYY[Any, ?]] {
+
       override def realTime(unit: TimeUnit): WRYYY[Any, Long] =
         WRYYY.eval(s.clockRealTime(unit))
+
       override def monotonic(unit: TimeUnit): WRYYY[Any, Long] =
         WRYYY.eval(s.clockMonotonic(unit))
     }

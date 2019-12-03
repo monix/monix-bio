@@ -21,6 +21,7 @@ import monix.bio.WRYYY
 import monix.bio.WRYYY.{Context, ContextSwitch, Options}
 
 private[bio] object TaskExecuteWithOptions {
+
   /**
     * Implementation for `Task.executeWithOptions`
     */

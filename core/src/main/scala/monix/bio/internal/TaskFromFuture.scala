@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.bio.internal
 
 import monix.bio.WRYYY.Context
@@ -12,6 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 private[bio] object TaskFromFuture {
+
   /** Implementation for `Task.fromFuture`. */
   def strict[A](f: Future[A]): Task[A] = {
     f.value match {
@@ -99,7 +117,11 @@ private[bio] object TaskFromFuture {
     }
   }
 
-  private def startCancelable[A](ctx: WRYYY.Context[Throwable], cb: Callback[Throwable, A], f: Future[A], c: Cancelable): Unit = {
+  private def startCancelable[A](
+    ctx: WRYYY.Context[Throwable],
+    cb: Callback[Throwable, A],
+    f: Future[A],
+    c: Cancelable): Unit = {
 
     f.value match {
       case Some(value) =>

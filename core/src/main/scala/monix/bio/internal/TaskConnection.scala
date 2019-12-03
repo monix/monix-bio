@@ -128,18 +128,17 @@ private[bio] object TaskConnection {
     * Reusable [[TaskConnection]] reference that cannot
     * be canceled.
     */
-  def uncancelable[E]: TaskConnection[E] =
-    new Uncancelable[E]
+  def uncancelable[E]: TaskConnection[E] = Uncancelable.asInstanceOf[TaskConnection[E]]
 
-  private final class Uncancelable[E] extends TaskConnection[E] {
+  private object Uncancelable extends TaskConnection[Any] {
     def cancel = WRYYY.unit
     def isCanceled: Boolean = false
-    def pop(): CancelToken[WRYYY[E, ?]] = WRYYY.unit
+    def pop(): CancelToken[WRYYY[Any, ?]] = WRYYY.unit
     def tryReactivate(): Boolean = true
-    def push(token: CancelToken[WRYYY[E, ?]])(implicit s: Scheduler): Unit = ()
+    def push(token: CancelToken[WRYYY[Any, ?]])(implicit s: Scheduler): Unit = ()
     def push(cancelable: Cancelable)(implicit s: Scheduler): Unit = ()
-    def push(connection: CancelableF[WRYYY[E, ?]])(implicit s: Scheduler): Unit = ()
-    def pushConnections(seq: CancelableF[WRYYY[E, ?]]*)(implicit s: Scheduler): Unit = ()
+    def push(connection: CancelableF[WRYYY[Any, ?]])(implicit s: Scheduler): Unit = ()
+    def pushConnections(seq: CancelableF[WRYYY[Any, ?]]*)(implicit s: Scheduler): Unit = ()
 
     def toCancelable(implicit s: Scheduler): Cancelable =
       Cancelable.empty

@@ -1,4 +1,22 @@
+/*
+ * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.bio
+
 package internal
 
 import cats.effect.CancelToken
@@ -9,11 +27,12 @@ import monix.execution.atomic.{Atomic, AtomicBoolean}
 import monix.execution.schedulers.TrampolinedRunnable
 
 private[bio] object TaskCancellation {
+
   /**
     * Implementation for `Task.uncancelable`.
     */
   def uncancelable[E, A](fa: WRYYY[E, A]): WRYYY[E, A] =
-    WRYYY.ContextSwitch[E, A](fa, withConnectionUncancelable, restoreConnection)
+    WRYYY.ContextSwitch[E, A](fa, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], restoreConnection)
 
   /**
     * Implementation for `Task.onCancelRaiseError`.
@@ -38,11 +57,11 @@ private[bio] object TaskCancellation {
   }
 
   private final class RaiseCallback[E, A](
-                                        waitsForResult: AtomicBoolean,
-                                        conn: TaskConnection[E],
-                                        cb: Callback[E, A]
-                                      )(implicit s: Scheduler)
-    extends Callback[E, A] with TrampolinedRunnable {
+    waitsForResult: AtomicBoolean,
+    conn: TaskConnection[E],
+    cb: Callback[E, A]
+  )(implicit s: Scheduler)
+      extends Callback[E, A] with TrampolinedRunnable {
 
     private[this] var value: A = _
     private[this] var error: E = _
@@ -72,11 +91,11 @@ private[bio] object TaskCancellation {
   }
 
   private def raiseCancelable[E, A](
-                                  waitsForResult: AtomicBoolean,
-                                  conn: TaskConnection[E],
-                                  conn2: TaskConnection[E],
-                                  cb: Callback[E, A],
-                                  e: E): CancelToken[WRYYY[E, ?]] = {
+    waitsForResult: AtomicBoolean,
+    conn: TaskConnection[E],
+    conn2: TaskConnection[E],
+    cb: Callback[E, A],
+    e: E): CancelToken[WRYYY[E, ?]] = {
 
     WRYYY.suspend {
       if (waitsForResult.getAndSet(false))
@@ -88,8 +107,7 @@ private[bio] object TaskCancellation {
     }
   }
 
-  // TODO: could it be a val again?
-  private[this] def withConnectionUncancelable[E]: Context[E] => Context[E] =
+  private[this] val withConnectionUncancelable: Context[Any] => Context[Any] =
     ct => {
       ct.withConnection(TaskConnection.uncancelable)
         .withOptions(ct.options.disableAutoCancelableRunLoops)

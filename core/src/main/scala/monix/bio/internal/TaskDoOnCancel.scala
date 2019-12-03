@@ -24,6 +24,7 @@ import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TrampolinedRunnable
 
 private[bio] object TaskDoOnCancel {
+
   /**
     * Implementation for `Task.doOnCancel`
     */
@@ -43,7 +44,7 @@ private[bio] object TaskDoOnCancel {
   }
 
   private final class CallbackThatPops[E, A](ctx: WRYYY.Context[E], cb: Callback[E, A])
-    extends Callback[E, A] with TrampolinedRunnable {
+      extends Callback[E, A] with TrampolinedRunnable {
 
     private[this] var isActive = true
     private[this] var value: A = _

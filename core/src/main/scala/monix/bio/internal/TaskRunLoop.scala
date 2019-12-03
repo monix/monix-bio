@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context, ContextSwitch, Error, Eval, FlatMap, Map, Now, Suspend}
+import monix.bio.WRYYY.{Async, Context, ContextSwitch, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
 import monix.execution.{Callback, CancelableFuture, ExecutionModel, Scheduler}
@@ -32,6 +32,7 @@ private[bio] object TaskRunLoop {
   type Bind = Any => WRYYY[Any, Any]
   type CallStack = ChunkedArrayStack[Bind]
 
+  // Wrapper to report any error type to Scheduler
   final case class WrappedException[E](e: E) extends Exception(e.toString, null, true, false)
 
   /** Starts or resumes evaluation of the run-loop from where it left
@@ -84,7 +85,7 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = Error(e)
+                current = FatalError(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -100,7 +101,7 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              case ex if NonFatal(ex) => current = Error(ex)
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -109,10 +110,26 @@ private[bio] object TaskRunLoop {
                 cba.onError(error)
                 return
               case bind =>
+                // TODO: can this try catch be removed?
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = Error(e) }
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                currentIndex = em.nextFrameIndex(currentIndex)
+                bFirstRef = null
+            }
+
+          case FatalError(error) =>
+            findFatalErrorHandler[Any](bFirstRef, bRestRef) match {
+              case null =>
+                cba.onError(error)
+                return
+              case bind =>
+                // TODO: can this try catch be removed?
+                // Try/catch described as statement, otherwise ObjectRef happens ;-)
+                try {
+                  current = bind.recover(error)
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
                 currentIndex = em.nextFrameIndex(currentIndex)
                 bFirstRef = null
             }
@@ -156,7 +173,7 @@ private[bio] object TaskRunLoop {
               }
             } catch {
               case e if NonFatal(e) && catchError =>
-                current = Error(e)
+                current = FatalError(e)
             }
         }
 
@@ -170,7 +187,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = Error(ex)
+                case ex if NonFatal(ex) => current = FatalError(ex)
               }
               currentIndex = em.nextFrameIndex(currentIndex)
               hasUnboxed = false
@@ -275,7 +292,7 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = Error(e)
+                current = FatalError(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -292,7 +309,7 @@ private[bio] object TaskRunLoop {
               current = thunk()
             } catch {
               case ex if NonFatal(ex) =>
-                current = Error(ex)
+                current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -304,7 +321,21 @@ private[bio] object TaskRunLoop {
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = Error(e) }
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                frameIndex = em.nextFrameIndex(frameIndex)
+                bFirst = null
+            }
+
+          case FatalError(error) =>
+            findFatalErrorHandler[Any](bFirst, bRest) match {
+              case null =>
+                cb.onError(error)
+                return WRYYY.unit
+              case bind =>
+                // Try/catch described as statement, otherwise ObjectRef happens ;-)
+                try {
+                  current = bind.recover(error)
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -332,7 +363,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = Error(ex)
+                case ex if NonFatal(ex) => current = FatalError(ex)
               }
               frameIndex = em.nextFrameIndex(frameIndex)
               hasUnboxed = false
@@ -396,7 +427,7 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = Error(e)
+                current = FatalError(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -412,7 +443,7 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              case ex if NonFatal(ex) => current = Error(ex)
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -422,7 +453,19 @@ private[bio] object TaskRunLoop {
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = Error(e) }
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                frameIndex = em.nextFrameIndex(frameIndex)
+                bFirst = null
+            }
+
+          case FatalError(error) =>
+            findFatalErrorHandler[Any](bFirst, bRest) match {
+              case null => throw WrappedException(error)
+              case bind =>
+                // Try/catch described as statement to prevent ObjectRef ;-)
+                try {
+                  current = bind.recover(error)
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -440,7 +483,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = Error(ex)
+                case ex if NonFatal(ex) => current = FatalError(ex)
               }
               frameIndex = em.nextFrameIndex(frameIndex)
               hasUnboxed = false
@@ -498,7 +541,7 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = Error(e)
+                current = FatalError(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -514,7 +557,7 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              case ex if NonFatal(ex) => current = Error(ex)
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -526,6 +569,19 @@ private[bio] object TaskRunLoop {
                 try {
                   current = bind.recover(error)
                 } catch { case e if NonFatal(e) => current = Error(e) }
+                frameIndex = em.nextFrameIndex(frameIndex)
+                bFirst = null
+            }
+
+          case FatalError(error) =>
+            findFatalErrorHandler[Any](bFirst, bRest) match {
+              case null =>
+                return CancelableFuture.failed(WrappedException(error))
+              case bind =>
+                // Try/catch described as statement to prevent ObjectRef ;-)
+                try {
+                  current = bind.recover(error)
+                } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -551,7 +607,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = Error(ex)
+                case ex if NonFatal(ex) => current = FatalError(ex)
               }
               frameIndex = em.nextFrameIndex(frameIndex)
               hasUnboxed = false
@@ -612,7 +668,7 @@ private[bio] object TaskRunLoop {
       scheduler,
       opts,
       if (isCancelable) TaskConnection[E]()
-      else TaskConnection.uncancelable)
+      else TaskConnection.uncancelable[E])
 
     if (!forceFork) source match {
       case async: Async[Any, Any] =>
@@ -691,6 +747,26 @@ private[bio] object TaskRunLoop {
               return null
             else if (ref.isInstanceOf[StackFrame[_, _, _]])
               return ref.asInstanceOf[StackFrame[E, Any, WRYYY[E, Any]]]
+          } while (true)
+          // $COVERAGE-OFF$
+          null
+          // $COVERAGE-ON$
+        }
+    }
+  }
+
+  private[internal] def findFatalErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, WRYYY[E, Any]] = {
+    bFirst match {
+      case ref: StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]] @unchecked => ref
+      case _ =>
+        if (bRest eq null) null
+        else {
+          do {
+            val ref = bRest.pop()
+            if (ref eq null)
+              return null
+            else if (ref.isInstanceOf[StackFrame.FatalStackFrame[_, _, _]])
+              return ref.asInstanceOf[StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]]]
           } while (true)
           // $COVERAGE-OFF$
           null

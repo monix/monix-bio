@@ -39,6 +39,7 @@ private[bio] abstract class ForkedRegister[E, A] extends AbstractFunction2[Conte
 }
 
 private[bio] object ForkedRegister {
+
   /**
     * Returns `true` if the given task is known to fork execution,
     * or `false` otherwise.

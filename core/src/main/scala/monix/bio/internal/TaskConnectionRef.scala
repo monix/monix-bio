@@ -16,6 +16,7 @@
  */
 
 package monix.bio
+
 package internal
 
 import cats.effect.CancelToken
@@ -94,6 +95,7 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[WRYYY[E, ?]] {
 }
 
 private[bio] object TaskConnectionRef {
+
   /**
     * Returns a new `TaskForwardConnection` reference.
     */
@@ -101,8 +103,9 @@ private[bio] object TaskConnectionRef {
 
   private sealed trait State
   private case object Empty extends State
+
   private final case class IsActive(token: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ )
-    extends State
+      extends State
   private case object IsCanceled extends State
   private case object IsEmptyCanceled extends State
 }

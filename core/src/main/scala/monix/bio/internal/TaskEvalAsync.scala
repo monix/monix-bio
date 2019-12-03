@@ -23,6 +23,7 @@ import monix.execution.Callback
 import scala.util.control.NonFatal
 
 private[bio] object TaskEvalAsync {
+
   /**
     * Implementation for `WRYYY.evalAsync`.
     */

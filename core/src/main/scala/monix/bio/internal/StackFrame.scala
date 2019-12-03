@@ -28,7 +28,6 @@ private[bio] abstract class StackFrame[E, -A, +R] extends (A => R) { self =>
   def recover(e: E): R
 }
 
-// TODO: why two are the same ?
 private[bio] object StackFrame {
 
   /** [[StackFrame]] used in the implementation of `redeemWith`. */
@@ -43,6 +42,15 @@ private[bio] object StackFrame {
     */
   final class ErrorHandler[E, -A, +R](fe: E => R, fa: A => R) extends StackFrame[E, A, R] {
 
+    def apply(a: A): R = fa(a)
+    def recover(e: E): R = fe(e)
+  }
+
+  // TODO: could it be fixed to Throwable?
+  // marker trait to distinguish between fatal and recoverable errors
+  trait FatalStackFrame[E, -A, +R] extends StackFrame[E, A, R]
+
+  final class FatalErrorHandler[E, -A, +R](fe: E => R, fa: A => R) extends FatalStackFrame[E, A, R] {
     def apply(a: A): R = fa(a)
     def recover(e: E): R = fe(e)
   }

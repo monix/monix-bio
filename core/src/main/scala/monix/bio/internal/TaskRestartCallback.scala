@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.WRYYY.{Context, Error, Now}
-import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack}
+import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack, WrappedException}
 import monix.bio.WRYYY
 import monix.execution.Callback
 import monix.execution.misc.Local
@@ -85,8 +85,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       }
     } else {
       // $COVERAGE-OFF$
-      // TODO: report error
-//      context.scheduler.reportFailure(error)
+      context.scheduler.reportFailure(WrappedException(error))
       // $COVERAGE-ON$
     }
 

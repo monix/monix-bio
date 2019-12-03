@@ -74,7 +74,8 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def getToken[E](task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[WRYYY[E, ?]] =
+  private[internal] def getToken[E](
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[WRYYY[E, ?]] =
     task match {
       case ref: WRYYY[E, Unit] @unchecked =>
         ref
@@ -151,6 +152,7 @@ private[bio] object UnsafeCancelUtils {
           case Nil =>
             WRYYY.unit
           case first :: rest =>
+            println(s"normal errors: $errors")
             // TODO: do a composite error, handle fatalErrors
             WRYYY.raiseError(first)
 //            WRYYY.raiseError(Platform.composeErrors(first, rest: _*))

@@ -24,6 +24,7 @@ import monix.execution.Callback
 import scala.concurrent.duration.Duration
 
 private[bio] object TaskSleep {
+
   /** Implementation for `Task.sleep`. */
   def apply(timespan: Duration): UIO[Unit] =
     Async[Nothing, Unit](
@@ -38,17 +39,18 @@ private[bio] object TaskSleep {
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
   private final class Register(timespan: Duration) extends ForkedRegister[Nothing, Unit] {
+
     def apply(ctx: Context[Nothing], cb: Callback[Nothing, Unit]): Unit = {
       implicit val s = ctx.scheduler
       val c = TaskConnectionRef[Nothing]()
       ctx.connection.push(c.cancel)
 
 //      try {
-        c := ctx.scheduler.scheduleOnce(
-          timespan.length,
-          timespan.unit,
-          new SleepRunnable(ctx, cb)
-        )
+      c := ctx.scheduler.scheduleOnce(
+        timespan.length,
+        timespan.unit,
+        new SleepRunnable(ctx, cb)
+      )
 //      } catch {
 //        case e: RejectedExecutionException =>
 //          Callback.signalErrorTrampolined(cb, e)
@@ -62,6 +64,7 @@ private[bio] object TaskSleep {
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
   private final class SleepRunnable(ctx: Context[Nothing], cb: Callback[Nothing, Unit]) extends Runnable {
+
     def run(): Unit = {
       ctx.connection.pop()
       // We had an async boundary, as we must reset the frame

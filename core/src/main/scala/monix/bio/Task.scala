@@ -17,19 +17,24 @@
 
 package monix.bio
 
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 object Task {
+
   def now[A](a: A): Task[A] =
     WRYYY.now(a)
 
-  def apply[A](a: A): Task[A] =
+  def pure[A](a: A): Task[A] =
+    WRYYY.pure(a)
+
+  def apply[A](a: => A): Task[A] =
     WRYYY.eval(a)
 
-  def eval[A](a: A): Task[A] =
+  def eval[A](a: => A): Task[A] =
     WRYYY.eval(a)
 
-  def evalAsync[A](a: A): Task[A] =
+  def evalAsync[A](a: => A): Task[A] =
     WRYYY.evalAsync(a)
 
   def suspend[A](fa: => Task[A]): Task[A] =
@@ -38,11 +43,14 @@ object Task {
   def defer[A](fa: => Task[A]): Task[A] =
     WRYYY.defer(fa)
 
-  def raiseError(ex: Throwable): Task[Nothing] =
+  def raiseError[A](ex: Throwable): Task[A] =
     WRYYY.raiseError(ex)
 
   val unit: Task[Unit] =
     WRYYY.unit
+
+  def never[A]: Task[A] =
+    WRYYY.never
 
   def fromTry[A](a: Try[A]): Task[A] =
     WRYYY.fromTry(a)
@@ -52,4 +60,7 @@ object Task {
 
   def racePair[A, B](fa: Task[A], fb: Task[B]): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
     WRYYY.racePair(fa, fb)
+
+  def sleep(timespan: FiniteDuration): Task[Unit] =
+    WRYYY.sleep(timespan)
 }

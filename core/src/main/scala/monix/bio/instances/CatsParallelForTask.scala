@@ -1,6 +1,23 @@
+/*
+ * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.bio.instances
 
-import cats.{Applicative, Monad, Parallel, ~>}
+import cats.{~>, Applicative, Monad, Parallel}
 import monix.bio.WRYYY
 
 /** `cats.Parallel` type class instance for [[monix.bio.WRYYY WRYYY]].
@@ -20,29 +37,34 @@ class CatsParallelForTask[E] extends Parallel[WRYYY[E, ?]] {
   override val applicative: Applicative[WRYYY.Par[E, ?]] = new NondetApplicative[E]
   override val monad: Monad[WRYYY[E, ?]] = new CatsBaseForTask[E]
 
-  override val sequential: WRYYY.Par[E, ?] ~> WRYYY[E, ?] = new (WRYYY.Par[E, ?] ~> WRYYY[E, ?] ) {
+  override val sequential: WRYYY.Par[E, ?] ~> WRYYY[E, ?] = new (WRYYY.Par[E, ?] ~> WRYYY[E, ?]) {
     def apply[A](fa: WRYYY.Par[E, A]): WRYYY[E, A] = WRYYY.Par.unwrap(fa)
   }
-  override val parallel: WRYYY[E, ?]  ~> WRYYY.Par[E, ?] = new (WRYYY[E, ?]  ~> WRYYY.Par[E, ?]) {
+
+  override val parallel: WRYYY[E, ?] ~> WRYYY.Par[E, ?] = new (WRYYY[E, ?] ~> WRYYY.Par[E, ?]) {
     def apply[A](fa: WRYYY[E, A]): WRYYY.Par[E, A] = WRYYY.Par.apply(fa)
   }
 }
 
+private class NondetApplicative[E] extends Applicative[WRYYY.Par[E, ?]] {
 
-  private class NondetApplicative[E] extends Applicative[WRYYY.Par[E, ?]] {
+  import WRYYY.Par.{unwrap, apply => par}
 
-    import WRYYY.Par.{unwrap, apply => par}
+  override def ap[A, B](ff: WRYYY.Par[E, A => B])(fa: WRYYY.Par[E, A]): WRYYY.Par[E, B] =
+    par(WRYYY.mapBoth(unwrap(ff), unwrap(fa))(_(_)))
 
-    override def ap[A, B](ff: WRYYY.Par[E, A => B])(fa: WRYYY.Par[E, A]): WRYYY.Par[E, B] =
-      par(WRYYY.mapBoth(unwrap(ff), unwrap(fa))(_(_)))
-    override def map2[A, B, Z](fa: WRYYY.Par[E, A], fb: WRYYY.Par[E, B])(f: (A, B) => Z): WRYYY.Par[E, Z] =
-      par(WRYYY.mapBoth(unwrap(fa), unwrap(fb))(f))
-    override def product[A, B](fa: WRYYY.Par[E, A], fb: WRYYY.Par[E, B]): WRYYY.Par[E, (A, B)] =
-      par(WRYYY.mapBoth(unwrap(fa), unwrap(fb))((_, _)))
-    override def pure[A](a: A): WRYYY.Par[E, A] =
-      par(WRYYY.now(a))
-    override val unit: WRYYY.Par[E, Unit] =
-      par(WRYYY.unit)
-    override def map[A, B](fa: WRYYY.Par[E, A])(f: A => B): WRYYY.Par[E, B] =
-      par(unwrap(fa).map(f))
-  }
+  override def map2[A, B, Z](fa: WRYYY.Par[E, A], fb: WRYYY.Par[E, B])(f: (A, B) => Z): WRYYY.Par[E, Z] =
+    par(WRYYY.mapBoth(unwrap(fa), unwrap(fb))(f))
+
+  override def product[A, B](fa: WRYYY.Par[E, A], fb: WRYYY.Par[E, B]): WRYYY.Par[E, (A, B)] =
+    par(WRYYY.mapBoth(unwrap(fa), unwrap(fb))((_, _)))
+
+  override def pure[A](a: A): WRYYY.Par[E, A] =
+    par(WRYYY.now(a))
+
+  override val unit: WRYYY.Par[E, Unit] =
+    par(WRYYY.unit)
+
+  override def map[A, B](fa: WRYYY.Par[E, A])(f: A => B): WRYYY.Par[E, B] =
+    par(unwrap(fa).map(f))
+}

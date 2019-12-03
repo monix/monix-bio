@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * See the project homepage at: https://monix.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package monix.bio.internal
 
 import monix.bio.WRYYY
@@ -12,6 +29,7 @@ import scala.annotation.tailrec
 import scala.util.control.NonFatal
 
 private[bio] object TaskMapBoth {
+
   /**
     * Implementation for `Task.mapBoth`.
     */
@@ -24,13 +42,12 @@ private[bio] object TaskMapBoth {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A1, A2, R](fa1: WRYYY[E, A1], fa2: WRYYY[E, A2], f: (A1, A2) => R) extends ForkedRegister[E, R] {
+  private final class Register[E, A1, A2, R](fa1: WRYYY[E, A1], fa2: WRYYY[E, A2], f: (A1, A2) => R)
+      extends ForkedRegister[E, R] {
 
     /* For signaling the values after the successful completion of both tasks. */
-    def sendSignal(mainConn: TaskConnection[E], cb: Callback[E, R], a1: A1, a2: A2)(
-      implicit s: Scheduler): Unit = {
+    def sendSignal(mainConn: TaskConnection[E], cb: Callback[E, R], a1: A1, a2: A2)(implicit s: Scheduler): Unit = {
 
-      // TODO: should be fatal
       var streamErrors = true
       try {
         val r = f(a1, a2)
@@ -39,25 +56,22 @@ private[bio] object TaskMapBoth {
         cb.onSuccess(r)
       } catch {
         case NonFatal(ex) if streamErrors =>
-//          // Both tasks completed by this point, so we don't need
-//          // to worry about the `state` being a `Stop`
+          // Both tasks completed by this point, so we don't need
+          // to worry about the `state` being a `Stop`
           mainConn.pop()
-//          cb.onError(ex)
+          // TODO: unify reporting of errors in `f`, perhaps we can get rid of try catch completely
+          s.reportFailure(ex)
       }
     }
 
     /* For signaling an error. */
-    @tailrec def sendError(
-                            mainConn: TaskConnection[E],
-                            state: AtomicAny[AnyRef],
-                            cb: Callback[E, R],
-                            ex: E)(implicit s: Scheduler): Unit = {
+    @tailrec def sendError(mainConn: TaskConnection[E], state: AtomicAny[AnyRef], cb: Callback[E, R], ex: E)(
+      implicit s: Scheduler): Unit = {
 
       // Guarding the contract of the callback, as we cannot send an error
       // if an error has already happened because of the other task
       state.get match {
         case Stop =>
-          // TODO: report exception
           // We've got nowhere to send the error, so report it
           s.reportFailure(WrappedException(ex))
         case other =>
@@ -99,9 +113,11 @@ private[bio] object TaskMapBoth {
               case s @ Left(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                // TODO: handle multiple cb called
-                throw new IllegalStateException(s.toString)
-              //                onError(new IllegalStateException(s.toString))
+                // TODO: make sure it is handled correctly
+                context.scheduler.reportFailure(
+                  new IllegalStateException(
+                    s"TaskMapBoth has triggered multiple onSuccess calls, please report the issue on github: $s.toString")
+                )
             }
 
           def onError(ex: E): Unit =
@@ -125,8 +141,11 @@ private[bio] object TaskMapBoth {
               case s @ Right(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                throw new IllegalStateException(s.toString)
-//                onError(new IllegalStateException(s.toString))
+                context.scheduler.reportFailure(
+                  new IllegalStateException(
+                    s"TaskMapBoth has triggered multiple onSuccess calls, please report the issue on github: $s.toString")
+                )
+
             }
 
           def onError(ex: E): Unit =
