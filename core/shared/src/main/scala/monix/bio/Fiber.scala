@@ -19,6 +19,7 @@ package monix.bio
 
 import cats.effect.CancelToken
 import monix.bio.internal.TaskConnection
+import monix.execution.schedulers.TrampolineExecutionContext
 
 import scala.concurrent.Promise
 
@@ -98,7 +99,7 @@ object Fiber {
           p.future.onComplete { r =>
             ctx.connection.pop()
             cb(r.get)
-          }(ctx.scheduler)
+          }(TrampolineExecutionContext.immediate)
       }
     }
     new Tuple(join, conn.cancel)

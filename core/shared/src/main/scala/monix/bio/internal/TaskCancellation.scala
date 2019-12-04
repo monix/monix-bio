@@ -86,7 +86,10 @@ private[bio] object TaskCancellation {
         s.execute(this)
       } else {
         // TODO: unify reporting of failures like that (failure after success)
-        s.reportFailure(WrappedException(e))
+        e match {
+          case t: Throwable => s.reportFailure(t)
+          case _ => s.reportFailure(WrappedException(e))
+        }
       }
   }
 

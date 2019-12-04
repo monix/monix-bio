@@ -6,6 +6,7 @@ val catsEffectVersion = "2.0.0"
 lazy val `monix-bio` = project.in(file("."))
   .settings(crossSettings, releaseSettings, skipOnPublishSettings)
   .aggregate(coreJVM, coreJS)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val coreCommon =
   crossSettings ++ crossVersionSharedSources ++ testSettings ++ Seq(
@@ -14,11 +15,13 @@ lazy val coreCommon =
 
 lazy val coreJVM = project.in(file("core/jvm"))
   .settings(coreCommon)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val coreJS = project.in(file("core/js"))
   .enablePlugins(ScalaJSPlugin)
   .settings(scalaJSSettings)
   .settings(coreCommon)
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val contributors = Seq(
   "Avasil" -> "Piotr Gawrys"
@@ -56,7 +59,23 @@ lazy val sharedSettings = Seq(
     "io.monix" %% "monix-catnap" % monixVersion,
     "io.monix" %% "minitest" % minitestVersion % Test,
     "io.monix" %% "minitest-laws" % minitestVersion % Test
-  )
+  ),
+  headerLicense := Some(HeaderLicense.Custom(
+    """|Copyright (c) 2019-2019 by The Monix Project Developers.
+       |See the project homepage at: https://monix.io
+       |
+       |Licensed under the Apache License, Version 2.0 (the "License");
+       |you may not use this file except in compliance with the License.
+       |You may obtain a copy of the License at
+       |
+       |    http://www.apache.org/licenses/LICENSE-2.0
+       |
+       |Unless required by applicable law or agreed to in writing, software
+       |distributed under the License is distributed on an "AS IS" BASIS,
+       |WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       |See the License for the specific language governing permissions and
+       |limitations under the License."""
+      .stripMargin)),
 )
 
 val compilerOptions = Seq(

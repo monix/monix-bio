@@ -85,7 +85,8 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = FatalError(e)
+                // Eval and Suspend are allowed to catch errors
+                current = Error(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -101,7 +102,8 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              case ex if NonFatal(ex) => current = FatalError(ex)
+              // Eval and Suspend are allowed to catch errors
+              case ex if NonFatal(ex) => current = Error(ex)
             }
 
           case Error(error) =>
@@ -292,7 +294,8 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = FatalError(e)
+                // Eval and Suspend are allowed to catch errors
+                current = Error(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -309,7 +312,8 @@ private[bio] object TaskRunLoop {
               current = thunk()
             } catch {
               case ex if NonFatal(ex) =>
-                current = FatalError(ex)
+                // Eval and Suspend are allowed to catch errors
+              current = Error(ex)
             }
 
           case Error(error) =>
@@ -427,7 +431,8 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = FatalError(e)
+                // Eval and Suspend are allowed to catch errors
+                current = Error(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -443,7 +448,8 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              case ex if NonFatal(ex) => current = FatalError(ex)
+              // Eval and Suspend are allowed to catch errors
+              case ex if NonFatal(ex) => current = Error(ex)
             }
 
           case Error(error) =>
@@ -541,7 +547,8 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                current = FatalError(e)
+                // Eval and Suspend are allowed to catch errors
+                current = Error(e)
             }
 
           case bindNext @ Map(fa, _, _) =>
@@ -557,7 +564,8 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              case ex if NonFatal(ex) => current = FatalError(ex)
+              // Eval and Suspend are allowed to catch errors
+              case ex if NonFatal(ex) => current = Error(ex)
             }
 
           case Error(error) =>

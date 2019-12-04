@@ -52,6 +52,9 @@ object Task {
   def never[A]: Task[A] =
     WRYYY.never
 
+  val cancelBoundary: Task[Unit] =
+    WRYYY.cancelBoundary
+
   def fromTry[A](a: Try[A]): Task[A] =
     WRYYY.fromTry(a)
 

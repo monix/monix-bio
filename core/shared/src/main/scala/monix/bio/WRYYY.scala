@@ -402,6 +402,30 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   final def flatten[E1 >: E, B](implicit ev: A <:< WRYYY[E1, B]): WRYYY[E1, B] =
     flatMap(a => a)
 
+  /** Returns a new task that upon evaluation will execute the given
+    * function for the generated element, transforming the source into
+    * a `Task[Unit]`.
+    *
+    * Similar in spirit with normal [[foreach]], but lazy, as
+    * obviously nothing gets executed at this point.
+    */
+  final def foreachL(f: A => Unit): WRYYY[E, Unit] =
+    this.map { a =>
+      f(a); ()
+    }
+
+  /** Triggers the evaluation of the source, executing the given
+    * function for the generated element.
+    *
+    * The application of this function has strict behavior, as the
+    * task is immediately executed.
+    *
+    * Exceptions in `f` are reported using provided (implicit) Scheduler
+    */
+  @UnsafeBecauseImpure
+  final def foreach(f: A => Unit)(implicit s: Scheduler): Unit =
+    runToFuture.foreach(f)
+
   /** Returns a new `Task` that applies the mapping function to
     * the element emitted by the source.
     *
@@ -790,6 +814,38 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   final def >>[E1 >: E, B](tb: => WRYYY[E1, B]): WRYYY[E1, B] =
     this.flatMap(_ => tb)
+
+  /** Introduces an asynchronous boundary at the current stage in the
+    * asynchronous processing pipeline.
+    *
+    * Consider the following example:
+    *
+    * {{{
+    *   import monix.execution.Scheduler
+    *   val io = Scheduler.io()
+    *
+    *   val source = Task(1).executeOn(io).map(_ + 1)
+    * }}}
+    *
+    * That task is being forced to execute on the `io` scheduler,
+    * including the `map` transformation that follows after
+    * `executeOn`. But what if we want to jump with the execution
+    * run-loop on the default scheduler for the following
+    * transformations?
+    *
+    * Then we can do:
+    *
+    * {{{
+    *   source.asyncBoundary.map(_ + 2)
+    * }}}
+    *
+    * In this sample, whatever gets evaluated by the `source` will
+    * happen on the `io` scheduler, however the `asyncBoundary` call
+    * will make all subsequent operations to happen on the default
+    * scheduler.
+    */
+  final def asyncBoundary: WRYYY[E, A] =
+    flatMap(a => WRYYY.shift.map(_ => a))
 
   /** Returns a task that treats the source task as the acquisition of a resource,
     * which is then exploited by the `use` function and then `released`.
@@ -1216,6 +1272,51 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B] =
     this.asInstanceOf[UIO[Try[B]]].flatMap(fromTry)
 
+  /** Returns a new task that mirrors the source task for normal termination,
+    * but that triggers the given error on cancellation.
+    *
+    * Normally tasks that are cancelled become non-terminating.
+    * Here's an example of a cancelable task:
+    *
+    * {{{
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   val tenSecs = Task.sleep(10.seconds)
+    *   val task1 = tenSecs.start.flatMap { fa =>
+    *     // Triggering pure cancellation, then trying to get its result
+    *     fa.cancel.flatMap(_ => tenSecs)
+    *   }
+    *
+    *   task1.timeout(10.seconds).runToFuture
+    *   //=> throws TimeoutException
+    * }}}
+    *
+    * In general you can expect cancelable tasks to become non-terminating on
+    * cancellation.
+    *
+    * This `onCancelRaiseError` operator transforms a task that would yield
+    * [[Task.never]] on cancellation into one that yields [[Task.raiseError]].
+    *
+    * Example:
+    * {{{
+    *   import java.util.concurrent.CancellationException
+    *
+    *   val anotherTenSecs = Task.sleep(10.seconds)
+    *     .onCancelRaiseError(new CancellationException)
+    *
+    *   val task2 = anotherTenSecs.start.flatMap { fa =>
+    *     // Triggering pure cancellation, then trying to get its result
+    *     fa.cancel.flatMap(_ => anotherTenSecs)
+    *   }
+    *
+    *   task2.runToFuture
+    *   // => CancellationException
+    * }}}
+    */
+  final def onCancelRaiseError[E1 >: E](e: E1): WRYYY[E1, A] =
+    TaskCancellation.raiseError(this, e)
+
   /** Creates a new task that will try recovering from an error by
     * matching it with another task using the given partial function.
     *
@@ -1350,6 +1451,10 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   final def uncancelable: WRYYY[E, A] =
     TaskCancellation.uncancelable(this)
+
+  // TODO: scaladoc, name
+  final def orFatal(implicit E: E <:< Throwable): UIO[A] =
+    onErrorHandleWith(ex => WRYYY.raiseFatalError(E(ex)))
 }
 
 object WRYYY extends TaskInstancesLevel0 {
@@ -1913,7 +2018,6 @@ object WRYYY extends TaskInstancesLevel0 {
   private val nowConstructor: Any => UIO[Nothing] =
     ((a: Any) => new Now(a)).asInstanceOf[Any => UIO[Nothing]]
 
-
   private def raiseConstructor[E]: E => WRYYY[E, Nothing] =
     raiseConstructorRef.asInstanceOf[E => WRYYY[E, Nothing]]
 
@@ -1923,8 +2027,10 @@ object WRYYY extends TaskInstancesLevel0 {
 
   /** Used as optimization by [[WRYYY.failed]]. */
   private object Failed extends StackFrame[Any, Any, UIO[Any]] {
+
     def apply(a: Any): UIO[Any] =
       FatalError(new NoSuchElementException("failed"))
+
     def recover(e: Any): UIO[Any] =
       Now(e)
   }

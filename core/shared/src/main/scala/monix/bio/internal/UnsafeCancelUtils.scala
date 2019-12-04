@@ -82,9 +82,7 @@ private[bio] object UnsafeCancelUtils {
       case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
-        // TODO: handle error in cancel as fatal error
-        WRYYY.suspend(WRYYY.pure(ref.cancel()))
-//        WRYYY.delay(ref.cancel())
+        WRYYY.delay(ref.cancel()).orFatal
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -152,7 +150,6 @@ private[bio] object UnsafeCancelUtils {
           case Nil =>
             WRYYY.unit
           case first :: rest =>
-            println(s"normal errors: $errors")
             // TODO: do a composite error, handle fatalErrors
             WRYYY.raiseError(first)
 //            WRYYY.raiseError(Platform.composeErrors(first, rest: _*))

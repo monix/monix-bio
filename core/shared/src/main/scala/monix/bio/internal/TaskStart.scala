@@ -31,7 +31,7 @@ private[bio] object TaskStart {
   def forked[E, A](fa: WRYYY[E, A]): UIO[Fiber[E, A]] =
     fa match {
       // There's no point in evaluating strict stuff
-      case WRYYY.Now(_) | WRYYY.Error(_) =>
+      case WRYYY.Now(_) | WRYYY.Error(_) | WRYYY.FatalError(_) =>
         WRYYY.Now(Fiber(fa, WRYYY.unit))
       case _ =>
         Async[Nothing, Fiber[E, A]](
