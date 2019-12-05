@@ -19,15 +19,24 @@ package monix.bio
 
 import cats.Parallel
 import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
-import monix.bio.instances.{CatsBaseForTask, CatsConcurrentEffectForTask, CatsConcurrentForTask, CatsParallelForTask, Newtype2}
+import monix.bio.instances.{
+  CatsBaseForTask,
+  CatsConcurrentEffectForTask,
+  CatsConcurrentForTask,
+  CatsParallelForTask,
+  Newtype2
+}
+import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.bio.internal._
+import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
+import monix.execution.compat.BuildFrom
+import monix.bio.compat.internal.newBuilder
 import monix.execution.internal.Platform
 import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
-
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, FiniteDuration, TimeUnit}
@@ -425,6 +434,23 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   @UnsafeBecauseImpure
   final def foreach(f: A => Unit)(implicit s: Scheduler): Unit =
     runToFuture.foreach(f)
+
+  /** Returns a new `Task` that repeatedly executes the source as long
+    * as it continues to succeed. It never produces a terminal value.
+    *
+    * Example:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   Task.eval(println("Tick!"))
+    *     .delayExecution(1.second)
+    *     .loopForever
+    * }}}
+    *
+    */
+  final def loopForever: WRYYY[E, Nothing] =
+    flatMap(_ => this.loopForever)
 
   /** Returns a new `Task` that applies the mapping function to
     * the element emitted by the source.
@@ -1747,6 +1773,121 @@ object WRYYY extends TaskInstancesLevel0 {
   def shift(ec: ExecutionContext): UIO[Unit] =
     TaskShift(ec)
 
+  /** Given a `Iterable` of tasks, transforms it to a task signaling
+    * the collection, executing the tasks one by one and gathering their
+    * results in the same collection.
+    *
+    * This operation will execute the tasks one by one, in order, which means that
+    * both effects and results will be ordered. See [[gather]] and [[gatherUnordered]]
+    * for unordered results or effects, and thus potential of running in parallel.
+    *
+    *  It's a simple version of [[traverse]].
+    */
+  def sequence[E, A, M[X] <: Iterable[X]](in: M[WRYYY[E, A]])(
+    implicit bf: BuildFrom[M[WRYYY[E, A]], A, M[A]]): WRYYY[E, M[A]] =
+    TaskSequence.list(in)(bf)
+
+  /** Given a `Iterable[A]` and a function `A => Task[B]`, sequentially
+    * apply the function to each element of the collection and gather their
+    * results in the same collection.
+    *
+    *  It's a generalized version of [[sequence]].
+    */
+  def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => WRYYY[E, B])(
+    implicit bf: BuildFrom[M[A], B, M[B]]): WRYYY[E, M[B]] =
+    TaskSequence.traverse(in, f)(bf)
+
+  /** Executes the given sequence of tasks in parallel, non-deterministically
+    * gathering their results, returning a task that will signal the sequence
+    * of results once all tasks are finished.
+    *
+    * This function is the nondeterministic analogue of `sequence` and should
+    * behave identically to `sequence` so long as there is no interaction between
+    * the effects being gathered. However, unlike `sequence`, which decides on
+    * a total order of effects, the effects in a `gather` are unordered with
+    * respect to each other, the tasks being execute in parallel, not in sequence.
+    *
+    * Although the effects are unordered, we ensure the order of results
+    * matches the order of the input sequence. Also see [[gatherUnordered]]
+    * for the more efficient alternative.
+    *
+    * Example:
+    * {{{
+    *   val tasks = List(Task(1 + 1), Task(2 + 2), Task(3 + 3))
+    *
+    *   // Yields 2, 4, 6
+    *   Task.gather(tasks)
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * @see [[gatherN]] for a version that limits parallelism.
+    */
+  def gather[E, A, M[X] <: Iterable[X]](in: M[WRYYY[E, A]])(
+    implicit bf: BuildFrom[M[WRYYY[E, A]], A, M[A]]): WRYYY[E, M[A]] =
+    TaskGather[E, A, M](in, () => newBuilder(bf, in))
+
+  /** Executes the given sequence of tasks in parallel, non-deterministically
+    * gathering their results, returning a task that will signal the sequence
+    * of results once all tasks are finished.
+    *
+    * Implementation ensure there are at most `n` (= `parallelism` parameter) tasks
+    * running concurrently and the results are returned in order.
+    *
+    * Example:
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   val tasks = List(
+    *     Task(1 + 1).delayExecution(1.second),
+    *     Task(2 + 2).delayExecution(2.second),
+    *     Task(3 + 3).delayExecution(3.second),
+    *     Task(4 + 4).delayExecution(4.second)
+    *    )
+    *
+    *   // Yields 2, 4, 6, 8 after around 6 seconds
+    *   Task.gatherN(2)(tasks)
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * @see [[gather]] for a version that does not limit parallelism.
+    */
+  def gatherN[E, A](parallelism: Int)(in: Iterable[WRYYY[E, A]]): WRYYY[E, List[A]] =
+    TaskGatherN[E, A](parallelism, in)
+
+  /** Processes the given collection of tasks in parallel and
+    * nondeterministically gather the results without keeping the original
+    * ordering of the given tasks.
+    *
+    * This function is similar to [[gather]], but neither the effects nor the
+    * results will be ordered. Useful when you don't need ordering because:
+    *
+    *  - it has non-blocking behavior (but not wait-free)
+    *  - it can be more efficient (compared with [[gather]]), but not
+    *    necessarily (if you care about performance, then test)
+    *
+    * Example:
+    * {{{
+    *   val tasks = List(Task(1 + 1), Task(2 + 2), Task(3 + 3))
+    *
+    *   // Yields 2, 4, 6 (but order is NOT guaranteed)
+    *   Task.gatherUnordered(tasks)
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * @param in is a list of tasks to execute
+    */
+  def gatherUnordered[E, A](in: Iterable[WRYYY[E, A]]): WRYYY[E, List[A]] =
+    TaskGatherUnordered(in)
+
   /** Yields a task that on evaluation will process the given tasks
     * in parallel, then apply the given mapping function on their results.
     *
@@ -1908,21 +2049,120 @@ object WRYYY extends TaskInstancesLevel0 {
       localContextPropagation = Platform.localContextPropagation
     )
 
-  // TODO: add runloop optimizations
-
   /** [[Task]] state describing an immediate synchronous value. */
-  private[bio] final case class Now[+A](value: A) extends WRYYY[Nothing, A]
+  private[bio] final case class Now[+A](value: A) extends WRYYY[Nothing, A] {
 
-  // TODO: add runloop optimizations
+    // Optimization to avoid the run-loop
+    override def runAsyncOptF[E](
+      cb: Either[E, A] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): CancelToken[WRYYY[E, ?]] = {
+      if (s.executionModel != AlwaysAsyncExecution) {
+        Callback.callSuccess(cb, value)
+        WRYYY.unit
+      } else {
+        super.runAsyncOptF(cb)(s, opts)
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runToFutureOpt(implicit s: Scheduler, opts: Options): CancelableFuture[A] = {
+      CancelableFuture.successful(value)
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncOpt(cb: Either[Nothing, A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      if (s.executionModel != AlwaysAsyncExecution) {
+        Callback.callSuccess(cb, value)
+        Cancelable.empty
+      } else {
+        super.runAsyncOpt(cb)(s, opts)
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncUncancelableOpt(cb: Either[Nothing, A] => Unit)(
+      implicit s: Scheduler,
+      opts: Options
+    ): Unit = {
+      if (s.executionModel != AlwaysAsyncExecution)
+        Callback.callSuccess(cb, value)
+      else
+        super.runAsyncUncancelableOpt(cb)(s, opts)
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncAndForgetOpt(implicit s: Scheduler, opts: Options): Unit =
+      ()
+  }
 
   /** [[Task]] state describing an immediate exception. */
-  private[bio] final case class Error[E](e: E) extends WRYYY[E, Nothing]
+  private[bio] final case class Error[E](e: E) extends WRYYY[E, Nothing] {
+
+    // Optimization to avoid the run-loop
+    override def runAsyncOptF[E1 >: E](
+      cb: Either[E1, Nothing] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): CancelToken[WRYYY[E1, ?]] = {
+      if (s.executionModel != AlwaysAsyncExecution) {
+        // todo: double check
+        Callback.callError(cb, e)
+        WRYYY.unit
+      } else {
+        super.runAsyncOptF(cb)(s, opts)
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runToFutureOpt(implicit s: Scheduler, opts: Options): CancelableFuture[Nothing] = {
+      e match {
+        case th: Throwable => CancelableFuture.failed(th)
+        case _ => CancelableFuture.failed(WrappedException(e))
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncOpt(cb: Either[E, Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      if (s.executionModel != AlwaysAsyncExecution) {
+        Callback.callError(cb, e)
+        Cancelable.empty
+      } else {
+        super.runAsyncOpt(cb)(s, opts)
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncAndForgetOpt(implicit s: Scheduler, opts: Options): Unit = {
+      e match {
+        case th: Throwable => s.reportFailure(th)
+        case _ => s.reportFailure(WrappedException(e))
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncUncancelableOpt(cb: Either[E, Nothing] => Unit)(
+      implicit s: Scheduler,
+      opts: Options
+    ): Unit = {
+      if (s.executionModel != AlwaysAsyncExecution)
+        Callback.callError(cb, e)
+      else
+        super.runAsyncUncancelableOpt(cb)(s, opts)
+    }
+  }
+
+  // TODO: revise FatalError optimizations
 
   /** [[Task]] state describing an immediate exception. */
-  private[bio] final case class FatalError(e: Throwable) extends WRYYY[Nothing, Nothing]
+  private[bio] final case class FatalError(e: Throwable) extends WRYYY[Nothing, Nothing] {
+
+    // Optimization to avoid the run-loop
+    override def runToFutureOpt(implicit s: Scheduler, opts: Options): CancelableFuture[Nothing] =
+      CancelableFuture.failed(e)
+
+    // Optimization to avoid the run-loop
+    override def runAsyncAndForgetOpt(implicit s: Scheduler, opts: Options): Unit =
+      s.reportFailure(e)
+  }
 
   /** [[WRYYY]] state describing an non-strict synchronous value. */
-  private[bio] final case class Eval[+A](thunk: () => A) extends WRYYY[Throwable, A]
+  private[bio] final case class Eval[+E, +A](thunk: () => A) extends WRYYY[E, A]
 
   /** Internal state, the result of [[WRYYY.defer]] */
   private[bio] final case class Suspend[+E, +A](thunk: () => WRYYY[E, A]) extends WRYYY[E, A]

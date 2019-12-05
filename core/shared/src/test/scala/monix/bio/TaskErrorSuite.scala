@@ -467,7 +467,6 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
-
   // TODO: should it materialize all errors?
 //  test("Task.materialize on failing flatMap") { implicit s =>
 //    val ex = DummyException("dummy")

@@ -15,25 +15,16 @@
  * limitations under the License.
  */
 
-package monix.bio
+package monix.bio.compat
 
-object UIO {
+import scala.collection.mutable
+import monix.execution.compat.BuildFrom
 
-  def apply[A](a: => A): UIO[A] =
-    WRYYY.Eval(a _)
+private[monix] object internal {
 
-  def eval[A](a: => A): UIO[A] =
-    WRYYY.Eval(a _)
+  type IterableOnce[+X] = scala.collection.IterableOnce[X]
+  def toIterator[X](i: IterableOnce[X]): Iterator[X] = i.iterator
+  def hasDefiniteSize[X](i: IterableOnce[X]): Boolean = i.knownSize >= 0
 
-  def evalAsync[A](a: => A): UIO[A] =
-    WRYYY.Eval(a _).executeAsync
-
-  def suspend[A](fa: => UIO[A]): UIO[A] =
-    WRYYY.suspend(fa)
-
-  val never: UIO[Nothing] =
-    WRYYY.never
-
-  val unit: UIO[Unit] =
-    WRYYY.unit
+  def newBuilder[From, A, C](bf: BuildFrom[From, A, C], from: From): mutable.Builder[A, C] = bf.newBuilder(from)
 }

@@ -68,7 +68,7 @@ trait Fiber[E, A] extends cats.effect.Fiber[WRYYY[E, ?], A] {
     * of the underlying fiber is already complete, then there's nothing
     * to cancel.
     */
-  def cancel: CancelToken[WRYYY[E, ?]]
+  def cancel: CancelToken[WRYYY[E, ?]] // TODO: figure out a way to return CancelToken[UIO]
 
   /** Returns a new task that will await for the completion of the
     * underlying fiber, (asynchronously) blocking the current run-loop

@@ -313,7 +313,7 @@ private[bio] object TaskRunLoop {
             } catch {
               case ex if NonFatal(ex) =>
                 // Eval and Suspend are allowed to catch errors
-              current = Error(ex)
+                current = Error(ex)
             }
 
           case Error(error) =>

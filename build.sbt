@@ -1,3 +1,4 @@
+
 val monixVersion = "3.1.0"
 val minitestVersion = "2.7.0"
 val catsVersion = "2.0.0"
@@ -23,8 +24,27 @@ lazy val coreJS = project.in(file("core/js"))
   .settings(coreCommon)
   .enablePlugins(AutomateHeaderPlugin)
 
+lazy val benchmarks = project.in(file("benchmarks"))
+  .dependsOn(coreJVM)
+  .enablePlugins(JmhPlugin)
+  .enablePlugins(AutomateHeaderPlugin)
+  .settings(coreCommon)
+  .settings(doNotPublishArtifact)
+  .settings(
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "1.0.0-RC17",
+      "io.monix" %% "monix-eval" % "3.1.0"
+    ))
+
 lazy val contributors = Seq(
   "Avasil" -> "Piotr Gawrys"
+)
+
+lazy val doNotPublishArtifact = Seq(
+  publishArtifact := false,
+  publishArtifact in (Compile, packageDoc) := false,
+  publishArtifact in (Compile, packageSrc) := false,
+  publishArtifact in (Compile, packageBin) := false
 )
 
 def priorTo2_13(scalaVersion: String): Boolean =
