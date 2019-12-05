@@ -38,7 +38,7 @@ import scala.concurrent.duration.Duration
   *
   *     Or to specify custom values use below format:
   *
-  *     benchmarks/jmh:run -i 20 -wi 20 -f 4 -t 2 *.IOShallowAttemptBenchmark
+  *     benchmarks/jmh:run -i 20 -wi 20 -f 4 -t 2 *.TaskSequenceBenchmark
   *
   * Please note that benchmarks should be usually executed at least in
   * 10 iterations (as a rule of thumb), but more is better.
