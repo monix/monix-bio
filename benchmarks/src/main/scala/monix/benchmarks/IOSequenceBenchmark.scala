@@ -32,13 +32,13 @@ import scala.concurrent.duration.Duration
 
 /** To run the benchmark from within SBT:
   *
-  *     benchmarks/jmh:run .*.TaskSequenceBenchmark
+  *     benchmarks/jmh:run .*.IOSequenceBenchmark
   *     The above test will take default values as "10 iterations", "10 warm-up iterations",
   *     "2 forks", "1 thread".
   *
   *     Or to specify custom values use below format:
   *
-  *     benchmarks/jmh:run -i 20 -wi 20 -f 4 -t 2 *.TaskSequenceBenchmark
+  *     benchmarks/jmh:run -i 20 -wi 20 -f 4 -t 2 *.IOSequenceBenchmark
   *
   * Please note that benchmarks should be usually executed at least in
   * 10 iterations (as a rule of thumb), but more is better.
@@ -50,7 +50,7 @@ import scala.concurrent.duration.Duration
 @State(Scope.Thread)
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
-class TaskSequenceBenchmark {
+class IOSequenceBenchmark {
   @Param(Array("100", "1000"))
   var count: Int = _
 
