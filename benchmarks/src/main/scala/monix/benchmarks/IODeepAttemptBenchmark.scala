@@ -56,8 +56,8 @@ class IODeepAttemptBenchmark {
     import scala.concurrent.duration.Duration.Inf
 
     def descend(n: Int): Future[BigInt] =
-      if (n == depth) Future.failed(new Exception("Oh noes!"))
-      else if (n == halfway) descend(n + 1).transform(_ => 50, identity)
+      if (n == depth) Future.failed(new Error("Oh noes!"))
+      else if (n == halfway) descend(n + 1).recover { case _ => 50 }
       else descend(n + 1).map(_ + n)
 
     Await.result(descend(0), Inf)
