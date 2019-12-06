@@ -36,8 +36,8 @@ import scala.concurrent.Await
   * Please note that benchmarks should be usually executed at least in
   * 10 iterations (as a rule of thumb), but more is better.
   */
-@Measurement(iterations = 10, time = 3, timeUnit = TimeUnit.SECONDS)
-@Warmup(iterations = 10, time = 3, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 15, time = 5, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
 @Fork(2)
 @Threads(1)
 @State(Scope.Thread)
