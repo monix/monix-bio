@@ -17,9 +17,10 @@
 
 package monix.bio.internal
 
+import java.util.concurrent.RejectedExecutionException
+
 import monix.bio.UIO
 import monix.bio.WRYYY.{Async, Context}
-import monix.execution.Callback
 
 import scala.concurrent.duration.Duration
 
@@ -40,21 +41,21 @@ private[bio] object TaskSleep {
   // a full async boundary!
   private final class Register(timespan: Duration) extends ForkedRegister[Nothing, Unit] {
 
-    def apply(ctx: Context[Nothing], cb: Callback[Nothing, Unit]): Unit = {
+    def apply(ctx: Context[Nothing], cb: BiCallback[Nothing, Unit]): Unit = {
       implicit val s = ctx.scheduler
       val c = TaskConnectionRef[Nothing]()
       ctx.connection.push(c.cancel)
 
-//      try {
-      c := ctx.scheduler.scheduleOnce(
-        timespan.length,
-        timespan.unit,
-        new SleepRunnable(ctx, cb)
-      )
-//      } catch {
-//        case e: RejectedExecutionException =>
-//          Callback.signalErrorTrampolined(cb, e)
-//      }
+      try {
+        c := ctx.scheduler.scheduleOnce(
+          timespan.length,
+          timespan.unit,
+          new SleepRunnable(ctx, cb)
+        )
+      } catch {
+        case e: RejectedExecutionException =>
+          cb.onFatalError(e)
+      }
     }
   }
 
@@ -63,7 +64,7 @@ private[bio] object TaskSleep {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class SleepRunnable(ctx: Context[Nothing], cb: Callback[Nothing, Unit]) extends Runnable {
+  private final class SleepRunnable(ctx: Context[Nothing], cb: BiCallback[Nothing, Unit]) extends Runnable {
 
     def run(): Unit = {
       ctx.connection.pop()

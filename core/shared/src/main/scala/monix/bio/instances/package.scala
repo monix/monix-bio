@@ -17,22 +17,13 @@
 
 package monix.bio
 
-import monix.bio.WRYYY.Context
+import cats.effect.ExitCase
 
-package object internal {
-
-  /** Handy alias for building `Task.Async` nodes. */
-  private[bio] type Start[E, A] = (Context[E], BiCallback[E, A]) => Unit
-
-  /** Internal API: A run-loop frame index is a number representing the current
-    * run-loop cycle, being incremented whenever a `flatMap` evaluation happens.
-    *
-    * It gets used for automatically forcing asynchronous boundaries, according to the
-    * [[monix.execution.ExecutionModel ExecutionModel]]
-    * injected by the [[monix.execution.Scheduler Scheduler]] when
-    * the task gets evaluated with `runAsync`.
-    *
-    * @see [[FrameIndexRef]]
-    */
-  private[bio] type FrameIndex = Int
+package object instances {
+  @inline private[instances] final def exitCaseFlattenEither(exit: ExitCase[Either[Throwable, Throwable]]): ExitCase[Throwable] =
+    exit match {
+      case ExitCase.Error(e) => ExitCase.Error(e.fold(identity, identity))
+      case ExitCase.Completed => ExitCase.Completed
+      case ExitCase.Canceled => ExitCase.Canceled
+    }
 }

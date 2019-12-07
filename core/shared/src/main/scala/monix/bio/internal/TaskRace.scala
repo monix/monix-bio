@@ -17,7 +17,6 @@
 
 package monix.bio.internal
 
-import monix.execution.Callback
 import monix.bio.WRYYY
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.atomic.Atomic
@@ -41,7 +40,7 @@ private[bio] object TaskRace {
   // a full async boundary!
   private final class Register[E, A, B](fa: WRYYY[E, A], fb: WRYYY[E, B]) extends ForkedRegister[E, Either[A, B]] {
 
-    def apply(context: WRYYY.Context[E], cb: Callback[E, Either[A, B]]): Unit = {
+    def apply(context: WRYYY.Context[E], cb: BiCallback[E, Either[A, B]]): Unit = {
       implicit val sc = context.scheduler
       val conn = context.connection
 
@@ -57,7 +56,7 @@ private[bio] object TaskRace {
       WRYYY.unsafeStartEnsureAsync(
         fa,
         contextA,
-        new Callback[E, A] {
+        new BiCallback[E, A] {
           def onSuccess(valueA: A): Unit =
             if (isActive.getAndSet(false)) {
               connB.cancel.runAsyncAndForget
@@ -71,7 +70,16 @@ private[bio] object TaskRace {
               connB.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              sc.reportFailure(WrappedException(ex))
+              sc.reportFailure(WrappedException.wrap(ex))
+            }
+
+          override def onFatalError(e: Throwable): Unit =
+            if (isActive.getAndSet(false)) {
+              conn.pop()
+              connB.cancel.runAsyncAndForget
+              cb.onFatalError(e)
+            } else {
+              sc.reportFailure(e)
             }
         }
       )
@@ -80,7 +88,7 @@ private[bio] object TaskRace {
       WRYYY.unsafeStartEnsureAsync(
         fb,
         contextB,
-        new Callback[E, B] {
+        new BiCallback[E, B] {
           def onSuccess(valueB: B): Unit =
             if (isActive.getAndSet(false)) {
               connA.cancel.runAsyncAndForget
@@ -94,7 +102,16 @@ private[bio] object TaskRace {
               connA.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              sc.reportFailure(WrappedException(ex))
+              sc.reportFailure(WrappedException.wrap(ex))
+            }
+
+          override def onFatalError(e: Throwable): Unit =
+            if (isActive.getAndSet(false)) {
+              conn.pop()
+              connA.cancel.runAsyncAndForget
+              cb.onFatalError(e)
+            } else {
+              sc.reportFailure(e)
             }
         }
       )

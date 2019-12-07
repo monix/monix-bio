@@ -339,29 +339,29 @@ object TaskConnectionSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-//  test("throwing multiple errors in Tasks on cancel all") { implicit s =>
-//    val dummy1 = DummyException("dummy1")
-//    val task1 = WRYYY.raiseError(dummy1)
-//    val dummy2 = DummyException("dummy2")
-//    val task2 = WRYYY.raiseError(dummy2)
-//
-//    val c = TaskConnection[Throwable]()
-//    c.push(task1)
-//    c.push(task2)
-//    c.cancel.runAsyncAndForget; s.tick()
-//
-//    if (Platform.isJVM) {
-//      assertEquals(s.state.lastReportedError, dummy2)
-//      assertEquals(dummy2.getSuppressed.toList, List(dummy1))
-//    } else {
-//      s.state.lastReportedError match {
-//        case CompositeException(errors) =>
-//          assertEquals(errors, List(dummy2, dummy1))
-//        case _ =>
-//          fail(s"Unexpected: ${s.state.lastReportedError}")
-//      }
-//    }
-//  }
+  test("throwing multiple errors in Tasks on cancel all") { implicit s =>
+    val dummy1 = DummyException("dummy1")
+    val task1 = WRYYY.raiseError(dummy1)
+    val dummy2 = DummyException("dummy2")
+    val task2 = WRYYY.raiseError(dummy2)
+
+    val c = TaskConnection[Throwable]()
+    c.push(task1)
+    c.push(task2)
+    c.cancel.runAsyncAndForget; s.tick()
+
+    if (Platform.isJVM) {
+      assertEquals(s.state.lastReportedError, dummy2)
+      assertEquals(dummy2.getSuppressed.toList, List(dummy1))
+    } else {
+      s.state.lastReportedError match {
+        case CompositeException(errors) =>
+          assertEquals(errors, List(dummy2, dummy1))
+        case _ =>
+          fail(s"Unexpected: ${s.state.lastReportedError}")
+      }
+    }
+  }
 
   test("throwing error in Task after cancel") { implicit s =>
     val c = TaskConnection[Throwable]()
@@ -374,40 +374,40 @@ object TaskConnectionSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-//  test("throwing error in Cancelable on cancel all") { implicit s =>
-//    val dummy = DummyException("dummy")
-//    val task = Cancelable(() => throw dummy)
-//
-//    val c = TaskConnection[Throwable]()
-//    c.push(task)
-//    c.cancel.runAsyncAndForget; s.tick()
-//
-//    assertEquals(s.state.lastReportedError, dummy)
-//  }
-//
-//  test("throwing multiple errors in Cancelables on cancel all") { implicit s =>
-//    val dummy1 = DummyException("dummy1")
-//    val task1 = Cancelable(() => throw dummy1)
-//    val dummy2 = DummyException("dummy2")
-//    val task2 = Cancelable(() => throw dummy2)
-//
-//    val c = TaskConnection()
-//    c.push(task1)
-//    c.push(task2)
-//    c.cancel.runAsyncAndForget; s.tick()
-//
-//    if (Platform.isJVM) {
-//      assertEquals(s.state.lastReportedError, dummy2)
-//      assertEquals(dummy2.getSuppressed.toList, List(dummy1))
-//    } else {
-//      s.state.lastReportedError match {
-//        case CompositeException(errors) =>
-//          assertEquals(errors, List(dummy2, dummy1))
-//        case _ =>
-//          fail(s"Unexpected: ${s.state.lastReportedError}")
-//      }
-//    }
-//  }
+  test("throwing error in Cancelable on cancel all") { implicit s =>
+    val dummy = DummyException("dummy")
+    val task = Cancelable(() => throw dummy)
+
+    val c = TaskConnection[Throwable]()
+    c.push(task)
+    c.cancel.runAsyncAndForget; s.tick()
+
+    assertEquals(s.state.lastReportedError, dummy)
+  }
+
+  test("throwing multiple errors in Cancelables on cancel all") { implicit s =>
+    val dummy1 = DummyException("dummy1")
+    val task1 = Cancelable(() => throw dummy1)
+    val dummy2 = DummyException("dummy2")
+    val task2 = Cancelable(() => throw dummy2)
+
+    val c = TaskConnection()
+    c.push(task1)
+    c.push(task2)
+    c.cancel.runAsyncAndForget; s.tick()
+
+    if (Platform.isJVM) {
+      assertEquals(s.state.lastReportedError, dummy2)
+      assertEquals(dummy2.getSuppressed.toList, List(dummy1))
+    } else {
+      s.state.lastReportedError match {
+        case CompositeException(errors) =>
+          assertEquals(errors, List(dummy2, dummy1))
+        case _ =>
+          fail(s"Unexpected: ${s.state.lastReportedError}")
+      }
+    }
+  }
 
   test("throwing error in Cancelable after cancel") { implicit s =>
     val c = TaskConnection()

@@ -39,7 +39,7 @@ object TaskTraverseSuite extends BaseTestSuite {
     s.tick(1.second)
     assertEquals(f.value, None)
     s.tick(3.second)
-    assertEquals(f.value, Some(Success(Seq(2, 3, 4))))
+    assertEquals(f.value, Some(Success(Right(Seq(2, 3, 4)))))
   }
 
   test("Task.traverse should onError if one of the tasks terminates in error") { implicit s =>
@@ -59,7 +59,7 @@ object TaskTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     // Second
     s.tick(2.second)
-    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(f.value,  Some(Success(Left(ex))))
   }
 
   test("Task.traverse should be canceled") { implicit s =>

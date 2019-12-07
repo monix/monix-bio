@@ -17,9 +17,8 @@
 
 package monix.bio.internal
 
-import monix.execution.Callback
-import monix.bio.WRYYY.{Async, Context, ContextSwitch, FlatMap, Map}
 import monix.bio.WRYYY
+import monix.bio.WRYYY.{Async, Context, ContextSwitch, FlatMap, Map}
 
 import scala.annotation.tailrec
 import scala.runtime.AbstractFunction2
@@ -33,9 +32,9 @@ import scala.runtime.AbstractFunction2
   * is that the injected `Callback` MUST BE called after a full
   * asynchronous boundary.
   */
-private[bio] abstract class ForkedRegister[E, A] extends AbstractFunction2[Context[E], Callback[E, A], Unit] {
+private[bio] abstract class ForkedRegister[E, A] extends AbstractFunction2[Context[E], BiCallback[E, A], Unit] {
 
-  def apply(context: Context[E], cb: Callback[E, A]): Unit
+  def apply(context: Context[E], cb: BiCallback[E, A]): Unit
 }
 
 private[bio] object ForkedRegister {

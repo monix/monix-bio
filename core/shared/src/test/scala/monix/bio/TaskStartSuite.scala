@@ -50,7 +50,7 @@ object TaskStartSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
 //  testAsync("task.start shares Local.Context with fibers") { _ =>
@@ -82,7 +82,7 @@ object TaskStartSuite extends BaseTestSuite {
         Task.unit
 
     val f = loop(count).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(())))
+    assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("task.start executes asynchronously") { implicit sc =>
@@ -91,6 +91,6 @@ object TaskStartSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     sc.tick()
-    assertEquals(f.value, Some(Success(2)))
+    assertEquals(f.value, Some(Success(Right(2))))
   }
 }

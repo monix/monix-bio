@@ -84,14 +84,26 @@ private[bio] object TaskGatherUnordered {
         mainConn.pop().runAsyncAndForget
         finalCallback.onError(ex)
       } else {
-        ex match {
-          case th: Throwable => s.reportFailure(th)
-          case _ => s.reportFailure(WrappedException(ex))
-        }
+        s.reportFailure(WrappedException.wrap(ex))
       }
     }
 
-    def apply(context: Context[E], finalCallback: Callback[E, List[A]]): Unit = {
+    def reportFatalError(
+      stateRef: AtomicAny[State[A]],
+      mainConn: TaskConnection[E],
+      ex: Throwable,
+      finalCallback: BiCallback[E, List[A]])(implicit s: Scheduler): Unit = {
+
+      val currentState = stateRef.getAndSet(State.Complete)
+      if (currentState != State.Complete) {
+        mainConn.pop().runAsyncAndForget
+        finalCallback.onFatalError(ex)
+      } else {
+        s.reportFailure(ex)
+      }
+    }
+
+    def apply(context: Context[E], finalCallback: BiCallback[E, List[A]]): Unit = {
       @tailrec def activate(
         stateRef: AtomicAny[State[A]],
         count: Int,
@@ -146,7 +158,7 @@ private[bio] object TaskGatherUnordered {
           WRYYY.unsafeStartEnsureAsync(
             task,
             childCtx,
-            new Callback[E, A] {
+            new BiCallback[E, A] {
               @tailrec
               def onSuccess(value: A): Unit = {
                 val current = stateRef.get
@@ -161,6 +173,9 @@ private[bio] object TaskGatherUnordered {
 
               def onError(ex: E): Unit =
                 reportError(stateRef, mainConn, ex, finalCallback)
+
+              override def onFatalError(e: Throwable): Unit =
+                reportFatalError(stateRef, mainConn, e, finalCallback)
             }
           )
         }

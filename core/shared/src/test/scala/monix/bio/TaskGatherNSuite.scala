@@ -48,14 +48,14 @@ object TaskGatherNSuite extends BaseTestSuite {
     val res = WRYYY.gatherN(2)(task).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(List(1, 2, 3, 4, 5, 6, 7, 8, 9))))
+    assertEquals(res.value, Some(Success(Right(List(1, 2, 3, 4, 5, 6, 7, 8, 9)))))
   }
 
   test("Task.gatherN should return empty list") { implicit s =>
     val res = WRYYY.gatherN(2)(List.empty).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(List.empty)))
+    assertEquals(res.value, Some(Success(Right(List.empty))))
   }
 
   test("Task.gatherN should handle single item") { implicit s =>
@@ -63,7 +63,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     val res = WRYYY.gatherN(2)(task).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(List(1))))
+    assertEquals(res.value, Some(Success(Right(List(1)))))
   }
 
   test("Task.gatherN should handle parallelism bigger than list") { implicit s =>
@@ -71,7 +71,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     val res = WRYYY.gatherN(10)(task).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(List(1, 2, 3, 4))))
+    assertEquals(res.value, Some(Success(Right(List(1, 2, 3, 4)))))
   }
 
   test("Task.gatherN should onError if one of the tasks terminates in error") { implicit s =>
@@ -90,7 +90,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     s.tick(2.seconds)
     assertEquals(f.value, None)
     s.tick(2.seconds)
-    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(f.value, Some(Success(Left(ex))))
   }
 
   test("Task.gatherN should be canceled") { implicit s =>
@@ -115,7 +115,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     val composite = WRYYY.gatherN(count)(tasks).map(_.sum)
     val result = composite.runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(count)))
+    assertEquals(result.value, Some(Success(Right(count))))
   }
 
   // TODO: uncomment once memoize is added

@@ -18,7 +18,6 @@
 package monix.bio.internal
 
 import monix.bio.{Task, WRYYY}
-import monix.execution.Callback
 
 import scala.util.control.NonFatal
 
@@ -39,7 +38,7 @@ private[bio] object TaskEvalAsync {
   // that this is a task that forks on evaluation
   private final class EvalAsyncRegister[A](a: () => A) extends ForkedRegister[Throwable, A] {
 
-    def apply(ctx: WRYYY.Context[Throwable], cb: Callback[Throwable, A]): Unit =
+    def apply(ctx: WRYYY.Context[Throwable], cb: BiCallback[Throwable, A]): Unit =
       ctx.scheduler.executeAsync(() => {
         ctx.frameRef.reset()
         var streamError = true

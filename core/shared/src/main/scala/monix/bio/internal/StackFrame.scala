@@ -28,6 +28,9 @@ private[bio] abstract class StackFrame[E, -A, +R] extends (A => R) { self =>
   def recover(e: E): R
 }
 
+// TODO: maybe add recoverFatal to StackFrame itself and throw when it's not possible?
+
+
 private[bio] object StackFrame {
 
   /** [[StackFrame]] used in the implementation of `redeemWith`. */
@@ -46,12 +49,17 @@ private[bio] object StackFrame {
     def recover(e: E): R = fe(e)
   }
 
-  // TODO: could it be fixed to Throwable?
-  // marker trait to distinguish between fatal and recoverable errors
-  trait FatalStackFrame[E, -A, +R] extends StackFrame[E, A, R]
+  abstract class FatalStackFrame[E, -A, +R] extends StackFrame[E, A, R] {
+    def apply(a: A): R
+    def recover(e: E): R
+    def recoverFatal(e: Throwable): R
+  }
 
-  final class FatalErrorHandler[E, -A, +R](fe: E => R, fa: A => R) extends FatalStackFrame[E, A, R] {
-    def apply(a: A): R = fa(a)
-    def recover(e: E): R = fe(e)
+  final class RedeemFatalWith[-A, +R](fe: Throwable => R, fa: A => R) extends FatalStackFrame[Throwable, A, R] {
+    override def apply(a: A): R = fa(a)
+
+    override def recover(e: Throwable): R = fe(e)
+
+    override def recoverFatal(e: Throwable): R = fe(e)
   }
 }

@@ -20,17 +20,17 @@ package monix.bio
 package internal
 
 import monix.bio.WRYYY.Context
-import monix.execution.{Callback, Scheduler}
+import monix.execution.Scheduler
 
 private[bio] object TaskDeferAction {
 
   /** Implementation for `Task.deferAction`. */
   def apply[E, A](f: Scheduler => WRYYY[E, A]): WRYYY[E, A] = {
-    val start = (context: Context[E], callback: Callback[E, A]) => {
+    val start = (context: Context[E], callback: BiCallback[E, A]) => {
       implicit val ec = context.scheduler
 //      var streamErrors = true
 
-      // TODO: what if f(ec) fails?
+      // TODO: what if f(ec) fails? Will it be handled by TaskRestartCallback?
 //      try {
       val fa = f(ec)
 //        streamErrors = false

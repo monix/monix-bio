@@ -17,7 +17,6 @@
 
 package monix.bio.internal
 
-import monix.execution.Callback
 import monix.bio.WRYYY
 import monix.bio.WRYYY.{Async, Context}
 import monix.execution.ExecutionModel
@@ -29,7 +28,7 @@ private[bio] object TaskExecuteWithModel {
     * Implementation for `Task.executeWithModel`
     */
   def apply[E, A](self: WRYYY[E, A], em: ExecutionModel): WRYYY[E, A] = {
-    val start = (context: Context[E], cb: Callback[E, A]) => {
+    val start = (context: Context[E], cb: BiCallback[E, A]) => {
       val context2 = context.withExecutionModel(em)
       val frame = context2.frameRef
 

@@ -38,19 +38,19 @@ private[bio] object TaskGatherN {
       in.head.map(List(_))
     } else {
       for {
-        error <- Deferred[Task, E].orFatal
+        error <- Deferred[Task, E].hideErrors
         queue <- ConcurrentQueue
           .withConfig[Task, (Deferred[Task, A], WRYYY[E, A])](BufferCapacity.Bounded(itemSize), ChannelType.SPMC)
-          .orFatal
-        pairs <- WRYYY.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).orFatal)
-        _ <- queue.offerMany(pairs).orFatal
+          .hideErrors
+        pairs <- WRYYY.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
+        _ <- queue.offerMany(pairs).hideErrors
         // TODO: figure out why it doesn't infer
         workers = WRYYY.gather[Nothing, Fiber[E, Nothing], List](List.fill(parallelism.min(itemSize)) {
-          queue.poll.orFatal.flatMap {
+          queue.poll.hideErrors.flatMap {
             case (p, task) =>
               task.redeemWith(
                 err => error.complete(err).attempt >> WRYYY.raiseError(err),
-                a => p.complete(a).orFatal
+                a => p.complete(a).hideErrors
               )
           }.loopForever.start
         })
@@ -60,7 +60,7 @@ private[bio] object TaskGatherN {
               error.get,
               WRYYY.sequence(pairs.map(_._1.get))
             )
-            .orFatal
+            .hideErrors
             .flatMap {
               case Left(err) =>
                 WRYYY.raiseError(err)

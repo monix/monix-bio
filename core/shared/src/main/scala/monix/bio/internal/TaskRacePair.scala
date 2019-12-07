@@ -19,7 +19,6 @@ package monix.bio
 
 package internal
 
-import monix.execution.Callback
 import monix.execution.atomic.Atomic
 
 import scala.concurrent.Promise
@@ -46,7 +45,7 @@ private[bio] object TaskRacePair {
   private final class Register[E, A, B](fa: WRYYY[E, A], fb: WRYYY[E, B])
       extends ForkedRegister[E, RaceEither[E, A, B]] {
 
-    def apply(context: WRYYY.Context[E], cb: Callback[E, RaceEither[E, A, B]]): Unit = {
+    def apply(context: WRYYY.Context[E], cb: BiCallback[E, RaceEither[E, A, B]]): Unit = {
       implicit val s = context.scheduler
       val conn = context.connection
 
@@ -65,8 +64,8 @@ private[bio] object TaskRacePair {
       WRYYY.unsafeStartEnsureAsync(
         fa,
         contextA,
-        new Callback[E, A] {
-          def onSuccess(valueA: A): Unit =
+        new BiCallback[E, A] {
+          override def onSuccess(valueA: A): Unit =
             if (isActive.getAndSet(false)) {
               val fiberB = Fiber.fromPromise(pb, connB)
               conn.pop()
@@ -75,13 +74,22 @@ private[bio] object TaskRacePair {
               pa.success(Right(valueA))
             }
 
-          def onError(ex: E): Unit =
+          override def onError(ex: E): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connB.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
               pa.success(Left(ex))
+            }
+
+          override def onFatalError(e: Throwable): Unit =
+            if (isActive.getAndSet(false)) {
+              conn.pop()
+              connB.cancel.runAsyncAndForget
+              cb.onFatalError(e)
+            } else {
+              pa.failure(e)
             }
         }
       )
@@ -90,8 +98,8 @@ private[bio] object TaskRacePair {
       WRYYY.unsafeStartEnsureAsync(
         fb,
         contextB,
-        new Callback[E, B] {
-          def onSuccess(valueB: B): Unit =
+        new BiCallback[E, B] {
+          override def onSuccess(valueB: B): Unit =
             if (isActive.getAndSet(false)) {
               val fiberA = Fiber.fromPromise(pa, connA)
               conn.pop()
@@ -100,7 +108,7 @@ private[bio] object TaskRacePair {
               pb.success(Right(valueB))
             }
 
-          def onError(ex: E): Unit =
+          override def onError(ex: E): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connA.cancel.runAsyncAndForget
@@ -108,6 +116,15 @@ private[bio] object TaskRacePair {
             } else {
               // TODO: should it be trySuccess?
               pb.success(Left(ex))
+            }
+
+          override def onFatalError(e: Throwable): Unit =
+            if (isActive.getAndSet(false)) {
+              conn.pop()
+              connA.cancel.runAsyncAndForget
+              cb.onFatalError(e)
+            } else {
+              pb.failure(e)
             }
         }
       )

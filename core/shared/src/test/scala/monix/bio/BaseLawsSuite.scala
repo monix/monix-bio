@@ -24,6 +24,7 @@ import cats.effect.{Async, IO}
 import monix.bio
 import monix.bio.internal.TaskCreate
 import monix.execution.atomic.Atomic
+import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 import monix.execution.schedulers.TestScheduler
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
@@ -50,7 +51,7 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 
   implicit def equalityTask[E, A](
     implicit
-    A: Eq[A],
+    A: Eq[Either[E, A]],
     sc: TestScheduler,
     opts: WRYYY.Options = WRYYY.defaultOptions): Eq[WRYYY[E, A]] = {
 
@@ -60,9 +61,24 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     }
   }
 
+  implicit def equalityUIO[A](
+                                   implicit
+                                   A: Eq[A],
+                                   sc: TestScheduler,
+                                   opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
+
+    new Eq[UIO[A]] {
+      def eqv(lh: UIO[A], rh: UIO[A]): Boolean =
+        equalityFuture(A, sc).eqv(
+          lh.runToFutureOpt.map(_.getOrElse(throw DummyException("UIO had error"))),
+          rh.runToFutureOpt.map(_.getOrElse(throw DummyException("UIO had error")))
+        )
+    }
+  }
+
   implicit def equalityTaskPar[E, A](
     implicit
-    A: Eq[A],
+    A: Eq[Either[E, A]],
     ec: TestScheduler,
     opts: WRYYY.Options = WRYYY.defaultOptions): Eq[WRYYY.Par[E, A]] = {
 
@@ -81,7 +97,6 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     }
 }
 
-// TODO: Gen [E, A] ?
 trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
 
   implicit def arbitraryTask[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[WRYYY[E, A]] = {

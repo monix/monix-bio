@@ -30,6 +30,7 @@ import org.typelevel.discipline.Laws
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionException, Future}
 import scala.util.{Failure, Success, Try}
+import scala.language.implicitConversions
 
 trait BaseLawsSuite extends SimpleTestSuite with Checkers with ArbitraryInstances {
 
@@ -164,6 +165,20 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
         if (x.isSuccess) optA.eqv(x.toOption, y.toOption)
         else y.isFailure
     }
+
+//  implicit def equalityEither[E: Eq, A: Eq]: Eq[Either[E, A]] =
+//    new Eq[Either[E, A]] {
+//      def eqv(x: Either[E, A], y: Either[E, A]): Boolean = (x, y) match {
+//        case (Right(a), Right(b)) => implicitly[Eq[A]].eqv(a, b)
+//        case (Left(a), Left(b)) => implicitly[Eq[E]].eqv(a, b)
+//        case _ => false
+//      }
+//    }
+//
+//  implicit val equalityNothing: Eq[Nothing] =
+//    new Eq[Nothing] {
+//      override def eqv(x: Nothing, y: Nothing): Boolean = true
+//    }
 
   implicit def cogenForThrowable: Cogen[Throwable] =
     Cogen[String].contramap(_.toString)

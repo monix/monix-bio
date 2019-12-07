@@ -35,7 +35,7 @@ object TaskGatherSuite extends BaseTestSuite {
     s.tick(2.seconds)
     assertEquals(f.value, None)
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Seq(1, 2, 3))))
+    assertEquals(f.value, Some(Success(Right(Seq(1, 2, 3)))))
   }
 
   test("Task.gather should onError if one of the tasks terminates in error") { implicit s =>
@@ -52,7 +52,7 @@ object TaskGatherSuite extends BaseTestSuite {
     s.tick()
     assertEquals(f.value, None)
     s.tick(2.seconds)
-    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(f.value, Some(Success(Left(ex))))
   }
 
   test("Task.gather should be canceled") { implicit s =>
@@ -78,7 +78,7 @@ object TaskGatherSuite extends BaseTestSuite {
     val composite = WRYYY.gather(tasks).map(_.sum)
     val result = composite.runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(count)))
+    assertEquals(result.value, Some(Success(Right(count))))
   }
 
   // TODO: uncomment once memoize is added

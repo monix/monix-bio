@@ -17,6 +17,11 @@
 
 package monix.bio
 
+import cats.effect.CancelToken
+import monix.bio.internal.{TaskCreate, TaskFromFuture}
+import monix.execution.{Callback, Scheduler}
+
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
@@ -66,4 +71,28 @@ object Task {
 
   def sleep(timespan: FiniteDuration): Task[Unit] =
     WRYYY.sleep(timespan)
+
+  def async[A](register: Callback[Throwable, A] => Unit): Task[A] =
+    TaskCreate.async(register)
+
+  def async0[A](register: (Scheduler, Callback[Throwable, A]) => Unit): Task[A] =
+    TaskCreate.async0(register)
+
+  def asyncF[A](register: Callback[Throwable, A] => Task[Unit]): Task[A] =
+    TaskCreate.asyncF(register)
+
+  def cancelable[A](register: Callback[Throwable, A] => CancelToken[Task]): Task[A] =
+    cancelable0((_, cb) => register(cb))
+
+  def cancelable0[A](register: (Scheduler, Callback[Throwable, A]) => CancelToken[Task]): Task[A] =
+    TaskCreate.cancelable0(register)
+
+  def fromFuture[A](f: Future[A]): Task[A] =
+    TaskFromFuture.strict(f)
+
+  def deferFuture[A](fa: => Future[A]): Task[A] =
+    defer(fromFuture(fa))
+
+  def deferFutureAction[A](f: Scheduler => Future[A]): Task[A] =
+    TaskFromFuture.deferAction(f)
 }

@@ -22,7 +22,7 @@ import monix.bio.WRYYY
 import monix.bio.WRYYY.{Async, Context, ContextSwitch, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
-import monix.execution.{Callback, CancelableFuture, ExecutionModel, Scheduler}
+import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
 
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
@@ -35,6 +35,14 @@ private[bio] object TaskRunLoop {
   // Wrapper to report any error type to Scheduler
   final case class WrappedException[E](e: E) extends Exception(e.toString, null, true, false)
 
+  object WrappedException {
+
+    def wrap[E](e: E): Throwable = e match {
+      case th: Throwable => th
+      case _ => new WrappedException(e)
+    }
+  }
+
   /** Starts or resumes evaluation of the run-loop from where it left
     * off. This is the complete run-loop.
     *
@@ -42,15 +50,15 @@ private[bio] object TaskRunLoop {
     * happens from [[startFuture]] and [[startLight]].
     */
   def startFull[E, A](
-    source: WRYYY[E, A],
-    contextInit: Context[E],
-    cb: Callback[E, A],
-    rcb: TaskRestartCallback,
-    bFirst: Bind,
-    bRest: CallStack,
-    frameIndex: FrameIndex): Unit = {
+                       source: WRYYY[E, A],
+                       contextInit: Context[E],
+                       cb: BiCallback[E, A],
+                       rcb: TaskRestartCallback,
+                       bFirst: Bind,
+                       bRest: CallStack,
+                       frameIndex: FrameIndex): Unit = {
 
-    val cba = cb.asInstanceOf[Callback[Any, Any]]
+    val cba = cb.asInstanceOf[BiCallback[Any, Any]]
     var current: Current = source
     var bFirstRef = bFirst
     var bRestRef = bRest
@@ -124,13 +132,12 @@ private[bio] object TaskRunLoop {
           case FatalError(error) =>
             findFatalErrorHandler[Any](bFirstRef, bRestRef) match {
               case null =>
-                cba.onError(error)
+                if (!cba.tryOnFatalError(error)) context.scheduler.reportFailure(error)
                 return
               case bind =>
-                // TODO: can this try catch be removed?
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
-                  current = bind.recover(error)
+                  current = bind.recoverFatal(error)
                 } catch { case e if NonFatal(e) => current = FatalError(e) }
                 currentIndex = em.nextFrameIndex(currentIndex)
                 bFirstRef = null
@@ -209,12 +216,12 @@ private[bio] object TaskRunLoop {
     * trampoline loop.
     */
   def restartAsync[E, A](
-    source: WRYYY[E, A],
-    context: Context[E],
-    cb: Callback[E, A],
-    rcb: TaskRestartCallback,
-    bindCurrent: Bind,
-    bindRest: CallStack): Unit = {
+                          source: WRYYY[E, A],
+                          context: Context[E],
+                          cb: BiCallback[E, A],
+                          rcb: TaskRestartCallback,
+                          bindCurrent: Bind,
+                          bindRest: CallStack): Unit = {
 
     val savedLocals =
       if (context.options.localContextPropagation) Local.getContext()
@@ -255,12 +262,12 @@ private[bio] object TaskRunLoop {
     * Function gets invoked by `Task.runAsync(cb: Callback)`.
     */
   def startLight[E, A](
-    source: WRYYY[E, A],
-    scheduler: Scheduler,
-    opts: WRYYY.Options,
-    // TODO: should it be [E, A]?
-    cb: Callback[Any, A],
-    isCancelable: Boolean = true): CancelToken[WRYYY[E, ?]] = {
+                        source: WRYYY[E, A],
+                        scheduler: Scheduler,
+                        opts: WRYYY.Options,
+                        // TODO: should it be [E, A]?
+                        cb: BiCallback[Any, A],
+                        isCancelable: Boolean = true): CancelToken[WRYYY[E, ?]] = {
 
     var current = source.asInstanceOf[WRYYY[Any, Any]]
     var bFirst: Bind = null
@@ -333,12 +340,12 @@ private[bio] object TaskRunLoop {
           case FatalError(error) =>
             findFatalErrorHandler[Any](bFirst, bRest) match {
               case null =>
-                cb.onError(error)
+                if (!cb.tryOnFatalError(error)) scheduler.reportFailure(error)
                 return WRYYY.unit
               case bind =>
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
-                  current = bind.recover(error)
+                  current = bind.recoverFatal(error)
                 } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
@@ -349,7 +356,7 @@ private[bio] object TaskRunLoop {
               async,
               scheduler,
               opts,
-              cb.asInstanceOf[Callback[Any, Any]],
+              cb.asInstanceOf[BiCallback[Any, Any]],
               bFirst,
               bRest,
               frameIndex,
@@ -381,7 +388,7 @@ private[bio] object TaskRunLoop {
           current,
           scheduler,
           opts,
-          cb.asInstanceOf[Callback[Any, Any]],
+          cb.asInstanceOf[BiCallback[Any, Any]],
           bFirst,
           bRest,
           frameIndex,
@@ -454,7 +461,7 @@ private[bio] object TaskRunLoop {
 
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
-              case null => throw WrappedException(error)
+              case null => throw WrappedException.wrap(error)
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
@@ -470,7 +477,7 @@ private[bio] object TaskRunLoop {
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
-                  current = bind.recover(error)
+                  current = bind.recoverFatal(error)
                 } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
@@ -513,7 +520,10 @@ private[bio] object TaskRunLoop {
     *
     * Function gets invoked by `Task.runAsync(implicit s: Scheduler)`.
     */
-  def startFuture[E, A](source: WRYYY[E, A], scheduler: Scheduler, opts: WRYYY.Options): CancelableFuture[A] = {
+  def startFuture[E, A](
+    source: WRYYY[E, A],
+    scheduler: Scheduler,
+    opts: WRYYY.Options): CancelableFuture[Either[E, A]] = {
     var current = source.asInstanceOf[WRYYY[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
@@ -571,10 +581,7 @@ private[bio] object TaskRunLoop {
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
-                error match {
-                  case t: Throwable => return CancelableFuture.failed(t)
-                  case _ => return CancelableFuture.failed(WrappedException(error))
-                }
+                return CancelableFuture.successful(Left(error.asInstanceOf[E]))
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
@@ -591,7 +598,7 @@ private[bio] object TaskRunLoop {
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
-                  current = bind.recover(error)
+                  current = bind.recoverFatal(error)
                 } catch { case e if NonFatal(e) => current = FatalError(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
@@ -612,7 +619,7 @@ private[bio] object TaskRunLoop {
         if (hasUnboxed) {
           popNextBind(bFirst, bRest) match {
             case null =>
-              return CancelableFuture.successful(unboxed.asInstanceOf[A])
+              return CancelableFuture.successful(Right(unboxed.asInstanceOf[A]))
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
@@ -637,13 +644,13 @@ private[bio] object TaskRunLoop {
   }
 
   private[internal] def executeAsyncTask(
-    task: WRYYY.Async[Any, Any],
-    context: Context[Any],
-    cb: Callback[Any, Any],
-    rcb: TaskRestartCallback,
-    bFirst: Bind,
-    bRest: CallStack,
-    nextFrame: FrameIndex): Unit = {
+                                          task: WRYYY.Async[Any, Any],
+                                          context: Context[Any],
+                                          cb: BiCallback[Any, Any],
+                                          rcb: TaskRestartCallback,
+                                          bFirst: Bind,
+                                          bRest: CallStack,
+                                          nextFrame: FrameIndex): Unit = {
 
     // We are going to resume the frame index from where we left,
     // but only if no real asynchronous execution happened. So in order
@@ -665,15 +672,15 @@ private[bio] object TaskRunLoop {
     * [[startLight]].
     */
   private def goAsyncForLightCB[E](
-    source: Current,
-    scheduler: Scheduler,
-    opts: WRYYY.Options,
-    cb: Callback[Any, Any],
-    bFirst: Bind,
-    bRest: CallStack,
-    nextFrame: FrameIndex,
-    isCancelable: Boolean,
-    forceFork: Boolean): CancelToken[WRYYY[E, ?]] = {
+                                    source: Current,
+                                    scheduler: Scheduler,
+                                    opts: WRYYY.Options,
+                                    cb: BiCallback[Any, Any],
+                                    bFirst: Bind,
+                                    bRest: CallStack,
+                                    nextFrame: FrameIndex,
+                                    isCancelable: Boolean,
+                                    forceFork: Boolean): CancelToken[WRYYY[E, ?]] = {
 
     val context = Context(
       scheduler,
@@ -700,10 +707,10 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean): CancelableFuture[A] = {
+    forceFork: Boolean): CancelableFuture[Either[E, A]] = {
 
-    val p = Promise[A]()
-    val cb = Callback.fromPromise(p).asInstanceOf[Callback[Any, Any]]
+    val p = Promise[Either[E, A]]()
+    val cb = BiCallback.fromPromise(p).asInstanceOf[BiCallback[Any, Any]]
     val context = Context[Any](scheduler, opts)
     val current = source.asInstanceOf[WRYYY[E, A]]
 
@@ -748,7 +755,8 @@ private[bio] object TaskRunLoop {
 
   private[internal] def findErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, WRYYY[E, Any]] = {
     bFirst match {
-      case ref: StackFrame[E, Any, WRYYY[E, Any]] @unchecked => ref
+      case ref: StackFrame[E, Any, WRYYY[E, Any]] @unchecked =>
+        ref
       case _ =>
         if (bRest eq null) null
         else {
@@ -766,7 +774,7 @@ private[bio] object TaskRunLoop {
     }
   }
 
-  private[internal] def findFatalErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, WRYYY[E, Any]] = {
+  private[internal] def findFatalErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]] = {
     bFirst match {
       case ref: StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]] @unchecked => ref
       case _ =>

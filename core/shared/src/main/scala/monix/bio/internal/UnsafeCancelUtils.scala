@@ -18,8 +18,10 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{Task, WRYYY}
+import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.bio.{Task, UIO, WRYYY}
 import monix.catnap.CancelableF
+import monix.execution.internal.Platform
 import monix.execution.{Cancelable, Scheduler}
 
 import scala.collection.mutable.ListBuffer
@@ -82,7 +84,7 @@ private[bio] object UnsafeCancelUtils {
       case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
-        WRYYY.delay(ref.cancel()).orFatal
+        WRYYY.delay(ref.cancel()).hideErrors
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -117,7 +119,6 @@ private[bio] object UnsafeCancelUtils {
       extends StackFrame[E, Unit, WRYYY[E, Unit]] {
 
     private[this] val errors = ListBuffer.empty[E]
-    // TODO: do something with this
     private[this] val fatalErrors = ListBuffer.empty[Throwable]
 
     def loop(): CancelToken[WRYYY[E, ?]] = {
@@ -146,13 +147,21 @@ private[bio] object UnsafeCancelUtils {
       if (task ne null) {
         task.flatMap(this)
       } else {
-        errors.toList match {
-          case Nil =>
-            WRYYY.unit
-          case first :: rest =>
-            // TODO: do a composite error, handle fatalErrors
+        (fatalErrors.toList, errors.toList) match {
+          case (first :: rest, rest2) =>
+              WRYYY.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
+          case (Nil, first :: rest) =>
+            (first, rest) match {
+              case (th: Throwable, restTh: List[Throwable]) =>
+                WRYYY.raiseError(Platform.composeErrors(th, restTh: _*).asInstanceOf[E])
+              case _ =>
+                WRYYY.deferAction(s => UIO(rest.foreach{e => s.reportFailure(WrappedException.wrap(e))})) >> WRYYY.raiseError(first)
+            }
             WRYYY.raiseError(first)
-//            WRYYY.raiseError(Platform.composeErrors(first, rest: _*))
+
+          case (Nil, Nil) =>
+            WRYYY.unit
+
         }
       }
     }

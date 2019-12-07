@@ -19,7 +19,6 @@ package monix.bio.internal
 
 import monix.bio.WRYYY.{Async, Context}
 import monix.bio.{UIO, WRYYY}
-import monix.execution.Callback
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TrampolinedRunnable
 
@@ -32,7 +31,7 @@ private[bio] object TaskDoOnCancel {
     if (callback eq WRYYY.unit) {
       self
     } else {
-      val start = (context: Context[E], onFinish: Callback[E, A]) => {
+      val start = (context: Context[E], onFinish: BiCallback[E, A]) => {
         implicit val s = context.scheduler
         implicit val o = context.options
 
@@ -43,12 +42,13 @@ private[bio] object TaskDoOnCancel {
     }
   }
 
-  private final class CallbackThatPops[E, A](ctx: WRYYY.Context[E], cb: Callback[E, A])
-      extends Callback[E, A] with TrampolinedRunnable {
+  private final class CallbackThatPops[E, A](ctx: WRYYY.Context[E], cb: BiCallback[E, A])
+      extends BiCallback[E, A] with TrampolinedRunnable {
 
     private[this] var isActive = true
     private[this] var value: A = _
     private[this] var error: E = _
+    private[this] var fatalError: Throwable = _
 
     override def onSuccess(value: A): Unit =
       if (!tryOnSuccess(value)) {
@@ -57,6 +57,11 @@ private[bio] object TaskDoOnCancel {
 
     override def onError(e: E): Unit =
       if (!tryOnError(e)) {
+        throw new CallbackCalledMultipleTimesException("onError")
+      }
+
+    override def onFatalError(e: Throwable): Unit =
+      if (!tryOnFatalError(e)) {
         throw new CallbackCalledMultipleTimesException("onError")
       }
 
@@ -84,8 +89,24 @@ private[bio] object TaskDoOnCancel {
       }
     }
 
+    override def tryOnFatalError(e: Throwable): Boolean = {
+      if (isActive) {
+        isActive = false
+        ctx.connection.pop()
+        this.fatalError = e
+        ctx.scheduler.execute(this)
+        true
+      } else {
+        false
+      }
+    }
+
     override def run(): Unit = {
-      if (error != null) {
+      if (fatalError != null) {
+        val e = fatalError
+        fatalError = null
+        cb.onFatalError(e)
+      } else if (error != null) {
         val e = error
         error = null.asInstanceOf[E]
         cb.onError(e)

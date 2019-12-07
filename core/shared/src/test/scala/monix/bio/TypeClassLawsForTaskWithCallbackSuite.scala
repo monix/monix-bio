@@ -18,15 +18,16 @@
 package monix.bio
 
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.kernel.laws.discipline.MonoidTests
 import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests}
 import cats.{Applicative, Eq}
 import monix.bio.WRYYY.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.DummyException
 import monix.execution.schedulers.TestScheduler
 
 import scala.concurrent.Promise
+import scala.util.Either
 
 /**
   * Type class tests for Task that use an alternative `Eq`, making
@@ -51,17 +52,28 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
 
   override implicit def equalityTask[E, A](
     implicit
-    A: Eq[A],
+    A: Eq[Either[E, A]],
     ec: TestScheduler,
-    opts: Options) = {
+    opts: Options): Eq[WRYYY[E, A]] = {
+    Eq.by { task =>
+      val p = Promise[Either[E, A]]()
+      task.runAsyncOpt {
+        case Left(e) => p.failure(WrappedException.wrap(e)) // todo: should it be failure or left
+        case Right(a) => p.success(Right(a))
+      }
+      p.future
+    }
+  }
+
+  override implicit def equalityUIO[A](
+                               implicit
+                               A: Eq[A],
+                               sc: TestScheduler,
+                               opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
     Eq.by { task =>
       val p = Promise[A]()
       task.runAsyncOpt {
-        case Left(e) =>
-          e match {
-            case t: Throwable => p.failure(t)
-            case _ => p.failure(WrappedException(e))
-          }
+        case Left(e) => p.failure(WrappedException.wrap(e))
         case Right(a) => p.success(a)
       }
       p.future
@@ -70,20 +82,16 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
 
   override implicit def equalityTaskPar[E, A](
     implicit
-    A: Eq[A],
+    A: Eq[Either[E, A]],
     ec: TestScheduler,
     opts: Options): Eq[WRYYY.Par[E, A]] = {
 
     import WRYYY.Par.unwrap
     Eq.by { task =>
-      val p = Promise[A]()
+      val p = Promise[Either[E, A]]()
       unwrap(task).runAsyncOpt {
-        case Left(e) =>
-          e match {
-            case t: Throwable => p.failure(t)
-            case _ => p.failure(WrappedException(e))
-          }
-        case Right(a) => p.success(a)
+        case Left(e) => p.failure(WrappedException.wrap(e))
+        case Right(a) => p.success(Right(a))
       }
       p.future
     }

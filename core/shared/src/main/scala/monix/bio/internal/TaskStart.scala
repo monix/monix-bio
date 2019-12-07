@@ -54,7 +54,7 @@ private[bio] object TaskStart {
       // It needs its own context, its own cancelable
       val ctx2 = WRYYY.Context[E](ctx.scheduler, ctx.options)
       // Starting actual execution of our newly created task;
-      WRYYY.unsafeStartEnsureAsync(fa, ctx2, Callback.fromAttempt(p.success))
+      WRYYY.unsafeStartEnsureAsync(fa, ctx2, BiCallback.fromPromise(p))
       // Signal the created fiber
       cb.onSuccess(Fiber.fromPromise(p, ctx2.connection))
     }

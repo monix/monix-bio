@@ -54,7 +54,7 @@ private[bio] object TaskGather {
     makeBuilder: () => mutable.Builder[A, M[A]])
       extends ForkedRegister[E, M[A]] {
 
-    def apply(context: Context[E], finalCallback: Callback[E, M[A]]): Unit = {
+    def apply(context: Context[E], finalCallback: BiCallback[E, M[A]]): Unit = {
       // We need a monitor to synchronize on, per evaluation!
       val lock = new AnyRef
       val mainConn = context.connection
@@ -102,10 +102,22 @@ private[bio] object TaskGather {
           results = null // GC relief
           finalCallback.onError(ex)
         } else {
-          ex match {
-            case th: Throwable => s.reportFailure(th)
-            case _ => s.reportFailure(WrappedException(ex))
-          }
+          s.reportFailure(WrappedException.wrap(ex))
+        }
+      }
+
+      // MUST BE synchronized by `lock`!
+      def reportFatalError(mainConn: TaskConnection[E], ex: Throwable)(implicit s: Scheduler): Unit = {
+
+        if (isActive) {
+          isActive = false
+          // This should cancel our CompositeCancelable
+          mainConn.pop().runAsyncAndForget
+          tasks = null // GC relief
+          results = null // GC relief
+          finalCallback.onFatalError(ex)
+        } else {
+          s.reportFailure(ex)
         }
       }
 
@@ -147,7 +159,7 @@ private[bio] object TaskGather {
             WRYYY.unsafeStartEnsureAsync(
               tasks(idx),
               childContext,
-              new Callback[E, A] {
+              new BiCallback[E, A] {
                 def onSuccess(value: A): Unit =
                   lock.synchronized {
                     if (isActive) {
@@ -158,6 +170,9 @@ private[bio] object TaskGather {
 
                 def onError(ex: E): Unit =
                   lock.synchronized(reportError(mainConn, ex))
+
+                override def onFatalError(e: Throwable): Unit =
+                  lock.synchronized(reportFatalError(mainConn, e))
               }
             )
 
@@ -173,18 +188,7 @@ private[bio] object TaskGather {
         case ex if NonFatal(ex) =>
           // We are still under the lock.synchronize block
           // so this call is safe
-          // TODO: how to handle this error - can we ignore it?
-          if (isActive) {
-            isActive = false
-            // This should cancel our CompositeCancelable
-            mainConn.pop().runAsyncAndForget(context.scheduler)
-            tasks = null // GC relief
-            results = null // GC relief
-            context.scheduler.reportFailure(ex)
-          } else {
-            context.scheduler.reportFailure(ex)
-          }
-//          reportError(context.connection, ex)(context.scheduler)
+          reportFatalError(context.connection, ex)(context.scheduler)
       }
     }
   }

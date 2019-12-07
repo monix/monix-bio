@@ -37,7 +37,7 @@ object TaskSequenceSuite extends BaseTestSuite {
     s.tick(1.second)
     assertEquals(f.value, None)
     s.tick(3.second)
-    assertEquals(f.value, Some(Success(Seq(1, 2, 3))))
+    assertEquals(f.value, Some(Success(Right(Seq(1, 2, 3)))))
   }
 
   test("Task.sequence should onError if one of the tasks terminates in error") { implicit s =>
@@ -56,7 +56,7 @@ object TaskSequenceSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     // Second
     s.tick(2.second)
-    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(f.value, Some(Success(Left(ex))))
   }
 
   test("Task.sequence should be canceled") { implicit s =>

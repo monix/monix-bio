@@ -327,7 +327,7 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick(1.second)
     assertEquals(f.value, None)
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(30)))
+    assertEquals(f.value, Some(Success(Right(30))))
   }
 
   test("Task.racePair(a,b) should cancel both") { implicit s =>
@@ -345,7 +345,7 @@ object TaskRaceSuite extends BaseTestSuite {
   test("Task.racePair(A,B) should not cancel B if A completes first") { implicit s =>
     val ta = Task.now(10).delayExecution(1.second)
     val tb = Task.now(20).delayExecution(2.seconds)
-    var future = Option.empty[CancelableFuture[Int]]
+    var future = Option.empty[CancelableFuture[Either[Throwable, Int]]]
 
     val t = Task.racePair(ta, tb).map {
       case Left((a, taskB)) =>
@@ -360,18 +360,18 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick(1.second)
     f.cancel()
 
-    assertEquals(f.value, Some(Success(10)))
+    assertEquals(f.value, Some(Success(Right(10))))
     assert(future.isDefined, "future.isDefined")
     assertEquals(future.flatMap(_.value), None)
 
     s.tick(1.second)
-    assertEquals(future.flatMap(_.value), Some(Success(20)))
+    assertEquals(future.flatMap(_.value), Some(Success(Right(20))))
   }
 
   test("Task.racePair(A,B) should not cancel A if B completes first") { implicit s =>
     val ta = Task.now(10).delayExecution(2.second)
     val tb = Task.now(20).delayExecution(1.seconds)
-    var future = Option.empty[CancelableFuture[Int]]
+    var future = Option.empty[CancelableFuture[Either[Throwable, Int]]]
 
     val t = Task.racePair(ta, tb).map {
       case Left((a, taskB)) =>
@@ -386,12 +386,12 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick(1.second)
     f.cancel()
 
-    assertEquals(f.value, Some(Success(20)))
+    assertEquals(f.value, Some(Success(Right(20))))
     assert(future.isDefined, "future.isDefined")
     assertEquals(future.flatMap(_.value), None)
 
     s.tick(1.second)
-    assertEquals(future.flatMap(_.value), Some(Success(10)))
+    assertEquals(future.flatMap(_.value), Some(Success(Right(10))))
   }
 
   test("Task.racePair(A,B) should end both in error if A completes first in error") { implicit s =>
@@ -402,7 +402,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val t = Task.racePair(ta, tb)
     val f = t.runToFuture
     s.tick(1.second)
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
@@ -414,7 +414,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val t = Task.racePair(ta, tb)
     val f = t.runToFuture
     s.tick(1.second)
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
@@ -439,8 +439,8 @@ object TaskRaceSuite extends BaseTestSuite {
     val f2 = t2.runToFuture
     s.tick(2.seconds)
 
-    assertEquals(f1.value, Some(Failure(dummy)))
-    assertEquals(f2.value, Some(Success(20)))
+    assertEquals(f1.value, Some(Success(Left(dummy))))
+    assertEquals(f2.value, Some(Success(Right(20))))
   }
 
   test("Task.racePair(A,B) should work if B completes second in error") { implicit s =>
@@ -464,8 +464,8 @@ object TaskRaceSuite extends BaseTestSuite {
     val f2 = t2.runToFuture
     s.tick(2.seconds)
 
-    assertEquals(f1.value, Some(Failure(dummy)))
-    assertEquals(f2.value, Some(Success(10)))
+    assertEquals(f1.value, Some(Success(Left(dummy))))
+    assertEquals(f2.value, Some(Success(Right(10))))
   }
 
   test("Task.racePair should be stack safe, take 1") { implicit s =>
@@ -535,7 +535,7 @@ object TaskRaceSuite extends BaseTestSuite {
 
     val f = t.runToFuture
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(10)))
+    assertEquals(f.value, Some(Success(Right(10))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
@@ -550,7 +550,7 @@ object TaskRaceSuite extends BaseTestSuite {
 
     val f = t.runToFuture
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(20)))
+    assertEquals(f.value, Some(Success(Right(20))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
@@ -574,7 +574,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val t = Task.race(ta, tb)
     val f = t.runToFuture
     s.tick(1.second)
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
@@ -586,7 +586,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val t = Task.race(ta, tb)
     val f = t.runToFuture
     s.tick(1.second)
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
@@ -603,8 +603,8 @@ object TaskRaceSuite extends BaseTestSuite {
     val f = task.runToFuture
     s.tick(2.seconds)
 
-    assertEquals(f.value, Some(Success(20)))
-    assertEquals(s.state.lastReportedError, WrappedException(dummy))
+    assertEquals(f.value, Some(Success(Right(20))))
+    assertEquals(s.state.lastReportedError, dummy)
   }
 
   test("Task.race(a, b) should work if `b` completes in error") { implicit s =>
@@ -620,8 +620,8 @@ object TaskRaceSuite extends BaseTestSuite {
     val f = task.runToFuture
     s.tick(2.seconds)
 
-    assertEquals(f.value, Some(Success(20)))
-    assertEquals(s.state.lastReportedError, WrappedException(dummy))
+    assertEquals(f.value, Some(Success(Right(20))))
+    assertEquals(s.state.lastReportedError, dummy)
   }
 
   test("Task.race should be stack safe, take 1") { implicit s =>

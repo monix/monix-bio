@@ -38,7 +38,7 @@ private[bio] object TaskCancellation {
     * Implementation for `Task.onCancelRaiseError`.
     */
   def raiseError[E, A](fa: WRYYY[E, A], e: E): WRYYY[E, A] = {
-    val start = (ctx: Context[E], cb: Callback[E, A]) => {
+    val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val sc = ctx.scheduler
       val canCall = Atomic(true)
       // We need a special connection because the main one will be reset on
@@ -59,16 +59,17 @@ private[bio] object TaskCancellation {
   private final class RaiseCallback[E, A](
     waitsForResult: AtomicBoolean,
     conn: TaskConnection[E],
-    cb: Callback[E, A]
+    cb: BiCallback[E, A]
   )(implicit s: Scheduler)
-      extends Callback[E, A] with TrampolinedRunnable {
+      extends BiCallback[E, A] with TrampolinedRunnable {
 
     private[this] var value: A = _
     private[this] var error: E = _
+    private[this] var fatalError: Throwable = _
 
     def run(): Unit = {
-      val e = error
-      if (e != null) cb.onError(e)
+      if (fatalError ne null) cb.onFatalError(fatalError)
+      else if (error != null) cb.onError(error)
       else cb.onSuccess(value)
     }
 
@@ -85,11 +86,16 @@ private[bio] object TaskCancellation {
         this.error = e
         s.execute(this)
       } else {
-        // TODO: unify reporting of failures like that (failure after success)
-        e match {
-          case t: Throwable => s.reportFailure(t)
-          case _ => s.reportFailure(WrappedException(e))
-        }
+        s.reportFailure(WrappedException.wrap(e))
+      }
+
+    override def onFatalError(e: Throwable): Unit =
+      if (waitsForResult.getAndSet(false)) {
+        conn.pop()
+        this.fatalError = e
+        s.execute(this)
+      } else {
+        s.reportFailure(e)
       }
   }
 

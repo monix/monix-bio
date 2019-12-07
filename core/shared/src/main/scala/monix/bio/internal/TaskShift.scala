@@ -17,14 +17,15 @@
 
 package monix.bio.internal
 
+import java.util.concurrent.RejectedExecutionException
+
 import monix.bio.UIO
 import monix.bio.WRYYY.{Async, Context}
+import monix.execution.Scheduler
 import monix.execution.schedulers.TracingScheduler
-import monix.execution.{Callback, Scheduler}
 
 import scala.concurrent.ExecutionContext
 
-// TODO: should it be UIO or RejectedExecutionException?
 private[bio] object TaskShift {
 
   /**
@@ -46,7 +47,7 @@ private[bio] object TaskShift {
   // a full async boundary!
   private final class Register(ec: ExecutionContext) extends ForkedRegister[Nothing, Unit] {
 
-    def apply(context: Context[Nothing], cb: Callback[Nothing, Unit]): Unit = {
+    def apply(context: Context[Nothing], cb: BiCallback[Nothing, Unit]): Unit = {
       val ec2 =
         if (ec eq null) {
           context.scheduler
@@ -61,17 +62,17 @@ private[bio] object TaskShift {
           ec
         }
 
-//      try {
-      ec2.execute(new Runnable {
-        def run(): Unit = {
-          context.frameRef.reset()
-          cb.onSuccess(())
-        }
-      })
-//      } catch {
-//        case e: RejectedExecutionException =>
-//          Callback.signalErrorTrampolined(cb, e)
-//      }
+      try {
+        ec2.execute(new Runnable {
+          def run(): Unit = {
+            context.frameRef.reset()
+            cb.onSuccess(())
+          }
+        })
+      } catch {
+        case e: RejectedExecutionException =>
+          cb.onFatalError(e)
+      }
     }
   }
 }

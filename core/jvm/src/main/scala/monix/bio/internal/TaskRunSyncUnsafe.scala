@@ -23,8 +23,8 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer
 import monix.bio.WRYYY
 import monix.bio.WRYYY.{Async, Context, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
 import monix.bio.internal.TaskRunLoop._
+import monix.execution.Scheduler
 import monix.execution.internal.collection.ChunkedArrayStack
-import monix.execution.{Callback, Scheduler}
 
 import scala.concurrent.blocking
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -85,7 +85,7 @@ private[bio] object TaskRunSyncUnsafe {
 
         case Error(error) =>
           findErrorHandler[Any](bFirst, bRest) match {
-            case null => throw new WrappedException(error)
+            case null => throw WrappedException.wrap(error)
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
@@ -170,16 +170,20 @@ private[bio] object TaskRunSyncUnsafe {
       throw new TimeoutException(s"Task.runSyncUnsafe($limit)")
   }
 
-  private final class BlockingCallback[E, A](latch: OneShotLatch) extends Callback[E, A] {
+  private final class BlockingCallback[E, A](latch: OneShotLatch) extends BiCallback[E, A] {
 
     private[this] var success: A = _
     private[this] var error: E = _
+    private[this] var fatalError: Throwable = _
 
-    def value: A =
-      error match {
+    def value: A ={
+      if (fatalError ne null) throw fatalError
+      else error match {
         case null => success
+        case th: Throwable => throw th
         case e => throw new WrappedException(e)
       }
+    }
 
     def onSuccess(value: A): Unit = {
       success = value
@@ -188,6 +192,11 @@ private[bio] object TaskRunSyncUnsafe {
 
     def onError(ex: E): Unit = {
       error = ex
+      latch.releaseShared(1)
+    }
+
+    override def onFatalError(ex: Throwable): Unit = {
+      fatalError = ex
       latch.releaseShared(1)
     }
   }

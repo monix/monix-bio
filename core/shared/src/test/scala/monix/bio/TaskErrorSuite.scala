@@ -53,7 +53,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("Task.error.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    assertEquals(Task.raiseError[Int](dummy).materialize.runToFuture.value, Some(Success(Failure(dummy))))
+    assertEquals(Task.raiseError[Int](dummy).materialize.runToFuture.value, Some(Success(Right(Failure(dummy)))))
   }
 
 //  test("Task.evalOnce.materialize") { implicit s =>
@@ -98,20 +98,20 @@ object TaskErrorSuite extends BaseTestSuite {
   test("Task.materialize") { implicit s =>
     val f = Task.evalAsync(10).materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(10))))
+    assertEquals(f.value, Some(Success(Right(Success(10)))))
   }
 
   test("Task.flatMap.materialize") { implicit s =>
     val f = Task.evalAsync(10).flatMap(Task.now).materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(10))))
+    assertEquals(f.value, Some(Success(Right(Success(10)))))
   }
 
   test("Task.evalAsync(error).flatMap.materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = Task[Int](throw dummy).flatMap(Task.now).materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Failure(dummy))))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   // TODO: should it materialize all errors?
@@ -124,31 +124,31 @@ object TaskErrorSuite extends BaseTestSuite {
   test("Task.defer(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = Task.defer[Int](throw dummy).materialize.runToFuture
-    assertEquals(f.value, Some(Success(Failure(dummy))))
+    assertEquals(f.value,Some(Success(Right(Failure(dummy)))))
   }
 
   test("Task.defer(error).flatMap.materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = Task.defer[Int](throw dummy).flatMap(Task.now).materialize.runToFuture
-    assertEquals(f.value, Some(Success(Failure(dummy))))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   test("Task.now.dematerialize") { implicit s =>
     val result = Task.now(10).materialize.dematerialize.runToFuture.value
-    assertEquals(result, Some(Success(10)))
+    assertEquals(result, Some(Success(Right(10))))
   }
 
   test("Task.error.dematerialize") { implicit s =>
     val dummy = DummyException("dummy")
     val result = Task.raiseError[Int](dummy).materialize.dematerialize.runToFuture.value
-    assertEquals(result, Some(Failure(dummy)))
+    assertEquals(result, Some(Success(Left(dummy))))
   }
 
   test("Task#onErrorRecover should mirror source on success") { implicit s =>
     val task = Task.evalAsync(1).onErrorRecover { case _: Throwable => 99 }
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("Task#onErrorRecover should recover") { implicit s =>
@@ -159,7 +159,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(99)))
+    assertEquals(f.value, Some(Success(Right(99))))
   }
 
   test("Task#onErrorRecover should protect against user code") { implicit s =>
@@ -178,7 +178,7 @@ object TaskErrorSuite extends BaseTestSuite {
     }
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("Task#onErrorHandle should recover") { implicit s =>
@@ -189,7 +189,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(99)))
+    assertEquals(f.value, Some(Success(Right(99))))
   }
 
   test("Task#onErrorHandle should protect against user code") { implicit s =>
@@ -208,7 +208,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = Task.evalAsync(1).onErrorFallbackTo(Task.evalAsync(2))
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("Task.onErrorFallbackTo should fallback to backup onError") { implicit s =>
@@ -216,7 +216,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = Task.evalAsync(throw ex).onErrorFallbackTo(Task.evalAsync(2))
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(2)))
+    assertEquals(f.value, Some(Success(Right(2))))
   }
 
   test("Task.onErrorFallbackTo should protect against user code") { implicit s =>
@@ -225,7 +225,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = Task.evalAsync(throw ex).onErrorFallbackTo(Task.defer(throw err))
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Failure(err)))
+    assertEquals(f.value, Some(Success(Left(err))))
   }
 
   test("Task.onErrorFallbackTo should be cancelable if the ExecutionModel allows it") { implicit s =>
@@ -328,7 +328,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = Task.evalAsync(1).onErrorRecoverWith { case _: Throwable => Task.evalAsync(99) }
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("Task#onErrorRecoverWith should recover") { implicit s =>
@@ -339,7 +339,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(99)))
+    assertEquals(f.value, Some(Success(Right(99))))
   }
 
   test("Task#onErrorRecoverWith should protect against user code") { implicit s =>
@@ -370,14 +370,14 @@ object TaskErrorSuite extends BaseTestSuite {
     val dummy = DummyException("dummy")
     val task = Task[Int](throw dummy).onErrorRecover { case _: TimeoutException => 10 }
     val f = task.runToFuture; s.tick()
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
   test("Task#onErrorRecoverWith should emit error if not matches") { implicit s =>
     val dummy = DummyException("dummy")
     val task = Task[Int](throw dummy).onErrorRecoverWith { case _: TimeoutException => Task.now(10) }
     val f = task.runToFuture; s.tick()
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
   // TODO: add tests for variants catching fatal errors instead
@@ -401,7 +401,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = Task.evalAsync(1).materialize
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(1))))
+    assertEquals(f.value, Some(Success(Right(Success(1)))))
   }
 
   test("Task.materialize should work for failure") { implicit s =>
@@ -409,7 +409,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = Task[Int] { throw dummy }.materialize
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Failure(dummy))))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   test("Task.materialize should be stack safe") { implicit s =>
@@ -424,20 +424,20 @@ object TaskErrorSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(0)))
+    assertEquals(result.value, Some(Success(Right(0))))
   }
 
   test("Task.eval.materialize should work for success") { implicit s =>
     val task = Task.eval(1).materialize
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Success(1))))
+    assertEquals(f.value, Some(Success(Right(Success(1)))))
   }
 
   test("Task.eval.materialize should work for failure") { implicit s =>
     val dummy = DummyException("dummy")
     val task = Task.eval[Int](throw dummy).materialize
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Failure(dummy))))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   test("Task.eval.materialize should be stack safe") { implicit s =>
@@ -451,20 +451,20 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture; s.tick()
-    assertEquals(result.value, Some(Success(0)))
+    assertEquals(result.value, Some(Success(Right(0))))
   }
 
   test("Task.now.materialize should work") { implicit s =>
     val task = Task.now(1).materialize
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Success(1))))
+    assertEquals(f.value, Some(Success(Right(Success(1)))))
   }
 
   test("Task.error.materialize should work") { implicit s =>
     val dummy = DummyException("dummy")
     val task = Task.raiseError(dummy).materialize
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Failure(dummy))))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   // TODO: should it materialize all errors?
@@ -488,13 +488,13 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture; s.tick()
-    assertEquals(result.value, Some(Success(0)))
+    assertEquals(result.value, Some(Success(Right(0))))
   }
 
   test("Task.raiseError.dematerialize") { implicit s =>
     val ex = DummyException("dummy")
     val result = Task.raiseError[Int](ex).materialize.dematerialize.runToFuture
-    assertEquals(result.value, Some(Failure(ex)))
+    assertEquals(result.value, Some(Success(Left((ex)))))
   }
 
   test("Task.now.onErrorRecoverWith should be stack safe") { implicit s =>
@@ -511,7 +511,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val result = task.runToFuture
 
     s.tick()
-    assertEquals(result.value, Some(Success(count)))
+    assertEquals(result.value, Some(Success(Right(count))))
   }
 
   test("onErrorRecoverWith should be stack safe for loop with executeAsync boundaries") { implicit s =>
@@ -528,7 +528,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val result = task.runToFuture
 
     s.tick()
-    assertEquals(result.value, Some(Success(count)))
+    assertEquals(result.value, Some(Success(Right(count))))
   }
 //
 //  test("Task.onErrorRestartLoop works for success") { implicit s =>

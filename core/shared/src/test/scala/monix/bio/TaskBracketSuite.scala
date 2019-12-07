@@ -26,10 +26,10 @@ import scala.util.{Failure, Success}
 
 object TaskBracketSuite extends BaseTestSuite {
   test("equivalence with onErrorHandleWith") { implicit sc =>
-    check2 { (task: Task[Int], f: Throwable => UIO[Unit]) =>
-      val expected = task.onErrorHandleWith(e => f(e) >> Task.raiseError(e))
-      val received = task.bracketE(Task.now) {
-        case (_, Left(Some(e))) => f(e)
+    check2 { (task: WRYYY[String, Int], f: String => UIO[Unit]) =>
+      val expected = task.onErrorHandleWith(e => f(e) >> WRYYY.raiseError(e))
+      val received = task.bracketE(WRYYY.now) {
+        case (_, Left(Some(e))) => e.fold(WRYYY.raiseFatalError, f)
         case (_, _) => UIO.unit
       }
       received <-> expected
@@ -37,11 +37,11 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("equivalence with flatMap + transformWith") { implicit sc =>
-    check3 { (acquire: Task[Int], f: Int => Task[Int], release: Int => UIO[Unit]) =>
+    check3 { (acquire: WRYYY[Int, Int], f: Int => WRYYY[Int, Int], release: Int => UIO[Unit]) =>
       val expected = acquire.flatMap { a =>
         f(a).redeemWith(
-          e => release(a) >> Task.raiseError(e),
-          s => release(a) >> Task.pure(s)
+          e => release(a) >> WRYYY.raiseError(e),
+          s => release(a) >> WRYYY.pure(s)
         )
       }
 
@@ -52,22 +52,23 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("use is protected against user error") { implicit sc =>
     val dummy = new DummyException("dummy")
-    var input = Option.empty[(Int, Either[Option[Throwable], Int])]
+    var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
 
-    val task = Task.evalAsync(1).bracketE(_ => throw dummy) { (a, i) =>
+    val task = UIO.evalAsync(1).bracketE(_ => throw dummy) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(dummy)))))
+    assertEquals(input, Some((1, Left(Some(Left(dummy))))))
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
   test("release is evaluated on success") { implicit sc =>
-    var input = Option.empty[(Int, Either[Option[Throwable], Int])]
-    val task = Task.evalAsync(1).bracketE(x => Task.evalAsync(x + 1)) { (a, i) =>
+    var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
+
+    val task = UIO.evalAsync(1).bracketE(x => UIO.evalAsync(x + 1)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
@@ -75,31 +76,45 @@ object TaskBracketSuite extends BaseTestSuite {
     sc.tick()
 
     assertEquals(input, Some((1, Right(2))))
-    assertEquals(f.value, Some(Success(2)))
+    assertEquals(f.value, Some(Success(Right(2))))
   }
 
   test("release is evaluated on error") { implicit sc =>
-    val dummy = new DummyException("dummy")
-    var input = Option.empty[(Int, Either[Option[Throwable], Int])]
+    var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
 
-    val task = Task.evalAsync(1).bracketE(_ => Task.raiseError[Int](dummy)) { (a, i) =>
+    val task = UIO.evalAsync(1).bracketE(_ => WRYYY.raiseError[Int](-99)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(dummy)))))
+    assertEquals(input, Some((1, Left(Some(Right(-99))))))
+    assertEquals(f.value, Some(Success(Left(-99))))
+  }
+
+  test("release is evaluated on fatal error") { implicit sc =>
+    val dummy = new DummyException("dummy")
+    var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
+
+    val task: WRYYY[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => WRYYY.raiseFatalError(dummy)) { (a, i) =>
+      UIO.eval { input = Some((a, i)) }
+    }
+
+    val f = task.runToFuture
+    sc.tick()
+
+    assertEquals(input, Some((1, Left(Some(Left(dummy))))))
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
   test("release is evaluated on cancel") { implicit sc =>
     import scala.concurrent.duration._
-    var input = Option.empty[(Int, Either[Option[Throwable], Int])]
+    var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
 
-    val task = Task
+    val task = UIO
       .evalAsync(1)
-      .bracketE(x => Task.evalAsync(x + 1).delayExecution(1.second)) { (a, i) =>
+      .bracketE(x => UIO.evalAsync(x + 1).delayExecution(1.second)) { (a, i) =>
         UIO.eval { input = Some((a, i)) }
       }
 
@@ -179,7 +194,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = loop(cycles).runToFuture
 
     sc.tick()
-    assertEquals(f.value, Some(Success(())))
+    assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("bracket is stack safe (2)") { implicit sc =>
@@ -191,7 +206,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(())))
+    assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("bracket is stack safe (3)") { implicit sc =>
@@ -202,7 +217,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(())))
+    assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("bracket is stack safe (4)") { implicit sc =>
@@ -213,7 +228,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(())))
+    assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("use is not evaluated on cancel") { implicit sc =>
@@ -233,6 +248,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     assertEquals(use, false)
-    assertEquals(release, true)
+
+        assertEquals(release, true)
   }
 }

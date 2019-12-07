@@ -21,7 +21,7 @@ import monix.bio.WRYYY
 import monix.bio.WRYYY.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.Ack.Stop
-import monix.execution.{Callback, Scheduler}
+import monix.execution.Scheduler
 import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.execution.atomic.{Atomic, AtomicAny}
 
@@ -46,7 +46,7 @@ private[bio] object TaskMapBoth {
       extends ForkedRegister[E, R] {
 
     /* For signaling the values after the successful completion of both tasks. */
-    def sendSignal(mainConn: TaskConnection[E], cb: Callback[E, R], a1: A1, a2: A2)(implicit s: Scheduler): Unit = {
+    def sendSignal(mainConn: TaskConnection[E], cb: BiCallback[E, R], a1: A1, a2: A2)(implicit s: Scheduler): Unit = {
 
       var streamErrors = true
       try {
@@ -59,13 +59,12 @@ private[bio] object TaskMapBoth {
           // Both tasks completed by this point, so we don't need
           // to worry about the `state` being a `Stop`
           mainConn.pop()
-          // TODO: unify reporting of errors in `f`, perhaps we can get rid of try catch completely
-          s.reportFailure(ex)
+          cb.onFatalError(ex)
       }
     }
 
     /* For signaling an error. */
-    @tailrec def sendError(mainConn: TaskConnection[E], state: AtomicAny[AnyRef], cb: Callback[E, R], ex: E)(
+    @tailrec def sendError(mainConn: TaskConnection[E], state: AtomicAny[AnyRef], cb: BiCallback[E, R], ex: E)(
       implicit s: Scheduler): Unit = {
 
       // Guarding the contract of the callback, as we cannot send an error
@@ -73,7 +72,7 @@ private[bio] object TaskMapBoth {
       state.get match {
         case Stop =>
           // We've got nowhere to send the error, so report it
-          s.reportFailure(WrappedException(ex))
+          s.reportFailure(WrappedException.wrap(ex))
         case other =>
           if (!state.compareAndSet(other, Stop))
             sendError(mainConn, state, cb, ex)(s) // retry
@@ -84,7 +83,30 @@ private[bio] object TaskMapBoth {
       }
     }
 
-    def apply(context: Context[E], cb: Callback[E, R]): Unit = {
+    /* For signaling a fatal error. */
+    @tailrec def sendFatalError(
+                                 mainConn: TaskConnection[E],
+                                 state: AtomicAny[AnyRef],
+                                 cb: BiCallback[E, R],
+                                 ex: Throwable)(implicit s: Scheduler): Unit = {
+
+      // Guarding the contract of the callback, as we cannot send an error
+      // if an error has already happened because of the other task
+      state.get match {
+        case Stop =>
+          // We've got nowhere to send the error, so report it
+          s.reportFailure(ex)
+        case other =>
+          if (!state.compareAndSet(other, Stop))
+            sendFatalError(mainConn, state, cb, ex)(s) // retry
+          else {
+            mainConn.pop().runAsyncAndForget
+            cb.onFatalError(ex)
+          }
+      }
+    }
+
+    def apply(context: Context[E], cb: BiCallback[E, R]): Unit = {
       implicit val s = context.scheduler
       val mainConn = context.connection
       // for synchronizing the results
@@ -101,7 +123,7 @@ private[bio] object TaskMapBoth {
       WRYYY.unsafeStartEnsureAsync(
         fa1,
         context1,
-        new Callback[E, A1] {
+        new BiCallback[E, A1] {
           @tailrec def onSuccess(a1: A1): Unit =
             state.get match {
               case null => // null means this is the first task to complete
@@ -122,6 +144,9 @@ private[bio] object TaskMapBoth {
 
           def onError(ex: E): Unit =
             sendError(mainConn, state, cb, ex)(s)
+
+          override def onFatalError(e: Throwable): Unit =
+            sendFatalError(mainConn, state, cb, e)
         }
       )
 
@@ -129,7 +154,7 @@ private[bio] object TaskMapBoth {
       WRYYY.unsafeStartEnsureAsync(
         fa2,
         context2,
-        new Callback[E, A2] {
+        new BiCallback[E, A2] {
           @tailrec def onSuccess(a2: A2): Unit =
             state.get match {
               case null => // null means this is the first task to complete
@@ -150,6 +175,9 @@ private[bio] object TaskMapBoth {
 
           def onError(ex: E): Unit =
             sendError(mainConn, state, cb, ex)(s)
+
+          override def onFatalError(e: Throwable): Unit =
+            sendFatalError(mainConn, state, cb, e)
         }
       )
     }

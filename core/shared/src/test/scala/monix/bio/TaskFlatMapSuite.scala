@@ -19,12 +19,12 @@ package monix.bio
 
 import cats.laws._
 import cats.laws.discipline._
-import monix.execution.Callback
+import monix.bio.internal.BiCallback
 import monix.execution.atomic.{Atomic, AtomicInt}
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 object TaskFlatMapSuite extends BaseTestSuite {
   test("runAsync flatMap loop is not cancelable if autoCancelableRunLoops=false") { implicit s =>
@@ -41,7 +41,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
     f.cancel(); s.tick()
     assertEquals(atomic.get, maxCount)
-    assertEquals(f.value, Some(Success(())))
+    assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("runAsync flatMap loop is cancelable if ExecutionModel permits") { implicit s =>
@@ -82,12 +82,18 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
     val c = loop(atomic)
       .executeWithOptions(_.enableAutoCancelableRunLoops)
-      .runAsync(new Callback[Throwable, Unit] {
-        def onSuccess(value: Unit): Unit =
-          result = Some(Success(value))
-        def onError(ex: Throwable): Unit =
-          result = Some(Failure(ex))
-      })
+      .runAsync(
+        new BiCallback[Either[Throwable, Throwable], Unit] {
+          override def onFatalError(e: Throwable): Unit =
+            result = Some(Failure(e))
+
+          override def onSuccess(value: Unit): Unit =
+            result = Some(Success(value))
+
+          override def onError(e: Either[Throwable, Throwable]): Unit =
+            result = Some(Failure(e.fold(identity, identity)))
+        }
+    )
 
     c.cancel()
     s.tickOne()
@@ -125,14 +131,14 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val dummy = new DummyException("dummy")
     val task = WRYYY.raiseError(dummy).redeemWith(_ => WRYYY.now(1), WRYYY.now)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("redeem can recover") { implicit s =>
     val dummy = DummyException("dummy")
     val task: UIO[Int] = WRYYY.raiseError(dummy).redeem(_ => 1, identity)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(1)))
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test(">> is stack safe for infinite loops") { implicit s =>

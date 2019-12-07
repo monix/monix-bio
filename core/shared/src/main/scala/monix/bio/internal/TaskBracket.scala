@@ -23,7 +23,6 @@ import monix.bio.WRYYY.{Context, ContextSwitch}
 import monix.bio.internal.StackFrame.FatalStackFrame
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.bio.{UIO, WRYYY}
-import monix.execution.Callback
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
 
@@ -35,7 +34,7 @@ private[monix] object TaskBracket {
   // Task.guaranteeCase
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-  def guaranteeCase[E, A](task: WRYYY[E, A], finalizer: ExitCase[E] => UIO[Unit]): WRYYY[E, A] =
+  def guaranteeCase[E, A](task: WRYYY[E, A], finalizer: ExitCase[Either[Throwable, E]] => UIO[Unit]): WRYYY[E, A] =
     WRYYY.Async(
       new ReleaseStart(task, finalizer),
       trampolineBefore = true,
@@ -43,10 +42,10 @@ private[monix] object TaskBracket {
       restoreLocals = true
     )
 
-  private final class ReleaseStart[E, A](source: WRYYY[E, A], release: ExitCase[E] => UIO[Unit])
-      extends ((Context[E], Callback[E, A]) => Unit) {
+  private final class ReleaseStart[E, A](source: WRYYY[E, A], release: ExitCase[Either[Throwable, E]] => UIO[Unit])
+      extends ((Context[E], BiCallback[E, A]) => Unit) {
 
-    def apply(ctx: Context[E], cb: Callback[E, A]): Unit = {
+    def apply(ctx: Context[E], cb: BiCallback[E, A]): Unit = {
       implicit val s = ctx.scheduler
 
       val conn = ctx.connection
@@ -66,13 +65,13 @@ private[monix] object TaskBracket {
     }
   }
 
-  private final class EnsureReleaseFrame[E, A](ctx: Context[E], releaseFn: ExitCase[E] => UIO[Unit])
+  private final class EnsureReleaseFrame[E, A](ctx: Context[E], releaseFn: ExitCase[Either[Throwable, E]] => UIO[Unit])
       extends BaseReleaseFrame[E, Unit, A](ctx, ()) {
 
     def releaseOnSuccess(a: Unit, b: A): UIO[Unit] =
       releaseFn(ExitCase.Completed)
 
-    def releaseOnError(a: Unit, e: E): UIO[Unit] =
+    def releaseOnError(a: Unit, e: Either[Throwable, E]): UIO[Unit] =
       releaseFn(ExitCase.Error(e))
 
     def releaseOnCancel(a: Unit): UIO[Unit] =
@@ -89,7 +88,7 @@ private[monix] object TaskBracket {
   def either[E, A, B](
     acquire: WRYYY[E, A],
     use: A => WRYYY[E, B],
-    release: (A, Either[Option[E], B]) => UIO[Unit]): WRYYY[E, B] = {
+    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit]): WRYYY[E, B] = {
 
     WRYYY.Async(
       new StartE(acquire, use, release),
@@ -102,20 +101,20 @@ private[monix] object TaskBracket {
   private final class StartE[E, A, B](
     acquire: WRYYY[E, A],
     use: A => WRYYY[E, B],
-    release: (A, Either[Option[E], B]) => UIO[Unit])
+    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
       extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameE(ctx, value, release)
   }
 
-  private final class ReleaseFrameE[E, A, B](ctx: Context[E], a: A, release: (A, Either[Option[E], B]) => UIO[Unit])
+  private final class ReleaseFrameE[E, A, B](ctx: Context[E], a: A, release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
       extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
       release(a, Right(b))
 
-    def releaseOnError(a: A, e: E): UIO[Unit] =
+    def releaseOnError(a: A, e: Either[Throwable, E]): UIO[Unit] =
       release(a, Left(Some(e)))
 
     def releaseOnCancel(a: A): UIO[Unit] =
@@ -132,7 +131,7 @@ private[monix] object TaskBracket {
   def exitCase[E, A, B](
     acquire: WRYYY[E, A],
     use: A => WRYYY[E, B],
-    release: (A, ExitCase[E]) => UIO[Unit]): WRYYY[E, B] =
+    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit]): WRYYY[E, B] =
     WRYYY.Async(
       new StartCase(acquire, use, release),
       trampolineBefore = true,
@@ -143,20 +142,20 @@ private[monix] object TaskBracket {
   private final class StartCase[E, A, B](
     acquire: WRYYY[E, A],
     use: A => WRYYY[E, B],
-    release: (A, ExitCase[E]) => UIO[Unit])
+    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
       extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameCase(ctx, value, release)
   }
 
-  private final class ReleaseFrameCase[E, A, B](ctx: Context[E], a: A, release: (A, ExitCase[E]) => UIO[Unit])
+  private final class ReleaseFrameCase[E, A, B](ctx: Context[E], a: A, release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
       extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
       release(a, Completed)
 
-    def releaseOnError(a: A, e: E): UIO[Unit] =
+    def releaseOnError(a: A, e: Either[Throwable, E]): UIO[Unit] =
       release(a, Error(e))
 
     def releaseOnCancel(a: A): UIO[Unit] =
@@ -168,16 +167,16 @@ private[monix] object TaskBracket {
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
   private abstract class BaseStart[E, A, B](acquire: WRYYY[E, A], use: A => WRYYY[E, B])
-      extends ((Context[E], Callback[E, B]) => Unit) {
+      extends ((Context[E], BiCallback[E, B]) => Unit) {
 
     protected def makeReleaseFrame(ctx: Context[E], value: A): BaseReleaseFrame[E, A, B]
 
-    final def apply(ctx: Context[E], cb: Callback[E, B]): Unit = {
+    final def apply(ctx: Context[E], cb: BiCallback[E, B]): Unit = {
       // Async boundary needed, but it is guaranteed via Task.Async below;
       WRYYY.unsafeStartNow(
         acquire,
         ctx.withConnection(TaskConnection.uncancelable[E]),
-        new Callback[E, A] {
+        new BiCallback[E, A] {
           def onSuccess(value: A): Unit = {
             implicit val sc = ctx.scheduler
             val conn = ctx.connection
@@ -188,7 +187,6 @@ private[monix] object TaskBracket {
             // Check if Task wasn't already cancelled in acquire
             if (!conn.isCanceled) {
               val onNext = {
-
                 val fb =
                   try use(value)
                   catch { case NonFatal(e) => WRYYY.raiseFatalError(e) }
@@ -201,18 +199,22 @@ private[monix] object TaskBracket {
 
           def onError(ex: E): Unit =
             cb.onError(ex)
+
+          override def onFatalError(e: Throwable): Unit = {
+            cb.onFatalError(e)
+          }
         }
       )
     }
   }
 
-  private abstract class BaseReleaseFrame[E, A, B](ctx: Context[E], a: A) extends FatalStackFrame[E, B, UIO[B]] {
+  private abstract class BaseReleaseFrame[E, A, B](ctx: Context[E], a: A) extends FatalStackFrame[E, B, WRYYY[E, B]] {
     private[this] val waitsForResult = Atomic(true)
     protected def releaseOnSuccess(a: A, b: B): UIO[Unit]
-    protected def releaseOnError(a: A, e: E): UIO[Unit]
+    protected def releaseOnError(a: A, e: Either[Throwable, E]): UIO[Unit]
     protected def releaseOnCancel(a: A): UIO[Unit]
 
-    final def apply(b: B): UIO[B] = {
+    final def apply(b: B): WRYYY[E, B] = {
       // In case auto-cancelable run-loops are enabled, then the function
       // call needs to be suspended, because we might evaluate the effect before
       // the connection is actually made uncancelable
@@ -225,15 +227,28 @@ private[monix] object TaskBracket {
       makeUncancelable(task)
     }
 
-    final def recover(e: E): UIO[B] = {
+    final def recover(e: E): WRYYY[E, B] = {
       // In case auto-cancelable run-loops are enabled, then the function
       // call needs to be suspended, because we might evaluate the effect before
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          UIO.suspend(unsafeRecover(e))
+          WRYYY.suspend(unsafeRecover(e))
         else
           unsafeRecover(e)
+
+      makeUncancelable(task)
+    }
+
+    override final def recoverFatal(e: Throwable): WRYYY[E, B] = {
+      // In case auto-cancelable run-loops are enabled, then the function
+      // call needs to be suspended, because we might evaluate the effect before
+      // the connection is actually made uncancelable
+      val task =
+      if (ctx.options.autoCancelableRunLoops)
+        WRYYY.suspend(unsafeRecoverFatal(e))
+      else
+        unsafeRecoverFatal(e)
 
       makeUncancelable(task)
     }
@@ -255,39 +270,51 @@ private[monix] object TaskBracket {
       }
     }
 
-    private final def unsafeRecover(e: E): UIO[B] = {
+    private final def unsafeRecover(e: E): WRYYY[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        // TODO: unify it so it is already taken into account
-        val t: Throwable = e match {
-          case th: Throwable => th
-          case _ => new WrappedException(e)
-        }
-        releaseOnError(a, e).flatMap(new ReleaseRecover(t))
+        val re = Right(e)
+        releaseOnError(a, re).flatMap[E, B](new ReleaseRecover(re))
       } else {
         WRYYY.never
       }
     }
 
-    private final def makeUncancelable(task: UIO[B]): UIO[B] = {
+    private final def unsafeRecoverFatal(e: Throwable): WRYYY[E, B] = {
+      if (waitsForResult.compareAndSet(expect = true, update = false)) {
+        ctx.connection.pop()
+        val le = Left(e)
+        releaseOnError(a, le).flatMap[E, B](new ReleaseRecover(le))
+      } else {
+        WRYYY.never
+      }
+    }
+
+    private final def makeUncancelable(task: WRYYY[E, B]): WRYYY[E, B] = {
       // NOTE: the "restore" part of this is `null` because we don't need to restore
       // the original connection. The original connection gets restored automatically
       // via how "TaskRestartCallback" works. This is risky!
-      ContextSwitch[Nothing, B](
+      ContextSwitch[E, B](
         task,
-        withConnectionUncancelable.asInstanceOf[Context[Nothing] => Context[Nothing]],
+        withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]],
         null)
 
     }
   }
 
-  private final class ReleaseRecover(e: Throwable) extends FatalStackFrame[Throwable, Unit, UIO[Nothing]] {
+  private final class ReleaseRecover[E](e: Either[Throwable, E]) extends FatalStackFrame[Throwable, Unit, WRYYY[E, Nothing]] {
 
-    def apply(a: Unit): UIO[Nothing] =
-      WRYYY.raiseFatalError(e)
+    def apply(a: Unit): WRYYY[E, Nothing] = {
+      e.fold(WRYYY.raiseFatalError, WRYYY.raiseError)
+    }
 
-    def recover(e2: Throwable): UIO[Nothing] =
-      WRYYY.raiseFatalError(Platform.composeErrors(e, e2))
+    def recover(e2: Throwable): WRYYY[E, Nothing] = {
+      WRYYY.raiseFatalError(Platform.composeErrors(e.fold(identity, WrappedException.wrap), e2))
+    }
+
+    override def recoverFatal(e2: Throwable): WRYYY[E, Nothing] = {
+      WRYYY.raiseFatalError(Platform.composeErrors(e.fold(identity, WrappedException.wrap), e2))
+    }
   }
 
   private val leftNone = Left(None)
