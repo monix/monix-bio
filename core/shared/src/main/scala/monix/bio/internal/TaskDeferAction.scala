@@ -27,24 +27,8 @@ private[bio] object TaskDeferAction {
   /** Implementation for `Task.deferAction`. */
   def apply[E, A](f: Scheduler => WRYYY[E, A]): WRYYY[E, A] = {
     val start = (context: Context[E], callback: BiCallback[E, A]) => {
-      implicit val ec = context.scheduler
-//      var streamErrors = true
-
-      // TODO: what if f(ec) fails? Will it be handled by TaskRestartCallback?
-//      try {
-      val fa = f(ec)
-//        streamErrors = false
+      val fa = f(context.scheduler)
       WRYYY.unsafeStartNow(fa, context, callback)
-//      } catch {
-//        case ex if NonFatal(ex) =>
-//          if (streamErrors)
-//            callback.onError(ex)
-//          else {
-//            // $COVERAGE-OFF$
-//            ec.reportFailure(ex)
-//            // $COVERAGE-ON$
-//          }
-//      }
     }
 
     WRYYY.Async(

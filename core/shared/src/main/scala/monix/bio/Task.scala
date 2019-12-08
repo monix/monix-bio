@@ -18,10 +18,11 @@
 package monix.bio
 
 import cats.effect.CancelToken
+import monix.bio.WRYYY.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.{Callback, Scheduler}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
@@ -60,6 +61,12 @@ object Task {
   val cancelBoundary: Task[Unit] =
     WRYYY.cancelBoundary
 
+  val shift: Task[Unit] =
+    WRYYY.shift
+
+  def shift(ec: ExecutionContext): Task[Unit] =
+    WRYYY.shift(ec)
+
   def fromTry[A](a: Try[A]): Task[A] =
     WRYYY.fromTry(a)
 
@@ -90,9 +97,27 @@ object Task {
   def fromFuture[A](f: Future[A]): Task[A] =
     TaskFromFuture.strict(f)
 
+  /**
+    * @see See [[monix.bio.WRYYY.deferFuture]]
+    */
   def deferFuture[A](fa: => Future[A]): Task[A] =
     defer(fromFuture(fa))
 
+  /**
+    * @see See [[monix.bio.WRYYY.deferFutureAction]]
+    */
   def deferFutureAction[A](f: Scheduler => Future[A]): Task[A] =
     TaskFromFuture.deferAction(f)
+
+  /**
+    * @see See [[monix.bio.WRYYY.deferAction]]
+    */
+  def deferAction[A](f: Scheduler => Task[A]): Task[A] =
+    WRYYY.deferAction(f)
+
+  /**
+    * @see See [[monix.bio.WRYYY.create]]
+    */
+  def create[A]: AsyncBuilder.CreatePartiallyApplied[Throwable, A] =
+    WRYYY.create[Throwable, A]
 }
