@@ -135,15 +135,12 @@ private[bio] object TaskMapBoth {
               case s @ Left(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                // TODO: make sure it is handled correctly
-                context.scheduler.reportFailure(
-                  new IllegalStateException(
-                    s"TaskMapBoth has triggered multiple onSuccess calls, please report the issue on github: $s.toString")
-                )
+                onFatalError(new IllegalStateException(s.toString))
             }
 
-          def onError(ex: E): Unit =
+          def onError(ex: E): Unit = {
             sendError(mainConn, state, cb, ex)(s)
+          }
 
           override def onFatalError(e: Throwable): Unit =
             sendFatalError(mainConn, state, cb, e)
@@ -166,15 +163,12 @@ private[bio] object TaskMapBoth {
               case s @ Right(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                context.scheduler.reportFailure(
-                  new IllegalStateException(
-                    s"TaskMapBoth has triggered multiple onSuccess calls, please report the issue on github: $s.toString")
-                )
-
+                onFatalError(new IllegalStateException(s.toString))
             }
 
-          def onError(ex: E): Unit =
+          def onError(ex: E): Unit = {
             sendError(mainConn, state, cb, ex)(s)
+          }
 
           override def onFatalError(e: Throwable): Unit =
             sendFatalError(mainConn, state, cb, e)

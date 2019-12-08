@@ -51,13 +51,14 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 
   implicit def equalityTask[E, A](
     implicit
-    A: Eq[Either[E, A]],
+    A: Eq[A],
+    E: Eq[E],
     sc: TestScheduler,
     opts: WRYYY.Options = WRYYY.defaultOptions): Eq[WRYYY[E, A]] = {
 
     new Eq[WRYYY[E, A]] {
       def eqv(lh: WRYYY[E, A], rh: WRYYY[E, A]): Boolean =
-        equalityFuture(A, sc).eqv(lh.runToFutureOpt, rh.runToFutureOpt)
+        equalityFutureEither(A, E, sc).eqv(lh.runToFutureOpt, rh.runToFutureOpt)
     }
   }
 
@@ -78,10 +79,10 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 
   implicit def equalityTaskPar[E, A](
     implicit
-    A: Eq[Either[E, A]],
+    A: Eq[A],
+    E: Eq[E],
     ec: TestScheduler,
     opts: WRYYY.Options = WRYYY.defaultOptions): Eq[WRYYY.Par[E, A]] = {
-
     new Eq[WRYYY.Par[E, A]] {
       import WRYYY.Par.unwrap
       def eqv(lh: WRYYY.Par[E, A], rh: WRYYY.Par[E, A]): Boolean =

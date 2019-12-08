@@ -23,10 +23,9 @@ import cats.{Applicative, Eq}
 import monix.bio.WRYYY.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.execution.exceptions.DummyException
 import monix.execution.schedulers.TestScheduler
 
-import scala.concurrent.Promise
+import scala.concurrent.{Future, Promise}
 import scala.util.Either
 
 /**
@@ -52,7 +51,8 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
 
   override implicit def equalityTask[E, A](
     implicit
-    A: Eq[Either[E, A]],
+    A: Eq[A],
+    E: Eq[E],
     ec: TestScheduler,
     opts: Options): Eq[WRYYY[E, A]] = {
     Eq.by { task =>
@@ -70,19 +70,20 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
                                A: Eq[A],
                                sc: TestScheduler,
                                opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
-    Eq.by { task =>
+    Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
       task.runAsyncOpt {
         case Left(e) => p.failure(WrappedException.wrap(e))
         case Right(a) => p.success(a)
       }
       p.future
-    }
+    }(equalityFuture)
   }
 
   override implicit def equalityTaskPar[E, A](
     implicit
-    A: Eq[Either[E, A]],
+    A: Eq[A],
+    E: Eq[E],
     ec: TestScheduler,
     opts: Options): Eq[WRYYY.Par[E, A]] = {
 

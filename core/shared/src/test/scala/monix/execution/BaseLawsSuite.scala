@@ -71,11 +71,11 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
   implicit def isEqListToProp[A](list: List[IsEq[A]])(implicit A: Eq[A]): Prop =
     Prop(list.forall(isEq => A.eqv(isEq.lhs, isEq.rhs)))
 
-  implicit def equalityCancelableFuture[A](implicit A: Eq[A], ec: TestScheduler): Eq[CancelableFuture[A]] =
-    new Eq[CancelableFuture[A]] {
-      val inst = equalityFuture[A]
+  implicit def equalityCancelableFuture[E, A](implicit A: Eq[A], E: Eq[E], ec: TestScheduler): Eq[CancelableFuture[Either[E, A]]] =
+    new Eq[CancelableFuture[Either[E, A]]] {
+      val inst = equalityFutureEither[E, A]
 
-      def eqv(x: CancelableFuture[A], y: CancelableFuture[A]) =
+      def eqv(x: CancelableFuture[Either[E, A]], y: CancelableFuture[Either[E, A]]) =
         inst.eqv(x, y)
     }
 
@@ -105,9 +105,44 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 
 trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils {
 
-  implicit def equalityFuture[A](implicit A: Eq[A], ec: TestScheduler): Eq[Future[A]] =
-    new Eq[Future[A]] {
+  implicit def equalityFutureEither[E, A](implicit A: Eq[A], E: Eq[E], ec: TestScheduler): Eq[Future[Either[E, A]]] =
+    new Eq[Future[Either[E, A]]] {
 
+      def eqv(x: Future[Either[E, A]], y: Future[Either[E, A]]): Boolean = {
+        silenceSystemErr {
+          // Executes the whole pending queue of runnables
+          ec.tick(1.day, maxImmediateTasks = Some(500000))
+          x.value match {
+            case None =>
+              y.value.isEmpty
+            case Some(Success(Right(a))) =>
+              y.value match {
+                case Some(Success(Right(b))) => A.eqv(a, b)
+                case _ => false
+              }
+            case Some(Success(Left(a))) =>
+              y.value match {
+                case Some(Success(Left(b))) => (a.isInstanceOf[Throwable] && b.isInstanceOf[Throwable]) || E.eqv(a, b)
+                case _ => false
+              }
+            case Some(Failure(_)) =>
+              y.value match {
+                case Some(Failure(_)) =>
+                  // Exceptions aren't values, it's too hard to reason about
+                  // throwable equality and all exceptions are essentially
+                  // yielding non-terminating futures and tasks from a type
+                  // theory point of view, so we simply consider them all equal
+                  true
+                case _ =>
+                  false
+              }
+          }
+        }
+      }
+    }
+
+  def equalityFuture[A](implicit A: Eq[A], ec: TestScheduler): Eq[Future[A]] =
+    new Eq[Future[A]] {
       def eqv(x: Future[A], y: Future[A]): Boolean = {
         silenceSystemErr {
           // Executes the whole pending queue of runnables
@@ -165,20 +200,6 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
         if (x.isSuccess) optA.eqv(x.toOption, y.toOption)
         else y.isFailure
     }
-
-//  implicit def equalityEither[E: Eq, A: Eq]: Eq[Either[E, A]] =
-//    new Eq[Either[E, A]] {
-//      def eqv(x: Either[E, A], y: Either[E, A]): Boolean = (x, y) match {
-//        case (Right(a), Right(b)) => implicitly[Eq[A]].eqv(a, b)
-//        case (Left(a), Left(b)) => implicitly[Eq[E]].eqv(a, b)
-//        case _ => false
-//      }
-//    }
-//
-//  implicit val equalityNothing: Eq[Nothing] =
-//    new Eq[Nothing] {
-//      override def eqv(x: Nothing, y: Nothing): Boolean = true
-//    }
 
   implicit def cogenForThrowable: Cogen[Throwable] =
     Cogen[String].contramap(_.toString)

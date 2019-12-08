@@ -107,10 +107,7 @@ object BiCallback {
 
       override def onError(e: E): Unit = {
         if (!tryOnError(e)) {
-          e match {
-            case th: Throwable => throw new CallbackCalledMultipleTimesException("onError", th)
-            case _ => throw new CallbackCalledMultipleTimesException("onError", new WrappedException(e))
-          }
+          throw new CallbackCalledMultipleTimesException("onError",WrappedException.wrap(e))
         }
       }
 
@@ -247,7 +244,7 @@ object BiCallback {
 
   private[monix] def callError[E, A](cb: Either[Either[Throwable, E], A] => Unit, value: E): Unit =
     cb match {
-      case ref: Callback[E, A] @unchecked => ref.onError(value)
+      case ref: Callback[Either[Throwable, E], A] @unchecked => ref.onError(Right(value))
       case _ => cb(Left(Right(value)))
     }
 

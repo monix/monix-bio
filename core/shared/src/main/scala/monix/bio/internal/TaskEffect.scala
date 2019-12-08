@@ -20,7 +20,7 @@ package monix.bio
 package internal
 
 import cats.effect.{CancelToken, IO, SyncIO}
-import monix.execution.Scheduler
+import monix.execution.{Callback, Scheduler}
 import monix.execution.internal.AttemptCallback.noop
 
 import scala.util.control.NonFatal
@@ -56,17 +56,16 @@ private[bio] object TaskEffect {
     implicit s: Scheduler,
     opts: WRYYY.Options) = {
 
-    fa.runAsyncOptF(new BiCallback[Either[Throwable, Throwable], A] {
+    fa.runAsyncOptF(new Callback[Either[Throwable, Throwable], A] {
       private def signal(value: Either[Throwable, A]): Unit =
         try cb(value).unsafeRunAsync(noop)
         catch { case NonFatal(e) => s.reportFailure(e) }
 
       override def onSuccess(value: A): Unit =
         signal(Right(value))
-      override def onError(e: Either[Throwable, Throwable]): Unit =
+      override def onError(e: Either[Throwable, Throwable]): Unit = {
         signal(Left(e.fold(identity, identity)))
-      override def onFatalError(e: Throwable): Unit =
-        signal(Left(e))
-    })
+      }
+      })
   }
 }
