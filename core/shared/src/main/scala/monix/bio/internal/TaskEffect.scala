@@ -66,6 +66,6 @@ private[bio] object TaskEffect {
       override def onError(e: Either[Throwable, Throwable]): Unit = {
         signal(Left(e.fold(identity, identity)))
       }
-      })
+    })
   }
 }

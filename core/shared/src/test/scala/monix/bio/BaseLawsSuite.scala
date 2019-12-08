@@ -63,10 +63,10 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
   }
 
   implicit def equalityUIO[A](
-                                   implicit
-                                   A: Eq[A],
-                                   sc: TestScheduler,
-                                   opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
+    implicit
+    A: Eq[A],
+    sc: TestScheduler,
+    opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
 
     new Eq[UIO[A]] {
       def eqv(lh: UIO[A], rh: UIO[A]): Boolean =

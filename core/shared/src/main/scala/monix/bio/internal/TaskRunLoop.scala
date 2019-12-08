@@ -50,13 +50,13 @@ private[bio] object TaskRunLoop {
     * happens from [[startFuture]] and [[startLight]].
     */
   def startFull[E, A](
-                       source: WRYYY[E, A],
-                       contextInit: Context[E],
-                       cb: BiCallback[E, A],
-                       rcb: TaskRestartCallback,
-                       bFirst: Bind,
-                       bRest: CallStack,
-                       frameIndex: FrameIndex): Unit = {
+    source: WRYYY[E, A],
+    contextInit: Context[E],
+    cb: BiCallback[E, A],
+    rcb: TaskRestartCallback,
+    bFirst: Bind,
+    bRest: CallStack,
+    frameIndex: FrameIndex): Unit = {
 
     val cba = cb.asInstanceOf[BiCallback[Any, Any]]
     var current: Current = source
@@ -216,12 +216,12 @@ private[bio] object TaskRunLoop {
     * trampoline loop.
     */
   def restartAsync[E, A](
-                          source: WRYYY[E, A],
-                          context: Context[E],
-                          cb: BiCallback[E, A],
-                          rcb: TaskRestartCallback,
-                          bindCurrent: Bind,
-                          bindRest: CallStack): Unit = {
+    source: WRYYY[E, A],
+    context: Context[E],
+    cb: BiCallback[E, A],
+    rcb: TaskRestartCallback,
+    bindCurrent: Bind,
+    bindRest: CallStack): Unit = {
 
     val savedLocals =
       if (context.options.localContextPropagation) Local.getContext()
@@ -262,12 +262,12 @@ private[bio] object TaskRunLoop {
     * Function gets invoked by `Task.runAsync(cb: Callback)`.
     */
   def startLight[E, A](
-                        source: WRYYY[E, A],
-                        scheduler: Scheduler,
-                        opts: WRYYY.Options,
-                        // TODO: should it be [E, A]?
-                        cb: BiCallback[Any, A],
-                        isCancelable: Boolean = true): CancelToken[WRYYY[E, ?]] = {
+    source: WRYYY[E, A],
+    scheduler: Scheduler,
+    opts: WRYYY.Options,
+    // TODO: should it be [E, A]?
+    cb: BiCallback[Any, A],
+    isCancelable: Boolean = true): CancelToken[WRYYY[E, ?]] = {
 
     var current = source.asInstanceOf[WRYYY[Any, Any]]
     var bFirst: Bind = null
@@ -644,13 +644,13 @@ private[bio] object TaskRunLoop {
   }
 
   private[internal] def executeAsyncTask(
-                                          task: WRYYY.Async[Any, Any],
-                                          context: Context[Any],
-                                          cb: BiCallback[Any, Any],
-                                          rcb: TaskRestartCallback,
-                                          bFirst: Bind,
-                                          bRest: CallStack,
-                                          nextFrame: FrameIndex): Unit = {
+    task: WRYYY.Async[Any, Any],
+    context: Context[Any],
+    cb: BiCallback[Any, Any],
+    rcb: TaskRestartCallback,
+    bFirst: Bind,
+    bRest: CallStack,
+    nextFrame: FrameIndex): Unit = {
 
     // We are going to resume the frame index from where we left,
     // but only if no real asynchronous execution happened. So in order
@@ -672,15 +672,15 @@ private[bio] object TaskRunLoop {
     * [[startLight]].
     */
   private def goAsyncForLightCB[E](
-                                    source: Current,
-                                    scheduler: Scheduler,
-                                    opts: WRYYY.Options,
-                                    cb: BiCallback[Any, Any],
-                                    bFirst: Bind,
-                                    bRest: CallStack,
-                                    nextFrame: FrameIndex,
-                                    isCancelable: Boolean,
-                                    forceFork: Boolean): CancelToken[WRYYY[E, ?]] = {
+    source: Current,
+    scheduler: Scheduler,
+    opts: WRYYY.Options,
+    cb: BiCallback[Any, Any],
+    bFirst: Bind,
+    bRest: CallStack,
+    nextFrame: FrameIndex,
+    isCancelable: Boolean,
+    forceFork: Boolean): CancelToken[WRYYY[E, ?]] = {
 
     val context = Context(
       scheduler,
@@ -774,7 +774,9 @@ private[bio] object TaskRunLoop {
     }
   }
 
-  private[internal] def findFatalErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]] = {
+  private[internal] def findFatalErrorHandler[E](
+    bFirst: Bind,
+    bRest: CallStack): StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]] = {
     bFirst match {
       case ref: StackFrame.FatalStackFrame[E, Any, WRYYY[E, Any]] @unchecked => ref
       case _ =>

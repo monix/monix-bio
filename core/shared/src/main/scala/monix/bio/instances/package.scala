@@ -20,7 +20,9 @@ package monix.bio
 import cats.effect.ExitCase
 
 package object instances {
-  @inline private[instances] final def exitCaseFlattenEither(exit: ExitCase[Either[Throwable, Throwable]]): ExitCase[Throwable] =
+
+  @inline private[instances] final def exitCaseFlattenEither(
+    exit: ExitCase[Either[Throwable, Throwable]]): ExitCase[Throwable] =
     exit match {
       case ExitCase.Error(e) => ExitCase.Error(e.fold(identity, identity))
       case ExitCase.Completed => ExitCase.Completed

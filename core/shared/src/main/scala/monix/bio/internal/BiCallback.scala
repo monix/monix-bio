@@ -107,7 +107,7 @@ object BiCallback {
 
       override def onError(e: E): Unit = {
         if (!tryOnError(e)) {
-          throw new CallbackCalledMultipleTimesException("onError",WrappedException.wrap(e))
+          throw new CallbackCalledMultipleTimesException("onError", WrappedException.wrap(e))
         }
       }
 
@@ -170,6 +170,7 @@ object BiCallback {
         new BiCallback[E, A] {
           private[this] var isActive = true
           override def onSuccess(value: A): Unit = apply(Right(value))
+
           override def onError(e: E): Unit = {
             apply(Left(e))
           }
@@ -300,8 +301,7 @@ object BiCallback {
       extends Base[E, A](cb)(ec) with TrampolinedRunnable
 
   /** Base implementation for `trampolined` and `forked`. */
-  private class Base[E, A](cb: BiCallback[E, A])(implicit ec: ExecutionContext)
-      extends BiCallback[E, A] with Runnable {
+  private class Base[E, A](cb: BiCallback[E, A])(implicit ec: ExecutionContext) extends BiCallback[E, A] with Runnable {
     private[this] val state = monix.execution.atomic.AtomicInt(0)
     private[this] var value: A = _
     private[this] var error: E = _

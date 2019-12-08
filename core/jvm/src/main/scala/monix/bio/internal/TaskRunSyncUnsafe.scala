@@ -176,13 +176,14 @@ private[bio] object TaskRunSyncUnsafe {
     private[this] var error: E = _
     private[this] var fatalError: Throwable = _
 
-    def value: A ={
+    def value: A = {
       if (fatalError ne null) throw fatalError
-      else error match {
-        case null => success
-        case th: Throwable => throw th
-        case e => throw new WrappedException(e)
-      }
+      else
+        error match {
+          case null => success
+          case th: Throwable => throw th
+          case e => throw new WrappedException(e)
+        }
     }
 
     def onSuccess(value: A): Unit = {

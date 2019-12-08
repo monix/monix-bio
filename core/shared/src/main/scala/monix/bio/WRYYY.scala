@@ -335,7 +335,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  final def runAsyncF[E1 >: E](cb: Either[Either[Throwable, E1], A] => Unit)(implicit s: Scheduler): CancelToken[WRYYY[E1, ?]] =
+  final def runAsyncF[E1 >: E](cb: Either[Either[Throwable, E1], A] => Unit)(
+    implicit s: Scheduler): CancelToken[WRYYY[E1, ?]] =
     runAsyncOptF(cb)(s, WRYYY.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
@@ -645,7 +646,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @param opts $optionsDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncUncancelableOpt(cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): Unit = {
+  def runAsyncUncancelableOpt(
+    cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): Unit = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -1012,7 +1014,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        needs release, along with the result of `use`
     *        (cancelation, error or successful result)
     */
-  final def bracketCase[E1 >: E, B](use: A => WRYYY[E1, B])(release: (A, ExitCase[Either[Throwable, E1]]) => UIO[Unit]): WRYYY[E1, B] =
+  final def bracketCase[E1 >: E, B](use: A => WRYYY[E1, B])(
+    release: (A, ExitCase[Either[Throwable, E1]]) => UIO[Unit]): WRYYY[E1, B] =
     TaskBracket.exitCase(this, use, release)
 
   /** Returns a task that treats the source task as the acquisition of a resource,
@@ -2696,8 +2699,9 @@ object WRYYY extends TaskInstancesLevel0 {
   private[bio] final case class Now[+A](value: A) extends WRYYY[Nothing, A] {
 
     // Optimization to avoid the run-loop
-    override def runAsyncOptF[E](
-      cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): CancelToken[WRYYY[E, ?]] = {
+    override def runAsyncOptF[E](cb: Either[Either[Throwable, E], A] => Unit)(
+      implicit s: Scheduler,
+      opts: WRYYY.Options): CancelToken[WRYYY[E, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         WRYYY.unit
@@ -2712,7 +2716,8 @@ object WRYYY extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runAsyncOpt(cb: Either[Either[Throwable, Nothing], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+    override def runAsyncOpt(
+      cb: Either[Either[Throwable, Nothing], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         Cancelable.empty
@@ -2741,8 +2746,9 @@ object WRYYY extends TaskInstancesLevel0 {
   private[bio] final case class Error[E](e: E) extends WRYYY[E, Nothing] {
 
     // Optimization to avoid the run-loop
-    override def runAsyncOptF[E1 >: E](
-      cb: Either[Either[Throwable, E1], Nothing] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): CancelToken[WRYYY[E1, ?]] = {
+    override def runAsyncOptF[E1 >: E](cb: Either[Either[Throwable, E1], Nothing] => Unit)(
+      implicit s: Scheduler,
+      opts: WRYYY.Options): CancelToken[WRYYY[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         WRYYY.unit
@@ -2759,7 +2765,8 @@ object WRYYY extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runAsyncOpt(cb: Either[Either[Throwable, E], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+    override def runAsyncOpt(
+      cb: Either[Either[Throwable, E], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         Cancelable.empty
@@ -2839,10 +2846,10 @@ object WRYYY extends TaskInstancesLevel0 {
     *        evaluating the `register` function
     */
   private[monix] final case class Async[E, +A](
-                                                register: (Context[E], BiCallback[E, A]) => Unit,
-                                                trampolineBefore: Boolean = false,
-                                                trampolineAfter: Boolean = true,
-                                                restoreLocals: Boolean = true)
+    register: (Context[E], BiCallback[E, A]) => Unit,
+    trampolineBefore: Boolean = false,
+    trampolineAfter: Boolean = true,
+    restoreLocals: Boolean = true)
       extends WRYYY[E, A]
 
   /** For changing the context for the rest of the run-loop.

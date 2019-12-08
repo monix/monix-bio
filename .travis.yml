@@ -1,23 +1,44 @@
-sudo: false
 language: scala
+sudo: required
+dist: trusty
+group: edge
 
-scala:
-  - 2.13.1
-  - 2.12.10
-  - 2.11.12
-
-jdk:
-  - openjdk11
+matrix:
+  include:
+    # Scala 2.11, JVM, JDK 11
+    - jdk: openjdk11
+      scala: 2.11.12
+      env: COMMAND=ci-jvm
+    # Scala 2.11, JavaScript
+    - jdk: oraclejdk11
+      scala: 2.11.12
+      env: COMMAND=ci-js
+    # Scala 2.12, JVM, JDK 11
+    - jdk: openjdk11
+      scala: 2.12.10
+      env: COMMAND=ci-jvm
+    # Scala 2.12, JavaScript
+    - jdk: oraclejdk11
+      scala: 2.12.10
+      env: COMMAND=ci-js
+    # Scala 2.13, JVM, JDK 11
+    - jdk: openjdk11
+      scala: 2.13.1
+      env: COMMAND=ci-jvm
+    # Scala 2.13, JavaScript
+    - jdk: oraclejdk11
+      scala: 2.13.1
+      env: COMMAND=ci-js
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION test
-
-after_success:
-  - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && test $TRAVIS_REPO_SLUG == "monix/monix-bio" && sbt ++$TRAVIS_SCALA_VERSION publish
-  - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && test $TRAVIS_REPO_SLUG == "monix/monix-bio" && test $TRAVIS_SCALA_VERSION == "2.13.1"
+  - sbt -J-Xmx6144m ++$TRAVIS_SCALA_VERSION $COMMAND
 
 cache:
   directories:
     - $HOME/.ivy2/cache
     - $HOME/.coursier/cache
     - $HOME/.sbt
+
+before_cache:
+  - find $HOME/.sbt -name "*.lock" -type f -delete
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete

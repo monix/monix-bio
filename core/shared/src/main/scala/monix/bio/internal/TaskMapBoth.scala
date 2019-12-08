@@ -85,10 +85,10 @@ private[bio] object TaskMapBoth {
 
     /* For signaling a fatal error. */
     @tailrec def sendFatalError(
-                                 mainConn: TaskConnection[E],
-                                 state: AtomicAny[AnyRef],
-                                 cb: BiCallback[E, R],
-                                 ex: Throwable)(implicit s: Scheduler): Unit = {
+      mainConn: TaskConnection[E],
+      state: AtomicAny[AnyRef],
+      cb: BiCallback[E, R],
+      ex: Throwable)(implicit s: Scheduler): Unit = {
 
       // Guarding the contract of the callback, as we cannot send an error
       // if an error has already happened because of the other task

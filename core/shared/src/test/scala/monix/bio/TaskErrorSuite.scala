@@ -124,7 +124,7 @@ object TaskErrorSuite extends BaseTestSuite {
   test("Task.defer(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = Task.defer[Int](throw dummy).materialize.runToFuture
-    assertEquals(f.value,Some(Success(Right(Failure(dummy)))))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   test("Task.defer(error).flatMap.materialize") { implicit s =>

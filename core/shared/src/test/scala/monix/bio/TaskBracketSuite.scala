@@ -249,6 +249,6 @@ object TaskBracketSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     assertEquals(use, false)
 
-        assertEquals(release, true)
+    assertEquals(release, true)
   }
 }

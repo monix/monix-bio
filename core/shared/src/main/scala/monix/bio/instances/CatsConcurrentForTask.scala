@@ -48,7 +48,8 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
 
   override def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(
     release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
-    acquire.bracketCase(use)((a, exit) => release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(WRYYY.raiseFatalError))
+    acquire.bracketCase(use)((a, exit) =>
+      release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(WRYYY.raiseFatalError))
 
   override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
     TaskCreate.asyncF(k)

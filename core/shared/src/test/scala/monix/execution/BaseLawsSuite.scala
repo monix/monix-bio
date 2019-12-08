@@ -71,7 +71,10 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
   implicit def isEqListToProp[A](list: List[IsEq[A]])(implicit A: Eq[A]): Prop =
     Prop(list.forall(isEq => A.eqv(isEq.lhs, isEq.rhs)))
 
-  implicit def equalityCancelableFuture[E, A](implicit A: Eq[A], E: Eq[E], ec: TestScheduler): Eq[CancelableFuture[Either[E, A]]] =
+  implicit def equalityCancelableFuture[E, A](
+    implicit A: Eq[A],
+    E: Eq[E],
+    ec: TestScheduler): Eq[CancelableFuture[Either[E, A]]] =
     new Eq[CancelableFuture[Either[E, A]]] {
       val inst = equalityFutureEither[E, A]
 
@@ -143,6 +146,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
 
   def equalityFuture[A](implicit A: Eq[A], ec: TestScheduler): Eq[Future[A]] =
     new Eq[Future[A]] {
+
       def eqv(x: Future[A], y: Future[A]): Boolean = {
         silenceSystemErr {
           // Executes the whole pending queue of runnables

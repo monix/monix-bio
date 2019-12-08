@@ -153,11 +153,7 @@ private[bio] object TaskCreate {
       }
   }
 
-  private final class CallbackForCreate[E, A](
-    ctx: Context[E],
-    threadId: Long,
-    shouldPop: Boolean,
-    cb: BiCallback[E, A])
+  private final class CallbackForCreate[E, A](ctx: Context[E], threadId: Long, shouldPop: Boolean, cb: BiCallback[E, A])
       extends BiCallback[E, A] with TrampolinedRunnable {
 
     private[this] val state = AtomicInt(0)

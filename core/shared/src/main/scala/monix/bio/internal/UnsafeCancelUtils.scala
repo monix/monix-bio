@@ -149,13 +149,16 @@ private[bio] object UnsafeCancelUtils {
       } else {
         (fatalErrors.toList, errors.toList) match {
           case (first :: rest, rest2) =>
-              WRYYY.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
+            WRYYY.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
           case (Nil, first :: rest) =>
             (first, rest) match {
               case (th: Throwable, restTh: List[Throwable]) =>
                 WRYYY.raiseError(Platform.composeErrors(th, restTh: _*).asInstanceOf[E])
               case _ =>
-                WRYYY.deferAction(s => UIO(rest.foreach{e => s.reportFailure(WrappedException.wrap(e))})) >> WRYYY.raiseError(first)
+                WRYYY.deferAction(s =>
+                  UIO(rest.foreach { e =>
+                    s.reportFailure(WrappedException.wrap(e))
+                  })) >> WRYYY.raiseError(first)
             }
             WRYYY.raiseError(first)
 

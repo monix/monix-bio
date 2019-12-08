@@ -119,10 +119,11 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
     task.runAsync {
       case Right(_) => ()
-      case Left(value) => value.fold(identity, identity) match {
-        case WrappedEx(nr) => effect += nr
-        case e => throw e
-      }
+      case Left(value) =>
+        value.fold(identity, identity) match {
+          case WrappedEx(nr) => effect += nr
+          case e => throw e
+        }
     }
 
     sc.tick()
@@ -141,10 +142,11 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
     task.runAsync {
       case Right(_) => effect += 1
-      case Left(value) => value.fold(identity, identity) match {
-        case WrappedEx(nr) => effect += nr
-        case e => throw e
-      }
+      case Left(value) =>
+        value.fold(identity, identity) match {
+          case WrappedEx(nr) => effect += nr
+          case e => throw e
+        }
     }
 
     sc.tick()
@@ -165,10 +167,11 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
       task.runAsync {
         case Right(nr) => effect += nr
-        case Left(value) => value.fold(identity, identity) match {
-          case WrappedEx(nr) => effect += nr
-          case e => throw e
-        }
+        case Left(value) =>
+          value.fold(identity, identity) match {
+            case WrappedEx(nr) => effect += nr
+            case e => throw e
+          }
       }
 
       sc.tick()

@@ -108,7 +108,10 @@ private[monix] object TaskBracket {
       new ReleaseFrameE(ctx, value, release)
   }
 
-  private final class ReleaseFrameE[E, A, B](ctx: Context[E], a: A, release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
+  private final class ReleaseFrameE[E, A, B](
+    ctx: Context[E],
+    a: A,
+    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
       extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
@@ -149,7 +152,10 @@ private[monix] object TaskBracket {
       new ReleaseFrameCase(ctx, value, release)
   }
 
-  private final class ReleaseFrameCase[E, A, B](ctx: Context[E], a: A, release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
+  private final class ReleaseFrameCase[E, A, B](
+    ctx: Context[E],
+    a: A,
+    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
       extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
@@ -245,10 +251,10 @@ private[monix] object TaskBracket {
       // call needs to be suspended, because we might evaluate the effect before
       // the connection is actually made uncancelable
       val task =
-      if (ctx.options.autoCancelableRunLoops)
-        WRYYY.suspend(unsafeRecoverFatal(e))
-      else
-        unsafeRecoverFatal(e)
+        if (ctx.options.autoCancelableRunLoops)
+          WRYYY.suspend(unsafeRecoverFatal(e))
+        else
+          unsafeRecoverFatal(e)
 
       makeUncancelable(task)
     }
@@ -294,15 +300,13 @@ private[monix] object TaskBracket {
       // NOTE: the "restore" part of this is `null` because we don't need to restore
       // the original connection. The original connection gets restored automatically
       // via how "TaskRestartCallback" works. This is risky!
-      ContextSwitch[E, B](
-        task,
-        withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]],
-        null)
+      ContextSwitch[E, B](task, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], null)
 
     }
   }
 
-  private final class ReleaseRecover[E](e: Either[Throwable, E]) extends FatalStackFrame[Throwable, Unit, WRYYY[E, Nothing]] {
+  private final class ReleaseRecover[E](e: Either[Throwable, E])
+      extends FatalStackFrame[Throwable, Unit, WRYYY[E, Nothing]] {
 
     def apply(a: Unit): WRYYY[E, Nothing] = {
       e.fold(WRYYY.raiseFatalError, WRYYY.raiseError)

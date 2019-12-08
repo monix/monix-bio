@@ -93,7 +93,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
           override def onError(e: Either[Throwable, Throwable]): Unit =
             result = Some(Failure(e.fold(identity, identity)))
         }
-    )
+      )
 
     c.cancel()
     s.tickOne()

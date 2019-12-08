@@ -66,10 +66,10 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
   }
 
   override implicit def equalityUIO[A](
-                               implicit
-                               A: Eq[A],
-                               sc: TestScheduler,
-                               opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
+    implicit
+    A: Eq[A],
+    sc: TestScheduler,
+    opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
     Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
       task.runAsyncOpt {

@@ -34,9 +34,9 @@ import scala.util.Try
   * use of Task's `runSyncUnsafe`.
   */
 object TypeClassLawsForTaskRunSyncUnsafeSuite
-  extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-    WRYYY.defaultOptions.disableAutoCancelableRunLoops
-  )
+    extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
+      WRYYY.defaultOptions.disableAutoCancelableRunLoops
+    )
 
 /**
   * Type class tests for Task that use an alternative `Eq`, making
@@ -44,12 +44,12 @@ object TypeClassLawsForTaskRunSyncUnsafeSuite
   * in auto-cancelable mode.
   */
 object TypeClassLawsForTaskAutoCancelableRunSyncUnsafeSuite
-  extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-    WRYYY.defaultOptions.enableAutoCancelableRunLoops
-  )
+    extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
+      WRYYY.defaultOptions.enableAutoCancelableRunLoops
+    )
 
 class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: WRYYY.Options)
-  extends monix.execution.BaseLawsSuite with ArbitraryInstancesBase {
+    extends monix.execution.BaseLawsSuite with ArbitraryInstancesBase {
 
   implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
   implicit val cs = IO.contextShift(sc)

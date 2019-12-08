@@ -21,7 +21,7 @@ import java.util.concurrent.RejectedExecutionException
 
 import monix.bio.WRYYY
 import monix.bio.WRYYY.{Context, Error, FatalError, Now}
-import monix.bio.internal.TaskRunLoop.{Bind, CallStack, WrappedException, startFull}
+import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack, WrappedException}
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.misc.Local
 import monix.execution.schedulers.TrampolinedRunnable
@@ -139,7 +139,14 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     val bRest = this.bRest
     this.bFirst = null
     this.bRest = null
-    startFull(FatalError(WrappedException.wrap(error)), context, this.wrappedCallback, this, bFirst, bRest, this.context.frameRef())
+    startFull(
+      FatalError(WrappedException.wrap(error)),
+      context,
+      this.wrappedCallback,
+      this,
+      bFirst,
+      bRest,
+      this.context.frameRef())
   }
 
   /** Reusable Runnable reference, to go lighter on memory allocations. */
@@ -167,6 +174,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
   /** Reusable Runnable reference, to go lighter on memory allocations. */
   private[this] val onFatalErrorRun: TrampolinedRunnable =
     new TrampolinedRunnable {
+
       def run(): Unit = {
         val e = error
         error = null
