@@ -17,6 +17,8 @@
 
 package monix.bio
 
+import scala.concurrent.duration.FiniteDuration
+
 object UIO {
 
   def apply[A](a: => A): UIO[A] =
@@ -36,4 +38,7 @@ object UIO {
 
   val unit: UIO[Unit] =
     WRYYY.unit
+
+  def sleep(timespan: FiniteDuration): UIO[Unit] =
+    WRYYY.sleep(timespan)
 }

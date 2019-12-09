@@ -1442,6 +1442,17 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   final def start: UIO[Fiber[E @uV, A @uV]] =
     TaskStart.forked(this)
 
+  /** Returns a string representation of this task meant for
+    * debugging purposes only.
+    */
+  override def toString: String = this match {
+    case Now(a) => s"WRYYY.Now($a)"
+    case Error(e) => s"WRYYY.Error($e)"
+    case _ =>
+      val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.WRYYY[$.]", "")
+      s"WRYYY.$n$$${System.identityHashCode(this)}"
+  }
+
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `map` functions, which get executed depending
     * on whether the result is successful or if it ends in error.
