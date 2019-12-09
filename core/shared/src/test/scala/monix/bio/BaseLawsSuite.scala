@@ -18,10 +18,9 @@
 package monix.bio
 
 import cats.Eq
+import cats.effect.IO
 import cats.effect.laws.discipline.Parameters
 import cats.effect.laws.discipline.arbitrary.{catsEffectLawsArbitraryForIO, catsEffectLawsCogenForIO}
-import cats.effect.{Async, IO}
-import monix.bio
 import monix.bio.internal.TaskCreate
 import monix.execution.atomic.Atomic
 import monix.execution.exceptions.DummyException
@@ -30,7 +29,7 @@ import monix.execution.schedulers.TestScheduler
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}
 import org.scalacheck.{Arbitrary, Cogen, Gen}
 
-import scala.util.{Either, Success, Try}
+import scala.util.Either
 
 /**
   * Base trait to inherit in all `monix-bio` tests that use ScalaCheck.
@@ -189,6 +188,10 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
 
   implicit def arbitraryUIO[A: Arbitrary: Cogen]: Arbitrary[UIO[A]] = {
     Arbitrary(getArbitrary[A].map(UIO(_)))
+  }
+
+  implicit def arbitraryUIOf[A: Arbitrary: Cogen, B: Arbitrary: Cogen]: Arbitrary[A => UIO[B]] = {
+    Arbitrary(getArbitrary[A => B].map ( f => a => UIO(f(a))))
   }
 
   implicit def arbitraryTaskPar[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[WRYYY.Par[E, A]] =

@@ -30,7 +30,6 @@ private[bio] abstract class StackFrame[E, -A, +R] extends (A => R) { self =>
 
 // TODO: maybe add recoverFatal to StackFrame itself and throw when it's not possible?
 
-
 private[bio] object StackFrame {
 
   /** [[StackFrame]] used in the implementation of `redeemWith`. */

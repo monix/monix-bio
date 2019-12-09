@@ -40,7 +40,7 @@ object Task {
   def eval[A](a: => A): Task[A] =
     WRYYY.eval(a)
 
-  def delay[A](a : => A): Task[A] =
+  def delay[A](a: => A): Task[A] =
     WRYYY.delay(a)
 
   def evalAsync[A](a: => A): Task[A] =
@@ -75,6 +75,9 @@ object Task {
 
   def fromTry[A](a: Try[A]): Task[A] =
     WRYYY.fromTry(a)
+
+  def fromEither[A](a: Either[Throwable, A]): Task[A] =
+    WRYYY.fromEither(a)
 
   def race[A, B](fa: Task[A], fb: Task[B]): Task[Either[A, B]] =
     WRYYY.race(fa, fb)
@@ -126,4 +129,7 @@ object Task {
     */
   def create[A]: AsyncBuilder.CreatePartiallyApplied[Throwable, A] =
     WRYYY.create[Throwable, A]
+
+  def gatherUnordered[A](in: Iterable[Task[A]]): Task[List[A]] =
+    WRYYY.gatherUnordered(in)
 }

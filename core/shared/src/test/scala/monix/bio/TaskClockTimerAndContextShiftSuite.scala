@@ -28,8 +28,7 @@ import scala.util.{Failure, Success}
 
 object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("WRYYY.clock is implicit") { _ =>
-    assertEquals(WRYYY.clock[Any],
-      implicitly[Clock[WRYYY[Any, ?]]])
+    assertEquals(WRYYY.clock[Any], implicitly[Clock[WRYYY[Any, ?]]])
   }
 
   test("WRYYY.clock.monotonic") { implicit s =>

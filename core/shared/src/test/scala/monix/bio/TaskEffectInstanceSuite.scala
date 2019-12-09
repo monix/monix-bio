@@ -24,6 +24,7 @@ import monix.execution.schedulers.TracingScheduler
 import scala.concurrent.duration._
 
 object TaskEffectInstanceSuite extends BaseTestSuite {
+
   val readOptions: UIO[WRYYY.Options] =
     WRYYY.Async[Nothing, Options] { (ctx, cb) =>
       cb.onSuccess(ctx.options)
@@ -87,4 +88,3 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
     assert(received.localContextPropagation)
   }
 }
-

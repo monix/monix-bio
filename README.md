@@ -6,9 +6,9 @@ Experimental alternative to [monix.eval.Task](https://monix.io/api/3.1/monix/eva
 
 ## Stability
 
-Currently there are no backwards compatibility guarantees. It will take a bit of time for everything to stabilize so I strongly advise against using in serious projects. :) On the other hand, please play with it, give feedback and report bugs! It will be a tremendous help in getting this production-ready faster.
+Currently there are no backwards compatibility guarantees. It will take a bit of time for everything to stabilize so I strongly advise against using it in serious projects at the moment. :) On the other hand, please play with it, give feedback and report bugs! It will be a tremendous help in getting this production-ready faster.
 
-One of the main goals is to stay as consistent with `monix.eval.Task` as possible so the core functionality will not see much changes but it is possible that type signatures change, e.g. to return `UIO[A]` where possible. 
+One of the main goals is to stay as consistent with `monix.eval.Task` as possible so the core functionality will not see much changes but it is likely that some type signatures change, e.g. to return `UIO[A]` where possible. 
 
 Error handling operators are actively worked on and they will most likely see breaking changes.
 
