@@ -1953,7 +1953,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * @param register $registerParamDesc
     */
   def cancelable[E, A](register: Callback[E, A] => CancelToken[WRYYY[E, ?]]): WRYYY[E, A] =
-    cancelable0((_, cb) => register(cb))
+    cancelable0[E, A]((_, cb) => register(cb))
 
   /** Create a cancelable `Task` from an asynchronous computation,
     * which takes the form of a function with which we can register a
@@ -3094,7 +3094,7 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
   implicit def contextShift[E]: ContextShift[WRYYY[E, ?]] =
     contextShiftAny.asInstanceOf[ContextShift[WRYYY[E, ?]]]
 
-  implicit val contextShiftAny: ContextShift[WRYYY[Any, ?]] =
+  private[this] final val contextShiftAny: ContextShift[WRYYY[Any, ?]] =
     new ContextShift[WRYYY[Any, ?]] {
 
       override def shift: WRYYY[Any, Unit] =
@@ -3137,7 +3137,7 @@ private[bio] abstract class TaskTimers extends TaskClocks {
   implicit def timer[E]: Timer[WRYYY[E, ?]] =
     timerAny.asInstanceOf[Timer[WRYYY[E, ?]]]
 
-  implicit val timerAny: Timer[WRYYY[Any, ?]] =
+  private[this] final val timerAny: Timer[WRYYY[Any, ?]] =
     new Timer[WRYYY[Any, ?]] {
 
       override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
@@ -3169,10 +3169,10 @@ private[bio] abstract class TaskClocks {
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[WRYYY.runToFuture]]).
     */
-  implicit def clock[E]: Clock[WRYYY[E, ?]] =
+  def clock[E]: Clock[WRYYY[E, ?]] =
     clockAny.asInstanceOf[Clock[WRYYY[E, ?]]]
 
-  val clockAny: Clock[WRYYY[Any, ?]] =
+  private[this] final val clockAny: Clock[WRYYY[Any, ?]] =
     new Clock[WRYYY[Any, ?]] {
 
       override def realTime(unit: TimeUnit): WRYYY[Any, Long] =

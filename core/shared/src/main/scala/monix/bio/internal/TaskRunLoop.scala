@@ -821,9 +821,9 @@ private[bio] object TaskRunLoop {
       extends StackFrame[Any, Any, WRYYY[Any, Any]] {
 
     def apply(a: Any): WRYYY[Any, Any] =
-      ContextSwitch(Now(a), current => restore(a, null, old, current), null)
+      ContextSwitch[Any, Any](Now(a), current => restore(a, null, old, current), null)
 
     def recover(e: Any): WRYYY[Any, Any] =
-      ContextSwitch(Error(e), current => restore(null, e, old, current), null)
+      ContextSwitch[Any, Any](Error(e), current => restore(null, e, old, current), null)
   }
 }

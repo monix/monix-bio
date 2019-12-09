@@ -49,7 +49,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
 
   implicit val ap: Applicative[WRYYY.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
 
-  override implicit def equalityTask[E, A](
+  override implicit def equalityWRYYY[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],

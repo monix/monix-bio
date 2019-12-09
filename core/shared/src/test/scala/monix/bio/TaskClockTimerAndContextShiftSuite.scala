@@ -28,7 +28,8 @@ import scala.util.{Failure, Success}
 
 object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("WRYYY.clock is implicit") { _ =>
-    assertEquals(WRYYY.clock, implicitly[Clock[WRYYY[Any, ?]]])
+    assertEquals(WRYYY.clock[Any],
+      implicitly[Clock[WRYYY[Any, ?]]])
   }
 
   test("WRYYY.clock.monotonic") { implicit s =>
@@ -70,8 +71,8 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   }
 
   test("WRYYY.timer is implicit") { implicit s =>
-    assertEquals(WRYYY.timer, implicitly[Timer[WRYYY[Any, ?]]])
-    assertEquals(WRYYY.timer.clock, implicitly[Clock[WRYYY[Any, ?]]])
+    assertEquals(WRYYY.timer[Any], implicitly[Timer[WRYYY[Any, ?]]])
+    assertEquals(WRYYY.timer[Any].clock, implicitly[Clock[WRYYY[Any, ?]]])
   }
 
   test("WRYYY.timer") { implicit s =>
@@ -105,7 +106,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   }
 
   test("WRYYY.contextShift is implicit") { implicit s =>
-    assertEquals(WRYYY.contextShift, implicitly[ContextShift[WRYYY[Any, ?]]])
+    assertEquals(WRYYY.contextShift[Any], implicitly[ContextShift[WRYYY[Any, ?]]])
   }
 
   test("WRYYY.contextShift.shift") { implicit s =>

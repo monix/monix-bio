@@ -35,7 +35,7 @@ private[bio] object TaskCreate {
     * Implementation for `cats.effect.Concurrent#cancelable`.
     */
   def cancelableEffect[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
-    cancelable0((_, cb) => k(cb))
+    cancelable0[Throwable, A]((_, cb) => k(cb))
 
   /**
     * Implementation for `Task.cancelable`

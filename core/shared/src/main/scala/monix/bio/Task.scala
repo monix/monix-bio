@@ -40,6 +40,9 @@ object Task {
   def eval[A](a: => A): Task[A] =
     WRYYY.eval(a)
 
+  def delay[A](a : => A): Task[A] =
+    WRYYY.delay(a)
+
   def evalAsync[A](a: => A): Task[A] =
     WRYYY.evalAsync(a)
 
@@ -51,6 +54,9 @@ object Task {
 
   def raiseError[A](ex: Throwable): Task[A] =
     WRYYY.raiseError(ex)
+
+  def raiseFatalError(ex: Throwable): Task[Nothing] =
+    WRYYY.raiseFatalError(ex)
 
   val unit: Task[Unit] =
     WRYYY.unit

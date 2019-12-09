@@ -60,7 +60,7 @@ lazy val sharedSettings = Seq(
   organization := "io.monix",
 
   scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.11.12", "2.12.10", "2.13.1"),
+  crossScalaVersions := Seq("2.12.10", "2.13.1"),
   scalacOptions ++= compilerOptions,
   scalacOptions ++= (
     if (priorTo2_13(scalaVersion.value))
@@ -109,7 +109,9 @@ val compilerOptions = Seq(
   "-language:higherKinds",
   "-unchecked",
   "-Ywarn-dead-code",
-  "-Ywarn-numeric-widen"
+  "-Ywarn-numeric-widen",
+  "-language:implicitConversions",
+  "-language:experimental.macros"
 )
 
 lazy val crossSettings = sharedSettings ++ Seq(

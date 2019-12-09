@@ -49,7 +49,7 @@ trait BaseLawsSuite extends monix.execution.BaseLawsSuite with ArbitraryInstance
 
 trait ArbitraryInstances extends ArbitraryInstancesBase {
 
-  implicit def equalityTask[E, A](
+  implicit def equalityWRYYY[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],
