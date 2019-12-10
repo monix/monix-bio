@@ -25,7 +25,7 @@ Currently there are no backwards compatibility guarantees. It will take a bit of
 
 One of the main goals is to stay as consistent with `monix.eval.Task` as possible so the core functionality will not see much changes but it is likely that some type signatures change, e.g. to return `UIO[A]` where possible. 
 
-Error handling operators are actively worked on and they will most likely see breaking changes.
+Error handling operators and error reporting are actively worked on and they will most likely see breaking changes.
 
 Most of the internals didn't see significant changes when compared to `monix.eval.Task` so this implementation can greatly benefit from maturity of its parent but the project has just started and the changes weren't thoroughly tested yet.
 

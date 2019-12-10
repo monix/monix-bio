@@ -37,6 +37,437 @@ import scala.concurrent.duration.{Duration, FiniteDuration, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
+/** `Task` represents a specification for a possibly lazy or
+  * asynchronous computation, which when executed will produce an `A`
+  * as a result, along with possible side-effects.
+  *
+  * Compared with `Future` from Scala's standard library, `Task` does
+  * not represent a running computation or a value detached from time,
+  * as `Task` does not execute anything when working with its builders
+  * or operators and it does not submit any work into any thread-pool,
+  * the execution eventually taking place only after `runAsync` is
+  * called and not before that.
+  *
+  * Note that `Task` is conservative in how it spawns logical threads.
+  * Transformations like `map` and `flatMap` for example will default
+  * to being executed on the logical thread on which the asynchronous
+  * computation was started. But one shouldn't make assumptions about
+  * how things will end up executed, as ultimately it is the
+  * implementation's job to decide on the best execution model. All
+  * you are guaranteed is asynchronous execution after executing
+  * `runAsync`.
+  *
+  * =Getting Started=
+  *
+  * To build a `Task` from a by-name parameters (thunks), we can use
+  * [[monix.eval.Task.apply Task.apply]] (
+  * alias [[monix.eval.Task.eval Task.eval]]) or
+  * [[monix.eval.Task.evalAsync Task.evalAsync]]:
+  *
+  * {{{
+  *   val hello = Task("Hello ")
+  *   val world = Task.evalAsync("World!")
+  * }}}
+  *
+  * Nothing gets executed yet, as `Task` is lazy, nothing executes
+  * until you trigger its evaluation via [[Task!.runAsync runAsync]] or
+  * [[Task!.runToFuture runToFuture]].
+  *
+  * To combine `Task` values we can use [[Task!.map .map]] and
+  * [[Task!.flatMap .flatMap]], which describe sequencing and this time
+  * it's in a very real sense because of the laziness involved:
+  *
+  * {{{
+  *   val sayHello = hello
+  *     .flatMap(h => world.map(w => h + w))
+  *     .map(println)
+  * }}}
+  *
+  * This `Task` reference will trigger a side effect on evaluation, but
+  * not yet. To make the above print its message:
+  *
+  * {{{
+  *   import monix.execution.CancelableFuture
+  *   import monix.execution.Scheduler.Implicits.global
+  *
+  *   val f: CancelableFuture[Unit] = sayHello.runToFuture
+  *   // => Hello World!
+  * }}}
+  *
+  * The returned type is a
+  * [[monix.execution.CancelableFuture CancelableFuture]] which
+  * inherits from Scala's standard [[scala.concurrent.Future Future]],
+  * a value that can be completed already or might be completed at
+  * some point in the future, once the running asynchronous process
+  * finishes. Such a future value can also be canceled, see below.
+  *
+  * =Laziness, Purity and Referential Transparency=
+  *
+  * The fact that `Task` is lazy whereas `Future` is not
+  * has real consequences. For example with `Task` you can do this:
+  *
+  * {{{
+  *   import scala.concurrent.duration._
+  *
+  *   def retryOnFailure[A](times: Int, source: Task[A]): Task[A] =
+  *     source.onErrorHandleWith { err =>
+  *       // No more retries left? Re-throw error:
+  *       if (times <= 0) Task.raiseError(err) else {
+  *         // Recursive call, yes we can!
+  *         retryOnFailure(times - 1, source)
+  *           // Adding 500 ms delay for good measure
+  *           .delayExecution(500.millis)
+  *       }
+  *     }
+  * }}}
+  *
+  * `Future` being a strict value-wannabe means that the actual value
+  * gets "memoized" (means cached), however `Task` is basically a function
+  * that can be repeated for as many times as you want.
+  *
+  * `Task` is a pure data structure that can be used to describe
+  * pure functions, the equivalent of Haskell's `IO`.
+  *
+  * ==Memoization==
+  *
+  * `Task` can also do memoization, making it behave like a "lazy"
+  * Scala `Future`, meaning that nothing is started yet, its
+  * side effects being evaluated on the first `runAsync` and then
+  * the result reused on subsequent evaluations:
+  *
+  * {{{
+  *   Task(println("boo")).memoize
+  * }}}
+  *
+  * The difference between this and just calling `runAsync()` is that
+  * `memoize()` still returns a `Task` and the actual memoization
+  * happens on the first `runAsync()` (with idempotency guarantees of
+  * course).
+  *
+  * But here's something else that the `Future` data type cannot do,
+  * [[monix.eval.Task!.memoizeOnSuccess memoizeOnSuccess]]:
+  *
+  * {{{
+  *   Task.eval {
+  *     if (scala.util.Random.nextDouble() > 0.33)
+  *       throw new RuntimeException("error!")
+  *     println("moo")
+  *   }.memoizeOnSuccess
+  * }}}
+  *
+  * This keeps repeating the computation for as long as the result is a
+  * failure and caches it only on success. Yes we can!
+  *
+  * ''WARNING:'' as awesome as `memoize` can be, use with care
+  * because memoization can break referential transparency!
+  *
+  * ==Parallelism==
+  *
+  * Because of laziness, invoking
+  * [[monix.eval.Task.sequence Task.sequence]] will not work like
+  * it does for `Future.sequence`, the given `Task` values being
+  * evaluated one after another, in ''sequence'', not in ''parallel''.
+  * If you want parallelism, then you need to use
+  * [[monix.eval.Task.gather Task.gather]] and thus be explicit about it.
+  *
+  * This is great because it gives you the possibility of fine tuning the
+  * execution. For example, say you want to execute things in parallel,
+  * but with a maximum limit of 30 tasks being executed in parallel.
+  * One way of doing that is to process your list in batches:
+  *
+  * {{{
+  *   // Some array of tasks, you come up with something good :-)
+  *   val list: Seq[Task[Int]] = Seq.tabulate(100)(Task(_))
+  *
+  *   // Split our list in chunks of 30 items per chunk,
+  *   // this being the maximum parallelism allowed
+  *   val chunks = list.sliding(30, 30).toSeq
+  *
+  *   // Specify that each batch should process stuff in parallel
+  *   val batchedTasks = chunks.map(chunk => Task.gather(chunk))
+  *   // Sequence the batches
+  *   val allBatches = Task.sequence(batchedTasks)
+  *
+  *   // Flatten the result, within the context of Task
+  *   val all: Task[Seq[Int]] = allBatches.map(_.flatten)
+  * }}}
+  *
+  * Note that the built `Task` reference is just a specification at
+  * this point, or you can view it as a function, as nothing has
+  * executed yet, you need to call [[Task!.runAsync runAsync]]
+  * or [[Task!.runToFuture runToFuture]] explicitly.
+  *
+  * =Cancellation=
+  *
+  * The logic described by an `Task` task could be cancelable,
+  * depending on how the `Task` gets built.
+  *
+  * [[monix.execution.CancelableFuture CancelableFuture]] references
+  * can also be canceled, in case the described computation can be
+  * canceled. When describing `Task` tasks with `Task.eval` nothing
+  * can be cancelled, since there's nothing about a plain function
+  * that you can cancel, but we can build cancelable tasks with
+  * [[monix.eval.Task.cancelable0[A](register* Task.cancelable]].
+  *
+  * {{{
+  *   import scala.concurrent.duration._
+  *   import scala.util._
+  *
+  *   val delayedHello = Task.cancelable0[Unit] { (scheduler, callback) =>
+  *     val task = scheduler.scheduleOnce(1.second) {
+  *       println("Delayed Hello!")
+  *       // Signaling successful completion
+  *       callback(Success(()))
+  *     }
+  *     // Returning a cancel token that knows how to cancel the
+  *     // scheduled computation:
+  *     Task {
+  *       println("Cancelling!")
+  *       task.cancel()
+  *     }
+  *   }
+  * }}}
+  *
+  * The sample above prints a message with a delay, where the delay
+  * itself is scheduled with the injected `Scheduler`. The `Scheduler`
+  * is in fact an implicit parameter to `runAsync()`.
+  *
+  * This action can be cancelled, because it specifies cancellation
+  * logic. In case we have no cancelable logic to express, then it's
+  * OK if we returned a
+  * [[monix.execution.Cancelable.empty Cancelable.empty]] reference,
+  * in which case the resulting `Task` would not be cancelable.
+  *
+  * But the `Task` we just described is cancelable, for one at the
+  * edge, due to `runAsync` returning [[monix.execution.Cancelable Cancelable]]
+  * and [[monix.execution.CancelableFuture CancelableFuture]] references:
+  *
+  * {{{
+  *   // Triggering execution
+  *   val cf: CancelableFuture[Unit] = delayedHello.runToFuture
+  *
+  *   // If we change our mind before the timespan has passed:
+  *   cf.cancel()
+  * }}}
+  *
+  * But also cancellation is described on `Task` as a pure action,
+  * which can be used for example in [[monix.eval.Task.race race]] conditions:
+  *
+  * {{{
+  *   import scala.concurrent.duration._
+  *   import scala.concurrent.TimeoutException
+  *
+  *   val ta = Task(1 + 1).delayExecution(4.seconds)
+  *
+  *   val tb = Task.raiseError[Int](new TimeoutException)
+  *     .delayExecution(4.seconds)
+  *
+  *   Task.racePair(ta, tb).flatMap {
+  *     case Left((a, fiberB)) =>
+  *       fiberB.cancel.map(_ => a)
+  *     case Right((fiberA, b)) =>
+  *       fiberA.cancel.map(_ => b)
+  *   }
+  * }}}
+  *
+  * The returned type in `racePair` is [[Fiber]], which is a data
+  * type that's meant to wrap tasks linked to an active process
+  * and that can be [[Fiber.cancel canceled]] or [[Fiber.join joined]].
+  *
+  * Also, given a task, we can specify actions that need to be
+  * triggered in case of cancellation, see
+  * [[monix.eval.Task!.doOnCancel doOnCancel]]:
+  *
+  * {{{
+  *   val task = Task.eval(println("Hello!")).executeAsync
+  *
+  *   task doOnCancel Task.eval {
+  *     println("A cancellation attempt was made!")
+  *   }
+  * }}}
+  *
+  * Given a task, we can also create a new task from it that atomic
+  * (non cancelable), in the sense that either all of it executes
+  * or nothing at all, via [[monix.eval.Task!.uncancelable uncancelable]].
+  *
+  * =Note on the ExecutionModel=
+  *
+  * `Task` is conservative in how it introduces async boundaries.
+  * Transformations like `map` and `flatMap` for example will default
+  * to being executed on the current call stack on which the
+  * asynchronous computation was started. But one shouldn't make
+  * assumptions about how things will end up executed, as ultimately
+  * it is the implementation's job to decide on the best execution
+  * model. All you are guaranteed (and can assume) is asynchronous
+  * execution after executing `runAsync`.
+  *
+  * Currently the default
+  * [[monix.execution.ExecutionModel ExecutionModel]] specifies
+  * batched execution by default and `Task` in its evaluation respects
+  * the injected `ExecutionModel`. If you want a different behavior,
+  * you need to execute the `Task` reference with a different scheduler.
+  *
+  * @define schedulerDesc is an injected
+  *         [[monix.execution.Scheduler Scheduler]] that gets used
+  *         whenever asynchronous boundaries are needed when
+  *         evaluating the task; a `Scheduler` is in general needed
+  *         when the `Task` needs to be evaluated via `runAsync`
+  *
+  * @define schedulerEvalDesc is the
+  *         [[monix.execution.Scheduler Scheduler]] needed in order
+  *         to evaluate the source, being required in Task's
+  *         [[runAsync]], [[runAsyncF]] or [[runToFuture]].
+  *
+  * @define callbackDesc ==Callback==
+  *
+  *         When executing the task via this method, the user is
+  *         required to supply a side effecting callback with the
+  *         signature: `Either[Throwable, A] => Unit`.
+  *
+  *         This will be used by the implementation to signal completion,
+  *         signaling either a `Right(value)` or a `Left(error)`.
+  *
+  *         `Task` however uses [[monix.execution.Callback Callback]]
+  *         internally, so you can supply a `Callback` instance instead
+  *         and it will be used to avoid unnecessary boxing. It also has
+  *         handy utilities.
+  *
+  *         Note that with `Callback` you can:
+  *
+  *          - convert from a plain function using `Either[Throwable, A]` as input via
+  *            [[monix.execution.Callback.fromAttempt Callback.fromAttempt]]
+  *          - convert from a plain function using `Try[A]` as input via
+  *            [[monix.execution.Callback.fromTry Callback.fromTry]]
+  *          - wrap a standard Scala `Promise` via
+  *            [[monix.execution.Callback.fromPromise Callback.fromPromise]]
+  *          - pass an empty callback that just reports errors via
+  *            [[monix.execution.Callback.empty Callback.empty]]
+  *
+  * @define callbackParamDesc is a callback that will be invoked upon
+  *         completion, either with a successful result, or with an error;
+  *         note that you can use [[monix.execution.Callback]] for extra
+  *         performance (avoids the boxing in [[scala.Either]])
+  *
+  * @define cancelableDesc a [[monix.execution.Cancelable Cancelable]]
+  *         that can be used to cancel a running task
+  *
+  * @define cancelTokenDesc a `Task[Unit]`, aliased via Cats-Effect
+  *         as a `CancelToken[Task]`, that can be used to cancel the
+  *         running task. Given that this is a `Task`, it can describe
+  *         asynchronous finalizers (if the source had any), therefore
+  *         users can apply back-pressure on the completion of such
+  *         finalizers.
+  *
+  * @define optionsDesc a set of [[monix.eval.Task.Options Options]]
+  *         that determine the behavior of Task's run-loop.
+  *
+  * @define startInspiration Inspired by
+  *         [[https://github.com/functional-streams-for-scala/fs2 FS2]],
+  *         with the difference that this method does not fork
+  *         automatically, being consistent with Monix's default
+  *         behavior.
+  *
+  * @define runSyncUnsafeTimeout is a duration that specifies the
+  *         maximum amount of time that this operation is allowed to block the
+  *         underlying thread. If the timeout expires before the result is ready,
+  *         a `TimeoutException` gets thrown. Note that you're allowed to
+  *         pass an infinite duration (with `Duration.Inf`), but unless
+  *         it's `main` that you're blocking and unless you're doing it only
+  *         once, then this is definitely not recommended — provide a finite
+  *         timeout in order to avoid deadlocks.
+  *
+  * @define runSyncUnsafePermit is an implicit value that's only available for
+  *         the JVM and not for JavaScript, its purpose being to stop usage of
+  *         this operation on top of engines that do not support blocking threads.
+  *
+  * @define runSyncMaybeReturn `Right(result)` in case a result was processed,
+  *         or `Left(future)` in case an asynchronous boundary
+  *         was hit and further async execution is needed
+  *
+  * @define runSyncStepReturn `Right(result)` in case a result was processed,
+  *         or `Left(task)` in case an asynchronous boundary
+  *         was hit and further async execution is needed
+  *
+  * @define runAsyncToFutureReturn a
+  *         [[monix.execution.CancelableFuture CancelableFuture]]
+  *         that can be used to extract the result or to cancel
+  *         a running task.
+  *
+  * @define bracketErrorNote '''NOTE on error handling''': one big
+  *         difference versus `try {} finally {}` is that, in case
+  *         both the `release` function and the `use` function throws,
+  *         the error raised by `use` gets signaled and the error
+  *         raised by `release` gets reported with `System.err` for
+  *         [[Coeval]] or with
+  *         [[monix.execution.Scheduler.reportFailure Scheduler.reportFailure]]
+  *         for [[Task]].
+  *
+  *         For example:
+  *
+  *         {{{
+  *           Task.evalAsync("resource").bracket { _ =>
+  *             // use
+  *             Task.raiseError(new RuntimeException("Foo"))
+  *           } { _ =>
+  *             // release
+  *             Task.raiseError(new RuntimeException("Bar"))
+  *           }
+  *         }}}
+  *
+  *         In this case the error signaled downstream is `"Foo"`,
+  *         while the `"Bar"` error gets reported. This is consistent
+  *         with the behavior of Haskell's `bracket` operation and NOT
+  *         with `try {} finally {}` from Scala, Java or JavaScript.
+  *
+  * @define unsafeRun '''UNSAFE (referential transparency)''' —
+  *         this operation can trigger the execution of side effects, which
+  *         breaks referential transparency and is thus not a pure function.
+  *
+  *         Normally these functions shouldn't be called until
+  *         "the end of the world", which is to say at the end of
+  *         the program (for a console app), or at the end of a web
+  *         request (in case you're working with a web framework or
+  *         toolkit that doesn't provide good integration with Monix's
+  *         `Task` via Cats-Effect).
+  *
+  *         Otherwise for modifying or operating on tasks, prefer
+  *         its pure functions like `map` and `flatMap`.
+  *         In FP code don't use `runAsync`. Remember that `Task`
+  *         is not a 1:1 replacement for `Future`, `Task` being
+  *         a very different abstraction.
+  *
+  * @define memoizeCancel '''Cancellation''' — a memoized task will mirror
+  *         the behavior of the source on cancellation. This means that:
+  *
+  *          - if the source isn't cancellable, then the resulting memoized
+  *            task won't be cancellable either
+  *          - if the source is cancellable, then the memoized task can be
+  *            cancelled, which can take unprepared users by surprise
+  *
+  *         Depending on use-case, there are two ways to ensure no surprises:
+  *
+  *          - usage of [[onCancelRaiseError]], before applying memoization, to
+  *            ensure that on cancellation an error is triggered and then noticed
+  *            by the memoization logic
+  *          - usage of [[uncancelable]], either before or after applying
+  *            memoization, to ensure that the memoized task cannot be cancelled
+  *
+  * @define memoizeUnsafe '''UNSAFE''' — this operation allocates a shared,
+  *         mutable reference, which can break in certain cases
+  *         referential transparency, even if this operation guarantees
+  *         idempotency (i.e. referential transparency implies idempotency,
+  *         but idempotency does not imply referential transparency).
+  *
+  *         The allocation of a mutable reference is known to be a
+  *         side effect, thus breaking referential transparency,
+  *         even if calling this method does not trigger the evaluation
+  *         of side effects suspended by the source.
+  *
+  *         Use with care. Sometimes it's easier to just keep a shared,
+  *         memoized reference to some connection, but keep in mind
+  *         it might be better to pass such a reference around as
+  *         a parameter.
+  */
 sealed abstract class BIO[+E, +A] extends Serializable {
   import BIO._
 
@@ -382,154 +813,6 @@ sealed abstract class BIO[+E, +A] extends Serializable {
         .startLight(this, s, opts2, BiCallback.fromAttempt(cb).asInstanceOf[BiCallback[Any, A]]) // TODO: should it be E,A?
     }
   }
-
-  /** Returns a failed projection of this task.
-    *
-    * The failed projection is a `Task` holding a value of type `Throwable`,
-    * emitting the error yielded by the source, in case the source fails,
-    * otherwise if the source succeeds the result will fail with a
-    * `NoSuchElementException`.
-    */
-  final def failed: UIO[E] =
-    FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
-
-  /** Creates a new Task by applying a function to the successful result
-    * of the source Task, and returns a task equivalent to the result
-    * of the function.
-    */
-  final def flatMap[E1 >: E, B](f: A => BIO[E1, B]): BIO[E1, B] =
-    FlatMap(this, f)
-
-  /** Given a source Task that emits another Task, this function
-    * flattens the result, returning a Task equivalent to the emitted
-    * Task by the source.
-    */
-  final def flatten[E1 >: E, B](implicit ev: A <:< BIO[E1, B]): BIO[E1, B] =
-    flatMap(a => a)
-
-  /** Returns a new task that upon evaluation will execute the given
-    * function for the generated element, transforming the source into
-    * a `Task[Unit]`.
-    *
-    * Similar in spirit with normal [[foreach]], but lazy, as
-    * obviously nothing gets executed at this point.
-    */
-  final def foreachL(f: A => Unit): BIO[E, Unit] =
-    this.map { a =>
-      f(a); ()
-    }
-
-  /** Triggers the evaluation of the source, executing the given
-    * function for the generated element.
-    *
-    * The application of this function has strict behavior, as the
-    * task is immediately executed.
-    *
-    * Exceptions in `f` are reported using provided (implicit) Scheduler
-    */
-  @UnsafeBecauseImpure
-  final def foreach(f: Either[E, A] => Unit)(implicit s: Scheduler): Unit =
-    runToFuture.foreach(f)
-
-  /** Returns a new `Task` that repeatedly executes the source as long
-    * as it continues to succeed. It never produces a terminal value.
-    *
-    * Example:
-    *
-    * {{{
-    *   import scala.concurrent.duration._
-    *
-    *   Task.eval(println("Tick!"))
-    *     .delayExecution(1.second)
-    *     .loopForever
-    * }}}
-    *
-    */
-  final def loopForever: BIO[E, Nothing] =
-    flatMap(_ => this.loopForever)
-
-  /** Returns a new `Task` that applies the mapping function to
-    * the element emitted by the source.
-    *
-    * Can be used for specifying a (lazy) transformation to the result
-    * of the source.
-    *
-    * This equivalence with [[flatMap]] always holds:
-    *
-    * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
-    */
-  final def map[B](f: A => B): BIO[E, B] =
-    this match {
-      case Map(source, g, index) =>
-        // Allowed to do a fixed number of map operations fused before
-        // resetting the counter in order to avoid stack overflows;
-        // See `monix.execution.internal.Platform` for details.
-        if (index != fusionMaxStackDepth) Map(source, g.andThen(f), index + 1)
-        else Map(this, f, 0)
-      case _ =>
-        Map(this, f, 0)
-    }
-
-  /** Mirrors the given source `Task`, but upon execution ensure
-    * that evaluation forks into a separate (logical) thread.
-    *
-    * The [[monix.execution.Scheduler Scheduler]] used will be
-    * the one that is used to start the run-loop in
-    * [[Task.runAsync]] or [[Task.runToFuture]].
-    *
-    * This operation is equivalent with:
-    *
-    * {{{
-    *   Task.shift.flatMap(_ => Task(1 + 1))
-    *
-    *   // ... or ...
-    *
-    *   import cats.syntax.all._
-    *
-    *   Task.shift *> Task(1 + 1)
-    * }}}
-    *
-    * The [[monix.execution.Scheduler Scheduler]] used for scheduling
-    * the async boundary will be the default, meaning the one used to
-    * start the run-loop in `runAsync`.
-    */
-  final def executeAsync: BIO[E, A] =
-    BIO.shift.flatMap(_ => this)
-
-  /** Returns a new task that will execute the source with a different
-    * [[monix.execution.ExecutionModel ExecutionModel]].
-    *
-    * This allows fine-tuning the options injected by the scheduler
-    * locally. Example:
-    *
-    * {{{
-    *   import monix.execution.ExecutionModel.AlwaysAsyncExecution
-    *   Task(1 + 1).executeWithModel(AlwaysAsyncExecution)
-    * }}}
-    *
-    * @param em is the
-    *        [[monix.execution.ExecutionModel ExecutionModel]]
-    *        with which the source will get evaluated on `runAsync`
-    */
-  final def executeWithModel(em: ExecutionModel): BIO[E, A] =
-    TaskExecuteWithModel(this, em)
-
-  /** Returns a new task that will execute the source with a different
-    * set of [[BIO.Options Options]].
-    *
-    * This allows fine-tuning the default options. Example:
-    *
-    * {{{
-    *   Task(1 + 1).executeWithOptions(_.enableAutoCancelableRunLoops)
-    * }}}
-    *
-    * @param f is a function that takes the source's current set of
-    *          [[BIO.Options options]] and returns a modified set of
-    *          options that will be used to execute the source
-    *          upon `runAsync`
-    */
-  final def executeWithOptions(f: Options => Options): BIO[E, A] =
-    TaskExecuteWithOptions(this, f)
 
   /** Triggers the asynchronous execution of the source task
     * in a "fire and forget" fashion.
@@ -1306,6 +1589,132 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def executeOn(s: Scheduler, forceAsync: Boolean = true): BIO[E, A] =
     TaskExecuteOn(this, s, forceAsync)
 
+  /** Mirrors the given source `Task`, but upon execution ensure
+    * that evaluation forks into a separate (logical) thread.
+    *
+    * The [[monix.execution.Scheduler Scheduler]] used will be
+    * the one that is used to start the run-loop in
+    * [[Task.runAsync]] or [[Task.runToFuture]].
+    *
+    * This operation is equivalent with:
+    *
+    * {{{
+    *   Task.shift.flatMap(_ => Task(1 + 1))
+    *
+    *   // ... or ...
+    *
+    *   import cats.syntax.all._
+    *
+    *   Task.shift *> Task(1 + 1)
+    * }}}
+    *
+    * The [[monix.execution.Scheduler Scheduler]] used for scheduling
+    * the async boundary will be the default, meaning the one used to
+    * start the run-loop in `runAsync`.
+    */
+  final def executeAsync: BIO[E, A] =
+    BIO.shift.flatMap(_ => this)
+
+  /** Returns a new task that will execute the source with a different
+    * [[monix.execution.ExecutionModel ExecutionModel]].
+    *
+    * This allows fine-tuning the options injected by the scheduler
+    * locally. Example:
+    *
+    * {{{
+    *   import monix.execution.ExecutionModel.AlwaysAsyncExecution
+    *   Task(1 + 1).executeWithModel(AlwaysAsyncExecution)
+    * }}}
+    *
+    * @param em is the
+    *        [[monix.execution.ExecutionModel ExecutionModel]]
+    *        with which the source will get evaluated on `runAsync`
+    */
+  final def executeWithModel(em: ExecutionModel): BIO[E, A] =
+    TaskExecuteWithModel(this, em)
+
+  /** Returns a new task that will execute the source with a different
+    * set of [[BIO.Options Options]].
+    *
+    * This allows fine-tuning the default options. Example:
+    *
+    * {{{
+    *   Task(1 + 1).executeWithOptions(_.enableAutoCancelableRunLoops)
+    * }}}
+    *
+    * @param f is a function that takes the source's current set of
+    *          [[BIO.Options options]] and returns a modified set of
+    *          options that will be used to execute the source
+    *          upon `runAsync`
+    */
+  final def executeWithOptions(f: Options => Options): BIO[E, A] =
+    TaskExecuteWithOptions(this, f)
+
+  /** Returns a failed projection of this task.
+    *
+    * The failed projection is a `Task` holding a value of type `Throwable`,
+    * emitting the error yielded by the source, in case the source fails,
+    * otherwise if the source succeeds the result will fail with a
+    * `NoSuchElementException`.
+    */
+  final def failed: UIO[E] =
+    FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
+
+  /** Creates a new Task by applying a function to the successful result
+    * of the source Task, and returns a task equivalent to the result
+    * of the function.
+    */
+  final def flatMap[E1 >: E, B](f: A => BIO[E1, B]): BIO[E1, B] =
+    FlatMap(this, f)
+
+  /** Given a source Task that emits another Task, this function
+    * flattens the result, returning a Task equivalent to the emitted
+    * Task by the source.
+    */
+  final def flatten[E1 >: E, B](implicit ev: A <:< BIO[E1, B]): BIO[E1, B] =
+    flatMap(a => a)
+
+  /** Returns a new task that upon evaluation will execute the given
+    * function for the generated element, transforming the source into
+    * a `Task[Unit]`.
+    *
+    * Similar in spirit with normal [[foreach]], but lazy, as
+    * obviously nothing gets executed at this point.
+    */
+  final def foreachL(f: A => Unit): BIO[E, Unit] =
+    this.map { a =>
+      f(a); ()
+    }
+
+  /** Triggers the evaluation of the source, executing the given
+    * function for the generated element.
+    *
+    * The application of this function has strict behavior, as the
+    * task is immediately executed.
+    *
+    * Exceptions in `f` are reported using provided (implicit) Scheduler
+    */
+  @UnsafeBecauseImpure
+  final def foreach(f: Either[E, A] => Unit)(implicit s: Scheduler): Unit =
+    runToFuture.foreach(f)
+
+  /** Returns a new `Task` that repeatedly executes the source as long
+    * as it continues to succeed. It never produces a terminal value.
+    *
+    * Example:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   Task.eval(println("Tick!"))
+    *     .delayExecution(1.second)
+    *     .loopForever
+    * }}}
+    *
+    */
+  final def loopForever: BIO[E, Nothing] =
+    flatMap(_ => this.loopForever)
+
   /** Returns a new `Task` that will mirror the source, but that will
     * execute the given `callback` if the task gets canceled before
     * completion.
@@ -1395,6 +1804,28 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   final def onErrorFallbackTo[E1, B >: A](that: BIO[E1, B]): BIO[E1, B] =
     onErrorHandleWith(_ => that)
+
+  /** Returns a new `Task` that applies the mapping function to
+    * the element emitted by the source.
+    *
+    * Can be used for specifying a (lazy) transformation to the result
+    * of the source.
+    *
+    * This equivalence with [[flatMap]] always holds:
+    *
+    * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
+    */
+  final def map[B](f: A => B): BIO[E, B] =
+    this match {
+      case Map(source, g, index) =>
+        // Allowed to do a fixed number of map operations fused before
+        // resetting the counter in order to avoid stack overflows;
+        // See `monix.execution.internal.Platform` for details.
+        if (index != fusionMaxStackDepth) Map(source, g.andThen(f), index + 1)
+        else Map(this, f, 0)
+      case _ =>
+        Map(this, f, 0)
+    }
 
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
@@ -1520,19 +1951,122 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def uncancelable: BIO[E, A] =
     TaskCancellation.uncancelable(this)
 
-  // TODO: scaladoc, name
+  /** Hides all errors from the return type and raises them in the internal channel.
+    *
+    * Use if you have a method that returns a possible error but you can't recover
+    * from it anyway and do not want to drag it everywhere.
+    *
+    * {{{
+    *   import monix.execution.CancelableFuture
+    *   import monix.execution.exceptions.DummyException
+    *   import monix.execution.Scheduler.Implicits.global
+    *
+    *   val task: UIO[Int] = BIO
+    *     .raiseError(DummyException("boom!"))
+    *     .hideErrors
+    *     .map(_ => 10)
+    *
+    *   // Some(Failure(DummyException(boom!)))
+    *   task.runToFuture.value
+    * }}}
+    */
   final def hideErrors(implicit E: E <:< Throwable): UIO[A] =
     onErrorHandleWith(ex => BIO.raiseFatalError(E(ex)))
 
-  // TODO: scaladoc, name
+  /** Returns a new value that transforms the result of the source,
+    * given the `recover` or `map` functions, which get executed depending
+    * on whether the result is successful or if it ends in a fatal (untyped) error.
+    *
+    * @param recover is a function used for error recover in case the
+    *        source ends in error
+    * @param map is a function used for mapping the result of the source
+    *        in case it ends in success
+    *
+    * @see [[BIO.redeem]] for a version which works on typed errors
+    */
   final def redeemFatal[B](recover: Throwable => B, map: A => B): UIO[B] =
     BIO.FlatMap(this, new BIO.RedeemFatal(recover, map))
 
-  // TODO: scaladoc, name
+  /** Returns a new value that transforms the result of the source,
+    * given the `recover` or `bind` functions, which get executed depending
+    * on whether the result is successful or if it ends in a fatal (untyped) error.
+    *
+    * Usage of `redeemWith` also subsumes [[flatMap]] because:
+    *
+    * `task.redeemFatalWith(BIO.raiseError, fs) <-> task.flatMap(fs)`
+    *
+    * @param recover is the function that gets called to recover the source
+    *        in case of error
+    * @param bind is the function that gets to transform the source
+    *        in case of success
+    *
+    * @see [[BIO.redeemWith]] for a version which only works on typed errors
+    */
   final def redeemFatalWith[E1, B](recover: Throwable => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
     BIO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 }
 
+/** Builders for [[BIO]].
+  *
+  * @define registerParamDesc is a function that will be called when
+  *         this `Task` is executed, receiving a callback as a
+  *         parameter, a callback that the user is supposed to call in
+  *         order to signal the desired outcome of this `Task`. This
+  *         function also receives a [[monix.execution.Scheduler Scheduler]]
+  *         that can be used for managing asynchronous boundaries, a
+  *         scheduler being nothing more than an evolved `ExecutionContext`.
+  *
+  * @define shiftDesc For example we can introduce an
+  *         asynchronous boundary in the `flatMap` chain before a
+  *         certain task, this being literally the implementation of
+  *         [[BIO.executeAsync executeAsync]]:
+  *
+  *         {{{
+  *           val task = BIO.eval(35)
+  *
+  *           BIO.shift.flatMap(_ => task)
+  *         }}}
+  *
+  *         And this can also be described with `>>` from Cats:
+  *
+  *         {{{
+  *           import cats.syntax.all._
+  *
+  *           BIO.shift >> task
+  *         }}}
+  *
+  *         Or we can specify an asynchronous boundary ''after''
+  *         the evaluation of a certain task, this being literally
+  *         the implementation of
+  *         [[BIO!.asyncBoundary:monix\.eval\.BIO[A]* .asyncBoundary]]:
+  *
+  *         {{{
+  *           task.flatMap(a => BIO.shift.map(_ => a))
+  *         }}}
+  *
+  *         And again we can also describe this with `<<`
+  *         from Cats:
+  *
+  *         {{{
+  *           task << Task.shift
+  *         }}}
+  *
+  * @define parallelismNote NOTE: the tasks get forked automatically so there's
+  *         no need to force asynchronous execution for immediate tasks,
+  *         parallelism being guaranteed when multi-threading is available!
+  *
+  *         All specified tasks get evaluated in parallel, regardless of their
+  *         execution model ([[Task.eval]] vs [[Task.evalAsync]] doesn't matter).
+  *         Also the implementation tries to be smart about detecting forked
+  *         tasks so it can eliminate extraneous forks for the very obvious
+  *         cases.
+  *
+  * @define parallelismAdvice ADVICE: In a real life scenario the tasks should
+  *         be expensive in order to warrant parallel execution. Parallelism
+  *         doesn't magically speed up the code - it's usually fine for I/O-bound
+  *         tasks, however for CPU-bound tasks it can make things worse.
+  *         Performance improvements need to be verified.
+  */
 object BIO extends TaskInstancesLevel0 {
 
   /** Lifts the given thunk in the `BIO` context, processing it synchronously
@@ -2303,8 +2837,8 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   Task.sleep(3.seconds).flatMap { _ =>
-    *     Task.eval(println("Hello!"))
+    *   BIO.sleep(3.seconds).flatMap { _ =>
+    *     BIO.eval(println("Hello!"))
     *   }
     * }}}
     *
