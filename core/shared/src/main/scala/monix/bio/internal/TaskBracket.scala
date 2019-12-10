@@ -22,7 +22,7 @@ import cats.effect.ExitCase.{Canceled, Completed, Error}
 import monix.bio.BIO.{Context, ContextSwitch}
 import monix.bio.internal.StackFrame.FatalStackFrame
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{BIO, UIO}
+import monix.bio.{BIO, Cause, UIO}
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
 
@@ -34,7 +34,7 @@ private[monix] object TaskBracket {
   // Task.guaranteeCase
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-  def guaranteeCase[E, A](task: BIO[E, A], finalizer: ExitCase[Either[Throwable, E]] => UIO[Unit]): BIO[E, A] =
+  def guaranteeCase[E, A](task: BIO[E, A], finalizer: ExitCase[Cause[E]] => UIO[Unit]): BIO[E, A] =
     BIO.Async(
       new ReleaseStart(task, finalizer),
       trampolineBefore = true,
@@ -42,7 +42,7 @@ private[monix] object TaskBracket {
       restoreLocals = true
     )
 
-  private final class ReleaseStart[E, A](source: BIO[E, A], release: ExitCase[Either[Throwable, E]] => UIO[Unit])
+  private final class ReleaseStart[E, A](source: BIO[E, A], release: ExitCase[Cause[E]] => UIO[Unit])
       extends ((Context[E], BiCallback[E, A]) => Unit) {
 
     def apply(ctx: Context[E], cb: BiCallback[E, A]): Unit = {
@@ -65,13 +65,13 @@ private[monix] object TaskBracket {
     }
   }
 
-  private final class EnsureReleaseFrame[E, A](ctx: Context[E], releaseFn: ExitCase[Either[Throwable, E]] => UIO[Unit])
+  private final class EnsureReleaseFrame[E, A](ctx: Context[E], releaseFn: ExitCase[Cause[E]] => UIO[Unit])
       extends BaseReleaseFrame[E, Unit, A](ctx, ()) {
 
     def releaseOnSuccess(a: Unit, b: A): UIO[Unit] =
       releaseFn(ExitCase.Completed)
 
-    def releaseOnError(a: Unit, e: Either[Throwable, E]): UIO[Unit] =
+    def releaseOnError(a: Unit, e: Cause[E]): UIO[Unit] =
       releaseFn(ExitCase.Error(e))
 
     def releaseOnCancel(a: Unit): UIO[Unit] =
@@ -88,7 +88,7 @@ private[monix] object TaskBracket {
   def either[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit]): BIO[E, B] = {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]): BIO[E, B] = {
 
     BIO.Async(
       new StartE(acquire, use, release),
@@ -101,7 +101,7 @@ private[monix] object TaskBracket {
   private final class StartE[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit])
       extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
@@ -111,13 +111,13 @@ private[monix] object TaskBracket {
   private final class ReleaseFrameE[E, A, B](
     ctx: Context[E],
     a: A,
-    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit])
       extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
       release(a, Right(b))
 
-    def releaseOnError(a: A, e: Either[Throwable, E]): UIO[Unit] =
+    def releaseOnError(a: A, e: Cause[E]): UIO[Unit] =
       release(a, Left(Some(e)))
 
     def releaseOnCancel(a: A): UIO[Unit] =
@@ -134,7 +134,7 @@ private[monix] object TaskBracket {
   def exitCase[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit]): BIO[E, B] =
+    release: (A, ExitCase[Cause[E]]) => UIO[Unit]): BIO[E, B] =
     BIO.Async(
       new StartCase(acquire, use, release),
       trampolineBefore = true,
@@ -145,23 +145,20 @@ private[monix] object TaskBracket {
   private final class StartCase[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
+    release: (A, ExitCase[Cause[E]]) => UIO[Unit])
       extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameCase(ctx, value, release)
   }
 
-  private final class ReleaseFrameCase[E, A, B](
-    ctx: Context[E],
-    a: A,
-    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
+  private final class ReleaseFrameCase[E, A, B](ctx: Context[E], a: A, release: (A, ExitCase[Cause[E]]) => UIO[Unit])
       extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
       release(a, Completed)
 
-    def releaseOnError(a: A, e: Either[Throwable, E]): UIO[Unit] =
+    def releaseOnError(a: A, e: Cause[E]): UIO[Unit] =
       release(a, Error(e))
 
     def releaseOnCancel(a: A): UIO[Unit] =
@@ -217,7 +214,7 @@ private[monix] object TaskBracket {
   private abstract class BaseReleaseFrame[E, A, B](ctx: Context[E], a: A) extends FatalStackFrame[E, B, BIO[E, B]] {
     private[this] val waitsForResult = Atomic(true)
     protected def releaseOnSuccess(a: A, b: B): UIO[Unit]
-    protected def releaseOnError(a: A, e: Either[Throwable, E]): UIO[Unit]
+    protected def releaseOnError(a: A, e: Cause[E]): UIO[Unit]
     protected def releaseOnCancel(a: A): UIO[Unit]
 
     final def apply(b: B): BIO[E, B] = {
@@ -280,7 +277,7 @@ private[monix] object TaskBracket {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
         val re = Right(e)
-        releaseOnError(a, re).flatMap[E, B](new ReleaseRecover(re))
+        releaseOnError(a, Cause(re)).flatMap[E, B](new ReleaseRecover(re))
       } else {
         BIO.never
       }
@@ -290,7 +287,7 @@ private[monix] object TaskBracket {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
         val le = Left(e)
-        releaseOnError(a, le).flatMap[E, B](new ReleaseRecover(le))
+        releaseOnError(a, Cause(le)).flatMap[E, B](new ReleaseRecover(le))
       } else {
         BIO.never
       }

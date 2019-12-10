@@ -654,7 +654,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $cancelableDesc
     */
   @UnsafeBecauseImpure
-  final def runAsync(cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler): Cancelable =
+  final def runAsync(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler): Cancelable =
     runAsyncOpt(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsync]], but
@@ -702,7 +702,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $cancelableDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncOpt(cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+  def runAsyncOpt(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       UnsafeCancelUtils.taskToCancelable(runAsyncOptF(cb)(s, opts2))
@@ -766,8 +766,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  final def runAsyncF[E1 >: E](cb: Either[Either[Throwable, E1], A] => Unit)(
-    implicit s: Scheduler): CancelToken[BIO[E1, ?]] =
+  final def runAsyncF[E1 >: E](cb: Either[Cause[E1], A] => Unit)(implicit s: Scheduler): CancelToken[BIO[E1, ?]] =
     runAsyncOptF(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
@@ -806,7 +805,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   def runAsyncOptF[E1 >: E](
-    cb: Either[Either[Throwable, E1], A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, ?]] = {
+    cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, ?]] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -902,7 +901,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param s $schedulerDesc
     */
   @UnsafeBecauseImpure
-  final def runAsyncUncancelable(cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler): Unit =
+  final def runAsyncUncancelable(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler): Unit =
     runAsyncUncancelableOpt(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution in uncancelable mode,
@@ -929,8 +928,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param opts $optionsDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncUncancelableOpt(
-    cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): Unit = {
+  def runAsyncUncancelableOpt(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): Unit = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -1100,7 +1098,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     /*_*/
   }
 
-  /** Creates a new [[Task]] that will expose any triggered error
+  /** Creates a new [[Task]] that will expose any triggered typed
     * from the source.
     */
   final def attempt: UIO[Either[E, A]] =
@@ -1295,8 +1293,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *        needs release, along with the result of `use`
     *        (cancelation, error or successful result)
     */
-  final def bracketCase[E1 >: E, B](use: A => BIO[E1, B])(
-    release: (A, ExitCase[Either[Throwable, E1]]) => UIO[Unit]): BIO[E1, B] =
+  final def bracketCase[E1 >: E, B](use: A => BIO[E1, B])(release: (A, ExitCase[Cause[E1]]) => UIO[Unit]): BIO[E1, B] =
     TaskBracket.exitCase(this, use, release)
 
   /** Returns a task that treats the source task as the acquisition of a resource,
@@ -1334,7 +1331,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *        the result of `use` (cancellation, error or successful result)
     */
   final def bracketE[E1 >: E, B](use: A => BIO[E1, B])(
-    release: (A, Either[Option[Either[Throwable, E1]], B]) => UIO[Unit]): BIO[E1, B] =
+    release: (A, Either[Option[Cause[E1]], B]) => UIO[Unit]): BIO[E1, B] =
     TaskBracket.either(this, use, release)
 
   /**
@@ -1381,7 +1378,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[bracketCase]] for the more general operation
     */
-  final def guaranteeCase(finalizer: ExitCase[Either[Throwable, E]] => UIO[Unit]): BIO[E, A] =
+  final def guaranteeCase(finalizer: ExitCase[Cause[E]] => UIO[Unit]): BIO[E, A] =
     TaskBracket.guaranteeCase(this, finalizer)
 
   /** Returns a task that waits for the specified `timespan` before
@@ -2474,7 +2471,7 @@ object BIO extends TaskInstancesLevel0 {
     *    (via `runAsync` or when its turn comes in the `flatMap` chain, not before)
     *  - the injected [[monix.execution.Callback Callback]] can be
     *    called at most once, either with a successful result, or with
-    *    an error; calling it more than once is a contract violation
+    *    an typed; calling it more than once is a contract violation
     *  - the injected callback is thread-safe and in case it gets called
     *    multiple times it will throw a
     *    [[monix.execution.exceptions.CallbackCalledMultipleTimesException]];
@@ -3232,7 +3229,7 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E](
-      cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, ?]] = {
+      cb: Either[Cause[Nothing], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         BIO.unit
@@ -3248,7 +3245,7 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOpt(
-      cb: Either[Either[Throwable, Nothing], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      cb: Either[Cause[Nothing], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         Cancelable.empty
@@ -3258,7 +3255,7 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runAsyncUncancelableOpt(cb: Either[Either[Throwable, Nothing], A] => Unit)(
+    override def runAsyncUncancelableOpt(cb: Either[Cause[Nothing], A] => Unit)(
       implicit s: Scheduler,
       opts: Options
     ): Unit = {
@@ -3277,9 +3274,8 @@ object BIO extends TaskInstancesLevel0 {
   private[bio] final case class Error[E](e: E) extends BIO[E, Nothing] {
 
     // Optimization to avoid the run-loop
-    override def runAsyncOptF[E1 >: E](cb: Either[Either[Throwable, E1], Nothing] => Unit)(
-      implicit s: Scheduler,
-      opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
+    override def runAsyncOptF[E1 >: E](
+      cb: Either[Cause[E], Nothing] => Unit)(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         BIO.unit
@@ -3297,7 +3293,7 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOpt(
-      cb: Either[Either[Throwable, E], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      cb: Either[Cause[E], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         Cancelable.empty
@@ -3315,7 +3311,7 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runAsyncUncancelableOpt(cb: Either[Either[Throwable, E], Nothing] => Unit)(
+    override def runAsyncUncancelableOpt(cb: Either[Cause[E], Nothing] => Unit)(
       implicit s: Scheduler,
       opts: Options
     ): Unit = {
@@ -3330,7 +3326,7 @@ object BIO extends TaskInstancesLevel0 {
   private[bio] final case class FatalError(e: Throwable) extends BIO[Nothing, Nothing] {
 
     // Optimization to avoid the run-loop
-    override def runAsyncOptF[E1 >: Nothing](cb: Either[Either[Throwable, E1], Nothing] => Unit)(
+    override def runAsyncOptF[E1 >: Nothing](cb: Either[Cause[Nothing], Nothing] => Unit)(
       implicit s: Scheduler,
       opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
@@ -3348,7 +3344,7 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOpt(
-      cb: Either[Either[Throwable, Nothing], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      cb: Either[Cause[Nothing], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callFatalError(cb, e)
         Cancelable.empty
@@ -3362,7 +3358,7 @@ object BIO extends TaskInstancesLevel0 {
       s.reportFailure(e)
 
     // Optimization to avoid the run-loop
-    override def runAsyncUncancelableOpt(cb: Either[Either[Throwable, Nothing], Nothing] => Unit)(
+    override def runAsyncUncancelableOpt(cb: Either[Cause[Nothing], Nothing] => Unit)(
       implicit s: Scheduler,
       opts: Options
     ): Unit = {

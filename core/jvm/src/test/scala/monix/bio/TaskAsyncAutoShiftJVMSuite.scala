@@ -531,7 +531,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async(register error) should shift back if register forks") { s =>
+  testAsync("Task.async(register typed) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {

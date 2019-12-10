@@ -70,7 +70,7 @@ object TaskToFutureSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("Task.deferFutureAction(error) for already completed references") { implicit s =>
+  test("Task.deferFutureAction(typed) for already completed references") { implicit s =>
     val dummy = DummyException("dummy")
     val f = Task.deferFutureAction(_ => Future.failed(dummy)).runToFuture
 

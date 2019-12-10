@@ -47,8 +47,7 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
 
   override def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(
     release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
-    acquire.bracketCase(use)(
-      (a, exit) => release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(BIO.raiseFatalError))
+    acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(BIO.raiseFatalError))
 
   override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
     TaskCreate.asyncF(k)
@@ -57,7 +56,7 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
     acquire.guarantee(finalizer.onErrorHandleWith(BIO.raiseFatalError))
 
   override def guaranteeCase[A](acquire: Task[A])(finalizer: ExitCase[Throwable] => Task[Unit]): Task[A] =
-    acquire.guaranteeCase(exit => finalizer(exitCaseFlattenEither(exit)).onErrorHandleWith(BIO.raiseFatalError))
+    acquire.guaranteeCase(exit => finalizer(exitCaseFromCause(exit)).onErrorHandleWith(BIO.raiseFatalError))
 }
 
 /** Cats type class instance of [[monix.bio.BIO BIO]]

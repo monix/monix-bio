@@ -56,15 +56,15 @@ private[bio] object TaskEffect {
     implicit s: Scheduler,
     opts: BIO.Options) = {
 
-    fa.runAsyncOptF(new Callback[Either[Throwable, Throwable], A] {
+    fa.runAsyncOptF(new Callback[Cause[Throwable], A] {
       private def signal(value: Either[Throwable, A]): Unit =
         try cb(value).unsafeRunAsync(noop)
         catch { case NonFatal(e) => s.reportFailure(e) }
 
       override def onSuccess(value: A): Unit =
         signal(Right(value))
-      override def onError(e: Either[Throwable, Throwable]): Unit = {
-        signal(Left(e.fold(identity, identity)))
+      override def onError(e: Cause[Throwable]): Unit = {
+        signal(Left(e.flatten))
       }
     })
   }

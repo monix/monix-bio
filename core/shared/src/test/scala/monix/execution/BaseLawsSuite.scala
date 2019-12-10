@@ -30,7 +30,6 @@ import org.typelevel.discipline.Laws
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionException, Future}
-import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 
 trait BaseLawsSuite extends SimpleTestSuite with Checkers with ArbitraryInstances {

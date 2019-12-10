@@ -55,7 +55,7 @@ object Task {
   /**
     * @see See [[monix.bio.BIO.raiseFatalError]]
     */
-  def raiseFatalError(ex: Throwable): Task[Nothing] =
+  def raiseFatalError[A](ex: Throwable): Task[A] =
     BIO.raiseFatalError(ex)
 
   /**

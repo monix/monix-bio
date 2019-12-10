@@ -604,7 +604,7 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-  test("Task.race(a, b) should work if `b` completes in error") { implicit s =>
+  test("Task.race(a, b) should work if `b` completes in typed") { implicit s =>
     val dummy = DummyException("dummy")
     val ta = Task.now(20).delayExecution(1.seconds)
     val tb = Task.raiseError[Int](dummy).delayExecution(2.second).uncancelable

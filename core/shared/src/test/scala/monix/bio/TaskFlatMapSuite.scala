@@ -83,15 +83,15 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val c = loop(atomic)
       .executeWithOptions(_.enableAutoCancelableRunLoops)
       .runAsync(
-        new BiCallback[Either[Throwable, Throwable], Unit] {
+        new BiCallback[Cause[Throwable], Unit] {
           override def onFatalError(e: Throwable): Unit =
             result = Some(Failure(e))
 
           override def onSuccess(value: Unit): Unit =
             result = Some(Success(value))
 
-          override def onError(e: Either[Throwable, Throwable]): Unit =
-            result = Some(Failure(e.fold(identity, identity)))
+          override def onError(e: Cause[Throwable]): Unit =
+            result = Some(Failure(e.flatten))
         }
       )
 

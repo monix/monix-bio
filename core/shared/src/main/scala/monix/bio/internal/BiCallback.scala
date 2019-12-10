@@ -17,6 +17,7 @@
 
 package monix.bio.internal
 
+import monix.bio.Cause
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.schedulers.{TrampolineExecutionContext, TrampolinedRunnable}
@@ -156,7 +157,7 @@ object BiCallback {
   def trampolined[E, A](cb: BiCallback[E, A])(implicit ec: ExecutionContext): BiCallback[E, A] =
     new TrampolinedCallback(cb)
 
-  /** Turns `Either[Throwable, A] => Unit` callbacks into Monix
+  /** Turns `Either[Cause[E], A] => Unit` callbacks into Monix
     * callbacks.
     *
     * These are common within Cats' implementation, used for
@@ -164,7 +165,7 @@ object BiCallback {
     *
     * WARNING: the returned callback is NOT thread-safe!
     */
-  def fromAttempt[E, A](cb: Either[Either[Throwable, E], A] => Unit): BiCallback[E, A] =
+  def fromAttempt[E, A](cb: Either[Cause[E], A] => Unit): BiCallback[E, A] =
     cb match {
       case ref: BiCallback[E, A] @unchecked => ref
       case _ =>
@@ -184,7 +185,7 @@ object BiCallback {
           override def tryApply(result: Either[E, A]): Boolean =
             if (isActive) {
               isActive = false
-              cb(result.left.map(Right[Throwable, E]))
+              cb(result.left.map(Cause.typed))
               true
             } else {
               false
@@ -198,7 +199,7 @@ object BiCallback {
           override def tryOnFatalError(e: Throwable): Boolean = {
             if (isActive) {
               isActive = false
-              cb.apply(Left(Left(e)))
+              cb.apply(Left(Cause.fatal(e)))
               true
             } else {
               false
@@ -244,16 +245,16 @@ object BiCallback {
       case _ => cb(Right(value))
     }
 
-  private[monix] def callError[E, A](cb: Either[Either[Throwable, E], A] => Unit, value: E): Unit =
+  private[monix] def callError[E, A](cb: Either[Cause[E], A] => Unit, value: E): Unit =
     cb match {
-      case ref: BiCallback[Either[Throwable, E], A] @unchecked => ref.onError(Right(value))
-      case _ => cb(Left(Right(value)))
+      case ref: BiCallback[Cause[E], A] @unchecked => ref.onError(Cause.typed(value))
+      case _ => cb(Left(Cause.typed(value)))
     }
 
-  private[monix] def callFatalError[E, A](cb: Either[Either[Throwable, E], A] => Unit, value: Throwable): Unit =
+  private[monix] def callFatalError[E, A](cb: Either[Cause[E], A] => Unit, value: Throwable): Unit =
     cb match {
-      case ref: BiCallback[Either[Throwable, E], A] @unchecked => ref.onFatalError(value)
-      case _ => cb(Left(Left(value)))
+      case ref: BiCallback[Cause[E], A] @unchecked => ref.onFatalError(value)
+      case _ => cb(Left(Cause.fatal(value)))
     }
 
   private[monix] def signalErrorTrampolined[E, A](cb: BiCallback[E, A], e: E): Unit =
@@ -294,7 +295,7 @@ object BiCallback {
       BiCallback.trampolined(cb)
 
     /** See [[BiCallback.fromAttempt]]. */
-    def fromAttempt[A](cb: Either[Either[Throwable, E], A] => Unit): BiCallback[E, A] =
+    def fromAttempt[A](cb: Either[Cause[E], A] => Unit): BiCallback[E, A] =
       BiCallback.fromAttempt(cb)
 
     /** See [[BiCallback.fromTry]]. */

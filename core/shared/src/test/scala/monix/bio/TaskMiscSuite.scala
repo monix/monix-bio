@@ -19,6 +19,7 @@ package monix.bio
 
 import monix.execution.exceptions.DummyException
 
+import scala.concurrent.Promise
 import scala.util.{Failure, Success}
 
 object TaskMiscSuite extends BaseTestSuite {
@@ -156,34 +157,66 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(Task.pure(1), Task.now(1))
   }
 
-  // TODO: check after refactoring Either[Either
-//  test("Task.now.runAsync with Try-based callback") { implicit s =>
-//    val p = Promise[Either[Int, Int]]()
-//    Task.now(1).runAsync(BiCallback.fromPromise(p))
-//    assertEquals(p.future.value, Some(Success(Right(1))))
-//  }
-//
-//  test("Task.error.runAsync with Try-based callback") { implicit s =>
-//    val ex = DummyException("dummy")
-//    val p = Promise[Either[Int, Int]]()
-//    Task.raiseError[Int](ex).runAsync(BiCallback.fromPromise(p))
-//    assertEquals(p.future.value, Some(Failure(ex)))
-//  }
-//
-//  test("task.executeAsync.runAsync with Try-based callback for success") { implicit s =>
-//    val p = Promise[Either[Int, Int]]()
-//    Task.now(1).executeAsync.runAsync(BiCallback.fromPromise(p))
-//    s.tick()
-//    assertEquals(p.future.value, Some(Success(1)))
-//  }
-//
-//  test("task.executeAsync.runAsync with Try-based callback for error") { implicit s =>
-//    val ex = DummyException("dummy")
-//    val p = Promise[Either[Int, Int]]()
-//    Task.raiseError[Int](ex).executeAsync.runAsync(BiCallback.fromPromise(p))
-//    s.tick()
-//    assertEquals(p.future.value, Some(Failure(ex)))
-//  }
+  test("Task.now.runAsync with Try-based callback") { implicit s =>
+    val p = Promise[Either[Int, Int]]()
+    BIO.now(1).runAsync {
+      case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
+      case Right(v) => p.success(Right(v))
+    }
+    assertEquals(p.future.value, Some(Success(Right(1))))
+  }
+
+  test("Task.error.runAsync with Try-based callback") { implicit s =>
+    val ex = DummyException("dummy")
+    val p = Promise[Either[Throwable, Int]]()
+    Task.raiseError[Int](ex).runAsync {
+      case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
+      case Right(v) => p.success(Right(v))
+    }
+    assertEquals(p.future.value, Some(Success(Left(ex))))
+  }
+
+  test("Task.fatalError.runAsync with Try-based callback") { implicit s =>
+    val ex = DummyException("dummy")
+    val p = Promise[Either[Throwable, Int]]()
+    Task.raiseFatalError[Int](ex).runAsync {
+      case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
+      case Right(v) => p.success(Right(v))
+    }
+    assertEquals(p.future.value, Some(Failure(ex)))
+  }
+
+  test("task.executeAsync.runAsync with Try-based callback for success") { implicit s =>
+    val p = Promise[Either[Int, Int]]()
+    BIO.now(1).executeAsync.runAsync {
+      case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
+      case Right(v) => p.success(Right(v))
+    }
+    s.tick()
+    assertEquals(p.future.value, Some(Success(Right(1))))
+  }
+
+  test("task.executeAsync.runAsync with Try-based callback for error") { implicit s =>
+    val ex = DummyException("dummy")
+    val p = Promise[Either[Throwable, Int]]()
+    Task.raiseError[Int](ex).executeAsync.runAsync {
+      case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
+      case Right(v) => p.success(Right(v))
+    }
+    s.tick()
+    assertEquals(p.future.value, Some(Success(Left(ex))))
+  }
+
+  test("task.executeAsync.runAsync with Try-based callback for fatal error") { implicit s =>
+    val ex = DummyException("dummy")
+    val p = Promise[Either[Throwable, Int]]()
+    Task.raiseFatalError[Int](ex).executeAsync.runAsync {
+      case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
+      case Right(v) => p.success(Right(v))
+    }
+    s.tick()
+    assertEquals(p.future.value, Some(Failure(ex)))
+  }
 
   test("task.executeWithOptions protects against user error") { implicit s =>
     val ex = DummyException("dummy")
