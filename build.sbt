@@ -15,7 +15,7 @@ lazy val `monix-bio` = project.in(file("."))
 
 lazy val core = crossProject(JSPlatform, JVMPlatform)
   .in(file("core"))
-  .settings(crossSettings ++ crossVersionSharedSources)
+  .settings(crossSettings ++ crossVersionSharedSources ++ releaseSettings)
   .settings(Seq(name := "monix-bio"))
   .enablePlugins(AutomateHeaderPlugin)
 
