@@ -1535,17 +1535,17 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
 
 object WRYYY extends TaskInstancesLevel0 {
 
-  /** Lifts the given thunk in the `Task` context, processing it synchronously
+  /** Lifts the given thunk in the `WRYYY` context, processing it synchronously
     * when the task gets evaluated.
     *
     * This is an alias for:
     *
     * {{{
     *   val thunk = () => 42
-    *   Task.eval(thunk())
+    *   WRYYY.eval(thunk())
     * }}}
     *
-    * WARN: behavior of `Task.apply` has changed since 3.0.0-RC2.
+    * WARN: behavior of `WRYYY.apply` has changed since 3.0.0-RC2.
     * Before the change (during Monix 2.x series), this operation was forcing
     * a fork, being equivalent to the new [[WRYYY.evalAsync]].
     *
@@ -1555,7 +1555,7 @@ object WRYYY extends TaskInstancesLevel0 {
   def apply[A](a: => A): Task[A] =
     eval(a)
 
-  /** Returns a `Task` that on execution is always successful, emitting
+  /** Returns a `WRYYY` that on execution is always successful, emitting
     * the given strict value.
     */
   def now[A](a: A): UIO[A] =
@@ -2212,28 +2212,6 @@ object WRYYY extends TaskInstancesLevel0 {
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
     TaskFromFuture.fromCancelablePromise(p)
 
-  /** Creates a new `Task` that will sleep for the given duration,
-    * emitting a tick when that time span is over.
-    *
-    * As an example on evaluation this will print "Hello!" after
-    * 3 seconds:
-    *
-    * {{{
-    *   import scala.concurrent.duration._
-    *
-    *   Task.sleep(3.seconds).flatMap { _ =>
-    *     Task.eval(println("Hello!"))
-    *   }
-    * }}}
-    *
-    * See [[WRYYY.delayExecution]] for this operation described as
-    * a method on `Task` references or [[WRYYY.delayResult]] for the
-    * helper that triggers the evaluation of the source on time, but
-    * then delays the result.
-    */
-  def sleep(timespan: FiniteDuration): UIO[Unit] =
-    TaskSleep.apply(timespan)
-
   /** Run two `Task` actions concurrently, and return the first to
     * finish, either in success or error. The loser of the race is
     * cancelled.
@@ -2326,6 +2304,28 @@ object WRYYY extends TaskInstancesLevel0 {
     */
   def shift(ec: ExecutionContext): UIO[Unit] =
     TaskShift(ec)
+
+  /** Creates a new `Task` that will sleep for the given duration,
+    * emitting a tick when that time span is over.
+    *
+    * As an example on evaluation this will print "Hello!" after
+    * 3 seconds:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   Task.sleep(3.seconds).flatMap { _ =>
+    *     Task.eval(println("Hello!"))
+    *   }
+    * }}}
+    *
+    * See [[WRYYY.delayExecution]] for this operation described as
+    * a method on `Task` references or [[WRYYY.delayResult]] for the
+    * helper that triggers the evaluation of the source on time, but
+    * then delays the result.
+    */
+  def sleep(timespan: FiniteDuration): UIO[Unit] =
+    TaskSleep.apply(timespan)
 
   /** Given a `Iterable` of tasks, transforms it to a task signaling
     * the collection, executing the tasks one by one and gathering their
@@ -2470,6 +2470,89 @@ object WRYYY extends TaskInstancesLevel0 {
     WRYYY
       .Async[Nothing, Options]((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
 
+  /** Set of options for customizing the task's behavior.
+    *
+    * See [[WRYYY.defaultOptions]] for the default `Options` instance
+    * used by [[WRYYY.runAsync]] or [[WRYYY.runToFuture]].
+    *
+    * @param autoCancelableRunLoops should be set to `true` in
+    *        case you want `flatMap` driven loops to be
+    *        auto-cancelable. Defaults to `true`.
+    *
+    * @param localContextPropagation should be set to `true` in
+    *        case you want the [[monix.execution.misc.Local Local]]
+    *        variables to be propagated on async boundaries.
+    *        Defaults to `false`.
+    */
+  final case class Options(
+                            autoCancelableRunLoops: Boolean,
+                            localContextPropagation: Boolean
+                          ) {
+
+    /** Creates a new set of options from the source, but with
+      * the [[autoCancelableRunLoops]] value set to `true`.
+      */
+    def enableAutoCancelableRunLoops: Options =
+      copy(autoCancelableRunLoops = true)
+
+    /** Creates a new set of options from the source, but with
+      * the [[autoCancelableRunLoops]] value set to `false`.
+      */
+    def disableAutoCancelableRunLoops: Options =
+      copy(autoCancelableRunLoops = false)
+
+    /** Creates a new set of options from the source, but with
+      * the [[localContextPropagation]] value set to `true`.
+      */
+    def enableLocalContextPropagation: Options =
+      copy(localContextPropagation = true)
+
+    /** Creates a new set of options from the source, but with
+      * the [[localContextPropagation]] value set to `false`.
+      */
+    def disableLocalContextPropagation: Options =
+      copy(localContextPropagation = false)
+
+    /**
+      * Enhances the options set with the features of the underlying
+      * [[monix.execution.Scheduler Scheduler]].
+      *
+      * This enables for example the [[Options.localContextPropagation]]
+      * in case the `Scheduler` is a
+      * [[monix.execution.schedulers.TracingScheduler TracingScheduler]].
+      */
+    def withSchedulerFeatures(implicit s: Scheduler): Options = {
+      val wLocals = s.features.contains(Scheduler.TRACING)
+      if (wLocals == localContextPropagation)
+        this
+      else
+        copy(localContextPropagation = wLocals || localContextPropagation)
+    }
+  }
+
+  /** Default [[Options]] to use for [[WRYYY]] evaluation,
+    * thus:
+    *
+    *  - `autoCancelableRunLoops` is `true` by default
+    *  - `localContextPropagation` is `false` by default
+    *
+    * On top of the JVM the default can be overridden by
+    * setting the following system properties:
+    *
+    *  - `monix.environment.autoCancelableRunLoops`
+    *    (`false`, `no` or `0` for disabling)
+    *
+    *  - `monix.environment.localContextPropagation`
+    *    (`true`, `yes` or `1` for enabling)
+    *
+    * @see [[WRYYY.Options]]
+    */
+  val defaultOptions: Options =
+    Options(
+      autoCancelableRunLoops = Platform.autoCancelableRunLoops,
+      localContextPropagation = Platform.localContextPropagation
+    )
+
   /** The `AsyncBuilder` is a type used by the [[WRYYY.create]] builder,
     * in order to change its behavior based on the type of the
     * cancelation token.
@@ -2516,26 +2599,26 @@ object WRYYY extends TaskInstancesLevel0 {
       }
 
     // TODO: implement create forIO
-//    /** Implicit `AsyncBuilder` for cancelable tasks, using
-//      * `cats.effect.IO` values for specifying cancelation actions,
-//      * see [[https://typelevel.org/cats-effect/ Cats Effect]].
-//      */
-//    implicit val forIO: AsyncBuilder[IO[Unit]] =
-//      new AsyncBuilder[IO[Unit]] {
-//        def create[A](register: (Scheduler, Callback[E, A]) => CancelToken[IO]): Task[A] =
-//          TaskCreate.cancelableIO(register)
-//      }
+    //    /** Implicit `AsyncBuilder` for cancelable tasks, using
+    //      * `cats.effect.IO` values for specifying cancelation actions,
+    //      * see [[https://typelevel.org/cats-effect/ Cats Effect]].
+    //      */
+    //    implicit val forIO: AsyncBuilder[IO[Unit]] =
+    //      new AsyncBuilder[IO[Unit]] {
+    //        def create[A](register: (Scheduler, Callback[E, A]) => CancelToken[IO]): Task[A] =
+    //          TaskCreate.cancelableIO(register)
+    //      }
 
     // TODO: Task.create
-//    /** Implicit `AsyncBuilder` for cancelable tasks, using
-//      * [[Task]] values for specifying cancelation actions.
-//      */
-//    implicit def forTask[E1]: AsyncBuilder[WRYYY[E1, Unit]] =
-//      new AsyncBuilder[WRYYY[E1, Unit]] {
-//
-//        override def create[E, A](register: (Scheduler, Callback[E, A]) => WRYYY[E1, Unit]): WRYYY[E, A] =
-//          TaskCreate.cancelable0(register)
-//      }
+    //    /** Implicit `AsyncBuilder` for cancelable tasks, using
+    //      * [[Task]] values for specifying cancelation actions.
+    //      */
+    //    implicit def forTask[E1]: AsyncBuilder[WRYYY[E1, Unit]] =
+    //      new AsyncBuilder[WRYYY[E1, Unit]] {
+    //
+    //        override def create[E, A](register: (Scheduler, Callback[E, A]) => WRYYY[E1, Unit]): WRYYY[E, A] =
+    //          TaskCreate.cancelable0(register)
+    //      }
 
     /** Implicit `AsyncBuilder` for non-cancelable tasks built by a function
       * returning a [[monix.execution.Cancelable.Empty Cancelable.Empty]].
@@ -2622,89 +2705,6 @@ object WRYYY extends TaskInstancesLevel0 {
       new Context(scheduler, options, connection, frameRef)
     }
   }
-
-  /** Set of options for customizing the task's behavior.
-    *
-    * See [[WRYYY.defaultOptions]] for the default `Options` instance
-    * used by [[WRYYY.runAsync]] or [[WRYYY.runToFuture]].
-    *
-    * @param autoCancelableRunLoops should be set to `true` in
-    *        case you want `flatMap` driven loops to be
-    *        auto-cancelable. Defaults to `true`.
-    *
-    * @param localContextPropagation should be set to `true` in
-    *        case you want the [[monix.execution.misc.Local Local]]
-    *        variables to be propagated on async boundaries.
-    *        Defaults to `false`.
-    */
-  final case class Options(
-    autoCancelableRunLoops: Boolean,
-    localContextPropagation: Boolean
-  ) {
-
-    /** Creates a new set of options from the source, but with
-      * the [[autoCancelableRunLoops]] value set to `true`.
-      */
-    def enableAutoCancelableRunLoops: Options =
-      copy(autoCancelableRunLoops = true)
-
-    /** Creates a new set of options from the source, but with
-      * the [[autoCancelableRunLoops]] value set to `false`.
-      */
-    def disableAutoCancelableRunLoops: Options =
-      copy(autoCancelableRunLoops = false)
-
-    /** Creates a new set of options from the source, but with
-      * the [[localContextPropagation]] value set to `true`.
-      */
-    def enableLocalContextPropagation: Options =
-      copy(localContextPropagation = true)
-
-    /** Creates a new set of options from the source, but with
-      * the [[localContextPropagation]] value set to `false`.
-      */
-    def disableLocalContextPropagation: Options =
-      copy(localContextPropagation = false)
-
-    /**
-      * Enhances the options set with the features of the underlying
-      * [[monix.execution.Scheduler Scheduler]].
-      *
-      * This enables for example the [[Options.localContextPropagation]]
-      * in case the `Scheduler` is a
-      * [[monix.execution.schedulers.TracingScheduler TracingScheduler]].
-      */
-    def withSchedulerFeatures(implicit s: Scheduler): Options = {
-      val wLocals = s.features.contains(Scheduler.TRACING)
-      if (wLocals == localContextPropagation)
-        this
-      else
-        copy(localContextPropagation = wLocals || localContextPropagation)
-    }
-  }
-
-  /** Default [[Options]] to use for [[WRYYY]] evaluation,
-    * thus:
-    *
-    *  - `autoCancelableRunLoops` is `true` by default
-    *  - `localContextPropagation` is `false` by default
-    *
-    * On top of the JVM the default can be overridden by
-    * setting the following system properties:
-    *
-    *  - `monix.environment.autoCancelableRunLoops`
-    *    (`false`, `no` or `0` for disabling)
-    *
-    *  - `monix.environment.localContextPropagation`
-    *    (`true`, `yes` or `1` for enabling)
-    *
-    * @see [[WRYYY.Options]]
-    */
-  val defaultOptions: Options =
-    Options(
-      autoCancelableRunLoops = Platform.autoCancelableRunLoops,
-      localContextPropagation = Platform.localContextPropagation
-    )
 
   /** [[Task]] state describing an immediate synchronous value. */
   private[bio] final case class Now[+A](value: A) extends WRYYY[Nothing, A] {
