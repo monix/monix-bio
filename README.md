@@ -1,4 +1,4 @@
-# Monix-bio
+# Monix-BIO
 
 Experimental alternative to [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Task.html) from [Monix](https://github.com/monix/monix) which uses a second type parameter to represent recoverable errors.
 
@@ -39,9 +39,10 @@ DISCLAIMER: Benchmarks do not necessarily reflect the performance in real condit
 It is possible that in your specific use different effects will perform differently than the benchmark would suggest.
 It is best to always measure yourself and for your specific use case if you are concerned about the performance.
 
-
 At the time of writing (10 Dec 2019) the performance is excellent and we did not observe any regressions when compared to `monix.eval.Task`.
-Please open an issue or write on gitter (https://gitter.im/monix/monix) in case you measure completely different results or find a benchmark where `monix-bio` does not perform well against competition.
+Please open an issue or write on gitter (https://gitter.im/monix/monix) in case you measure completely different results or find a benchmark where `monix-bio` does not perform well.
+
+The benchmarks are inside [benchmarks module](benchmarks).
 
 ```
 [info] Benchmark                                        (depth)   Mode  Cnt      Score     Error  Units

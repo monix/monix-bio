@@ -1,3 +1,5 @@
+import sbtcrossproject.CrossPlugin.autoImport.crossProject
+
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
 addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
 
@@ -7,30 +9,23 @@ val catsVersion = "2.0.0"
 val catsEffectVersion = "2.0.0"
 
 lazy val `monix-bio` = project.in(file("."))
-  .settings(crossSettings, releaseSettings, skipOnPublishSettings)
-  .aggregate(coreJVM, coreJS)
-  .enablePlugins(AutomateHeaderPlugin)
-
-lazy val coreCommon =
-  crossSettings ++ crossVersionSharedSources ++ testSettings ++ Seq(
-    name := "monix-bio"
-  )
-
-lazy val coreJVM = project.in(file("core/jvm"))
-  .settings(coreCommon)
-  .enablePlugins(AutomateHeaderPlugin)
-
-lazy val coreJS = project.in(file("core/js"))
   .enablePlugins(ScalaJSPlugin)
-  .settings(scalaJSSettings)
-  .settings(coreCommon)
+  .settings(releaseSettings, skipOnPublishSettings)
+  .aggregate(coreJVM, coreJS)
+
+lazy val core = crossProject(JSPlatform, JVMPlatform)
+  .in(file("core"))
+  .settings(crossSettings ++ crossVersionSharedSources)
+  .settings(Seq(name := "monix-bio"))
   .enablePlugins(AutomateHeaderPlugin)
+
+lazy val coreJVM = core.jvm
+lazy val coreJS = core.js
 
 lazy val benchmarks = project.in(file("benchmarks"))
   .dependsOn(coreJVM)
   .enablePlugins(JmhPlugin)
   .enablePlugins(AutomateHeaderPlugin)
-  .settings(coreCommon)
   .settings(doNotPublishArtifact)
   .settings(
     libraryDependencies ++= Seq(
@@ -78,9 +73,10 @@ lazy val sharedSettings = Seq(
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
   libraryDependencies ++= Seq(
-    "io.monix" %% "monix-catnap" % monixVersion,
-    "io.monix" %% "minitest" % minitestVersion % Test,
-    "io.monix" %% "minitest-laws" % minitestVersion % Test
+    "io.monix" %%% "monix-catnap" % monixVersion,
+    "io.monix" %%% "minitest" % minitestVersion % Test,
+    "io.monix" %%% "minitest-laws" % minitestVersion % Test,
+    "org.typelevel" %%% "cats-effect-laws" % catsEffectVersion % Test
   ),
   headerLicense := Some(HeaderLicense.Custom(
     """|Copyright (c) 2019-2019 by The Monix Project Developers.
@@ -149,15 +145,6 @@ lazy val crossVersionSharedSources: Seq[Setting[_]] =
       }
     }
   }
-
-lazy val testSettings = Seq(
-  testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
-  libraryDependencies ++= Seq(
-    "io.monix" %%% "minitest-laws" % minitestVersion % Test,
-    "org.typelevel" %%% "cats-laws" % catsVersion % Test,
-    "org.typelevel" %%% "cats-effect-laws" % catsEffectVersion % Test
-  )
-)
 
 lazy val scalaJSSettings = Seq(
   // Use globally accessible (rather than local) source paths in JS source maps
