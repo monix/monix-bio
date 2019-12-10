@@ -18,7 +18,7 @@
 package monix.bio.instances
 
 import cats.{CoflatMap, Eval, MonadError, SemigroupK}
-import monix.bio.{UIO, BIO}
+import monix.bio.{BIO, UIO}
 
 import scala.util.Try
 

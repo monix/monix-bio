@@ -22,11 +22,12 @@ import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.{Callback, Scheduler}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 object Task {
+
   /**
     * @see See [[monix.bio.BIO.apply]]
     */

@@ -20,8 +20,8 @@ package monix.bio
 package internal
 
 import cats.effect.{CancelToken, IO, SyncIO}
-import monix.execution.{Callback, Scheduler}
 import monix.execution.internal.AttemptCallback.noop
+import monix.execution.{Callback, Scheduler}
 
 import scala.util.control.NonFatal
 

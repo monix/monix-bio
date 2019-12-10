@@ -19,8 +19,9 @@ package monix.bio
 
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
+
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 object TaskGatherSuite extends BaseTestSuite {
   test("Task.gather should execute in parallel for async tasks") { implicit s =>

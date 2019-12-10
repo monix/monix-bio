@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO.{Async, Context}
-import monix.bio.{UIO, BIO}
+import monix.bio.{BIO, UIO}
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TrampolinedRunnable
 

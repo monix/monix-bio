@@ -20,6 +20,7 @@ package monix.bio
 import scala.concurrent.duration.FiniteDuration
 
 object UIO {
+
   /**
     * @see See [[monix.bio.BIO.apply]]
     */

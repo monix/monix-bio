@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{Task, UIO, BIO}
+import monix.bio.{BIO, Task, UIO}
 import monix.catnap.CancelableF
 import monix.execution.internal.Platform
 import monix.execution.{Cancelable, Scheduler}
@@ -160,7 +160,6 @@ private[bio] object UnsafeCancelUtils {
                     s.reportFailure(WrappedException.wrap(e))
                   })) >> BIO.raiseError(first)
             }
-            BIO.raiseError(first)
 
           case (Nil, Nil) =>
             BIO.unit

@@ -19,8 +19,8 @@ package monix.bio
 
 import cats.Applicative
 import cats.laws.discipline.ApplicativeTests
-import monix.catnap.internal.ParallelApplicative
 import monix.bio.instances.CatsParallelForTask
+import monix.catnap.internal.ParallelApplicative
 
 object TypeClassLawsForParallelApplicativeSuite extends BaseLawsSuite {
 

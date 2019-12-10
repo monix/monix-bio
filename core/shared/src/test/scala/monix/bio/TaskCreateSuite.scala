@@ -17,12 +17,11 @@
 
 package monix.bio
 
-import cats.effect.IO
 import monix.execution.Cancelable
 import monix.execution.exceptions.DummyException
 
-import scala.util.{Failure, Success}
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 object TaskCreateSuite extends BaseTestSuite {
   test("can use Unit as return type") { implicit sc =>

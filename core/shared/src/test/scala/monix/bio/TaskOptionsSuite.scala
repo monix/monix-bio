@@ -19,10 +19,7 @@ package monix.bio
 
 import minitest.SimpleTestSuite
 import monix.bio.BIO.Options
-import monix.execution.Callback
 import monix.execution.Scheduler.Implicits.global
-
-import scala.concurrent.Promise
 
 object TaskOptionsSuite extends SimpleTestSuite {
   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation

@@ -18,15 +18,14 @@
 package monix.bio.internal
 
 import monix.bio.BIO.Context
+import monix.bio.{BIO, Task}
 import monix.execution._
-import monix.bio.{Task, BIO}
 import monix.execution.cancelables.SingleAssignCancelable
-
-import scala.util.control.NonFatal
 import monix.execution.schedulers.TrampolinedRunnable
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import scala.util.control.NonFatal
 
 private[bio] object TaskFromFuture {
 
@@ -118,10 +117,10 @@ private[bio] object TaskFromFuture {
   }
 
   private def startCancelable[A](
-                                  ctx: BIO.Context[Throwable],
-                                  cb: Callback[Throwable, A],
-                                  f: Future[A],
-                                  c: Cancelable): Unit = {
+    ctx: BIO.Context[Throwable],
+    cb: Callback[Throwable, A],
+    f: Future[A],
+    c: Cancelable): Unit = {
 
     f.value match {
       case Some(value) =>

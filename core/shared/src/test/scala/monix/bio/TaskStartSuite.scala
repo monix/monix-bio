@@ -21,7 +21,6 @@ import cats.laws._
 import cats.laws.discipline._
 import monix.execution.internal.Platform
 
-import concurrent.duration._
 import scala.util.Success
 
 object TaskStartSuite extends BaseTestSuite {

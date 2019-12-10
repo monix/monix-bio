@@ -18,6 +18,7 @@
 package monix.bio
 
 import monix.execution.schedulers.TestScheduler
+
 import scala.util.Success
 
 object TaskExecuteWithOptionsSuite extends BaseTestSuite {

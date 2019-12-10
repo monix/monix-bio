@@ -17,8 +17,8 @@
 
 package monix.bio
 
-import monix.catnap.CancelableF
 import monix.bio.internal.TaskConnectionComposite
+import monix.catnap.CancelableF
 import monix.execution.Cancelable
 import monix.execution.cancelables.BooleanCancelable
 

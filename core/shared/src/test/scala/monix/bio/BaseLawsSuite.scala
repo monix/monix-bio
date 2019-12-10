@@ -191,7 +191,7 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
   }
 
   implicit def arbitraryUIOf[A: Arbitrary: Cogen, B: Arbitrary: Cogen]: Arbitrary[A => UIO[B]] = {
-    Arbitrary(getArbitrary[A => B].map ( f => a => UIO(f(a))))
+    Arbitrary(getArbitrary[A => B].map(f => a => UIO(f(a))))
   }
 
   implicit def arbitraryTaskPar[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[BIO.Par[E, A]] =

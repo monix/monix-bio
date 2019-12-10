@@ -18,13 +18,13 @@
 package monix.bio.internal
 
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.execution.{Callback, UncaughtExceptionReporter}
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.schedulers.{TrampolineExecutionContext, TrampolinedRunnable}
+import monix.execution.{Callback, UncaughtExceptionReporter}
 
 import scala.concurrent.{ExecutionContext, Promise}
-import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 /**
   * Callback type which supports two channels of errors.

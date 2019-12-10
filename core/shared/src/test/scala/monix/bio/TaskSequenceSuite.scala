@@ -19,8 +19,8 @@ package monix.bio
 
 import monix.execution.exceptions.DummyException
 
-import concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.concurrent.duration._
+import scala.util.Success
 
 object TaskSequenceSuite extends BaseTestSuite {
   test("Task.sequence should not execute in parallel") { implicit s =>

@@ -21,8 +21,9 @@ import cats.implicits._
 import monix.execution.atomic.Atomic
 import monix.execution.exceptions.{CompositeException, DummyException}
 import monix.execution.internal.Platform
-import scala.util.{Failure, Success}
+
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 object TaskGuaranteeSuite extends BaseTestSuite {
 

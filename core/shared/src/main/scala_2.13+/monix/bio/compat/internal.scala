@@ -17,8 +17,9 @@
 
 package monix.bio.compat
 
-import scala.collection.mutable
 import monix.execution.compat.BuildFrom
+
+import scala.collection.mutable
 
 private[monix] object internal {
 

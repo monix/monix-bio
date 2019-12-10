@@ -51,8 +51,7 @@ class IODeepAttemptBenchmark {
 
   @Benchmark
   def futureDeepAttempt(): BigInt = {
-    import scala.concurrent.Await
-    import scala.concurrent.Future
+    import scala.concurrent.{Await, Future}
     import scala.concurrent.duration.Duration.Inf
 
     def descend(n: Int): Future[BigInt] =

@@ -22,7 +22,7 @@ import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 object TaskGatherNSuite extends BaseTestSuite {
 

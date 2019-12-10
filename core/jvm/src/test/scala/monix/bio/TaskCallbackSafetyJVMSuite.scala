@@ -18,10 +18,12 @@
 package monix.bio
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
+
 import minitest.SimpleTestSuite
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, DummyException}
 import monix.execution.schedulers.SchedulerService
 import monix.execution.{Callback, Scheduler}
+
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 

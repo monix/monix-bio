@@ -19,10 +19,9 @@ package monix.bio
 
 import cats.laws._
 import cats.laws.discipline._
-
 import monix.execution.exceptions.DummyException
 
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 object TaskEvalAlwaysSuite extends BaseTestSuite {
   test("Task.eval should work synchronously") { implicit s =>

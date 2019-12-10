@@ -132,12 +132,12 @@ private[bio] object TaskRunSyncUnsafe {
   }
 
   private def blockForResult[A](
-                                 source: BIO[Any, Any],
-                                 limit: Duration,
-                                 scheduler: Scheduler,
-                                 opts: BIO.Options,
-                                 bFirst: Bind,
-                                 bRest: CallStack): A = {
+    source: BIO[Any, Any],
+    limit: Duration,
+    scheduler: Scheduler,
+    opts: BIO.Options,
+    bFirst: Bind,
+    bRest: CallStack): A = {
 
     val latch = new OneShotLatch
     val cb = new BlockingCallback[Any, Any](latch)

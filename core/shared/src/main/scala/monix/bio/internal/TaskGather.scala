@@ -21,12 +21,11 @@ import cats.effect.CancelToken
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.execution.Callback
-import monix.execution.Scheduler
+import monix.execution.{Callback, Scheduler}
 
-import scala.util.control.NonFatal
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 
 private[bio] object TaskGather {
 
@@ -34,8 +33,8 @@ private[bio] object TaskGather {
     * Implementation for `Task.gather`
     */
   def apply[E, A, M[X] <: Iterable[X]](
-                                        in: Iterable[BIO[E, A]],
-                                        makeBuilder: () => mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
+    in: Iterable[BIO[E, A]],
+    makeBuilder: () => mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
     Async(
       new Register(in, makeBuilder),
       trampolineBefore = true,
@@ -50,8 +49,8 @@ private[bio] object TaskGather {
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
   private final class Register[E, A, M[X] <: Iterable[X]](
-                                                           in: Iterable[BIO[E, A]],
-                                                           makeBuilder: () => mutable.Builder[A, M[A]])
+    in: Iterable[BIO[E, A]],
+    makeBuilder: () => mutable.Builder[A, M[A]])
       extends ForkedRegister[E, M[A]] {
 
     def apply(context: Context[E], finalCallback: BiCallback[E, M[A]]): Unit = {

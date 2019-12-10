@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{Task, BIO}
+import monix.bio.{BIO, Task}
 
 import scala.util.control.NonFatal
 

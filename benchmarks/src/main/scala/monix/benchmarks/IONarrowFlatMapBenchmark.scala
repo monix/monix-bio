@@ -47,8 +47,7 @@ class IONarrowFlatMapBenchmark {
 
   @Benchmark
   def futureNarrowFlatMap(): Int = {
-    import scala.concurrent.Await
-    import scala.concurrent.Future
+    import scala.concurrent.{Await, Future}
     import scala.concurrent.duration.Duration.Inf
 
     def loop(i: Int): Future[Int] =

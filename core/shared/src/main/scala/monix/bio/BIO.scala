@@ -1524,9 +1524,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def hideErrors(implicit E: E <:< Throwable): UIO[A] =
     onErrorHandleWith(ex => BIO.raiseFatalError(E(ex)))
 
+  // TODO: scaladoc, name
   final def redeemFatal[B](recover: Throwable => B, map: A => B): UIO[B] =
     BIO.FlatMap(this, new BIO.RedeemFatal(recover, map))
 
+  // TODO: scaladoc, name
   final def redeemFatalWith[E1, B](recover: Throwable => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
     BIO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 }
@@ -2366,8 +2368,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see [[gatherN]] for a version that limits parallelism.
     */
-  def gather[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(
-    implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
+  def gather[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
     TaskGather[E, A, M](in, () => newBuilder(bf, in))
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
@@ -2471,9 +2472,9 @@ object BIO extends TaskInstancesLevel0 {
     *                                Defaults to `false`.
     */
   final case class Options(
-                            autoCancelableRunLoops: Boolean,
-                            localContextPropagation: Boolean
-                          ) {
+    autoCancelableRunLoops: Boolean,
+    localContextPropagation: Boolean
+  ) {
 
     /** Creates a new set of options from the source, but with
       * the [[autoCancelableRunLoops]] value set to `true`.
@@ -2696,9 +2697,8 @@ object BIO extends TaskInstancesLevel0 {
   private[bio] final case class Now[+A](value: A) extends BIO[Nothing, A] {
 
     // Optimization to avoid the run-loop
-    override def runAsyncOptF[E](cb: Either[Either[Throwable, E], A] => Unit)(
-      implicit s: Scheduler,
-      opts: BIO.Options): CancelToken[BIO[E, ?]] = {
+    override def runAsyncOptF[E](
+      cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         BIO.unit
@@ -2883,10 +2883,7 @@ object BIO extends TaskInstancesLevel0 {
     * Internal API — starts the execution of a Task with a guaranteed
     * trampolined async boundary.
     */
-  private[monix] def unsafeStartTrampolined[E, A](
-    source: BIO[E, A],
-    context: Context[E],
-    cb: BiCallback[E, A]): Unit =
+  private[monix] def unsafeStartTrampolined[E, A](source: BIO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     context.scheduler.execute(new TrampolinedRunnable {
 
       def run(): Unit =

@@ -25,7 +25,6 @@ lazy val coreJS = core.js
 lazy val benchmarks = project.in(file("benchmarks"))
   .dependsOn(coreJVM)
   .enablePlugins(JmhPlugin)
-  .enablePlugins(AutomateHeaderPlugin)
   .settings(doNotPublishArtifact)
   .settings(
     libraryDependencies ++= Seq(
@@ -93,7 +92,7 @@ lazy val sharedSettings = Seq(
        |WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
        |See the License for the specific language governing permissions and
        |limitations under the License."""
-      .stripMargin)),
+      .stripMargin))
 )
 
 val compilerOptions = Seq(

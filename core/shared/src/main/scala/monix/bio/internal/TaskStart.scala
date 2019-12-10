@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.{Fiber, UIO, BIO}
 import monix.bio.BIO.{Async, Context}
+import monix.bio.{BIO, Fiber, UIO}
 import monix.execution.Callback
 
 import scala.concurrent.Promise
@@ -42,8 +42,7 @@ private[bio] object TaskStart {
         )
     }
 
-  private class StartForked[E, A](fa: BIO[E, A])
-      extends ((Context[Nothing], Callback[Nothing, Fiber[E, A]]) => Unit) {
+  private class StartForked[E, A](fa: BIO[E, A]) extends ((Context[Nothing], Callback[Nothing, Fiber[E, A]]) => Unit) {
 
     final def apply(ctx: Context[Nothing], cb: Callback[Nothing, Fiber[E, A]]): Unit = {
       implicit val sc = ctx.scheduler

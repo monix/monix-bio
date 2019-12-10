@@ -21,8 +21,9 @@ package internal
 
 import cats.effect.CancelToken
 import monix.catnap.CancelableF
-import monix.execution.{Cancelable, Scheduler}
 import monix.execution.atomic.Atomic
+import monix.execution.{Cancelable, Scheduler}
+
 import scala.annotation.tailrec
 
 private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {

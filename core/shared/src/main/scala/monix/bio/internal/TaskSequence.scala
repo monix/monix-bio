@@ -26,8 +26,7 @@ import scala.collection.mutable
 private[bio] object TaskSequence {
 
   /** Implementation for `Task.sequence`. */
-  def list[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(
-    implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] = {
+  def list[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] = {
 
     def loop(cursor: Iterator[BIO[E, A]], acc: mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
       if (cursor.hasNext) {

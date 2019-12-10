@@ -17,11 +17,11 @@
 
 package monix.bio
 
+import monix.bio.internal.TaskConnectionRef
 import monix.catnap.CancelableF
 import monix.catnap.cancelables.BooleanCancelableF
-import monix.execution.cancelables.BooleanCancelable
-import monix.bio.internal.TaskConnectionRef
 import monix.execution.ExecutionModel.SynchronousExecution
+import monix.execution.cancelables.BooleanCancelable
 
 object TaskConnectionRefSuite extends BaseTestSuite {
   test("assign and cancel a Cancelable") { implicit s =>

@@ -18,11 +18,13 @@
 package monix.bio
 
 import java.util.concurrent.RejectedExecutionException
+
 import minitest.SimpleTestSuite
 import monix.execution.Scheduler
 import monix.execution.Scheduler.Implicits.global
-import scala.concurrent.{Await, ExecutionContext, Future}
+
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 object TaskRejectedExecutionSuite extends SimpleTestSuite {
 

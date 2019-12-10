@@ -27,8 +27,8 @@ import monix.eval.Task
 import org.openjdk.jmh.annotations._
 import zio.ZIO
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 /** To run the benchmark from within SBT:
   *

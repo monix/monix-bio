@@ -22,7 +22,7 @@ import cats.effect.ExitCase.{Canceled, Completed, Error}
 import monix.bio.BIO.{Context, ContextSwitch}
 import monix.bio.internal.StackFrame.FatalStackFrame
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{UIO, BIO}
+import monix.bio.{BIO, UIO}
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
 
@@ -86,9 +86,9 @@ private[monix] object TaskBracket {
     * [[monix.bio.BIO.bracket]] and [[monix.bio.BIO.bracketCase]]
     */
   def either[E, A, B](
-                       acquire: BIO[E, A],
-                       use: A => BIO[E, B],
-                       release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit]): BIO[E, B] = {
+    acquire: BIO[E, A],
+    use: A => BIO[E, B],
+    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit]): BIO[E, B] = {
 
     BIO.Async(
       new StartE(acquire, use, release),
@@ -99,9 +99,9 @@ private[monix] object TaskBracket {
   }
 
   private final class StartE[E, A, B](
-                                       acquire: BIO[E, A],
-                                       use: A => BIO[E, B],
-                                       release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
+    acquire: BIO[E, A],
+    use: A => BIO[E, B],
+    release: (A, Either[Option[Either[Throwable, E]], B]) => UIO[Unit])
       extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
@@ -132,9 +132,9 @@ private[monix] object TaskBracket {
     * [[monix.bio.BIO.bracketE]]
     */
   def exitCase[E, A, B](
-                         acquire: BIO[E, A],
-                         use: A => BIO[E, B],
-                         release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit]): BIO[E, B] =
+    acquire: BIO[E, A],
+    use: A => BIO[E, B],
+    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit]): BIO[E, B] =
     BIO.Async(
       new StartCase(acquire, use, release),
       trampolineBefore = true,
@@ -143,9 +143,9 @@ private[monix] object TaskBracket {
     )
 
   private final class StartCase[E, A, B](
-                                          acquire: BIO[E, A],
-                                          use: A => BIO[E, B],
-                                          release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
+    acquire: BIO[E, A],
+    use: A => BIO[E, B],
+    release: (A, ExitCase[Either[Throwable, E]]) => UIO[Unit])
       extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =

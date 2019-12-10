@@ -42,8 +42,7 @@ private[bio] object TaskRacePair {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A, B](fa: BIO[E, A], fb: BIO[E, B])
-      extends ForkedRegister[E, RaceEither[E, A, B]] {
+  private final class Register[E, A, B](fa: BIO[E, A], fb: BIO[E, B]) extends ForkedRegister[E, RaceEither[E, A, B]] {
 
     def apply(context: BIO.Context[E], cb: BiCallback[E, RaceEither[E, A, B]]): Unit = {
       implicit val s = context.scheduler

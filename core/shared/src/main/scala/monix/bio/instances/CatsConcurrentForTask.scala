@@ -20,7 +20,6 @@ package monix.bio
 package instances
 
 import cats.effect.{Async, CancelToken, Concurrent, ExitCase}
-import monix.bio.Task
 import monix.bio.internal.TaskCreate
 
 /** Cats type class instance of [[monix.bio.Task Task]]
@@ -48,8 +47,8 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
 
   override def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(
     release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
-    acquire.bracketCase(use)((a, exit) =>
-      release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(BIO.raiseFatalError))
+    acquire.bracketCase(use)(
+      (a, exit) => release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(BIO.raiseFatalError))
 
   override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
     TaskCreate.asyncF(k)

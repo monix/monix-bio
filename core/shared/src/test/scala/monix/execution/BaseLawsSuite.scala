@@ -22,15 +22,16 @@ import cats.laws._
 import minitest.SimpleTestSuite
 import minitest.laws.Checkers
 import monix.execution.exceptions.DummyException
-import org.scalacheck.Test.Parameters
 import monix.execution.internal.Platform
 import monix.execution.schedulers.TestScheduler
+import org.scalacheck.Test.Parameters
 import org.scalacheck.{Arbitrary, Cogen, Gen, Prop}
 import org.typelevel.discipline.Laws
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionException, Future}
-import scala.util.{Failure, Success, Try}
 import scala.language.implicitConversions
+import scala.util.{Failure, Success, Try}
 
 trait BaseLawsSuite extends SimpleTestSuite with Checkers with ArbitraryInstances {
 
@@ -213,6 +214,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
 }
 
 import java.io.{ByteArrayOutputStream, PrintStream}
+
 import scala.util.control.NonFatal
 
 /**

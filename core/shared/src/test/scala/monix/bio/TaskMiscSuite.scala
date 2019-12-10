@@ -17,12 +17,8 @@
 
 package monix.bio
 
-import monix.bio.internal.BiCallback
-import monix.execution.Callback
 import monix.execution.exceptions.DummyException
-import org.reactivestreams.{Subscriber, Subscription}
 
-import scala.concurrent.Promise
 import scala.util.{Failure, Success}
 
 object TaskMiscSuite extends BaseTestSuite {
@@ -160,7 +156,7 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(Task.pure(1), Task.now(1))
   }
 
-      // TODO: check after refactoring Either[Either
+  // TODO: check after refactoring Either[Either
 //  test("Task.now.runAsync with Try-based callback") { implicit s =>
 //    val p = Promise[Either[Int, Int]]()
 //    Task.now(1).runAsync(BiCallback.fromPromise(p))

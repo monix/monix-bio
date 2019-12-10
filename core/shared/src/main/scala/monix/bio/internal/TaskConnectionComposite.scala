@@ -19,11 +19,11 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO
-import monix.catnap.CancelableF
 import monix.bio.internal.TaskConnectionComposite.{Active, Cancelled, State}
-import monix.execution.{Cancelable, Scheduler}
+import monix.catnap.CancelableF
 import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.execution.atomic.{Atomic, AtomicAny}
+import monix.execution.{Cancelable, Scheduler}
 
 import scala.annotation.tailrec
 

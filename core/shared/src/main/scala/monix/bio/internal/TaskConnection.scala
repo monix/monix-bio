@@ -21,8 +21,8 @@ package internal
 
 import cats.effect.CancelToken
 import monix.catnap.CancelableF
-import monix.execution.{Cancelable, Scheduler}
 import monix.execution.atomic.{Atomic, PaddingStrategy}
+import monix.execution.{Cancelable, Scheduler}
 
 import scala.annotation.tailrec
 

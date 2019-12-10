@@ -21,6 +21,7 @@ import minitest.SimpleTestSuite
 import monix.execution.exceptions.DummyException
 
 object TaskToStringSuite extends SimpleTestSuite {
+
   def assertContains[E, A](ref: BIO[E, A], startStr: String): Unit = {
     val str = ref.toString
     assert(str.startsWith(startStr), s""""$str".startsWith("$startStr")""")

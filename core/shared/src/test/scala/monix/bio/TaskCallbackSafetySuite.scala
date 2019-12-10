@@ -18,8 +18,9 @@
 package monix.bio
 
 import monix.execution.Callback
-import monix.execution.exceptions.{CallbackCalledMultipleTimesException, DummyException}
+import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TestScheduler
+
 import scala.util.{Failure, Success}
 
 object TaskCallbackSafetySuite extends BaseTestSuite {

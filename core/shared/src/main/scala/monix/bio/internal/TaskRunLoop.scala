@@ -50,13 +50,13 @@ private[bio] object TaskRunLoop {
     * happens from [[startFuture]] and [[startLight]].
     */
   def startFull[E, A](
-                       source: BIO[E, A],
-                       contextInit: Context[E],
-                       cb: BiCallback[E, A],
-                       rcb: TaskRestartCallback,
-                       bFirst: Bind,
-                       bRest: CallStack,
-                       frameIndex: FrameIndex): Unit = {
+    source: BIO[E, A],
+    contextInit: Context[E],
+    cb: BiCallback[E, A],
+    rcb: TaskRestartCallback,
+    bFirst: Bind,
+    bRest: CallStack,
+    frameIndex: FrameIndex): Unit = {
 
     val cba = cb.asInstanceOf[BiCallback[Any, Any]]
     var current: Current = source
@@ -216,12 +216,12 @@ private[bio] object TaskRunLoop {
     * trampoline loop.
     */
   def restartAsync[E, A](
-                          source: BIO[E, A],
-                          context: Context[E],
-                          cb: BiCallback[E, A],
-                          rcb: TaskRestartCallback,
-                          bindCurrent: Bind,
-                          bindRest: CallStack): Unit = {
+    source: BIO[E, A],
+    context: Context[E],
+    cb: BiCallback[E, A],
+    rcb: TaskRestartCallback,
+    bindCurrent: Bind,
+    bindRest: CallStack): Unit = {
 
     val savedLocals =
       if (context.options.localContextPropagation) Local.getContext()
@@ -262,12 +262,12 @@ private[bio] object TaskRunLoop {
     * Function gets invoked by `Task.runAsync(cb: Callback)`.
     */
   def startLight[E, A](
-                        source: BIO[E, A],
-                        scheduler: Scheduler,
-                        opts: BIO.Options,
-                        // TODO: should it be [E, A]?
-                        cb: BiCallback[Any, A],
-                        isCancelable: Boolean = true): CancelToken[BIO[E, ?]] = {
+    source: BIO[E, A],
+    scheduler: Scheduler,
+    opts: BIO.Options,
+    // TODO: should it be [E, A]?
+    cb: BiCallback[Any, A],
+    isCancelable: Boolean = true): CancelToken[BIO[E, ?]] = {
 
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
@@ -520,10 +520,7 @@ private[bio] object TaskRunLoop {
     *
     * Function gets invoked by `Task.runAsync(implicit s: Scheduler)`.
     */
-  def startFuture[E, A](
-                         source: BIO[E, A],
-                         scheduler: Scheduler,
-                         opts: BIO.Options): CancelableFuture[Either[E, A]] = {
+  def startFuture[E, A](source: BIO[E, A], scheduler: Scheduler, opts: BIO.Options): CancelableFuture[Either[E, A]] = {
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
@@ -644,13 +641,13 @@ private[bio] object TaskRunLoop {
   }
 
   private[internal] def executeAsyncTask(
-                                          task: BIO.Async[Any, Any],
-                                          context: Context[Any],
-                                          cb: BiCallback[Any, Any],
-                                          rcb: TaskRestartCallback,
-                                          bFirst: Bind,
-                                          bRest: CallStack,
-                                          nextFrame: FrameIndex): Unit = {
+    task: BIO.Async[Any, Any],
+    context: Context[Any],
+    cb: BiCallback[Any, Any],
+    rcb: TaskRestartCallback,
+    bFirst: Bind,
+    bRest: CallStack,
+    nextFrame: FrameIndex): Unit = {
 
     // We are going to resume the frame index from where we left,
     // but only if no real asynchronous execution happened. So in order
@@ -672,15 +669,15 @@ private[bio] object TaskRunLoop {
     * [[startLight]].
     */
   private def goAsyncForLightCB[E](
-                                    source: Current,
-                                    scheduler: Scheduler,
-                                    opts: BIO.Options,
-                                    cb: BiCallback[Any, Any],
-                                    bFirst: Bind,
-                                    bRest: CallStack,
-                                    nextFrame: FrameIndex,
-                                    isCancelable: Boolean,
-                                    forceFork: Boolean): CancelToken[BIO[E, ?]] = {
+    source: Current,
+    scheduler: Scheduler,
+    opts: BIO.Options,
+    cb: BiCallback[Any, Any],
+    bFirst: Bind,
+    bRest: CallStack,
+    nextFrame: FrameIndex,
+    isCancelable: Boolean,
+    forceFork: Boolean): CancelToken[BIO[E, ?]] = {
 
     val context = Context(
       scheduler,
@@ -701,13 +698,13 @@ private[bio] object TaskRunLoop {
 
   /** Called when we hit the first async boundary in [[startFuture]]. */
   private def goAsync4Future[E, A](
-                                    source: Current,
-                                    scheduler: Scheduler,
-                                    opts: BIO.Options,
-                                    bFirst: Bind,
-                                    bRest: CallStack,
-                                    nextFrame: FrameIndex,
-                                    forceFork: Boolean): CancelableFuture[Either[E, A]] = {
+    source: Current,
+    scheduler: Scheduler,
+    opts: BIO.Options,
+    bFirst: Bind,
+    bRest: CallStack,
+    nextFrame: FrameIndex,
+    forceFork: Boolean): CancelableFuture[Either[E, A]] = {
 
     val p = Promise[Either[E, A]]()
     val cb = BiCallback.fromPromise(p).asInstanceOf[BiCallback[Any, Any]]
@@ -728,13 +725,13 @@ private[bio] object TaskRunLoop {
 
   /** Called when we hit the first async boundary in [[startStep]]. */
   private def goAsync4Step[E, A](
-                                  source: Current,
-                                  scheduler: Scheduler,
-                                  opts: BIO.Options,
-                                  bFirst: Bind,
-                                  bRest: CallStack,
-                                  nextFrame: FrameIndex,
-                                  forceFork: Boolean): Either[BIO[E, A], A] = {
+    source: Current,
+    scheduler: Scheduler,
+    opts: BIO.Options,
+    bFirst: Bind,
+    bRest: CallStack,
+    nextFrame: FrameIndex,
+    forceFork: Boolean): Either[BIO[E, A], A] = {
 
     val ctx = Context[Any](scheduler, opts)
     val start: Start[Any, Any] =

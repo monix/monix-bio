@@ -18,6 +18,7 @@
 package monix.bio
 
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
+
 import scala.util.Success
 
 object TaskExecutionModelSuite extends BaseTestSuite {

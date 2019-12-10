@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.ExitCase
 import cats.effect.concurrent.Deferred
-import monix.bio.{Fiber, Task, UIO, BIO}
+import monix.bio.{BIO, Fiber, Task, UIO}
 import monix.catnap.ConcurrentQueue
 import monix.execution.{BufferCapacity, ChannelType}
 

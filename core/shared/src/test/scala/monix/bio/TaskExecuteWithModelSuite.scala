@@ -19,9 +19,11 @@ package monix.bio
 
 import monix.execution.ExecutionModel
 import monix.execution.ExecutionModel.{AlwaysAsyncExecution, SynchronousExecution}
+
 import scala.util.Success
 
 object TaskExecuteWithModelSuite extends BaseTestSuite {
+
   def readModel: Task[ExecutionModel] =
     Task.deferAction(s => Task.now(s.executionModel))
 

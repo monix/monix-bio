@@ -20,15 +20,15 @@ package monix.bio.internal
 import cats.effect.CancelToken
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.execution.Callback
-import monix.execution.Scheduler
-import monix.execution.atomic.{Atomic, AtomicAny}
-import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.bio.compat.internal.toIterator
-import scala.util.control.NonFatal
+import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.{Callback, Scheduler}
+import monix.execution.atomic.PaddingStrategy.LeftRight128
+import monix.execution.atomic.{Atomic, AtomicAny}
+
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 
 private[bio] object TaskGatherUnordered {
 

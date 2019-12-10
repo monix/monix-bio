@@ -17,15 +17,12 @@
 
 package monix.bio
 
-import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.CancelableFuture
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
-import scala.concurrent.{Promise, TimeoutException}
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
-import monix.execution.atomic.Atomic
+import scala.util.Success
 
 object TaskRaceSuite extends BaseTestSuite {
 //  test("Task.raceMany should switch to other") { implicit s =>

@@ -20,8 +20,8 @@ package monix.bio
 import minitest.SimpleTestSuite
 import monix.execution.Scheduler.Implicits.global
 
-import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, TimeoutException}
 
 object TaskBlockingSuite extends SimpleTestSuite {
   test("blocking on future should work") {

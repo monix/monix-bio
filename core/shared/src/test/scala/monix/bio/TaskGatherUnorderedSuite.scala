@@ -119,16 +119,15 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     gatherSpecial(tasks)
       .map(_.sum)
       .runAsync(new BiCallback[Either[Throwable, Throwable], Int] {
-          override def onFatalError(e: Throwable): Unit =
-            result = Some(Failure(e))
+        override def onFatalError(e: Throwable): Unit =
+          result = Some(Failure(e))
 
-          override def onSuccess(value: Int): Unit =
-            result = Some(Success(value))
+        override def onSuccess(value: Int): Unit =
+          result = Some(Success(value))
 
-          override def onError(e: Either[Throwable, Throwable]): Unit =
-            result = Some(Failure(e.fold(identity, identity)))
-        }
-      )
+        override def onError(e: Either[Throwable, Throwable]): Unit =
+          result = Some(Failure(e.fold(identity, identity)))
+      })
 
     s.tick()
     assertEquals(result, Some(Success(count * (count - 1) / 2)))

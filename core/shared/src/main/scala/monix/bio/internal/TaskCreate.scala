@@ -22,7 +22,7 @@ import java.util.concurrent.RejectedExecutionException
 import cats.effect.CancelToken
 import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{Task, BIO}
+import monix.bio.{BIO, Task}
 import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.internal.Platform

@@ -17,7 +17,6 @@
 
 package monix.bio
 
-import java.util.concurrent.CancellationException
 import cats.laws._
 import cats.laws.discipline._
 import cats.syntax.all._
@@ -25,7 +24,7 @@ import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 object TaskCancellationSuite extends BaseTestSuite {
   test("cancellation works for async actions") { implicit ec =>

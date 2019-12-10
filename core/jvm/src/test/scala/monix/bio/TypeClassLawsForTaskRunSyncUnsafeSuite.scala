@@ -19,7 +19,6 @@ package monix.bio
 
 import cats.effect.IO
 import cats.effect.laws.discipline._
-import cats.kernel.laws.discipline.MonoidTests
 import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests}
 import cats.{Applicative, Eq}
 import monix.bio.instances.CatsParallelForTask
