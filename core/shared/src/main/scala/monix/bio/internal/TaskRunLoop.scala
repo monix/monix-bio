@@ -120,7 +120,6 @@ private[bio] object TaskRunLoop {
                 cba.onError(error)
                 return
               case bind =>
-                // TODO: can this try catch be removed?
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recover(error)

@@ -92,7 +92,8 @@ object BiCallback {
     new BiCallback[E, A] {
 
       override def tryApply(result: Try[A])(implicit ev: Throwable <:< E): Boolean =
-        p.tryComplete(result.map(Right(_))) // TODO: should it be fatal or normal error?
+        p.tryComplete(result.transform(a => Success(Right(a)), th => Success(Left(th))))
+
       override def tryApply(result: Either[E, A]): Boolean =
         p.trySuccess(result)
 
@@ -245,8 +246,14 @@ object BiCallback {
 
   private[monix] def callError[E, A](cb: Either[Either[Throwable, E], A] => Unit, value: E): Unit =
     cb match {
-      case ref: Callback[Either[Throwable, E], A] @unchecked => ref.onError(Right(value))
+      case ref: BiCallback[Either[Throwable, E], A] @unchecked => ref.onError(Right(value))
       case _ => cb(Left(Right(value)))
+    }
+
+  private[monix] def callFatalError[E, A](cb: Either[Either[Throwable, E], A] => Unit, value: Throwable): Unit =
+    cb match {
+      case ref: BiCallback[Either[Throwable, E], A] @unchecked => ref.onFatalError(value)
+      case _ => cb(Left(Left(value)))
     }
 
   private[monix] def signalErrorTrampolined[E, A](cb: BiCallback[E, A], e: E): Unit =
@@ -287,8 +294,8 @@ object BiCallback {
       BiCallback.trampolined(cb)
 
     /** See [[BiCallback.fromAttempt]]. */
-    def fromAttempt[A](cb: Either[E, A] => Unit): Callback[E, A] =
-      Callback.fromAttempt(cb)
+    def fromAttempt[A](cb: Either[Either[Throwable, E], A] => Unit): BiCallback[E, A] =
+      BiCallback.fromAttempt(cb)
 
     /** See [[BiCallback.fromTry]]. */
     def fromTry[A](cb: Try[A] => Unit)(implicit ev: Throwable <:< E): BiCallback[Throwable, A] =

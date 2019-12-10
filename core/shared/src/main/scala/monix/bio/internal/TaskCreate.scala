@@ -254,7 +254,6 @@ private[bio] object TaskCreate {
       }
     }
 
-    // TODO: double check if we don't lose anything about fatal errors
     private def forceErrorReport(e: RejectedExecutionException): Unit = {
       value = null.asInstanceOf[A]
       if (error != null) {

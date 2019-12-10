@@ -188,16 +188,7 @@ private[bio] object TaskGatherUnordered {
         activate(stateRef, count, mainConn, finalCallback)(s)
       } catch {
         case ex if NonFatal(ex) =>
-          // TODO: how to handle this error - can we ignore it?
-          s.reportFailure(ex)
-          val currentState = stateRef.getAndSet(State.Complete)
-          if (currentState != State.Complete) {
-            context.connection.pop().runAsyncAndForget
-            s.reportFailure(ex)
-          } else {
-            s.reportFailure(ex)
-          }
-//          reportError(stateRef, context.connection, ex, finalCallback)
+          reportFatalError(stateRef, context.connection, ex, finalCallback)
       }
     }
   }

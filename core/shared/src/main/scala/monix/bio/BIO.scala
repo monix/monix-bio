@@ -2792,20 +2792,51 @@ object BIO extends TaskInstancesLevel0 {
     }
   }
 
-  // TODO: revise FatalError optimizations
-
   /** [[Task]] state describing an immediate exception. */
   private[bio] final case class FatalError(e: Throwable) extends BIO[Nothing, Nothing] {
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt[E1 >: Nothing](
+    override def runAsyncOptF[E1 >: Nothing](cb: Either[Either[Throwable, E1], Nothing] => Unit)(
       implicit s: Scheduler,
-      opts: Options): CancelableFuture[Either[Nothing, Nothing]] =
+      opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
+      if (s.executionModel != AlwaysAsyncExecution) {
+        BiCallback.callFatalError(cb, e)
+        BIO.unit
+      } else {
+        super.runAsyncOptF(cb)(s, opts)
+      }
+    }
+
+    // Optimization to avoid the run-loop
+    override def runToFutureOpt[E1 >: Nothing](implicit s: Scheduler, opts: Options): CancelableFuture[Nothing] = {
       CancelableFuture.failed(e)
+    }
+
+    // Optimization to avoid the run-loop
+    override def runAsyncOpt(
+      cb: Either[Either[Throwable, Nothing], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      if (s.executionModel != AlwaysAsyncExecution) {
+        BiCallback.callFatalError(cb, e)
+        Cancelable.empty
+      } else {
+        super.runAsyncOpt(cb)(s, opts)
+      }
+    }
 
     // Optimization to avoid the run-loop
     override def runAsyncAndForgetOpt(implicit s: Scheduler, opts: Options): Unit =
       s.reportFailure(e)
+
+    // Optimization to avoid the run-loop
+    override def runAsyncUncancelableOpt(cb: Either[Either[Throwable, Nothing], Nothing] => Unit)(
+      implicit s: Scheduler,
+      opts: Options
+    ): Unit = {
+      if (s.executionModel != AlwaysAsyncExecution)
+        BiCallback.callFatalError(cb, e)
+      else
+        super.runAsyncUncancelableOpt(cb)(s, opts)
+    }
   }
 
   /** [[BIO]] state describing an non-strict synchronous value. */
@@ -3006,8 +3037,6 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     */
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     new CatsParallelForTask[E]
-
-  // TODO: implement CatsMonoid
 }
 
 private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
@@ -3045,8 +3074,6 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     opts: BIO.Options = BIO.defaultOptions): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
-
-  // TODO: implement catsSemigroup
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {

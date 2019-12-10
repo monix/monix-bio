@@ -148,7 +148,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
   }
 
   def await(latch: CountDownLatch): Unit = {
-    val seconds = 10
+    val seconds = 10L
     assert(latch.await(seconds, TimeUnit.SECONDS), s"latch.await($seconds seconds)")
   }
 }
