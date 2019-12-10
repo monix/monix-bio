@@ -77,7 +77,7 @@ object TaskAsyncSuite extends BaseTestSuite {
 
   test("Task.async works for immediate fatal error") { implicit sc =>
     val e = DummyException("dummy")
-    val task = WRYYY.async[Int, Int](_.asInstanceOf[BiCallback[Int, Int]].onFatalError(e))
+    val task = BIO.async[Int, Int](_.asInstanceOf[BiCallback[Int, Int]].onFatalError(e))
     assertEquals(task.runToFuture.value, Some(Failure(e)))
   }
 
@@ -120,7 +120,7 @@ object TaskAsyncSuite extends BaseTestSuite {
 
   test("Task.async0 works for async fatal error") { implicit sc =>
     val e = DummyException("dummy")
-    val f = WRYYY
+    val f = BIO
       .async0[Int, Int]((s, cb) => s.executeAsync(() => cb.asInstanceOf[BiCallback[Int, Int]].onFatalError(e)))
       .runToFuture
 

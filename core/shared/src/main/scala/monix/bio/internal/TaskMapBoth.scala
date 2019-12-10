@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.Ack.Stop
 import monix.execution.Scheduler
@@ -33,7 +33,7 @@ private[bio] object TaskMapBoth {
   /**
     * Implementation for `Task.mapBoth`.
     */
-  def apply[E, A1, A2, R](fa1: WRYYY[E, A1], fa2: WRYYY[E, A2])(f: (A1, A2) => R): WRYYY[E, R] = {
+  def apply[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] = {
     Async(new Register(fa1, fa2, f), trampolineBefore = true, trampolineAfter = true, restoreLocals = true)
   }
 
@@ -42,7 +42,7 @@ private[bio] object TaskMapBoth {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A1, A2, R](fa1: WRYYY[E, A1], fa2: WRYYY[E, A2], f: (A1, A2) => R)
+  private final class Register[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2], f: (A1, A2) => R)
       extends ForkedRegister[E, R] {
 
     /* For signaling the values after the successful completion of both tasks. */
@@ -120,7 +120,7 @@ private[bio] object TaskMapBoth {
 
       // Light asynchronous boundary; with most scheduler implementations
       // it will not fork a new (logical) thread!
-      WRYYY.unsafeStartEnsureAsync(
+      BIO.unsafeStartEnsureAsync(
         fa1,
         context1,
         new BiCallback[E, A1] {
@@ -148,7 +148,7 @@ private[bio] object TaskMapBoth {
       )
 
       // Start first task with a "hard" async boundary to ensure parallel evaluation
-      WRYYY.unsafeStartEnsureAsync(
+      BIO.unsafeStartEnsureAsync(
         fa2,
         context2,
         new BiCallback[E, A2] {

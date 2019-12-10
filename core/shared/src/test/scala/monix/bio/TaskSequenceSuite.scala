@@ -28,7 +28,7 @@ object TaskSequenceSuite extends BaseTestSuite {
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
       Task.evalAsync(3).delayExecution(3.seconds))
-    val f = WRYYY.sequence(seq).runToFuture
+    val f = BIO.sequence(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -49,7 +49,7 @@ object TaskSequenceSuite extends BaseTestSuite {
       Task.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = WRYYY.sequence(seq).runToFuture
+    val f = BIO.sequence(seq).runToFuture
 
     // First
     s.tick(1.second)
@@ -64,7 +64,7 @@ object TaskSequenceSuite extends BaseTestSuite {
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
       Task.evalAsync(3).delayExecution(3.seconds))
-    val f = WRYYY.sequence(seq).runToFuture
+    val f = BIO.sequence(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)

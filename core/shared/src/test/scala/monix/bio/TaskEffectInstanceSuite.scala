@@ -18,25 +18,25 @@
 package monix.bio
 
 import cats.effect.{Effect, IO}
-import monix.bio.WRYYY.Options
+import monix.bio.BIO.Options
 import monix.execution.schedulers.TracingScheduler
 
 import scala.concurrent.duration._
 
 object TaskEffectInstanceSuite extends BaseTestSuite {
 
-  val readOptions: UIO[WRYYY.Options] =
-    WRYYY.Async[Nothing, Options] { (ctx, cb) =>
+  val readOptions: UIO[BIO.Options] =
+    BIO.Async[Nothing, Options] { (ctx, cb) =>
       cb.onSuccess(ctx.options)
     }
 
   test("Effect instance should make use of implicit TaskOptions") { implicit sc =>
-    implicit val customOptions: WRYYY.Options = WRYYY.Options(
+    implicit val customOptions: BIO.Options = BIO.Options(
       autoCancelableRunLoops = true,
       localContextPropagation = true
     )
 
-    var received: WRYYY.Options = null
+    var received: BIO.Options = null
 
     val io = Effect[Task].runAsync(readOptions) {
       case Right(opts) =>
@@ -53,7 +53,7 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
   }
 
   test("Effect instance should use Task.defaultOptions with default TestScheduler") { implicit sc =>
-    var received: WRYYY.Options = null
+    var received: BIO.Options = null
     val io = Effect[Task].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
@@ -65,14 +65,14 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
 
     io.unsafeRunSync()
     sc.tick(1.day)
-    assertEquals(received, WRYYY.defaultOptions)
+    assertEquals(received, BIO.defaultOptions)
     assert(!received.localContextPropagation)
   }
 
   test("Effect instance should use Task.defaultOptions.withSchedulerFeatures") { sc =>
     implicit val tracing = TracingScheduler(sc)
 
-    var received: WRYYY.Options = null
+    var received: BIO.Options = null
     val io = Effect[Task].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
@@ -84,7 +84,7 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
 
     io.unsafeRunSync()
     sc.tick(1.day)
-    assertEquals(received, WRYYY.defaultOptions.withSchedulerFeatures)
+    assertEquals(received, BIO.defaultOptions.withSchedulerFeatures)
     assert(received.localContextPropagation)
   }
 }

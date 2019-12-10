@@ -17,9 +17,9 @@
 
 package monix.bio.internal
 
-import monix.bio.WRYYY.Context
+import monix.bio.BIO.Context
 import monix.execution._
-import monix.bio.{Task, WRYYY}
+import monix.bio.{Task, BIO}
 import monix.execution.cancelables.SingleAssignCancelable
 
 import scala.util.control.NonFatal
@@ -89,7 +89,7 @@ private[bio] object TaskFromFuture {
       }
     }
 
-    WRYYY.Async(
+    BIO.Async(
       start,
       trampolineBefore = false,
       trampolineAfter = false,
@@ -98,14 +98,14 @@ private[bio] object TaskFromFuture {
   }
 
   private def rawAsync[A](start: (Context[Throwable], Callback[Throwable, A]) => Unit): Task[A] =
-    WRYYY.Async(
+    BIO.Async(
       start,
       trampolineBefore = true,
       trampolineAfter = false,
       restoreLocals = true
     )
 
-  private def startSimple[A](ctx: WRYYY.Context[Throwable], cb: Callback[Throwable, A], f: Future[A]) = {
+  private def startSimple[A](ctx: BIO.Context[Throwable], cb: Callback[Throwable, A], f: Future[A]) = {
 
     f.value match {
       case Some(value) =>
@@ -118,10 +118,10 @@ private[bio] object TaskFromFuture {
   }
 
   private def startCancelable[A](
-    ctx: WRYYY.Context[Throwable],
-    cb: Callback[Throwable, A],
-    f: Future[A],
-    c: Cancelable): Unit = {
+                                  ctx: BIO.Context[Throwable],
+                                  cb: Callback[Throwable, A],
+                                  f: Future[A],
+                                  c: Cancelable): Unit = {
 
     f.value match {
       case Some(value) =>

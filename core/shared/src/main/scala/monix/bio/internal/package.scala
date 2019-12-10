@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import monix.bio.WRYYY.Context
+import monix.bio.BIO.Context
 
 package object internal {
 

@@ -53,10 +53,10 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     A: Eq[A],
     E: Eq[E],
     sc: TestScheduler,
-    opts: WRYYY.Options = WRYYY.defaultOptions): Eq[WRYYY[E, A]] = {
+    opts: BIO.Options = BIO.defaultOptions): Eq[BIO[E, A]] = {
 
-    new Eq[WRYYY[E, A]] {
-      def eqv(lh: WRYYY[E, A], rh: WRYYY[E, A]): Boolean =
+    new Eq[BIO[E, A]] {
+      def eqv(lh: BIO[E, A], rh: BIO[E, A]): Boolean =
         equalityFutureEither(A, E, sc).eqv(lh.runToFutureOpt, rh.runToFutureOpt)
     }
   }
@@ -65,7 +65,7 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
+    opts: BIO.Options = BIO.defaultOptions): Eq[UIO[A]] = {
 
     new Eq[UIO[A]] {
       def eqv(lh: UIO[A], rh: UIO[A]): Boolean =
@@ -81,11 +81,11 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: WRYYY.Options = WRYYY.defaultOptions): Eq[WRYYY.Par[E, A]] = {
-    new Eq[WRYYY.Par[E, A]] {
-      import WRYYY.Par.unwrap
-      def eqv(lh: WRYYY.Par[E, A], rh: WRYYY.Par[E, A]): Boolean =
-        Eq[WRYYY[E, A]].eqv(unwrap(lh), unwrap(rh))
+    opts: BIO.Options = BIO.defaultOptions): Eq[BIO.Par[E, A]] = {
+    new Eq[BIO.Par[E, A]] {
+      import BIO.Par.unwrap
+      def eqv(lh: BIO.Par[E, A], rh: BIO.Par[E, A]): Boolean =
+        Eq[BIO[E, A]].eqv(unwrap(lh), unwrap(rh))
     }
   }
 
@@ -99,26 +99,26 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 
 trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
 
-  implicit def arbitraryTask[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[WRYYY[E, A]] = {
-    def genPure: Gen[WRYYY[E, A]] =
-      getArbitrary[A].map(WRYYY.pure)
+  implicit def arbitraryTask[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[BIO[E, A]] = {
+    def genPure: Gen[BIO[E, A]] =
+      getArbitrary[A].map(BIO.pure)
 
-    def genEvalAsync: Gen[WRYYY[E, A]] =
-      getArbitrary[A].map(WRYYY.evalAsync(_).onErrorHandleWith(ex => WRYYY.raiseFatalError(ex)))
+    def genEvalAsync: Gen[BIO[E, A]] =
+      getArbitrary[A].map(BIO.evalAsync(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)))
 
-    def genEval: Gen[WRYYY[E, A]] =
+    def genEval: Gen[BIO[E, A]] =
       Gen.frequency(
-        1 -> getArbitrary[A].map(WRYYY.eval(_).onErrorHandleWith(ex => WRYYY.raiseFatalError(ex))),
-        1 -> getArbitrary[A].map(WRYYY(_).onErrorHandleWith(ex => WRYYY.raiseFatalError(ex)))
+        1 -> getArbitrary[A].map(BIO.eval(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex))),
+        1 -> getArbitrary[A].map(BIO(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)))
       )
 
-    def genFail: Gen[WRYYY[E, A]] =
-      getArbitrary[E].map(WRYYY.raiseError)
+    def genFail: Gen[BIO[E, A]] =
+      getArbitrary[E].map(BIO.raiseError)
 
-    def genAsync: Gen[WRYYY[E, A]] =
+    def genAsync: Gen[BIO[E, A]] =
       getArbitrary[(Either[E, A] => Unit) => Unit].map(TaskCreate.async)
 
-    def genCancelable: Gen[WRYYY[E, A]] =
+    def genCancelable: Gen[BIO[E, A]] =
       for (a <- getArbitrary[A]) yield TaskCreate.cancelable0[E, A] { (sc, cb) =>
         val isActive = Atomic(true)
         sc.executeAsync { () =>
@@ -128,12 +128,12 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         UIO.eval(isActive.set(false))
       }
 
-    def genNestedAsync: Gen[WRYYY[E, A]] =
-      getArbitrary[(Either[E, WRYYY[E, A]] => Unit) => Unit]
+    def genNestedAsync: Gen[BIO[E, A]] =
+      getArbitrary[(Either[E, BIO[E, A]] => Unit) => Unit]
         .map(k => TaskCreate.async(k).flatMap(x => x))
 
-    def genBindSuspend: Gen[WRYYY[E, A]] =
-      getArbitrary[A].map(WRYYY.evalAsync(_).onErrorHandleWith(ex => WRYYY.raiseFatalError(ex)).flatMap(WRYYY.pure))
+    def genBindSuspend: Gen[BIO[E, A]] =
+      getArbitrary[A].map(BIO.evalAsync(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)).flatMap(BIO.pure))
 
     def genSimpleTask = Gen.frequency(
       1 -> genPure,
@@ -145,24 +145,24 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       1 -> genBindSuspend
     )
 
-    def genContextSwitch: Gen[WRYYY[E, A]] =
+    def genContextSwitch: Gen[BIO[E, A]] =
       for (t <- genSimpleTask) yield {
-        WRYYY.ContextSwitch[E, A](t, x => x.copy(), (_, _, old, _) => old)
+        BIO.ContextSwitch[E, A](t, x => x.copy(), (_, _, old, _) => old)
       }
 
-    def genFlatMap: Gen[WRYYY[E, A]] =
+    def genFlatMap: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f <- getArbitrary[A => WRYYY[E, A]]
+        f <- getArbitrary[A => BIO[E, A]]
       } yield ioa.flatMap(f)
 
-    def getMapOne: Gen[WRYYY[E, A]] =
+    def getMapOne: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
         f <- getArbitrary[A => A]
       } yield ioa.map(f)
 
-    def getMapTwo: Gen[WRYYY[E, A]] =
+    def getMapTwo: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
         f1 <- getArbitrary[A => A]
@@ -194,8 +194,8 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
     Arbitrary(getArbitrary[A => B].map ( f => a => UIO(f(a))))
   }
 
-  implicit def arbitraryTaskPar[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[WRYYY.Par[E, A]] =
-    Arbitrary(arbitraryTask[E, A].arbitrary.map(WRYYY.Par(_)))
+  implicit def arbitraryTaskPar[E: Arbitrary, A: Arbitrary: Cogen]: Arbitrary[BIO.Par[E, A]] =
+    Arbitrary(arbitraryTask[E, A].arbitrary.map(BIO.Par(_)))
 
   implicit def arbitraryIO[A: Arbitrary: Cogen]: Arbitrary[IO[A]] =
     catsEffectLawsArbitraryForIO
@@ -222,7 +222,7 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       for (b <- B.arbitrary) yield (_: IO[A]) => b
     }
 
-  implicit def cogenForTask[E, A]: Cogen[WRYYY[E, A]] =
+  implicit def cogenForTask[E, A]: Cogen[BIO[E, A]] =
     Cogen[Unit].contramap(_ => ())
 
   implicit def cogenForIO[A: Cogen]: Cogen[IO[A]] =

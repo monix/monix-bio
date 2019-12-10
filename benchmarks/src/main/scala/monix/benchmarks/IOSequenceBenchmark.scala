@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 import cats.effect.IO
 import cats.effect.implicits._
 import cats.implicits._
-import monix.bio.WRYYY
+import monix.bio.BIO
 import monix.eval.Task
 import org.openjdk.jmh.annotations._
 import zio.ZIO
@@ -109,31 +109,31 @@ class IOSequenceBenchmark {
 
   @Benchmark
   def monixBioSequence(): Long = {
-    val tasks = (0 until count).map(_ => WRYYY.eval(1)).toList
-    val result = WRYYY.sequence(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
+    val result = BIO.sequence(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
 
   @Benchmark
   def monixBioGather(): Long = {
-    val tasks = (0 until count).map(_ => WRYYY.eval(1)).toList
-    val result = WRYYY.gather(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
+    val result = BIO.gather(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
 
   @Benchmark
   def monixBioGatherUnordered(): Long = {
-    val tasks = (0 until count).map(_ => WRYYY.eval(1)).toList
-    val result = WRYYY.gatherUnordered(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
+    val result = BIO.gatherUnordered(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
   @Benchmark
   def monixBioGatherN(): Long = {
-    val tasks = (0 until count).map(_ => WRYYY.eval(1)).toList
-    val result = WRYYY.gatherN(parallelism)(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
+    val result = BIO.gatherN(parallelism)(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 

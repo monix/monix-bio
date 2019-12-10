@@ -44,24 +44,24 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
     TaskCreate.async(k)
 
   override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
-    acquire.bracket(use)(release.andThen(_.onErrorHandleWith(WRYYY.raiseFatalError)))
+    acquire.bracket(use)(release.andThen(_.onErrorHandleWith(BIO.raiseFatalError)))
 
   override def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(
     release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
     acquire.bracketCase(use)((a, exit) =>
-      release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(WRYYY.raiseFatalError))
+      release(a, exitCaseFlattenEither(exit)).onErrorHandleWith(BIO.raiseFatalError))
 
   override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
     TaskCreate.asyncF(k)
 
   override def guarantee[A](acquire: Task[A])(finalizer: Task[Unit]): Task[A] =
-    acquire.guarantee(finalizer.onErrorHandleWith(WRYYY.raiseFatalError))
+    acquire.guarantee(finalizer.onErrorHandleWith(BIO.raiseFatalError))
 
   override def guaranteeCase[A](acquire: Task[A])(finalizer: ExitCase[Throwable] => Task[Unit]): Task[A] =
-    acquire.guaranteeCase(exit => finalizer(exitCaseFlattenEither(exit)).onErrorHandleWith(WRYYY.raiseFatalError))
+    acquire.guaranteeCase(exit => finalizer(exitCaseFlattenEither(exit)).onErrorHandleWith(BIO.raiseFatalError))
 }
 
-/** Cats type class instance of [[monix.bio.WRYYY WRYYY]]
+/** Cats type class instance of [[monix.bio.BIO BIO]]
   * for  `cats.effect.Concurrent`.
   *
   * References:
@@ -92,6 +92,6 @@ class CatsConcurrentForTask extends CatsAsyncForTask with Concurrent[Task] {
 /** Default and reusable instance for [[CatsConcurrentForTask]].
   *
   * Globally available in scope, as it is returned by
-  * [[monix.bio.WRYYY.catsAsync WRYYY.catsAsync]].
+  * [[monix.bio.BIO.catsAsync BIO.catsAsync]].
   */
 object CatsConcurrentForTask extends CatsConcurrentForTask

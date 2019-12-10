@@ -23,7 +23,7 @@ import cats.effect.{Fiber => _, _}
 import monix.bio.internal.TaskEffect
 import monix.execution.Scheduler
 
-/** Cats type class instances of [[monix.bio.WRYYY WRYYY]] for
+/** Cats type class instances of [[monix.bio.BIO BIO]] for
   * `cats.effect.Effect` (and implicitly for `Applicative`, `Monad`,
   * `MonadError`, `Sync`, etc).
   *
@@ -39,7 +39,7 @@ import monix.execution.Scheduler
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsEffectForTask(implicit s: Scheduler, opts: WRYYY.Options)
+class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options)
     extends CatsBaseForTask[Throwable] with Effect[Task] {
 
   /** We need to mixin [[CatsAsyncForTask]], because if we
@@ -71,7 +71,7 @@ class CatsEffectForTask(implicit s: Scheduler, opts: WRYYY.Options)
     F.bracketCase(acquire)(use)(release)
 }
 
-/** Cats type class instances of [[monix.bio.WRYYY WRYYY]] for
+/** Cats type class instances of [[monix.bio.BIO BIO]] for
   * `cats.effect.ConcurrentEffect`.
   *
   * Note this is a separate class from [[CatsConcurrentForTask]], because
@@ -86,7 +86,7 @@ class CatsEffectForTask(implicit s: Scheduler, opts: WRYYY.Options)
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: WRYYY.Options)
+class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: BIO.Options)
     extends CatsEffectForTask with ConcurrentEffect[Task] {
 
   /** We need to mixin [[CatsAsyncForTask]], because if we

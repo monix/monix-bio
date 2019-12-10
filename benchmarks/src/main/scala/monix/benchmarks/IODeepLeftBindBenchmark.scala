@@ -61,12 +61,12 @@ class IODeepLeftBindBenchmark {
 
   @Benchmark
   def monixBioDeepLeftBind(): Int = {
-    import monix.bio.WRYYY
+    import monix.bio.BIO
 
     var i  = 0
-    var io = WRYYY.eval(i)
+    var io = BIO.eval(i)
     while (i < depth) {
-      io = io.flatMap(i => WRYYY.eval(i))
+      io = io.flatMap(i => BIO.eval(i))
       i += 1
     }
 

@@ -29,7 +29,7 @@ import scala.util.{Failure, Success}
 
 object TaskCancellationSuite extends BaseTestSuite {
   test("cancellation works for async actions") { implicit ec =>
-    implicit val opts = WRYYY.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 
     var wasCancelled = false
     val task = Task
@@ -45,7 +45,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("cancellation works for autoCancelableRunLoops") { implicit ec =>
-    implicit val opts = WRYYY.defaultOptions.enableAutoCancelableRunLoops
+    implicit val opts = BIO.defaultOptions.enableAutoCancelableRunLoops
 
     var effect = 0
     val task = Task
@@ -185,7 +185,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("onCancelRaiseError resets cancellation flag") { implicit ec =>
-    implicit val opts = WRYYY.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 
     val err = DummyException("dummy")
     val task = Task

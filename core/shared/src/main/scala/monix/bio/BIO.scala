@@ -37,8 +37,8 @@ import scala.concurrent.duration.{Duration, FiniteDuration, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-sealed abstract class WRYYY[+E, +A] extends Serializable {
-  import WRYYY._
+sealed abstract class BIO[+E, +A] extends Serializable {
+  import BIO._
 
   /** Triggers the asynchronous execution, returning a cancelable
     * [[monix.execution.CancelableFuture CancelableFuture]] that can
@@ -106,10 +106,10 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runToFuture[E1 >: E](implicit s: Scheduler): CancelableFuture[Either[E1, A]] =
-    runToFutureOpt(s, WRYYY.defaultOptions)
+    runToFutureOpt(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runToFuture]],
-    * but includes the ability to specify [[monix.bio.WRYYY.Options Options]]
+    * but includes the ability to specify [[monix.bio.BIO.Options Options]]
     * that can modify the behavior of the run-loop.
     *
     * This is the configurable version of [[runToFuture]].
@@ -118,7 +118,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
-    * See [[WRYYY.Options]]. Example:
+    * See [[BIO.Options]]. Example:
     *
     * {{{
     *   import monix.execution.Scheduler.Implicits.global
@@ -224,10 +224,10 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsync(cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler): Cancelable =
-    runAsyncOpt(cb)(s, WRYYY.defaultOptions)
+    runAsyncOpt(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsync]], but
-    * includes the ability to specify [[monix.bio.WRYYY.Options WRYYY.Options]]
+    * includes the ability to specify [[monix.bio.BIO.Options BIO.Options]]
     * that can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
@@ -259,7 +259,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *   }
     * }}}
     *
-    * See [[WRYYY.Options]].
+    * See [[BIO.Options]].
     *
     * $callbackDesc
     *
@@ -336,8 +336,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsyncF[E1 >: E](cb: Either[Either[Throwable, E1], A] => Unit)(
-    implicit s: Scheduler): CancelToken[WRYYY[E1, ?]] =
-    runAsyncOptF(cb)(s, WRYYY.defaultOptions)
+    implicit s: Scheduler): CancelToken[BIO[E1, ?]] =
+    runAsyncOptF(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
     * includes the ability to specify [[monix.bio.Task.Options Task.Options]]
@@ -375,7 +375,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   def runAsyncOptF[E1 >: E](
-    cb: Either[Either[Throwable, E1], A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[WRYYY[E1, ?]] = {
+    cb: Either[Either[Throwable, E1], A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, ?]] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -391,20 +391,20 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * `NoSuchElementException`.
     */
   final def failed: UIO[E] =
-    FlatMap(this, WRYYY.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
+    FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
 
   /** Creates a new Task by applying a function to the successful result
     * of the source Task, and returns a task equivalent to the result
     * of the function.
     */
-  final def flatMap[E1 >: E, B](f: A => WRYYY[E1, B]): WRYYY[E1, B] =
+  final def flatMap[E1 >: E, B](f: A => BIO[E1, B]): BIO[E1, B] =
     FlatMap(this, f)
 
   /** Given a source Task that emits another Task, this function
     * flattens the result, returning a Task equivalent to the emitted
     * Task by the source.
     */
-  final def flatten[E1 >: E, B](implicit ev: A <:< WRYYY[E1, B]): WRYYY[E1, B] =
+  final def flatten[E1 >: E, B](implicit ev: A <:< BIO[E1, B]): BIO[E1, B] =
     flatMap(a => a)
 
   /** Returns a new task that upon evaluation will execute the given
@@ -414,7 +414,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * Similar in spirit with normal [[foreach]], but lazy, as
     * obviously nothing gets executed at this point.
     */
-  final def foreachL(f: A => Unit): WRYYY[E, Unit] =
+  final def foreachL(f: A => Unit): BIO[E, Unit] =
     this.map { a =>
       f(a); ()
     }
@@ -445,7 +445,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * }}}
     *
     */
-  final def loopForever: WRYYY[E, Nothing] =
+  final def loopForever: BIO[E, Nothing] =
     flatMap(_ => this.loopForever)
 
   /** Returns a new `Task` that applies the mapping function to
@@ -458,7 +458,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
     */
-  final def map[B](f: A => B): WRYYY[E, B] =
+  final def map[B](f: A => B): BIO[E, B] =
     this match {
       case Map(source, g, index) =>
         // Allowed to do a fixed number of map operations fused before
@@ -493,8 +493,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * the async boundary will be the default, meaning the one used to
     * start the run-loop in `runAsync`.
     */
-  final def executeAsync: WRYYY[E, A] =
-    WRYYY.shift.flatMap(_ => this)
+  final def executeAsync: BIO[E, A] =
+    BIO.shift.flatMap(_ => this)
 
   /** Returns a new task that will execute the source with a different
     * [[monix.execution.ExecutionModel ExecutionModel]].
@@ -511,11 +511,11 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        [[monix.execution.ExecutionModel ExecutionModel]]
     *        with which the source will get evaluated on `runAsync`
     */
-  final def executeWithModel(em: ExecutionModel): WRYYY[E, A] =
+  final def executeWithModel(em: ExecutionModel): BIO[E, A] =
     TaskExecuteWithModel(this, em)
 
   /** Returns a new task that will execute the source with a different
-    * set of [[WRYYY.Options Options]].
+    * set of [[BIO.Options Options]].
     *
     * This allows fine-tuning the default options. Example:
     *
@@ -524,11 +524,11 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * }}}
     *
     * @param f is a function that takes the source's current set of
-    *        [[WRYYY.Options options]] and returns a modified set of
-    *        options that will be used to execute the source
-    *        upon `runAsync`
+    *          [[BIO.Options options]] and returns a modified set of
+    *          options that will be used to execute the source
+    *          upon `runAsync`
     */
-  final def executeWithOptions(f: Options => Options): WRYYY[E, A] =
+  final def executeWithOptions(f: Options => Options): BIO[E, A] =
     TaskExecuteWithOptions(this, f)
 
   /** Triggers the asynchronous execution of the source task
@@ -557,11 +557,11 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsyncAndForget(implicit s: Scheduler): Unit =
-    runAsyncAndForgetOpt(s, WRYYY.defaultOptions)
+    runAsyncAndForgetOpt(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution in a "fire and forget"
     * fashion, like normal [[runAsyncAndForget]], but includes the
-    * ability to specify [[monix.bio.WRYYY.Options TasWRYYY.Options]] that
+    * ability to specify [[monix.bio.BIO.Options TasWRYYY.Options]] that
     * can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
@@ -570,7 +570,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of customizing the
-    * default [[WRYYY.Options]].
+    * default [[BIO.Options]].
     *
     * See the description of [[runAsyncAndForget]] for an example
     * of running as a "fire and forget".
@@ -581,7 +581,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @param opts $optionsDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncAndForgetOpt(implicit s: Scheduler, opts: WRYYY.Options): Unit =
+  def runAsyncAndForgetOpt(implicit s: Scheduler, opts: BIO.Options): Unit =
     runAsyncUncancelableOpt(BiCallback.empty)(s, opts)
 
   /** Triggers the asynchronous execution of the source task,
@@ -620,11 +620,11 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsyncUncancelable(cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler): Unit =
-    runAsyncUncancelableOpt(cb)(s, WRYYY.defaultOptions)
+    runAsyncUncancelableOpt(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution in uncancelable mode,
     * like [[runAsyncUncancelable]], but includes the ability to
-    * specify [[monix.bio.WRYYY.Options WRYYY.Options]] that can modify
+    * specify [[monix.bio.BIO.Options BIO.Options]] that can modify
     * the behavior of the run-loop.
     *
     * This allows you to specify options such as:
@@ -633,7 +633,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of customizing the
-    * default [[WRYYY.Options]].
+    * default [[BIO.Options]].
     *
     * This is an optimization over plain [[runAsyncOpt]] or
     * [[runAsyncOptF]] that doesn't give you a cancellation token for
@@ -647,7 +647,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   def runAsyncUncancelableOpt(
-    cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: WRYYY.Options): Unit = {
+    cb: Either[Either[Throwable, E], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): Unit = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -696,24 +696,23 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @return $runSyncStepReturn
     */
   @UnsafeBecauseImpure
-  final def runSyncStep(implicit s: Scheduler): Either[WRYYY[E, A], A] =
+  final def runSyncStep(implicit s: Scheduler): Either[BIO[E, A], A] =
     runSyncStepOpt(s, defaultOptions)
 
   /** A variant of [[runSyncStep]] that takes an implicit
-    * [[WRYYY.Options]] from the current scope.
+    * [[BIO.Options]] from the current scope.
     *
     * This helps in tuning the evaluation model of task.
     *
     * $unsafeRun
     *
     * @see [[runSyncStep]]
-    *
     * @param s $schedulerDesc
     * @param opts $optionsDesc
     * @return $runSyncStepReturn
     */
   @UnsafeBecauseImpure
-  final def runSyncStepOpt(implicit s: Scheduler, opts: Options): Either[WRYYY[E, A], A] = {
+  final def runSyncStepOpt(implicit s: Scheduler, opts: Options): Either[BIO[E, A], A] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop.startStep(this, s, opts2)
@@ -728,8 +727,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * error prone on top of the JVM. It's a good practice to not block
     * any threads and use the asynchronous `runAsync` methods instead.
     *
-    * In general prefer to use the asynchronous [[WRYYY.runAsync]] or
-    * [[WRYYY.runToFuture]] and to structure your logic around asynchronous
+    * In general prefer to use the asynchronous [[BIO.runAsync]] or
+    * [[BIO.runToFuture]] and to structure your logic around asynchronous
     * actions in a non-blocking way. But in case you're blocking only once, in
     * `main`, at the "edge of the world" so to speak, then it's OK.
     *
@@ -783,7 +782,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
   final def runSyncUnsafe(timeout: Duration = Duration.Inf)(implicit s: Scheduler, permit: CanBlock): A =
     runSyncUnsafeOpt(timeout)(s, defaultOptions, permit)
 
-  /** Variant of [[runSyncUnsafe]] that takes a [[WRYYY.Options]]
+  /** Variant of [[runSyncUnsafe]] that takes a [[BIO.Options]]
     * implicitly from the scope in order to tune the evaluation model
     * of the task.
     *
@@ -793,12 +792,11 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of
-    * customizing the default [[WRYYY.Options]].
+    * customizing the default [[BIO.Options]].
     *
     * $unsafeRun
     *
     * @see [[runSyncUnsafe]]
-    *
     * @param timeout $runSyncUnsafeTimeout
     * @param s $schedulerDesc
     * @param opts $optionsDesc
@@ -835,7 +833,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *   // Result value will be "second"
     * }}}
     */
-  final def >>[E1 >: E, B](tb: => WRYYY[E1, B]): WRYYY[E1, B] =
+  final def >>[E1 >: E, B](tb: => BIO[E1, B]): BIO[E1, B] =
     this.flatMap(_ => tb)
 
   /** Introduces an asynchronous boundary at the current stage in the
@@ -867,8 +865,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * will make all subsequent operations to happen on the default
     * scheduler.
     */
-  final def asyncBoundary: WRYYY[E, A] =
-    flatMap(a => WRYYY.shift.map(_ => a))
+  final def asyncBoundary: BIO[E, A] =
+    flatMap(a => BIO.shift.map(_ => a))
 
   /** Introduces an asynchronous boundary at the current stage in the
     * asynchronous processing pipeline, making processing to jump on
@@ -902,8 +900,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * @param s is the scheduler triggering the asynchronous boundary
     */
-  final def asyncBoundary(s: Scheduler): WRYYY[E, A] =
-    flatMap(a => WRYYY.shift(s).map(_ => a))
+  final def asyncBoundary(s: Scheduler): BIO[E, A] =
+    flatMap(a => BIO.shift(s).map(_ => a))
 
   /** Returns a task that treats the source task as the acquisition of a resource,
     * which is then exploited by the `use` function and then `released`.
@@ -980,7 +978,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        either normally or in error, or if it gets cancelled, receiving
     *        as input the resource that needs to be released
     */
-  final def bracket[E1 >: E, B](use: A => WRYYY[E1, B])(release: A => UIO[Unit]): WRYYY[E1, B] =
+  final def bracket[E1 >: E, B](use: A => BIO[E1, B])(release: A => UIO[Unit]): BIO[E1, B] =
     bracketCase(use)((a, _) => release(a))
 
   /** Returns a new task that treats the source task as the
@@ -1014,8 +1012,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        needs release, along with the result of `use`
     *        (cancelation, error or successful result)
     */
-  final def bracketCase[E1 >: E, B](use: A => WRYYY[E1, B])(
-    release: (A, ExitCase[Either[Throwable, E1]]) => UIO[Unit]): WRYYY[E1, B] =
+  final def bracketCase[E1 >: E, B](use: A => BIO[E1, B])(
+    release: (A, ExitCase[Either[Throwable, E1]]) => UIO[Unit]): BIO[E1, B] =
     TaskBracket.exitCase(this, use, release)
 
   /** Returns a task that treats the source task as the acquisition of a resource,
@@ -1052,8 +1050,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        as input the resource that needs that needs release, along with
     *        the result of `use` (cancellation, error or successful result)
     */
-  final def bracketE[E1 >: E, B](use: A => WRYYY[E1, B])(
-    release: (A, Either[Option[Either[Throwable, E1]], B]) => UIO[Unit]): WRYYY[E1, B] =
+  final def bracketE[E1 >: E, B](use: A => BIO[E1, B])(
+    release: (A, Either[Option[Either[Throwable, E1]], B]) => UIO[Unit]): BIO[E1, B] =
     TaskBracket.either(this, use, release)
 
   /**
@@ -1076,7 +1074,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * @see [[bracket]] for the more general operation
     */
-  final def guarantee(finalizer: UIO[Unit]): WRYYY[E, A] =
+  final def guarantee(finalizer: UIO[Unit]): BIO[E, A] =
     guaranteeCase(_ => finalizer)
 
   /**
@@ -1100,7 +1098,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * @see [[bracketCase]] for the more general operation
     */
-  final def guaranteeCase(finalizer: ExitCase[Either[Throwable, E]] => UIO[Unit]): WRYYY[E, A] =
+  final def guaranteeCase(finalizer: ExitCase[Either[Throwable, E]] => UIO[Unit]): BIO[E, A] =
     TaskBracket.guaranteeCase(this, finalizer)
 
   /** Returns a task that waits for the specified `timespan` before
@@ -1122,15 +1120,15 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *   Task.sleep(3.seconds).flatMap(_ => Task(println("Hello!")))
     * }}}
     *
-    * See [[WRYYY.sleep]] for the operation that describes the effect
-    * and [[WRYYY.delayResult]] for the version that evaluates the
+    * See [[BIO.sleep]] for the operation that describes the effect
+    * and [[BIO.delayResult]] for the version that evaluates the
     * task on time, but delays the signaling of the result.
     *
     * @param timespan is the time span to wait before triggering
     *        the evaluation of the task
     */
-  final def delayExecution(timespan: FiniteDuration): WRYYY[E, A] =
-    WRYYY.sleep(timespan).flatMap(_ => this)
+  final def delayExecution(timespan: FiniteDuration): BIO[E, A] =
+    BIO.sleep(timespan).flatMap(_ => this)
 
   /** Returns a task that executes the source immediately on `runAsync`,
     * but before emitting the `onSuccess` result for the specified
@@ -1150,7 +1148,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *     .flatMap(a => Task.now(a).delayExecution(3.seconds))
     * }}}
     *
-    * Or if we are to use the [[WRYYY.sleep]] describing just the
+    * Or if we are to use the [[BIO.sleep]] describing just the
     * effect, this operation is equivalent with:
     *
     * {{{
@@ -1170,8 +1168,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @param timespan is the time span to sleep before signaling
     *        the result, but after the evaluation of the source
     */
-  final def delayResult(timespan: FiniteDuration): WRYYY[E, A] =
-    flatMap(a => WRYYY.sleep(timespan).map(_ => a))
+  final def delayResult(timespan: FiniteDuration): BIO[E, A] =
+    flatMap(a => BIO.sleep(timespan).map(_ => a))
 
   /** Overrides the default [[monix.execution.Scheduler Scheduler]],
     * possibly forcing an asynchronous boundary before execution
@@ -1305,7 +1303,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *         the default and possibly force an extra asynchronous
     *         boundary on execution
     */
-  final def executeOn(s: Scheduler, forceAsync: Boolean = true): WRYYY[E, A] =
+  final def executeOn(s: Scheduler, forceAsync: Boolean = true): BIO[E, A] =
     TaskExecuteOn(this, s, forceAsync)
 
   /** Returns a new `Task` that will mirror the source, but that will
@@ -1318,7 +1316,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @param callback is the callback to execute if the task gets
     *        canceled prematurely
     */
-  final def doOnCancel(callback: UIO[Unit]): WRYYY[E, A] =
+  final def doOnCancel(callback: UIO[Unit]): BIO[E, A] =
     TaskDoOnCancel(this, callback)
 
   /** Creates a new [[Task]] that will expose any triggered error from
@@ -1373,7 +1371,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *   // => CancellationException
     * }}}
     */
-  final def onCancelRaiseError[E1 >: E](e: E1): WRYYY[E1, A] =
+  final def onCancelRaiseError[E1 >: E](e: E1): BIO[E1, A] =
     TaskCancellation.raiseError(this, e)
 
   /** Creates a new task that will try recovering from an error by
@@ -1381,7 +1379,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * See [[onErrorHandleWith]] for the version that takes a total function.
     */
-  final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, WRYYY[E1, B]]): WRYYY[E1, B] =
+  final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, BIO[E1, B]]): BIO[E1, B] =
     onErrorHandleWith(ex => pf.applyOrElse(ex, raiseConstructor[E]))
 
   /** Creates a new task that will handle any matching throwable that
@@ -1389,13 +1387,13 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * See [[onErrorRecoverWith]] for the version that takes a partial function.
     */
-  final def onErrorHandleWith[E1, B >: A](f: E => WRYYY[E1, B]): WRYYY[E1, B] =
+  final def onErrorHandleWith[E1, B >: A](f: E => BIO[E1, B]): BIO[E1, B] =
     FlatMap(this, new StackFrame.ErrorHandler(f, nowConstructor))
 
   /** Creates a new task that in case of error will fallback to the
     * given backup task.
     */
-  final def onErrorFallbackTo[E1, B >: A](that: WRYYY[E1, B]): WRYYY[E1, B] =
+  final def onErrorFallbackTo[E1, B >: A](that: BIO[E1, B]): BIO[E1, B] =
     onErrorHandleWith(_ => that)
 
   /** Creates a new task that will handle any matching throwable that
@@ -1411,7 +1409,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *
     * See [[onErrorHandle]] for the version that takes a total function.
     */
-  final def onErrorRecover[E1 >: E, U >: A](pf: PartialFunction[E, U]): WRYYY[E1, U] =
+  final def onErrorRecover[E1 >: E, U >: A](pf: PartialFunction[E, U]): BIO[E1, U] =
     onErrorRecoverWith(pf.andThen(nowConstructor))
 
   /** Start execution of the source suspended in the `Task` context.
@@ -1446,11 +1444,11 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * debugging purposes only.
     */
   override def toString: String = this match {
-    case Now(a) => s"WRYYY.Now($a)"
-    case Error(e) => s"WRYYY.Error($e)"
+    case Now(a) => s"BIO.Now($a)"
+    case Error(e) => s"BIO.Error($e)"
     case _ =>
-      val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.WRYYY[$.]", "")
-      s"WRYYY.$n$$${System.identityHashCode(this)}"
+      val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.BIO[$.]", "")
+      s"BIO.$n$$${System.identityHashCode(this)}"
   }
 
   /** Returns a new value that transforms the result of the source,
@@ -1472,7 +1470,7 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *        in case it ends in success
     */
   def redeem[B](recover: E => B, map: A => B): UIO[B] =
-    WRYYY.FlatMap(this, new WRYYY.Redeem(recover, map))
+    BIO.FlatMap(this, new BIO.Redeem(recover, map))
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `bind` functions, which get executed depending
@@ -1496,8 +1494,8 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     * @param bind is the function that gets to transform the source
     *        in case of success
     */
-  def redeemWith[E1, B](recover: E => WRYYY[E1, B], bind: A => WRYYY[E1, B]): WRYYY[E1, B] =
-    WRYYY.FlatMap(this, new StackFrame.RedeemWith(recover, bind))
+  def redeemWith[E1, B](recover: E => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
+    BIO.FlatMap(this, new StackFrame.RedeemWith(recover, bind))
 
   /** Makes the source `Task` uninterruptible such that a `cancel` signal
     * (e.g. [[Fiber.cancel]]) has no effect.
@@ -1519,47 +1517,47 @@ sealed abstract class WRYYY[+E, +A] extends Serializable {
     *   // => Hello!
     * }}}
     */
-  final def uncancelable: WRYYY[E, A] =
+  final def uncancelable: BIO[E, A] =
     TaskCancellation.uncancelable(this)
 
   // TODO: scaladoc, name
   final def hideErrors(implicit E: E <:< Throwable): UIO[A] =
-    onErrorHandleWith(ex => WRYYY.raiseFatalError(E(ex)))
+    onErrorHandleWith(ex => BIO.raiseFatalError(E(ex)))
 
   final def redeemFatal[B](recover: Throwable => B, map: A => B): UIO[B] =
-    WRYYY.FlatMap(this, new WRYYY.RedeemFatal(recover, map))
+    BIO.FlatMap(this, new BIO.RedeemFatal(recover, map))
 
-  final def redeemFatalWith[E1, B](recover: Throwable => WRYYY[E1, B], bind: A => WRYYY[E1, B]): WRYYY[E1, B] =
-    WRYYY.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
+  final def redeemFatalWith[E1, B](recover: Throwable => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
+    BIO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 }
 
-object WRYYY extends TaskInstancesLevel0 {
+object BIO extends TaskInstancesLevel0 {
 
-  /** Lifts the given thunk in the `WRYYY` context, processing it synchronously
+  /** Lifts the given thunk in the `BIO` context, processing it synchronously
     * when the task gets evaluated.
     *
     * This is an alias for:
     *
     * {{{
     *   val thunk = () => 42
-    *   WRYYY.eval(thunk())
+    *   BIO.eval(thunk())
     * }}}
     *
-    * WARN: behavior of `WRYYY.apply` has changed since 3.0.0-RC2.
+    * WARN: behavior of `BIO.apply` has changed since 3.0.0-RC2.
     * Before the change (during Monix 2.x series), this operation was forcing
-    * a fork, being equivalent to the new [[WRYYY.evalAsync]].
+    * a fork, being equivalent to the new [[BIO.evalAsync]].
     *
-    * Switch to [[WRYYY.evalAsync]] if you wish the old behavior, or combine
-    * [[WRYYY.eval]] with [[WRYYY.executeAsync]].
+    * Switch to [[BIO.evalAsync]] if you wish the old behavior, or combine
+    * [[BIO.eval]] with [[BIO.executeAsync]].
     */
   def apply[A](a: => A): Task[A] =
     eval(a)
 
-  /** Returns a `WRYYY` that on execution is always successful, emitting
+  /** Returns a `BIO` that on execution is always successful, emitting
     * the given strict value.
     */
   def now[A](a: A): UIO[A] =
-    WRYYY.Now(a)
+    BIO.Now(a)
 
   /** Lifts a value into the task context. Alias for [[now]]. */
   def pure[A](a: A): UIO[A] = now(a)
@@ -1567,7 +1565,7 @@ object WRYYY extends TaskInstancesLevel0 {
   /** Returns a task that on execution is always finishing in error
     * emitting the specified exception.
     */
-  def raiseError[E](ex: E): WRYYY[E, Nothing] =
+  def raiseError[E](ex: E): BIO[E, Nothing] =
     Error(ex)
 
   def raiseFatalError(ex: Throwable): UIO[Nothing] =
@@ -1576,7 +1574,7 @@ object WRYYY extends TaskInstancesLevel0 {
   /** Promote a non-strict value representing a Task to a Task of the
     * same type.
     */
-  def defer[E, A](fa: => WRYYY[E, A]): WRYYY[E, A] =
+  def defer[E, A](fa: => BIO[E, A]): BIO[E, A] =
     Suspend(fa _)
 
   /** Defers the creation of a `Task` by using the provided
@@ -1603,7 +1601,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * @param f is the function that's going to be called when the
     *        resulting `Task` gets evaluated
     */
-  def deferAction[E, A](f: Scheduler => WRYYY[E, A]): WRYYY[E, A] =
+  def deferAction[E, A](f: Scheduler => BIO[E, A]): BIO[E, A] =
     TaskDeferAction(f)
 
   /** Promote a non-strict Scala `Future` to a `Task` of the same type.
@@ -1664,7 +1662,7 @@ object WRYYY extends TaskInstancesLevel0 {
     TaskFromFuture.deferAction(f)
 
   /** Alias for [[defer]]. */
-  def suspend[E, A](fa: => WRYYY[E, A]): WRYYY[E, A] =
+  def suspend[E, A](fa: => BIO[E, A]): BIO[E, A] =
     Suspend(fa _)
 
   /** Promote a non-strict value, a thunk, to a `Task`, catching exceptions
@@ -1705,7 +1703,7 @@ object WRYYY extends TaskInstancesLevel0 {
     }
 
   /** Builds a [[Task]] instance out of a Scala `Either`. */
-  def fromEither[E, A](a: Either[E, A]): WRYYY[E, A] =
+  def fromEither[E, A](a: Either[E, A]): BIO[E, A] =
     a match {
       case Right(v) => Now(v)
       case Left(ex) => Error(ex)
@@ -1716,10 +1714,10 @@ object WRYYY extends TaskInstancesLevel0 {
     * Based on Phil Freeman's
     * [[http://functorial.com/stack-safety-for-free/index.pdf Stack Safety for Free]].
     */
-  def tailRecM[E, A, B](a: A)(f: A => WRYYY[E, Either[A, B]]): WRYYY[E, B] =
-    WRYYY.defer(f(a)).flatMap {
+  def tailRecM[E, A, B](a: A)(f: A => BIO[E, Either[A, B]]): BIO[E, B] =
+    BIO.defer(f(a)).flatMap {
       case Left(continueA) => tailRecM(continueA)(f)
-      case Right(b) => WRYYY.now(b)
+      case Right(b) => BIO.now(b)
     }
 
   /** A `Task[Unit]` provided for convenience. */
@@ -1731,14 +1729,14 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     * This operation is the implementation for `cats.effect.Async` and
     * is thus yielding non-cancelable tasks, being the simplified
-    * version of [[WRYYY.cancelable[A](register* Task.cancelable]].
+    * version of [[BIO.cancelable[A](register* Task.cancelable]].
     * This can be used to translate from a callback-based API to pure
     * `Task` values that cannot be canceled.
     *
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]].
     *
-    * For example, in case we wouldn't have [[WRYYY.deferFuture]]
+    * For example, in case we wouldn't have [[BIO.deferFuture]]
     * already defined, we could do this:
     *
     * {{{
@@ -1759,7 +1757,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * to trigger `Future#complete`, however Monix's `Task` can inject
     * a [[monix.execution.Scheduler Scheduler]] for you, thus allowing you
     * to get rid of these pesky execution contexts being passed around explicitly.
-    * See [[WRYYY.async0]].
+    * See [[BIO.async0]].
     *
     * CONTRACT for `register`:
     *
@@ -1774,16 +1772,14 @@ object WRYYY extends TaskInstancesLevel0 {
     *    also see [[monix.execution.Callback.tryOnSuccess Callback.tryOnSuccess]]
     *    and [[monix.execution.Callback.tryOnError Callback.tryOnError]]
     *
-    * @see [[WRYYY.async0]] for a variant that also injects a
+    * @see [[BIO.async0]] for a variant that also injects a
     *      [[monix.execution.Scheduler Scheduler]] into the provided callback,
     *      useful for forking, or delaying tasks or managing async boundaries
-    *
-    * @see [[WRYYY.cancelable[A](register* Task.cancelable]] and [[WRYYY.cancelable0]]
+    * @see [[BIO.cancelable[A](register* Task.cancelable]] and [[BIO.cancelable0]]
     *      for creating cancelable tasks
-    *
-    * @see [[WRYYY.create]] for the builder that does it all
+    * @see [[BIO.create]] for the builder that does it all
     */
-  def async[E, A](register: Callback[E, A] => Unit): WRYYY[E, A] =
+  def async[E, A](register: Callback[E, A] => Unit): BIO[E, A] =
     TaskCreate.async(register)
 
   /** Create a non-cancelable `Task` from an asynchronous computation,
@@ -1793,13 +1789,13 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     * This operation is the implementation for `cats.effect.Async` and
     * is thus yielding non-cancelable tasks, being the simplified
-    * version of [[WRYYY.cancelable0]]. It can be used to translate from a
+    * version of [[BIO.cancelable0]]. It can be used to translate from a
     * callback-based API to pure `Task` values that cannot be canceled.
     *
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]].
     *
-    * For example, in case we wouldn't have [[WRYYY.deferFuture]]
+    * For example, in case we wouldn't have [[BIO.deferFuture]]
     * already defined, we could do this:
     *
     * {{{
@@ -1820,7 +1816,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * }}}
     *
     * Note that this function doesn't need an implicit `ExecutionContext`.
-    * Compared with usage of [[WRYYY.async[A](register* Task.async]], this
+    * Compared with usage of [[BIO.async[A](register* Task.async]], this
     * function injects a [[monix.execution.Scheduler Scheduler]] for us to
     * use for managing async boundaries.
     *
@@ -1841,17 +1837,15 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     *  - `async` comes from `cats.effect.Async#async`
     *  - the `0` suffix is about overloading the simpler
-    *    [[WRYYY.async[A](register* Task.async]] builder
+    *    [[BIO.async[A](register* Task.async]] builder
     *
-    * @see [[WRYYY.async]] for a simpler variant that doesn't inject a
+    * @see [[BIO.async]] for a simpler variant that doesn't inject a
     *      `Scheduler`, in case you don't need one
-    *
-    * @see [[WRYYY.cancelable[A](register* Task.cancelable]] and [[WRYYY.cancelable0]]
+    * @see [[BIO.cancelable[A](register* Task.cancelable]] and [[BIO.cancelable0]]
     *      for creating cancelable tasks
-    *
-    * @see [[WRYYY.create]] for the builder that does it all
+    * @see [[BIO.create]] for the builder that does it all
     */
-  def async0[E, A](register: (Scheduler, Callback[E, A]) => Unit): WRYYY[E, A] =
+  def async0[E, A](register: (Scheduler, Callback[E, A]) => Unit): BIO[E, A] =
     TaskCreate.async0(register)
 
   /** Suspends an asynchronous side effect in `Task`, this being a
@@ -1876,12 +1870,11 @@ object WRYYY extends TaskInstancesLevel0 {
     *    non-terminating, with the error being printed via
     *    [[monix.execution.Scheduler.reportFailure Scheduler.reportFailure]]
     *
-    * @see [[WRYYY.async]] and [[WRYYY.async0]] for a simpler variants
-    *
-    * @see [[WRYYY.cancelable[A](register* Task.cancelable]] and
-    *      [[WRYYY.cancelable0]] for creating cancelable tasks
+    * @see [[BIO.async]] and [[BIO.async0]] for a simpler variants
+    * @see [[BIO.cancelable[A](register* Task.cancelable]] and
+    *      [[BIO.cancelable0]] for creating cancelable tasks
     */
-  def asyncF[E, A](register: Callback[E, A] => WRYYY[E, Unit]): WRYYY[E, A] =
+  def asyncF[E, A](register: Callback[E, A] => BIO[E, Unit]): BIO[E, A] =
     TaskCreate.asyncF(register)
 
   /** Create a cancelable `Task` from an asynchronous computation that
@@ -1896,7 +1889,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html cats.effect.Concurrent]].
     *
-    * For example, in case we wouldn't have [[WRYYY.delayExecution]]
+    * For example, in case we wouldn't have [[BIO.delayExecution]]
     * already defined and we wanted to delay evaluation using a Java
     * [[https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ScheduledExecutorService.html ScheduledExecutorService]]
     * (no need for that because we've got [[monix.execution.Scheduler Scheduler]],
@@ -1937,7 +1930,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * in order to do the actual processing, the `ScheduledExecutorService`
     * being in charge just of scheduling. We don't need to do that, as `Task`
     * affords to have a [[monix.execution.Scheduler Scheduler]] injected
-    * instead via [[WRYYY.cancelable0]].
+    * instead via [[BIO.cancelable0]].
     *
     * CONTRACT for `register`:
     *
@@ -1952,18 +1945,15 @@ object WRYYY extends TaskInstancesLevel0 {
     *    also see [[monix.execution.Callback.tryOnSuccess Callback.tryOnSuccess]]
     *    and [[monix.execution.Callback.tryOnError Callback.tryOnError]]
     *
-    * @see [[WRYYY.cancelable0]] for the version that also injects a
+    * @see [[BIO.cancelable0]] for the version that also injects a
     *      [[monix.execution.Scheduler Scheduler]] in that callback
-    *
-    * @see [[WRYYY.async0]] and [[WRYYY.async[A](register* Task.async]] for the
+    * @see [[BIO.async0]] and [[BIO.async[A](register* Task.async]] for the
     *      simpler versions of this builder that create non-cancelable tasks
     *      from callback-based APIs
-    *
-    * @see [[WRYYY.create]] for the builder that does it all
-    *
+    * @see [[BIO.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable[E, A](register: Callback[E, A] => CancelToken[WRYYY[E, ?]]): WRYYY[E, A] =
+  def cancelable[E, A](register: Callback[E, A] => CancelToken[BIO[E, ?]]): BIO[E, A] =
     cancelable0[E, A]((_, cb) => register(cb))
 
   /** Create a cancelable `Task` from an asynchronous computation,
@@ -2054,20 +2044,17 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     *  - `cancelable` comes from `cats.effect.Concurrent#cancelable`
     *  - the `0` suffix is about overloading the simpler
-    *    [[WRYYY.cancelable[A](register* Task.cancelable]] builder
+    *    [[BIO.cancelable[A](register* Task.cancelable]] builder
     *
-    * @see [[WRYYY.cancelable[A](register* Task.cancelable]] for the simpler
+    * @see [[BIO.cancelable[A](register* Task.cancelable]] for the simpler
     *      variant that doesn't inject the `Scheduler` in that callback
-    *
-    * @see [[WRYYY.async0]] and [[WRYYY.async[A](register* Task.async]] for the
+    * @see [[BIO.async0]] and [[BIO.async[A](register* Task.async]] for the
     *      simpler versions of this builder that create non-cancelable tasks
     *      from callback-based APIs
-    *
-    * @see [[WRYYY.create]] for the builder that does it all
-    *
+    * @see [[BIO.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable0[E, A](register: (Scheduler, Callback[E, A]) => CancelToken[WRYYY[E, ?]]): WRYYY[E, A] =
+  def cancelable0[E, A](register: (Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] =
     TaskCreate.cancelable0(register)
 
   /** Returns a cancelable boundary — a `Task` that checks for the
@@ -2098,11 +2085,11 @@ object WRYYY extends TaskInstancesLevel0 {
     * }}}
     *
     * NOTE: that by default `Task` is configured to be auto-cancelable
-    * (see [[WRYYY.Options]]), so this isn't strictly needed, unless you
+    * (see [[BIO.Options]]), so this isn't strictly needed, unless you
     * want to fine tune the cancelation boundaries.
     */
   val cancelBoundary: UIO[Unit] =
-    WRYYY.Async[Nothing, Unit] { (ctx, cb) =>
+    BIO.Async[Nothing, Unit] { (ctx, cb) =>
       if (!ctx.connection.isCanceled) cb.onSuccess(())
     }
 
@@ -2242,7 +2229,7 @@ object WRYYY extends TaskInstancesLevel0 {
     *     the loser automatically on successful results and [[raceMany]]
     *     for a version that races a whole list of tasks.
     */
-  def race[E, A, B](fa: WRYYY[E, A], fb: WRYYY[E, B]): WRYYY[E, Either[A, B]] =
+  def race[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[A, B]] =
     TaskRace(fa, fb)
 
   /** Run two `Task` actions concurrently, and returns a pair
@@ -2275,7 +2262,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * @see [[race]] for a simpler version that cancels the loser
     *      immediately or [[raceMany]] that races collections of tasks.
     */
-  def racePair[E, A, B](fa: WRYYY[E, A], fb: WRYYY[E, B]): WRYYY[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
+  def racePair[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
     TaskRacePair(fa, fb)
 
   /** Asynchronous boundary described as an effectful `Task` that
@@ -2284,8 +2271,8 @@ object WRYYY extends TaskInstancesLevel0 {
     * the default [[monix.execution.Scheduler Scheduler]].
     *
     * This is the equivalent of `IO.shift`, except that Monix's `Task`
-    * gets executed with an injected `Scheduler` in [[WRYYY.runAsync]] or
-    * in [[WRYYY.runToFuture]] and that's going to be the `Scheduler`
+    * gets executed with an injected `Scheduler` in [[BIO.runAsync]] or
+    * in [[BIO.runToFuture]] and that's going to be the `Scheduler`
     * responsible for the "shift".
     *
     * $shiftDesc
@@ -2319,8 +2306,8 @@ object WRYYY extends TaskInstancesLevel0 {
     *   }
     * }}}
     *
-    * See [[WRYYY.delayExecution]] for this operation described as
-    * a method on `Task` references or [[WRYYY.delayResult]] for the
+    * See [[BIO.delayExecution]] for this operation described as
+    * a method on `Task` references or [[BIO.delayResult]] for the
     * helper that triggers the evaluation of the source on time, but
     * then delays the result.
     */
@@ -2337,8 +2324,8 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     *  It's a simple version of [[traverse]].
     */
-  def sequence[E, A, M[X] <: Iterable[X]](in: M[WRYYY[E, A]])(
-    implicit bf: BuildFrom[M[WRYYY[E, A]], A, M[A]]): WRYYY[E, M[A]] =
+  def sequence[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(
+    implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
     TaskSequence.list(in)(bf)
 
   /** Given a `Iterable[A]` and a function `A => Task[B]`, sequentially
@@ -2347,8 +2334,8 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     *  It's a generalized version of [[sequence]].
     */
-  def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => WRYYY[E, B])(
-    implicit bf: BuildFrom[M[A], B, M[B]]): WRYYY[E, M[B]] =
+  def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(
+    implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] =
     TaskSequence.traverse(in, f)(bf)
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
@@ -2379,8 +2366,8 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     * @see [[gatherN]] for a version that limits parallelism.
     */
-  def gather[E, A, M[X] <: Iterable[X]](in: M[WRYYY[E, A]])(
-    implicit bf: BuildFrom[M[WRYYY[E, A]], A, M[A]]): WRYYY[E, M[A]] =
+  def gather[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(
+    implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
     TaskGather[E, A, M](in, () => newBuilder(bf, in))
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
@@ -2411,7 +2398,7 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     * @see [[gather]] for a version that does not limit parallelism.
     */
-  def gatherN[E, A](parallelism: Int)(in: Iterable[WRYYY[E, A]]): WRYYY[E, List[A]] =
+  def gatherN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskGatherN[E, A](parallelism, in)
 
   /** Processes the given collection of tasks in parallel and
@@ -2439,7 +2426,7 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     * @param in is a list of tasks to execute
     */
-  def gatherUnordered[E, A](in: Iterable[WRYYY[E, A]]): WRYYY[E, List[A]] =
+  def gatherUnordered[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskGatherUnordered(in)
 
   /** Yields a task that on evaluation will process the given tasks
@@ -2458,31 +2445,30 @@ object WRYYY extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     */
-  def mapBoth[E, A1, A2, R](fa1: WRYYY[E, A1], fa2: WRYYY[E, A2])(f: (A1, A2) => R): WRYYY[E, R] =
+  def mapBoth[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
     TaskMapBoth(fa1, fa2)(f)
 
-  /** Returns the current [[WRYYY.Options]] configuration, which determine the
+  /** Returns the current [[BIO.Options]] configuration, which determine the
     * task's run-loop behavior.
     *
-    * @see [[WRYYY.executeWithOptions]]
+    * @see [[BIO.executeWithOptions]]
     */
   val readOptions: UIO[Options] =
-    WRYYY
+    BIO
       .Async[Nothing, Options]((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
 
   /** Set of options for customizing the task's behavior.
     *
-    * See [[WRYYY.defaultOptions]] for the default `Options` instance
-    * used by [[WRYYY.runAsync]] or [[WRYYY.runToFuture]].
+    * See [[BIO.defaultOptions]] for the default `Options` instance
+    * used by [[BIO.runAsync]] or [[BIO.runToFuture]].
     *
-    * @param autoCancelableRunLoops should be set to `true` in
-    *        case you want `flatMap` driven loops to be
-    *        auto-cancelable. Defaults to `true`.
-    *
+    * @param autoCancelableRunLoops  should be set to `true` in
+    *                                case you want `flatMap` driven loops to be
+    *                                auto-cancelable. Defaults to `true`.
     * @param localContextPropagation should be set to `true` in
-    *        case you want the [[monix.execution.misc.Local Local]]
-    *        variables to be propagated on async boundaries.
-    *        Defaults to `false`.
+    *                                case you want the [[monix.execution.misc.Local Local]]
+    *                                variables to be propagated on async boundaries.
+    *                                Defaults to `false`.
     */
   final case class Options(
                             autoCancelableRunLoops: Boolean,
@@ -2530,7 +2516,7 @@ object WRYYY extends TaskInstancesLevel0 {
     }
   }
 
-  /** Default [[Options]] to use for [[WRYYY]] evaluation,
+  /** Default [[Options]] to use for [[BIO]] evaluation,
     * thus:
     *
     *  - `autoCancelableRunLoops` is `true` by default
@@ -2545,7 +2531,7 @@ object WRYYY extends TaskInstancesLevel0 {
     *  - `monix.environment.localContextPropagation`
     *    (`true`, `yes` or `1` for enabling)
     *
-    * @see [[WRYYY.Options]]
+    * @see [[BIO.Options]]
     */
   val defaultOptions: Options =
     Options(
@@ -2553,13 +2539,13 @@ object WRYYY extends TaskInstancesLevel0 {
       localContextPropagation = Platform.localContextPropagation
     )
 
-  /** The `AsyncBuilder` is a type used by the [[WRYYY.create]] builder,
+  /** The `AsyncBuilder` is a type used by the [[BIO.create]] builder,
     * in order to change its behavior based on the type of the
     * cancelation token.
     *
     * In combination with the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type technique]],
-    * this ends up providing a polymorphic [[WRYYY.create]] that can
+    * this ends up providing a polymorphic [[BIO.create]] that can
     * support multiple cancelation tokens optimally, i.e. without
     * implicit conversions and that can be optimized depending on
     * the `CancelToken` used - for example if `Unit` is returned,
@@ -2568,7 +2554,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * increasing performance.
     */
   abstract class AsyncBuilder[CancelationToken] {
-    def create[E, A](register: (Scheduler, Callback[E, A]) => CancelationToken): WRYYY[E, A]
+    def create[E, A](register: (Scheduler, Callback[E, A]) => CancelationToken): BIO[E, A]
   }
 
   object AsyncBuilder extends AsyncBuilder0 {
@@ -2578,7 +2564,7 @@ object WRYYY extends TaskInstancesLevel0 {
       */
     def apply[CancelationToken](implicit ref: AsyncBuilder[CancelationToken]): AsyncBuilder[CancelationToken] = ref
 
-    /** For partial application of type parameters in [[WRYYY.create]].
+    /** For partial application of type parameters in [[BIO.create]].
       *
       * Read about the
       * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type Technique]].
@@ -2586,7 +2572,7 @@ object WRYYY extends TaskInstancesLevel0 {
     private[bio] final class CreatePartiallyApplied[E, A](val dummy: Boolean = true) extends AnyVal {
 
       def apply[CancelationToken](register: (Scheduler, Callback[E, A]) => CancelationToken)(
-        implicit B: AsyncBuilder[CancelationToken]): WRYYY[E, A] =
+        implicit B: AsyncBuilder[CancelationToken]): BIO[E, A] =
         B.create(register)
     }
 
@@ -2594,7 +2580,7 @@ object WRYYY extends TaskInstancesLevel0 {
     implicit val forUnit: AsyncBuilder[Unit] =
       new AsyncBuilder[Unit] {
 
-        def create[E, A](register: (Scheduler, Callback[E, A]) => Unit): WRYYY[E, A] =
+        def create[E, A](register: (Scheduler, Callback[E, A]) => Unit): BIO[E, A] =
           TaskCreate.async0(register)
       }
 
@@ -2613,10 +2599,10 @@ object WRYYY extends TaskInstancesLevel0 {
     //    /** Implicit `AsyncBuilder` for cancelable tasks, using
     //      * [[Task]] values for specifying cancelation actions.
     //      */
-    //    implicit def forTask[E1]: AsyncBuilder[WRYYY[E1, Unit]] =
-    //      new AsyncBuilder[WRYYY[E1, Unit]] {
+    //    implicit def forTask[E1]: AsyncBuilder[BIO[E1, Unit]] =
+    //      new AsyncBuilder[BIO[E1, Unit]] {
     //
-    //        override def create[E, A](register: (Scheduler, Callback[E, A]) => WRYYY[E1, Unit]): WRYYY[E, A] =
+    //        override def create[E, A](register: (Scheduler, Callback[E, A]) => BIO[E1, Unit]): BIO[E, A] =
     //          TaskCreate.cancelable0(register)
     //      }
 
@@ -2633,12 +2619,12 @@ object WRYYY extends TaskInstancesLevel0 {
     private[this] val forCancelableDummyRef: AsyncBuilder[Cancelable.Empty] =
       new AsyncBuilder[Cancelable.Empty] {
 
-        def create[E, A](register: (Scheduler, Callback[E, A]) => Cancelable.Empty): WRYYY[E, A] =
+        def create[E, A](register: (Scheduler, Callback[E, A]) => Cancelable.Empty): BIO[E, A] =
           TaskCreate.async0(register)
       }
   }
 
-  private[WRYYY] abstract class AsyncBuilder0 {
+  private[BIO] abstract class AsyncBuilder0 {
 
     /**
       * Implicit `AsyncBuilder` for cancelable tasks, using
@@ -2651,7 +2637,7 @@ object WRYYY extends TaskInstancesLevel0 {
     private[this] val forCancelableRef =
       new AsyncBuilder[Cancelable] {
 
-        def create[E, A](register: (Scheduler, Callback[E, A]) => Cancelable): WRYYY[E, A] =
+        def create[E, A](register: (Scheduler, Callback[E, A]) => Cancelable): BIO[E, A] =
           TaskCreate.cancelableCancelable(register)
       }
   }
@@ -2707,15 +2693,15 @@ object WRYYY extends TaskInstancesLevel0 {
   }
 
   /** [[Task]] state describing an immediate synchronous value. */
-  private[bio] final case class Now[+A](value: A) extends WRYYY[Nothing, A] {
+  private[bio] final case class Now[+A](value: A) extends BIO[Nothing, A] {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E](cb: Either[Either[Throwable, E], A] => Unit)(
       implicit s: Scheduler,
-      opts: WRYYY.Options): CancelToken[WRYYY[E, ?]] = {
+      opts: BIO.Options): CancelToken[BIO[E, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
-        WRYYY.unit
+        BIO.unit
       } else {
         super.runAsyncOptF(cb)(s, opts)
       }
@@ -2754,15 +2740,15 @@ object WRYYY extends TaskInstancesLevel0 {
   }
 
   /** [[Task]] state describing an immediate exception. */
-  private[bio] final case class Error[E](e: E) extends WRYYY[E, Nothing] {
+  private[bio] final case class Error[E](e: E) extends BIO[E, Nothing] {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: E](cb: Either[Either[Throwable, E1], Nothing] => Unit)(
       implicit s: Scheduler,
-      opts: WRYYY.Options): CancelToken[WRYYY[E1, ?]] = {
+      opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
-        WRYYY.unit
+        BIO.unit
       } else {
         super.runAsyncOptF(cb)(s, opts)
       }
@@ -2809,7 +2795,7 @@ object WRYYY extends TaskInstancesLevel0 {
   // TODO: revise FatalError optimizations
 
   /** [[Task]] state describing an immediate exception. */
-  private[bio] final case class FatalError(e: Throwable) extends WRYYY[Nothing, Nothing] {
+  private[bio] final case class FatalError(e: Throwable) extends BIO[Nothing, Nothing] {
 
     // Optimization to avoid the run-loop
     override def runToFutureOpt[E1 >: Nothing](
@@ -2822,27 +2808,27 @@ object WRYYY extends TaskInstancesLevel0 {
       s.reportFailure(e)
   }
 
-  /** [[WRYYY]] state describing an non-strict synchronous value. */
-  private[bio] final case class Eval[+E, +A](thunk: () => A) extends WRYYY[E, A]
+  /** [[BIO]] state describing an non-strict synchronous value. */
+  private[bio] final case class Eval[+E, +A](thunk: () => A) extends BIO[E, A]
 
-  /** Internal state, the result of [[WRYYY.defer]] */
-  private[bio] final case class Suspend[+E, +A](thunk: () => WRYYY[E, A]) extends WRYYY[E, A]
+  /** Internal state, the result of [[BIO.defer]] */
+  private[bio] final case class Suspend[+E, +A](thunk: () => BIO[E, A]) extends BIO[E, A]
 
-  /** Internal [[WRYYY]] state that is the result of applying `flatMap`. */
-  private[bio] final case class FlatMap[E, E1, A, +B](source: WRYYY[E, A], f: A => WRYYY[E1, B]) extends WRYYY[E1, B]
+  /** Internal [[BIO]] state that is the result of applying `flatMap`. */
+  private[bio] final case class FlatMap[E, E1, A, +B](source: BIO[E, A], f: A => BIO[E1, B]) extends BIO[E1, B]
 
-  /** Internal [[WRYYY]] state that is the result of applying `map`. */
-  private[bio] final case class Map[S, +E, +A](source: WRYYY[E, S], f: S => A, index: Int)
-      extends WRYYY[E, A] with (S => WRYYY[E, A]) {
+  /** Internal [[BIO]] state that is the result of applying `map`. */
+  private[bio] final case class Map[S, +E, +A](source: BIO[E, S], f: S => A, index: Int)
+      extends BIO[E, A] with (S => BIO[E, A]) {
 
-    def apply(value: S): WRYYY[E, A] =
+    def apply(value: S): BIO[E, A] =
       new Now[A](f(value))
 
     override def toString: String =
-      super[WRYYY].toString
+      super[BIO].toString
   }
 
-  /** Constructs a lazy [[WRYYY]] instance whose result will
+  /** Constructs a lazy [[BIO]] instance whose result will
     * be computed asynchronously.
     *
     * Unsafe to build directly, only use if you know what you're doing.
@@ -2851,7 +2837,6 @@ object WRYYY extends TaskInstancesLevel0 {
     * @param register is the side-effecting, callback-enabled function
     *        that starts the asynchronous computation and registers
     *        the callback to be called on completion
-    *
     * @param trampolineBefore is an optimization that instructs the
     *        run-loop to insert a trampolined async boundary before
     *        evaluating the `register` function
@@ -2861,23 +2846,23 @@ object WRYYY extends TaskInstancesLevel0 {
     trampolineBefore: Boolean = false,
     trampolineAfter: Boolean = true,
     restoreLocals: Boolean = true)
-      extends WRYYY[E, A]
+      extends BIO[E, A]
 
   /** For changing the context for the rest of the run-loop.
     *
     * WARNING: this is entirely internal API and shouldn't be exposed.
     */
   private[monix] final case class ContextSwitch[E, A](
-    source: WRYYY[E, A],
+    source: BIO[E, A],
     modify: Context[E] => Context[E],
     restore: (A, E, Context[E], Context[E]) => Context[E])
-      extends WRYYY[E, A]
+      extends BIO[E, A]
 
   /**
     * Internal API — starts the execution of a Task with a guaranteed
     * asynchronous boundary.
     */
-  private[monix] def unsafeStartAsync[E, A](source: WRYYY[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
+  private[monix] def unsafeStartAsync[E, A](source: BIO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     TaskRunLoop.restartAsync(source, context, cb, null, null, null)
 
   /** Internal API — a variant of [[unsafeStartAsync]] that tries to
@@ -2885,7 +2870,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * avoids creating an extraneous async boundary.
     */
   private[monix] def unsafeStartEnsureAsync[E, A](
-    source: WRYYY[E, A],
+    source: BIO[E, A],
     context: Context[E],
     cb: BiCallback[E, A]): Unit = {
     if (ForkedRegister.detect(source))
@@ -2899,7 +2884,7 @@ object WRYYY extends TaskInstancesLevel0 {
     * trampolined async boundary.
     */
   private[monix] def unsafeStartTrampolined[E, A](
-    source: WRYYY[E, A],
+    source: BIO[E, A],
     context: Context[E],
     cb: BiCallback[E, A]): Unit =
     context.scheduler.execute(new TrampolinedRunnable {
@@ -2911,7 +2896,7 @@ object WRYYY extends TaskInstancesLevel0 {
   /**
     * Internal API - starts the immediate execution of a Task.
     */
-  private[monix] def unsafeStartNow[E, A](source: WRYYY[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
+  private[monix] def unsafeStartNow[E, A](source: BIO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
 
   /** Internal, reusable reference. */
@@ -2922,14 +2907,14 @@ object WRYYY extends TaskInstancesLevel0 {
   private val nowConstructor: Any => UIO[Nothing] =
     ((a: Any) => new Now(a)).asInstanceOf[Any => UIO[Nothing]]
 
-  private def raiseConstructor[E]: E => WRYYY[E, Nothing] =
-    raiseConstructorRef.asInstanceOf[E => WRYYY[E, Nothing]]
+  private def raiseConstructor[E]: E => BIO[E, Nothing] =
+    raiseConstructorRef.asInstanceOf[E => BIO[E, Nothing]]
 
   /** Internal, reusable reference. */
-  private val raiseConstructorRef: Any => WRYYY[Any, Nothing] =
+  private val raiseConstructorRef: Any => BIO[Any, Nothing] =
     e => new Error(e)
 
-  /** Used as optimization by [[WRYYY.failed]]. */
+  /** Used as optimization by [[BIO.failed]]. */
   private object Failed extends StackFrame[Any, Any, UIO[Any]] {
 
     def apply(a: Any): UIO[Any] =
@@ -2939,13 +2924,13 @@ object WRYYY extends TaskInstancesLevel0 {
       Now(e)
   }
 
-  /** Used as optimization by [[WRYYY.redeem]]. */
+  /** Used as optimization by [[BIO.redeem]]. */
   private final class Redeem[E, A, B](fe: E => B, fs: A => B) extends StackFrame[E, A, UIO[B]] {
     def apply(a: A): UIO[B] = new Now(fs(a))
     def recover(e: E): UIO[B] = new Now(fe(e))
   }
 
-  /** Used as optimization by [[WRYYY.redeemFatal]]. */
+  /** Used as optimization by [[BIO.redeemFatal]]. */
   private final class RedeemFatal[A, B](fe: Throwable => B, fs: A => B)
       extends StackFrame.FatalStackFrame[Throwable, A, UIO[B]] {
     override def apply(a: A): UIO[B] = new Now(fs(a))
@@ -2953,7 +2938,7 @@ object WRYYY extends TaskInstancesLevel0 {
     override def recoverFatal(e: Throwable): UIO[B] = new Now(fe(e))
   }
 
-  /** Used as optimization by [[WRYYY.attempt]]. */
+  /** Used as optimization by [[BIO.attempt]]. */
   private object AttemptTask extends StackFrame[Any, Any, UIO[Either[Any, Any]]] {
 
     override def apply(a: Any): UIO[Either[Any, Any]] =
@@ -2963,7 +2948,7 @@ object WRYYY extends TaskInstancesLevel0 {
       new Now(new Left(e))
   }
 
-  /** Used as optimization by [[WRYYY.materialize]]. */
+  /** Used as optimization by [[BIO.materialize]]. */
   private object MaterializeTask extends StackFrame[Throwable, Any, UIO[Try[Any]]] {
 
     override def apply(a: Any): UIO[Try[Any]] =
@@ -2984,7 +2969,7 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     * As trivia, it's named "catsAsync" and not "catsConcurrent" because
     * it represents the `cats.effect.Async` lineage, up until
     * `cats.effect.Effect`, which imposes extra restrictions, in our case
-    * the need for a `Scheduler` to be in scope (see [[WRYYY.catsEffect]]).
+    * the need for a `Scheduler` to be in scope (see [[BIO.catsEffect]]).
     * So by naming the lineage, not the concrete sub-type implemented, we avoid
     * breaking compatibility whenever a new type class (that we can implement)
     * gets added into Cats.
@@ -3022,7 +3007,7 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     *  - [[https://typelevel.org/cats/ typelevel/cats]]
     *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
     */
-  implicit def catsParallel[E]: Parallel.Aux[WRYYY[E, ?], WRYYY.Par[E, ?]] =
+  implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     new CatsParallelForTask[E]
 
   // TODO: implement CatsMonoid
@@ -3037,7 +3022,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * `cats.MonadError`, `cats.effect.Sync` and `cats.effect.Async`.
     *
     * Note this is different from
-    * [[monix.bio.WRYYY.catsAsync TWRYYYsk.catsAsync]] because we need an
+    * [[monix.bio.BIO.catsAsync TWRYYYsk.catsAsync]] because we need an
     * implicit [[monix.execution.Scheduler Scheduler]] in scope in
     * order to trigger the execution of a `Task`. It's also lower
     * priority in order to not trigger conflicts, because
@@ -3060,7 +3045,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     */
   implicit def catsEffect(
     implicit s: Scheduler,
-    opts: WRYYY.Options = WRYYY.defaultOptions): CatsConcurrentEffectForTask = {
+    opts: BIO.Options = BIO.defaultOptions): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
 
@@ -3088,10 +3073,10 @@ private[bio] abstract class TaskParallelNewtype extends TaskContextShift {
     */
   type Par[+E, +A] = Par.Type[E, A]
 
-  /** Newtype encoding, see the [[WRYYY.Par]] type alias
+  /** Newtype encoding, see the [[BIO.Par]] type alias
     * for more details.
     */
-  object Par extends Newtype2[WRYYY]
+  object Par extends Newtype2[BIO]
 }
 
 private[bio] abstract class TaskContextShift extends TaskTimers {
@@ -3100,18 +3085,18 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
     * Default, pure, globally visible `cats.effect.ContextShift`
     * implementation that shifts the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
-    * (that's being injected in [[WRYYY.runToFuture]]).
+    * (that's being injected in [[BIO.runToFuture]]).
     */
-  implicit def contextShift[E]: ContextShift[WRYYY[E, ?]] =
-    contextShiftAny.asInstanceOf[ContextShift[WRYYY[E, ?]]]
+  implicit def contextShift[E]: ContextShift[BIO[E, ?]] =
+    contextShiftAny.asInstanceOf[ContextShift[BIO[E, ?]]]
 
-  private[this] final val contextShiftAny: ContextShift[WRYYY[Any, ?]] =
-    new ContextShift[WRYYY[Any, ?]] {
+  private[this] final val contextShiftAny: ContextShift[BIO[Any, ?]] =
+    new ContextShift[BIO[Any, ?]] {
 
-      override def shift: WRYYY[Any, Unit] =
-        WRYYY.shift
+      override def shift: BIO[Any, Unit] =
+        BIO.shift
 
-      override def evalOn[A](ec: ExecutionContext)(fa: WRYYY[Any, A]): WRYYY[Any, A] =
+      override def evalOn[A](ec: ExecutionContext)(fa: BIO[Any, A]): BIO[Any, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
           case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
@@ -3122,13 +3107,13 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
   /** Builds a `cats.effect.ContextShift` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def contextShift(s: Scheduler): ContextShift[WRYYY[Any, ?]] =
-    new ContextShift[WRYYY[Any, ?]] {
+  def contextShift(s: Scheduler): ContextShift[BIO[Any, ?]] =
+    new ContextShift[BIO[Any, ?]] {
 
-      override def shift: WRYYY[Any, Unit] =
-        WRYYY.shift(s)
+      override def shift: BIO[Any, Unit] =
+        BIO.shift(s)
 
-      override def evalOn[A](ec: ExecutionContext)(fa: WRYYY[Any, A]): WRYYY[Any, A] =
+      override def evalOn[A](ec: ExecutionContext)(fa: BIO[Any, A]): BIO[Any, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
           case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
@@ -3143,32 +3128,32 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     * Default, pure, globally visible `cats.effect.Timer`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
-    * (that's being injected in [[WRYYY.runToFuture]]).
+    * (that's being injected in [[BIO.runToFuture]]).
     */
-  implicit def timer[E]: Timer[WRYYY[E, ?]] =
-    timerAny.asInstanceOf[Timer[WRYYY[E, ?]]]
+  implicit def timer[E]: Timer[BIO[E, ?]] =
+    timerAny.asInstanceOf[Timer[BIO[E, ?]]]
 
-  private[this] final val timerAny: Timer[WRYYY[Any, ?]] =
-    new Timer[WRYYY[Any, ?]] {
+  private[this] final val timerAny: Timer[BIO[Any, ?]] =
+    new Timer[BIO[Any, ?]] {
 
-      override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
-        WRYYY.sleep(duration)
+      override def sleep(duration: FiniteDuration): BIO[Any, Unit] =
+        BIO.sleep(duration)
 
-      override def clock: Clock[WRYYY[Any, ?]] =
-        WRYYY.clock
+      override def clock: Clock[BIO[Any, ?]] =
+        BIO.clock
     }
 
   /** Builds a `cats.effect.Timer` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def timer(s: Scheduler): Timer[WRYYY[Any, ?]] =
-    new Timer[WRYYY[Any, ?]] {
+  def timer(s: Scheduler): Timer[BIO[Any, ?]] =
+    new Timer[BIO[Any, ?]] {
 
-      override def sleep(duration: FiniteDuration): WRYYY[Any, Unit] =
-        WRYYY.sleep(duration).executeOn(s)
+      override def sleep(duration: FiniteDuration): BIO[Any, Unit] =
+        BIO.sleep(duration).executeOn(s)
 
-      override def clock: Clock[WRYYY[Any, ?]] =
-        WRYYY.clock(s)
+      override def clock: Clock[BIO[Any, ?]] =
+        BIO.clock(s)
     }
 }
 
@@ -3178,32 +3163,32 @@ private[bio] abstract class TaskClocks {
     * Default, pure, globally visible `cats.effect.Clock`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
-    * (that's being injected in [[WRYYY.runToFuture]]).
+    * (that's being injected in [[BIO.runToFuture]]).
     */
-  def clock[E]: Clock[WRYYY[E, ?]] =
-    clockAny.asInstanceOf[Clock[WRYYY[E, ?]]]
+  def clock[E]: Clock[BIO[E, ?]] =
+    clockAny.asInstanceOf[Clock[BIO[E, ?]]]
 
-  private[this] final val clockAny: Clock[WRYYY[Any, ?]] =
-    new Clock[WRYYY[Any, ?]] {
+  private[this] final val clockAny: Clock[BIO[Any, ?]] =
+    new Clock[BIO[Any, ?]] {
 
-      override def realTime(unit: TimeUnit): WRYYY[Any, Long] =
-        WRYYY.deferAction(sc => WRYYY.now(sc.clockRealTime(unit)))
+      override def realTime(unit: TimeUnit): BIO[Any, Long] =
+        BIO.deferAction(sc => BIO.now(sc.clockRealTime(unit)))
 
       override def monotonic(unit: TimeUnit): Task[Long] =
-        WRYYY.deferAction(sc => WRYYY.now(sc.clockMonotonic(unit)))
+        BIO.deferAction(sc => BIO.now(sc.clockMonotonic(unit)))
     }
 
   /**
     * Builds a `cats.effect.Clock` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def clock(s: Scheduler): Clock[WRYYY[Any, ?]] =
-    new Clock[WRYYY[Any, ?]] {
+  def clock(s: Scheduler): Clock[BIO[Any, ?]] =
+    new Clock[BIO[Any, ?]] {
 
-      override def realTime(unit: TimeUnit): WRYYY[Any, Long] =
-        WRYYY.eval(s.clockRealTime(unit))
+      override def realTime(unit: TimeUnit): BIO[Any, Long] =
+        BIO.eval(s.clockRealTime(unit))
 
-      override def monotonic(unit: TimeUnit): WRYYY[Any, Long] =
-        WRYYY.eval(s.clockMonotonic(unit))
+      override def monotonic(unit: TimeUnit): BIO[Any, Long] =
+        BIO.eval(s.clockMonotonic(unit))
     }
 }

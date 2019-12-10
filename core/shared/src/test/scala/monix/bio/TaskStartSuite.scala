@@ -56,7 +56,7 @@ object TaskStartSuite extends BaseTestSuite {
 //  testAsync("task.start shares Local.Context with fibers") { _ =>
 //    import monix.execution.Scheduler.Implicits.global
 //    import cats.syntax.all._
-//    implicit val opts = WRYYY.defaultOptions.enableLocalContextPropagation
+//    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 //
 //    val task = for {
 //      local <- TaskLocal(0)

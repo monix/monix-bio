@@ -73,7 +73,7 @@ object TaskDeferActionSuite extends BaseTestSuite {
 
 //  testAsync("deferAction(local.write) works") { _ =>
 //    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = WRYYY.defaultOptions.enableLocalContextPropagation
+//    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 //
 //    val task = for {
 //      l <- TaskLocal(10)

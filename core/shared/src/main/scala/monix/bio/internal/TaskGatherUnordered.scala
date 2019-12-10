@@ -18,8 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.Callback
 import monix.execution.Scheduler
@@ -35,7 +35,7 @@ private[bio] object TaskGatherUnordered {
   /**
     * Implementation for `Task.gatherUnordered`
     */
-  def apply[E, A](in: Iterable[WRYYY[E, A]]): WRYYY[E, List[A]] = {
+  def apply[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] = {
     Async(
       new Register(in),
       trampolineBefore = true,
@@ -49,7 +49,7 @@ private[bio] object TaskGatherUnordered {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A](in: Iterable[WRYYY[E, A]]) extends ForkedRegister[E, List[A]] {
+  private final class Register[E, A](in: Iterable[BIO[E, A]]) extends ForkedRegister[E, List[A]] {
 
     def maybeSignalFinal(
       ref: AtomicAny[State[A]],
@@ -136,7 +136,7 @@ private[bio] object TaskGatherUnordered {
         // Collecting all cancelables in a buffer, because adding
         // cancelables one by one in our `CompositeCancelable` is
         // expensive, so we do it at the end
-        val allCancelables = ListBuffer.empty[CancelToken[WRYYY[E, ?]]]
+        val allCancelables = ListBuffer.empty[CancelToken[BIO[E, ?]]]
         val batchSize = s.executionModel.recommendedBatchSize
         val cursor = toIterator(in)
 
@@ -155,7 +155,7 @@ private[bio] object TaskGatherUnordered {
           allCancelables += stacked.cancel
 
           // Light asynchronous boundary
-          WRYYY.unsafeStartEnsureAsync(
+          BIO.unsafeStartEnsureAsync(
             task,
             childCtx,
             new BiCallback[E, A] {

@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.WRYYY
+import monix.bio.BIO
 import monix.catnap.CancelableF
 import monix.bio.internal.TaskConnectionComposite.{Active, Cancelled, State}
 import monix.execution.{Cancelable, Scheduler}
@@ -29,10 +29,10 @@ import scala.annotation.tailrec
 
 private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny[State]) {
 
-  val cancel: CancelToken[WRYYY[E, ?]] =
-    WRYYY.suspend {
+  val cancel: CancelToken[BIO[E, ?]] =
+    BIO.suspend {
       stateRef.getAndSet(Cancelled) match {
-        case Cancelled => WRYYY.unit
+        case Cancelled => BIO.unit
         case Active(set) =>
           UnsafeCancelUtils.cancelAllUnsafe(set)
       }
@@ -42,11 +42,11 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * this connection hasn't been cancelled yet, otherwise it
     * cancels the given token.
     */
-  def add(token: CancelToken[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def add(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
     addAny(token)
 
   /** Alias for [[add(token* add]]. */
-  def `+=`(token: CancelToken[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def `+=`(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
     add(token)
 
   /** Adds a [[monix.execution.Cancelable]] to the underlying
@@ -64,11 +64,11 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * collection, if this connection hasn't been cancelled yet,
     * otherwise it cancels the given cancelable.
     */
-  def add(conn: CancelableF[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def add(conn: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
     addAny(conn)
 
   /** Alias for [[add(conn* add]]. */
-  def `+=`(conn: CancelableF[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def `+=`(conn: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
     add(conn)
 
   @tailrec
@@ -92,9 +92,9 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * connection is still active, or cancels the whole collection
     * otherwise.
     */
-  def addAll(that: Iterable[CancelToken[WRYYY[E, ?]]])(implicit s: Scheduler): Unit = {
+  def addAll(that: Iterable[CancelToken[BIO[E, ?]]])(implicit s: Scheduler): Unit = {
 
-    @tailrec def loop(that: Iterable[CancelToken[WRYYY[E, ?]]]): Unit =
+    @tailrec def loop(that: Iterable[CancelToken[BIO[E, ?]]]): Unit =
       stateRef.get() match {
         case Cancelled =>
           UnsafeCancelUtils.cancelAllUnsafe(that).runAsyncAndForget
@@ -112,7 +112,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
   /**
     * Removes the given token reference from the underlying collection.
     */
-  def remove(token: CancelToken[WRYYY[E, ?]]): Unit =
+  def remove(token: CancelToken[BIO[E, ?]]): Unit =
     removeAny(token)
 
   /**
@@ -126,7 +126,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * Removes a specific [[monix.catnap.CancelableF]] reference
     * from the underlying collection.
     */
-  def remove(conn: CancelableF[WRYYY[E, ?]]): Unit =
+  def remove(conn: CancelableF[BIO[E, ?]]): Unit =
     removeAny(conn)
 
   @tailrec
@@ -147,7 +147,7 @@ private[bio] object TaskConnectionComposite {
   /**
     * Builder for [[TaskConnectionComposite]].
     */
-  def apply[E](initial: CancelToken[WRYYY[E, ?]]*): TaskConnectionComposite[E] =
+  def apply[E](initial: CancelToken[BIO[E, ?]]*): TaskConnectionComposite[E] =
     new TaskConnectionComposite(Atomic.withPadding(Active(Set(initial: _*)): State, LeftRight128))
 
   private sealed abstract class State

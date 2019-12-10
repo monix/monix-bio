@@ -44,7 +44,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("returning Unit yields non-cancelable tasks") { implicit sc =>
-    implicit val opts = WRYYY.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 
     val task = Task.create[Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))

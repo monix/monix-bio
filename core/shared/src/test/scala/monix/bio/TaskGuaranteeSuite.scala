@@ -62,7 +62,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
   test("if finalizer throws, report finalizer error and signal use error") { implicit sc =>
     val useError = DummyException("useError")
     val finalizerError = DummyException("finalizerError")
-    val task = Task.raiseError(useError).guarantee(WRYYY.raiseFatalError(finalizerError))
+    val task = Task.raiseError(useError).guarantee(BIO.raiseFatalError(finalizerError))
 
     val result = task.runToFuture
     sc.tick()
@@ -114,7 +114,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
     val task = Task.unit
       .guarantee(UIO.sleep(10.seconds) *> UIO(effect.set(true)))
       .flatMap(_ =>
-        WRYYY.Async[Nothing, Unit](
+        BIO.Async[Nothing, Unit](
           (ctx, cb) => {
             cb.onSuccess(())
           }

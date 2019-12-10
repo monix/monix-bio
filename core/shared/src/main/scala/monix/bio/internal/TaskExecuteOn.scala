@@ -19,8 +19,8 @@ package monix.bio.internal
 
 import java.util.concurrent.RejectedExecutionException
 
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context}
 import monix.execution.Scheduler
 
 private[bio] object TaskExecuteOn {
@@ -28,7 +28,7 @@ private[bio] object TaskExecuteOn {
   /**
     * Implementation for `Task.executeOn`.
     */
-  def apply[E, A](source: WRYYY[E, A], s: Scheduler, forceAsync: Boolean): WRYYY[E, A] = {
+  def apply[E, A](source: BIO[E, A], s: Scheduler, forceAsync: Boolean): BIO[E, A] = {
     val withTrampoline = !forceAsync
     val start =
       if (forceAsync) new AsyncRegister(source, s)
@@ -44,14 +44,14 @@ private[bio] object TaskExecuteOn {
 
   // Implementing Async's "start" via `ForkedStart` in order to signal
   // that this is task that forks on evaluation
-  private final class AsyncRegister[E, A](source: WRYYY[E, A], s: Scheduler) extends ForkedRegister[E, A] {
+  private final class AsyncRegister[E, A](source: BIO[E, A], s: Scheduler) extends ForkedRegister[E, A] {
 
     def apply(ctx: Context[E], cb: BiCallback[E, A]): Unit = {
       val oldS = ctx.scheduler
       val ctx2 = ctx.withScheduler(s)
 
       try {
-        WRYYY.unsafeStartAsync(
+        BIO.unsafeStartAsync(
           source,
           ctx2,
           new BiCallback[E, A] with Runnable {
@@ -89,13 +89,13 @@ private[bio] object TaskExecuteOn {
     }
   }
 
-  private final class TrampolinedStart[E, A](source: WRYYY[E, A], s: Scheduler)
+  private final class TrampolinedStart[E, A](source: BIO[E, A], s: Scheduler)
       extends ((Context[E], BiCallback[E, A]) => Unit) {
 
     def apply(ctx: Context[E], cb: BiCallback[E, A]): Unit = {
       val ctx2 = ctx.withScheduler(s)
       try {
-        WRYYY.unsafeStartNow(source, ctx2, cb)
+        BIO.unsafeStartNow(source, ctx2, cb)
       } catch {
         case e: RejectedExecutionException =>
           BiCallback.signalFatalErrorTrampolined(cb, e)

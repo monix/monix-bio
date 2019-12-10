@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.ExitCase
 import cats.effect.concurrent.Deferred
-import monix.bio.{Fiber, Task, UIO, WRYYY}
+import monix.bio.{Fiber, Task, UIO, BIO}
 import monix.catnap.ConcurrentQueue
 import monix.execution.{BufferCapacity, ChannelType}
 
@@ -28,51 +28,51 @@ private[bio] object TaskGatherN {
 
   def apply[E, A](
     parallelism: Int,
-    in: Iterable[WRYYY[E, A]]
-  ): WRYYY[E, List[A]] = {
+    in: Iterable[BIO[E, A]]
+  ): BIO[E, List[A]] = {
     val itemSize = in.size
 
     if (itemSize == 0) {
-      WRYYY.pure(List.empty)
+      BIO.pure(List.empty)
     } else if (itemSize == 1) {
       in.head.map(List(_))
     } else {
       for {
         error <- Deferred[Task, E].hideErrors
         queue <- ConcurrentQueue
-          .withConfig[Task, (Deferred[Task, A], WRYYY[E, A])](BufferCapacity.Bounded(itemSize), ChannelType.SPMC)
+          .withConfig[Task, (Deferred[Task, A], BIO[E, A])](BufferCapacity.Bounded(itemSize), ChannelType.SPMC)
           .hideErrors
-        pairs <- WRYYY.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
+        pairs <- BIO.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
         _ <- queue.offerMany(pairs).hideErrors
         // TODO: figure out why it doesn't infer
-        workers = WRYYY.gather[Nothing, Fiber[E, Nothing], List](List.fill(parallelism.min(itemSize)) {
+        workers = BIO.gather[Nothing, Fiber[E, Nothing], List](List.fill(parallelism.min(itemSize)) {
           queue.poll.hideErrors.flatMap {
             case (p, task) =>
               task.redeemWith(
-                err => error.complete(err).attempt >> WRYYY.raiseError(err),
+                err => error.complete(err).attempt >> BIO.raiseError(err),
                 a => p.complete(a).hideErrors
               )
           }.loopForever.start
         })
         res <- workers.bracketCase { _ =>
-          WRYYY
+          BIO
             .race(
               error.get,
-              WRYYY.sequence(pairs.map(_._1.get))
+              BIO.sequence(pairs.map(_._1.get))
             )
             .hideErrors
             .flatMap {
               case Left(err) =>
-                WRYYY.raiseError(err)
+                BIO.raiseError(err)
 
               case Right(values) =>
-                WRYYY.pure(values)
+                BIO.pure(values)
             }
         } {
           case (fiber, exit) =>
             exit match {
               case ExitCase.Completed => UIO.unit
-              case _ => WRYYY.traverse(fiber)(_.cancel).redeem(_ => (), _ => ()) // TODO: confirm it's ok
+              case _ => BIO.traverse(fiber)(_.cancel).redeem(_ => (), _ => ()) // TODO: confirm it's ok
             }
         }
       } yield res

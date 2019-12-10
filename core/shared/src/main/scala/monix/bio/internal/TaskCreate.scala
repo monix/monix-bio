@@ -20,9 +20,9 @@ package monix.bio.internal
 import java.util.concurrent.RejectedExecutionException
 
 import cats.effect.CancelToken
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{Task, WRYYY}
+import monix.bio.{Task, BIO}
 import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.internal.Platform
@@ -40,9 +40,9 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.cancelable`
     */ // TODO: should it take CancelToken[UIO]?
-  def cancelable0[E, A](fn: (Scheduler, Callback[E, A]) => CancelToken[WRYYY[E, ?]]): WRYYY[E, A] = {
-    val start = new Cancelable0Start[E, A, CancelToken[WRYYY[E, ?]]](fn) {
-      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def cancelable0[E, A](fn: (Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] = {
+    val start = new Cancelable0Start[E, A, CancelToken[BIO[E, ?]]](fn) {
+      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
         ref := token
     }
     Async[E, A](
@@ -62,7 +62,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.create`, used via `TaskBuilder`.
     */
-  def cancelableCancelable[E, A](fn: (Scheduler, Callback[E, A]) => Cancelable): WRYYY[E, A] = {
+  def cancelableCancelable[E, A](fn: (Scheduler, Callback[E, A]) => Cancelable): BIO[E, A] = {
     val start = new Cancelable0Start[E, A, Cancelable](fn) {
       def setConnection(ref: TaskConnectionRef[E], token: Cancelable)(implicit s: Scheduler): Unit =
         ref := token
@@ -73,7 +73,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.async0`
     */
-  def async0[E, A](fn: (Scheduler, Callback[E, A]) => Any): WRYYY[E, A] = {
+  def async0[E, A](fn: (Scheduler, Callback[E, A]) => Any): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
@@ -89,7 +89,7 @@ private[bio] object TaskCreate {
     * It duplicates the implementation of `Task.async0` with the purpose
     * of avoiding extraneous callback allocations.
     */
-  def async[E, A](k: Callback[E, A] => Unit): WRYYY[E, A] = {
+  def async[E, A](k: Callback[E, A] => Unit): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
@@ -101,7 +101,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.asyncF`.
     */
-  def asyncF[E, A](k: Callback[E, A] => WRYYY[E, Unit]): WRYYY[E, A] = {
+  def asyncF[E, A](k: Callback[E, A] => BIO[E, Unit]): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       // Creating new connection, because we can have a race condition
@@ -113,7 +113,7 @@ private[bio] object TaskCreate {
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = true, cb)
       // Provided callback takes care of `conn.pop()`
       val task = k(cbProtected)
-      WRYYY.unsafeStartNow(task, ctx2, new ForwardErrorCallback(cbProtected))
+      BIO.unsafeStartNow(task, ctx2, new ForwardErrorCallback(cbProtected))
     }
     Async(start, trampolineBefore = false, trampolineAfter = false)
   }

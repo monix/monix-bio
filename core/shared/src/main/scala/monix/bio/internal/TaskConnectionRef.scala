@@ -25,11 +25,11 @@ import monix.execution.{Cancelable, Scheduler}
 import monix.execution.atomic.Atomic
 import scala.annotation.tailrec
 
-private[bio] final class TaskConnectionRef[E] extends CancelableF[WRYYY[E, ?]] {
+private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
   import TaskConnectionRef._
 
   @throws(classOf[IllegalStateException])
-  def `:=`(token: CancelToken[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def `:=`(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
     unsafeSet(token)
 
   @throws(classOf[IllegalStateException])
@@ -37,7 +37,7 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[WRYYY[E, ?]] {
     unsafeSet(cancelable)
 
   @throws(classOf[IllegalStateException])
-  def `:=`(conn: CancelableF[WRYYY[E, ?]])(implicit s: Scheduler): Unit =
+  def `:=`(conn: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
     unsafeSet(conn.cancel)
 
   @tailrec
@@ -65,24 +65,24 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[WRYYY[E, ?]] {
     }
   }
 
-  val cancel: CancelToken[WRYYY[E, ?]] = {
-    @tailrec def loop(): CancelToken[WRYYY[E, ?]] =
+  val cancel: CancelToken[BIO[E, ?]] = {
+    @tailrec def loop(): CancelToken[BIO[E, ?]] =
       state.get() match {
         case IsCanceled | IsEmptyCanceled =>
-          WRYYY.unit
+          BIO.unit
         case IsActive(task) =>
           state.set(IsCanceled)
           UnsafeCancelUtils.unsafeCancel(task)
         case Empty =>
           if (state.compareAndSet(Empty, IsEmptyCanceled)) {
-            WRYYY.unit
+            BIO.unit
           } else {
             // $COVERAGE-OFF$
             loop() // retry
             // $COVERAGE-ON$
           }
       }
-    WRYYY.suspend(loop())
+    BIO.suspend(loop())
   }
 
   private def raiseError(): Nothing = {

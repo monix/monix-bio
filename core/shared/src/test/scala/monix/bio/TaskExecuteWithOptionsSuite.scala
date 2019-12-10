@@ -25,9 +25,9 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
     val task = Task
       .eval(1)
       .flatMap(_ => Task.eval(2))
-      .flatMap(_ => WRYYY.readOptions)
+      .flatMap(_ => BIO.readOptions)
       .executeWithOptions(_.enableLocalContextPropagation)
-      .flatMap(opt1 => WRYYY.readOptions.map(opt2 => (opt1, opt2)))
+      .flatMap(opt1 => BIO.readOptions.map(opt2 => (opt1, opt2)))
 
     val f = task.runToFuture
     s.tick()

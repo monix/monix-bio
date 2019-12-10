@@ -37,7 +37,7 @@ private[bio] object TaskEffect {
     */
   def runAsync[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit])(
     implicit s: Scheduler,
-    opts: WRYYY.Options
+    opts: BIO.Options
   ): SyncIO[Unit] = SyncIO {
     execute(fa, cb); ()
   }
@@ -47,14 +47,14 @@ private[bio] object TaskEffect {
     */
   def runCancelable[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit])(
     implicit s: Scheduler,
-    opts: WRYYY.Options
+    opts: BIO.Options
   ): SyncIO[CancelToken[Task]] = SyncIO {
     execute(fa, cb)
   }
 
   private def execute[A](fa: Task[A], cb: Either[Throwable, A] => IO[Unit])(
     implicit s: Scheduler,
-    opts: WRYYY.Options) = {
+    opts: BIO.Options) = {
 
     fa.runAsyncOptF(new Callback[Either[Throwable, Throwable], A] {
       private def signal(value: Either[Throwable, A]): Unit =

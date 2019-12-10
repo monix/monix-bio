@@ -20,7 +20,7 @@ package monix.bio.internal
 import java.util.concurrent.RejectedExecutionException
 
 import monix.bio.UIO
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO.{Async, Context}
 
 import scala.concurrent.duration.Duration
 

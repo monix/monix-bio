@@ -18,8 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.Callback
 import monix.execution.Scheduler
@@ -34,8 +34,8 @@ private[bio] object TaskGather {
     * Implementation for `Task.gather`
     */
   def apply[E, A, M[X] <: Iterable[X]](
-    in: Iterable[WRYYY[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]]): WRYYY[E, M[A]] = {
+                                        in: Iterable[BIO[E, A]],
+                                        makeBuilder: () => mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
     Async(
       new Register(in, makeBuilder),
       trampolineBefore = true,
@@ -50,8 +50,8 @@ private[bio] object TaskGather {
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
   private final class Register[E, A, M[X] <: Iterable[X]](
-    in: Iterable[WRYYY[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]])
+                                                           in: Iterable[BIO[E, A]],
+                                                           makeBuilder: () => mutable.Builder[A, M[A]])
       extends ForkedRegister[E, M[A]] {
 
     def apply(context: Context[E], finalCallback: BiCallback[E, M[A]]): Unit = {
@@ -59,7 +59,7 @@ private[bio] object TaskGather {
       val lock = new AnyRef
       val mainConn = context.connection
 
-      var tasks: Array[WRYYY[E, A]] = null
+      var tasks: Array[BIO[E, A]] = null
       var results: Array[AnyRef] = null
       var tasksCount = 0
       var completed = 0
@@ -134,14 +134,14 @@ private[bio] object TaskGather {
           // If it's a single task, then execute it directly
           val source = tasks(0).map(r => (makeBuilder() += r).result())
           // Needs to ensure full async delivery due to implementing ForkedStart!
-          WRYYY.unsafeStartEnsureAsync(source, context, finalCallback)
+          BIO.unsafeStartEnsureAsync(source, context, finalCallback)
         } else {
           results = new Array[AnyRef](tasksCount)
 
           // Collecting all cancelables in a buffer, because adding
           // cancelables one by one in our `CompositeCancelable` is
           // expensive, so we do it at the end
-          val allCancelables = ListBuffer.empty[CancelToken[WRYYY[E, ?]]]
+          val allCancelables = ListBuffer.empty[CancelToken[BIO[E, ?]]]
 
           // We need a composite because we are potentially starting tasks
           // in parallel and thus we need to cancel everything
@@ -156,7 +156,7 @@ private[bio] object TaskGather {
             allCancelables += stacked.cancel
 
             // Light asynchronous boundary
-            WRYYY.unsafeStartEnsureAsync(
+            BIO.unsafeStartEnsureAsync(
               tasks(idx),
               childContext,
               new BiCallback[E, A] {

@@ -25,7 +25,7 @@ import scala.util.Success
 object TaskTraverseSuite extends BaseTestSuite {
   test("Task.traverse should not execute in parallel") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = WRYYY
+    val f = BIO
       .traverse(seq) {
         case (i, d) =>
           Task.evalAsync(i + 1).delayExecution(d.seconds)
@@ -45,7 +45,7 @@ object TaskTraverseSuite extends BaseTestSuite {
   test("Task.traverse should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
-    val f = WRYYY
+    val f = BIO
       .traverse(seq) {
         case (i, d) =>
           Task
@@ -64,7 +64,7 @@ object TaskTraverseSuite extends BaseTestSuite {
 
   test("Task.traverse should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = WRYYY
+    val f = BIO
       .traverse(seq) {
         case (i, d) => Task.evalAsync(i + 1).delayExecution(d.seconds)
       }

@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.WRYYY.{Async, Context}
-import monix.bio.{UIO, WRYYY}
+import monix.bio.BIO.{Async, Context}
+import monix.bio.{UIO, BIO}
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TrampolinedRunnable
 
@@ -27,8 +27,8 @@ private[bio] object TaskDoOnCancel {
   /**
     * Implementation for `Task.doOnCancel`
     */
-  def apply[E, A](self: WRYYY[E, A], callback: UIO[Unit]): WRYYY[E, A] = {
-    if (callback eq WRYYY.unit) {
+  def apply[E, A](self: BIO[E, A], callback: UIO[Unit]): BIO[E, A] = {
+    if (callback eq BIO.unit) {
       self
     } else {
       val start = (context: Context[E], onFinish: BiCallback[E, A]) => {
@@ -36,13 +36,13 @@ private[bio] object TaskDoOnCancel {
         implicit val o = context.options
 
         context.connection.push(callback)
-        WRYYY.unsafeStartNow(self, context, new CallbackThatPops(context, onFinish))
+        BIO.unsafeStartNow(self, context, new CallbackThatPops(context, onFinish))
       }
       Async(start, trampolineBefore = false, trampolineAfter = false, restoreLocals = false)
     }
   }
 
-  private final class CallbackThatPops[E, A](ctx: WRYYY.Context[E], cb: BiCallback[E, A])
+  private final class CallbackThatPops[E, A](ctx: BIO.Context[E], cb: BiCallback[E, A])
       extends BiCallback[E, A] with TrampolinedRunnable {
 
     private[this] var isActive = true

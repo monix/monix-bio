@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context, ContextSwitch, FlatMap, Map}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context, ContextSwitch, FlatMap, Map}
 
 import scala.annotation.tailrec
 import scala.runtime.AbstractFunction2
@@ -43,7 +43,7 @@ private[bio] object ForkedRegister {
     * Returns `true` if the given task is known to fork execution,
     * or `false` otherwise.
     */
-  @tailrec def detect(task: WRYYY[_, _], limit: Int = 8): Boolean = {
+  @tailrec def detect(task: BIO[_, _], limit: Int = 8): Boolean = {
     if (limit > 0) task match {
       case Async(_: ForkedRegister[_, _], _, _, _) => true
       case FlatMap(other, _) => detect(other, limit - 1)

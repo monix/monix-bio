@@ -25,24 +25,24 @@ import monix.bio.instances.CatsParallelForTask
 
 object TypeClassLawsForTaskSuite
     extends BaseTypeClassLawsForTaskSuite()(
-      WRYYY.defaultOptions.disableAutoCancelableRunLoops
+      BIO.defaultOptions.disableAutoCancelableRunLoops
     )
 
 object TypeClassLawsForTaskAutoCancelableSuite
     extends BaseTypeClassLawsForTaskSuite()(
-      WRYYY.defaultOptions.enableAutoCancelableRunLoops
+      BIO.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskSuite(implicit opts: WRYYY.Options) extends BaseLawsSuite {
+class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
 
-  implicit val ap: Applicative[WRYYY.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
 
   checkAllAsync("CoflatMap[Task]") { implicit ec =>
     CoflatMapTests[Task].coflatMap[Int, Int, Int]
   }
 
   checkAllAsync("Concurrent[Task]") { implicit ec =>
-    ConcurrentTests[WRYYY[Throwable, ?]].concurrent[Int, Int, Int]
+    ConcurrentTests[BIO[Throwable, ?]].concurrent[Int, Int, Int]
   }
 
   checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
@@ -50,11 +50,11 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: WRYYY.Options) extends BaseLa
   }
 
   checkAllAsync("Applicative[Task.Par]") { implicit ec =>
-    ApplicativeTests[WRYYY.Par[Throwable, ?]].applicative[Int, Int, Int]
+    ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
-    ParallelTests[Task, WRYYY.Par[Throwable, ?]].parallel[Int, Int]
+    ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
 //  checkAllAsync("Monoid[Task[Int]]") { implicit ec =>

@@ -135,7 +135,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
   }
 
 //  test("Task.gatherUnordered should log errors if multiple errors happen") { implicit s =>
-//    implicit val opts = WRYYY.defaultOptions.disableAutoCancelableRunLoops
+//    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 //
 //    val ex = DummyException("dummy1")
 //    var errorsThrow = 0

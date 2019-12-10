@@ -798,7 +798,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = WRYYY
+      val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           s2.executeAsync(() => cb.onSuccess(()))
           Task(())
@@ -817,7 +817,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = WRYYY
+      val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           cb.onSuccess(())
           Task(())
@@ -836,7 +836,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = WRYYY
+      val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           s2.executeAsync(() => cb.onError(dummy))
           Task(())
@@ -857,7 +857,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = WRYYY
+      val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           cb.onError(dummy)
           Task(())
@@ -957,7 +957,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       override def reportFailure(cause: Throwable): Unit = ()
     })
 
-    val f = WRYYY
+    val f = BIO
       .async0[Nothing, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
       .executeOn(s2)
       .redeem(_ => 2, identity)

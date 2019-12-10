@@ -26,10 +26,10 @@ import scala.util.{Failure, Success}
 
 object TaskBracketSuite extends BaseTestSuite {
   test("equivalence with onErrorHandleWith") { implicit sc =>
-    check2 { (task: WRYYY[String, Int], f: String => UIO[Unit]) =>
-      val expected = task.onErrorHandleWith(e => f(e) >> WRYYY.raiseError(e))
-      val received = task.bracketE(WRYYY.now) {
-        case (_, Left(Some(e))) => e.fold(WRYYY.raiseFatalError, f)
+    check2 { (task: BIO[String, Int], f: String => UIO[Unit]) =>
+      val expected = task.onErrorHandleWith(e => f(e) >> BIO.raiseError(e))
+      val received = task.bracketE(BIO.now) {
+        case (_, Left(Some(e))) => e.fold(BIO.raiseFatalError, f)
         case (_, _) => UIO.unit
       }
       received <-> expected
@@ -37,11 +37,11 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("equivalence with flatMap + transformWith") { implicit sc =>
-    check3 { (acquire: WRYYY[Int, Int], f: Int => WRYYY[Int, Int], release: Int => UIO[Unit]) =>
+    check3 { (acquire: BIO[Int, Int], f: Int => BIO[Int, Int], release: Int => UIO[Unit]) =>
       val expected = acquire.flatMap { a =>
         f(a).redeemWith(
-          e => release(a) >> WRYYY.raiseError(e),
-          s => release(a) >> WRYYY.pure(s)
+          e => release(a) >> BIO.raiseError(e),
+          s => release(a) >> BIO.pure(s)
         )
       }
 
@@ -82,7 +82,7 @@ object TaskBracketSuite extends BaseTestSuite {
   test("release is evaluated on error") { implicit sc =>
     var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
 
-    val task = UIO.evalAsync(1).bracketE(_ => WRYYY.raiseError[Int](-99)) { (a, i) =>
+    val task = UIO.evalAsync(1).bracketE(_ => BIO.raiseError[Int](-99)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
@@ -97,7 +97,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val dummy = new DummyException("dummy")
     var input = Option.empty[(Int, Either[Option[Either[Throwable, Int]], Int])]
 
-    val task: WRYYY[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => WRYYY.raiseFatalError(dummy)) { (a, i) =>
+    val task: BIO[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => BIO.raiseFatalError(dummy)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
@@ -137,7 +137,7 @@ object TaskBracketSuite extends BaseTestSuite {
       .bracket { _ =>
         Task.raiseError[Int](useError)
       } { _ =>
-        WRYYY.raiseFatalError(releaseError)
+        BIO.raiseFatalError(releaseError)
       }
 
     val f = task.runToFuture

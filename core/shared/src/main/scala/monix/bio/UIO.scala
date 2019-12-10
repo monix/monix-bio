@@ -21,68 +21,68 @@ import scala.concurrent.duration.FiniteDuration
 
 object UIO {
   /**
-    * @see See [[monix.bio.WRYYY.apply]]
+    * @see See [[monix.bio.BIO.apply]]
     */
   def apply[A](a: => A): UIO[A] =
-    WRYYY.Eval(a _)
+    BIO.Eval(a _)
 
   /**
-    * @see See [[monix.bio.WRYYY.now]]
+    * @see See [[monix.bio.BIO.now]]
     */
   def now[A](a: A): UIO[A] =
-    WRYYY.now(a)
+    BIO.now(a)
 
   /**
-    * @see See [[monix.bio.WRYYY.pure]]
+    * @see See [[monix.bio.BIO.pure]]
     */
   def pure[A](a: A): UIO[A] =
-    WRYYY.pure(a)
+    BIO.pure(a)
 
   /**
-    * @see See [[monix.bio.WRYYY.raiseFatalError]]
+    * @see See [[monix.bio.BIO.raiseFatalError]]
     */
   def raiseFatalError(ex: Throwable): UIO[Nothing] =
-    WRYYY.raiseFatalError(ex)
+    BIO.raiseFatalError(ex)
 
   /**
-    * @see See [[monix.bio.WRYYY.defer]]
+    * @see See [[monix.bio.BIO.defer]]
     */
   def defer[A](fa: => UIO[A]): UIO[A] =
-    WRYYY.defer(fa)
+    BIO.defer(fa)
 
   /**
-    * @see See [[monix.bio.WRYYY.suspend]]
+    * @see See [[monix.bio.BIO.suspend]]
     */
   def suspend[A](fa: => UIO[A]): UIO[A] =
-    WRYYY.suspend(fa)
+    BIO.suspend(fa)
 
   /**
-    * @see See [[monix.bio.WRYYY.eval]]
+    * @see See [[monix.bio.BIO.eval]]
     */
   def eval[A](a: => A): UIO[A] =
-    WRYYY.Eval(a _)
+    BIO.Eval(a _)
 
   /**
-    * @see See [[monix.bio.WRYYY.evalAsync]]
+    * @see See [[monix.bio.BIO.evalAsync]]
     */
   def evalAsync[A](a: => A): UIO[A] =
-    WRYYY.Eval(a _).executeAsync
+    BIO.Eval(a _).executeAsync
 
   /**
-    * @see See [[monix.bio.WRYYY.never]]
+    * @see See [[monix.bio.BIO.never]]
     */
   val never: UIO[Nothing] =
-    WRYYY.never
+    BIO.never
 
   /**
-    * @see See [[monix.bio.WRYYY.unit]]
+    * @see See [[monix.bio.BIO.unit]]
     */
   val unit: UIO[Unit] =
-    WRYYY.unit
+    BIO.unit
 
   /**
-    * @see See [[monix.bio.WRYYY.sleep]]
+    * @see See [[monix.bio.BIO.sleep]]
     */
   def sleep(timespan: FiniteDuration): UIO[Unit] =
-    WRYYY.sleep(timespan)
+    BIO.sleep(timespan)
 }

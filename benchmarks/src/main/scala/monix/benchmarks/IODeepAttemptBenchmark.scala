@@ -77,10 +77,10 @@ class IODeepAttemptBenchmark {
 
   @Benchmark
   def monixBioDeepAttemptTyped(): BigInt = {
-    import monix.bio.WRYYY
+    import monix.bio.BIO
 
-    def descend(n: Int): WRYYY[TypedError, BigInt] =
-      if (n == depth) WRYYY.raiseError(TypedError("Oh noes!"))
+    def descend(n: Int): BIO[TypedError, BigInt] =
+      if (n == depth) BIO.raiseError(TypedError("Oh noes!"))
       else if (n == halfway) descend(n + 1).redeem(_ => 50, identity)
       else descend(n + 1).map(_ + n)
 

@@ -24,10 +24,10 @@ import scala.util.{Failure, Success}
 
 object TaskMapBothSuite extends BaseTestSuite {
   test("if both tasks are synchronous, then mapBoth forks") { implicit s =>
-    val ta = WRYYY.eval(1)
-    val tb = WRYYY.eval(2)
+    val ta = BIO.eval(1)
+    val tb = BIO.eval(2)
 
-    val r = WRYYY.mapBoth(ta, tb)(_ + _)
+    val r = BIO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture
     assertEquals(f.value, None)
     s.tick()
@@ -35,29 +35,29 @@ object TaskMapBothSuite extends BaseTestSuite {
   }
 
   test("sum two async tasks") { implicit s =>
-    val ta = WRYYY.evalAsync(1)
-    val tb = WRYYY.evalAsync(2)
+    val ta = BIO.evalAsync(1)
+    val tb = BIO.evalAsync(2)
 
-    val r = WRYYY.mapBoth(ta, tb)(_ + _)
+    val r = BIO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture; s.tick()
     assertEquals(f.value.get, Success(Right(3)))
   }
 
   test("sum two synchronous tasks") { implicit s =>
-    val ta = WRYYY.eval(1)
-    val tb = WRYYY.eval(2)
+    val ta = BIO.eval(1)
+    val tb = BIO.eval(2)
 
-    val r = WRYYY.mapBoth(ta, tb)(_ + _)
+    val r = BIO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture; s.tick()
     assertEquals(f.value.get, Success(Right(3)))
   }
 
   test("should be stack-safe for synchronous tasks") { implicit s =>
     val count = 10000
-    val tasks = (0 until count).map(x => WRYYY.eval(x))
-    val init = WRYYY.eval(0L)
+    val tasks = (0 until count).map(x => BIO.eval(x))
+    val init = BIO.eval(0L)
 
-    val sum = tasks.foldLeft(init)((acc, t) => WRYYY.mapBoth(acc, t)(_ + _))
+    val sum = tasks.foldLeft(init)((acc, t) => BIO.mapBoth(acc, t)(_ + _))
     val result = sum.runToFuture
 
     s.tick()
@@ -66,10 +66,10 @@ object TaskMapBothSuite extends BaseTestSuite {
 
   test("should be stack-safe for asynchronous tasks") { implicit s =>
     val count = 10000
-    val tasks = (0 until count).map(x => WRYYY.evalAsync(x))
-    val init = WRYYY.eval(0L)
+    val tasks = (0 until count).map(x => BIO.evalAsync(x))
+    val init = BIO.eval(0L)
 
-    val sum = tasks.foldLeft(init)((acc, t) => WRYYY.mapBoth(acc, t)(_ + _))
+    val sum = tasks.foldLeft(init)((acc, t) => BIO.mapBoth(acc, t)(_ + _))
     val result = sum.runToFuture
 
     s.tick()
@@ -79,8 +79,8 @@ object TaskMapBothSuite extends BaseTestSuite {
   test("should have a stack safe cancelable") { implicit sc =>
     val count = if (Platform.isJVM) 10000 else 1000
 
-    val tasks = (0 until count).map(_ => WRYYY.never[Int])
-    val all = tasks.foldLeft(Task.now(0))((acc, t) => WRYYY.mapBoth(acc, t)(_ + _))
+    val tasks = (0 until count).map(_ => BIO.never[Int])
+    val all = tasks.foldLeft(Task.now(0))((acc, t) => BIO.mapBoth(acc, t)(_ + _))
     val f = all.runToFuture
 
     sc.tick()
@@ -93,14 +93,14 @@ object TaskMapBothSuite extends BaseTestSuite {
 
   test("sum random synchronous tasks") { implicit s =>
     check1 { (numbers: List[Int]) =>
-      val sum = numbers.foldLeft(Task.now(0))((acc, t) => WRYYY.mapBoth(acc, WRYYY.eval(t))(_ + _))
+      val sum = numbers.foldLeft(Task.now(0))((acc, t) => BIO.mapBoth(acc, BIO.eval(t))(_ + _))
       sum <-> Task.now(numbers.sum)
     }
   }
 
   test("sum random asynchronous tasks") { implicit s =>
     check1 { (numbers: List[Int]) =>
-      val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => WRYYY.mapBoth(acc, WRYYY.evalAsync(t))(_ + _))
+      val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => BIO.mapBoth(acc, BIO.evalAsync(t))(_ + _))
       sum <-> Task.evalAsync(numbers.sum)
     }
   }
@@ -111,7 +111,7 @@ object TaskMapBothSuite extends BaseTestSuite {
     val err2 = new RuntimeException("Error 2")
     val t2 = Task.defer(Task.raiseError[Int](err2)).executeAsync
 
-    val fb = WRYYY
+    val fb = BIO
       .mapBoth(t1, t2)(_ + _)
       .executeWithOptions(_.disableAutoCancelableRunLoops)
       .runToFuture
@@ -133,7 +133,7 @@ object TaskMapBothSuite extends BaseTestSuite {
     val err2 = new RuntimeException("Error 2")
     val t2: Task[Int] = Task.defer(Task.raiseFatalError(err2)).executeAsync
 
-    val fb = WRYYY
+    val fb = BIO
       .mapBoth(t1, t2)(_ + _)
       .executeWithOptions(_.disableAutoCancelableRunLoops)
       .runToFuture

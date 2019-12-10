@@ -28,7 +28,7 @@ object TaskGatherSuite extends BaseTestSuite {
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
       Task.evalAsync(3).delayExecution(3.seconds))
-    val f = WRYYY.gather(seq).runToFuture
+    val f = BIO.gather(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -47,7 +47,7 @@ object TaskGatherSuite extends BaseTestSuite {
       Task.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = WRYYY.gather(seq).runToFuture
+    val f = BIO.gather(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -60,7 +60,7 @@ object TaskGatherSuite extends BaseTestSuite {
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
       Task.evalAsync(3).delayExecution(3.seconds))
-    val f = WRYYY.gather(seq).runToFuture
+    val f = BIO.gather(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -75,7 +75,7 @@ object TaskGatherSuite extends BaseTestSuite {
   test("Task.gather should be stack safe for synchronous tasks") { implicit s =>
     val count = if (Platform.isJVM) 200000 else 5000
     val tasks = for (_ <- 0 until count) yield Task.now(1)
-    val composite = WRYYY.gather(tasks).map(_.sum)
+    val composite = BIO.gather(tasks).map(_.sum)
     val result = composite.runToFuture
     s.tick()
     assertEquals(result.value, Some(Success(Right(count))))

@@ -19,8 +19,8 @@ package monix.bio.internal
 
 import java.util.concurrent.RejectedExecutionException
 
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Context, Error, FatalError, Now}
+import monix.bio.BIO
+import monix.bio.BIO.{Context, Error, FatalError, Now}
 import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack, WrappedException}
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.misc.Local
@@ -49,7 +49,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     this.context = other
   }
 
-  final def start(task: WRYYY.Async[Any, Any], bindCurrent: Bind, bindRest: CallStack): Unit = {
+  final def start(task: BIO.Async[Any, Any], bindCurrent: Bind, bindRest: CallStack): Unit = {
     this.bFirst = bindCurrent
     this.bRest = bindRest
     this.trampolineAfter = task.trampolineAfter
@@ -114,7 +114,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     }
   }
 
-  protected def prepareStart(task: WRYYY.Async[_, _]): Unit = ()
+  protected def prepareStart(task: BIO.Async[_, _]): Unit = ()
   protected def prepareCallback: BiCallback[Any, Any] = callback
   private[this] val wrappedCallback = prepareCallback
 
@@ -206,7 +206,7 @@ private[internal] object TaskRestartCallback {
     private[this] var preparedLocals: Local.Context = _
     private[this] var previousLocals: Local.Context = _
 
-    override protected def prepareStart(task: WRYYY.Async[_, _]): Unit = {
+    override protected def prepareStart(task: BIO.Async[_, _]): Unit = {
       preparedLocals = if (task.restoreLocals) Local.getContext() else null
     }
 

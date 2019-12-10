@@ -35,7 +35,7 @@ import scala.util.Try
   */
 object TypeClassLawsForTaskRunSyncUnsafeSuite
     extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-      WRYYY.defaultOptions.disableAutoCancelableRunLoops
+      BIO.defaultOptions.disableAutoCancelableRunLoops
     )
 
 /**
@@ -45,15 +45,15 @@ object TypeClassLawsForTaskRunSyncUnsafeSuite
   */
 object TypeClassLawsForTaskAutoCancelableRunSyncUnsafeSuite
     extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-      WRYYY.defaultOptions.enableAutoCancelableRunLoops
+      BIO.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: WRYYY.Options)
+class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
     extends monix.execution.BaseLawsSuite with ArbitraryInstancesBase {
 
   implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
   implicit val cs = IO.contextShift(sc)
-  implicit val ap: Applicative[WRYYY.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
 
   val timeout = {
     if (System.getenv("TRAVIS") == "true" || System.getenv("CI") == "true")
@@ -77,9 +77,9 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: WRYYY.Options)
       equalityTry[A].eqv(ta, tb)
     }
 
-  implicit def equalityTaskPar[A](implicit A: Eq[A]): Eq[WRYYY.Par[Throwable, A]] =
+  implicit def equalityTaskPar[A](implicit A: Eq[A]): Eq[BIO.Par[Throwable, A]] =
     Eq.instance { (a, b) =>
-      import WRYYY.Par.unwrap
+      import BIO.Par.unwrap
       val ta = Try(unwrap(a).runSyncUnsafeOpt(timeout))
       val tb = Try(unwrap(b).runSyncUnsafeOpt(timeout))
       equalityTry[A].eqv(ta, tb)
@@ -98,9 +98,9 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: WRYYY.Options)
 
   checkAll("ConcurrentEffect[Task]", ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int])
 
-  checkAll("Applicative[Task.Par]", ApplicativeTests[WRYYY.Par[Throwable, ?]].applicative[Int, Int, Int])
+  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int])
 
-  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, WRYYY.Par[Throwable, ?]].parallel[Int, Int])
+  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int])
 
 //  checkAll("Monoid[Task[Int]]", MonoidTests[Task[Int]].monoid)
 }

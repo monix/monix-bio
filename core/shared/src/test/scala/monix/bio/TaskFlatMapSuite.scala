@@ -28,13 +28,13 @@ import scala.util.{Failure, Success, Try}
 
 object TaskFlatMapSuite extends BaseTestSuite {
   test("runAsync flatMap loop is not cancelable if autoCancelableRunLoops=false") { implicit s =>
-    implicit val opts = WRYYY.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
     val maxCount = Platform.recommendedBatchSize * 4
 
     def loop(count: AtomicInt): Task[Unit] =
-      if (count.incrementAndGet() >= maxCount) WRYYY.unit
+      if (count.incrementAndGet() >= maxCount) BIO.unit
       else
-        WRYYY.unit.flatMap(_ => loop(count))
+        BIO.unit.flatMap(_ => loop(count))
 
     val atomic = Atomic(0)
     val f = loop(atomic).runToFutureOpt
@@ -49,9 +49,9 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val expected = Platform.recommendedBatchSize
 
     def loop(count: AtomicInt): Task[Unit] =
-      if (count.getAndIncrement() >= maxCount) WRYYY.unit
+      if (count.getAndIncrement() >= maxCount) BIO.unit
       else
-        WRYYY.unit.flatMap(_ => loop(count))
+        BIO.unit.flatMap(_ => loop(count))
 
     val atomic = Atomic(0)
     val f = loop(atomic)
@@ -73,9 +73,9 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val expected = Platform.recommendedBatchSize
 
     def loop(count: AtomicInt): Task[Unit] =
-      if (count.getAndIncrement() >= maxCount) WRYYY.unit
+      if (count.getAndIncrement() >= maxCount) BIO.unit
       else
-        WRYYY.unit.flatMap(_ => loop(count))
+        BIO.unit.flatMap(_ => loop(count))
 
     val atomic = Atomic(0)
     var result = Option.empty[Try[Unit]]
@@ -105,13 +105,13 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
   test("redeemWith derives flatMap") { implicit s =>
     check2 { (fa: Task[Int], f: Int => Task[Int]) =>
-      fa.redeemWith(WRYYY.raiseError, f) <-> fa.flatMap(f)
+      fa.redeemWith(BIO.raiseError, f) <-> fa.flatMap(f)
     }
   }
 
   test("redeemWith derives onErrorHandleWith") { implicit s =>
     check2 { (fa: Task[Int], f: Throwable => Task[Int]) =>
-      fa.redeemWith(f, WRYYY.pure) <-> fa.onErrorHandleWith(f)
+      fa.redeemWith(f, BIO.pure) <-> fa.onErrorHandleWith(f)
     }
   }
 
@@ -129,21 +129,21 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
   test("redeemWith can recover") { implicit s =>
     val dummy = new DummyException("dummy")
-    val task = WRYYY.raiseError(dummy).redeemWith(_ => WRYYY.now(1), WRYYY.now)
+    val task = BIO.raiseError(dummy).redeemWith(_ => BIO.now(1), BIO.now)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("redeem can recover") { implicit s =>
     val dummy = DummyException("dummy")
-    val task: UIO[Int] = WRYYY.raiseError(dummy).redeem(_ => 1, identity)
+    val task: UIO[Int] = BIO.raiseError(dummy).redeem(_ => 1, identity)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test(">> is stack safe for infinite loops") { implicit s =>
     var wasCancelled = false
-    def looped: Task[Unit] = WRYYY.cancelBoundary >> looped
+    def looped: Task[Unit] = BIO.cancelBoundary >> looped
     val future = looped.doOnCancel(UIO { wasCancelled = true }).runToFuture
     future.cancel()
     s.tick()
@@ -151,13 +151,13 @@ object TaskFlatMapSuite extends BaseTestSuite {
   }
 
 //  test("flatMapLoop enables loops") { implicit s =>
-//    val random = WRYYY(Random.nextInt())
+//    val random = BIO(Random.nextInt())
 //    val loop = random.flatMapLoop(Vector.empty[Int]) { (a, list, continue) =>
 //      val newList = list :+ a
 //      if (newList.length < 5)
 //        continue(newList)
 //      else
-//        WRYYY.now(newList)
+//        BIO.now(newList)
 //    }
 //    val f = loop.runToFuture
 //    s.tick()

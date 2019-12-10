@@ -20,8 +20,8 @@ package monix.bio.internal
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
 import monix.execution.internal.collection.ChunkedArrayStack
@@ -35,8 +35,8 @@ private[bio] object TaskRunSyncUnsafe {
   /** Run-loop specialization that evaluates the given task and blocks for the result
     * if the given task is asynchronous.
     */
-  def apply[E, A](source: WRYYY[E, A], timeout: Duration, scheduler: Scheduler, opts: WRYYY.Options): A = {
-    var current = source.asInstanceOf[WRYYY[Any, Any]]
+  def apply[E, A](source: BIO[E, A], timeout: Duration, scheduler: Scheduler, opts: BIO.Options): A = {
+    var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
     // Values from Now, Always and Once are unboxed in this var, for code reuse
@@ -132,12 +132,12 @@ private[bio] object TaskRunSyncUnsafe {
   }
 
   private def blockForResult[A](
-    source: WRYYY[Any, Any],
-    limit: Duration,
-    scheduler: Scheduler,
-    opts: WRYYY.Options,
-    bFirst: Bind,
-    bRest: CallStack): A = {
+                                 source: BIO[Any, Any],
+                                 limit: Duration,
+                                 scheduler: Scheduler,
+                                 opts: BIO.Options,
+                                 bFirst: Bind,
+                                 bRest: CallStack): A = {
 
     val latch = new OneShotLatch
     val cb = new BlockingCallback[Any, Any](latch)

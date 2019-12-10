@@ -20,7 +20,7 @@ package monix.bio
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
 import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests}
 import cats.{Applicative, Eq}
-import monix.bio.WRYYY.Options
+import monix.bio.BIO.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.schedulers.TestScheduler
@@ -33,7 +33,7 @@ import scala.util.Either
   * use of Task's `runAsync(callback)`.
   */
 object TypeClassLawsForTaskWithCallbackSuite
-    extends BaseTypeClassLawsForTaskWithCallbackSuite()(WRYYY.defaultOptions.disableAutoCancelableRunLoops)
+    extends BaseTypeClassLawsForTaskWithCallbackSuite()(BIO.defaultOptions.disableAutoCancelableRunLoops)
 
 /**
   * Type class tests for Task that use an alternative `Eq`, making
@@ -42,19 +42,19 @@ object TypeClassLawsForTaskWithCallbackSuite
   */
 object TypeClassLawsForTaskAutoCancelableWithCallbackSuite
     extends BaseTypeClassLawsForTaskWithCallbackSuite()(
-      WRYYY.defaultOptions.enableAutoCancelableRunLoops
+      BIO.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) extends BaseLawsSuite {
+class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
 
-  implicit val ap: Applicative[WRYYY.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
 
   override implicit def equalityWRYYY[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: Options): Eq[WRYYY[E, A]] = {
+    opts: Options): Eq[BIO[E, A]] = {
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       task.runAsyncOpt {
@@ -69,7 +69,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
     implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: WRYYY.Options = WRYYY.defaultOptions): Eq[UIO[A]] = {
+    opts: BIO.Options = BIO.defaultOptions): Eq[UIO[A]] = {
     Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
       task.runAsyncOpt {
@@ -85,9 +85,9 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: Options): Eq[WRYYY.Par[E, A]] = {
+    opts: Options): Eq[BIO.Par[E, A]] = {
 
-    import WRYYY.Par.unwrap
+    import BIO.Par.unwrap
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       unwrap(task).runAsyncOpt {
@@ -111,11 +111,11 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: WRYYY.Options) ex
   }
 
   checkAllAsync("Applicative[Task.Par]") { implicit ec =>
-    ApplicativeTests[WRYYY.Par[Throwable, ?]].applicative[Int, Int, Int]
+    ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
-    ParallelTests[Task, WRYYY.Par[Throwable, ?]].parallel[Int, Int]
+    ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
 //  checkAllAsync("Monoid[Task[Int]]") { implicit ec =>

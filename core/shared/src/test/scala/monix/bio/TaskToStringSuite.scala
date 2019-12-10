@@ -21,48 +21,48 @@ import minitest.SimpleTestSuite
 import monix.execution.exceptions.DummyException
 
 object TaskToStringSuite extends SimpleTestSuite {
-  def assertContains[E, A](ref: WRYYY[E, A], startStr: String): Unit = {
+  def assertContains[E, A](ref: BIO[E, A], startStr: String): Unit = {
     val str = ref.toString
     assert(str.startsWith(startStr), s""""$str".startsWith("$startStr")""")
   }
 
-  test("WRYYY.Now") {
-    val ref = WRYYY.now(1)
-    assertContains(ref, "WRYYY.Now")
+  test("BIO.Now") {
+    val ref = BIO.now(1)
+    assertContains(ref, "BIO.Now")
   }
 
-  test("WRYYY.Error") {
-    val ref = WRYYY.raiseError(DummyException("dummy"))
-    assertContains(ref, "WRYYY.Error")
+  test("BIO.Error") {
+    val ref = BIO.raiseError(DummyException("dummy"))
+    assertContains(ref, "BIO.Error")
   }
 
-  test("WRYYY.FatalError") {
-    val ref = WRYYY.raiseFatalError(DummyException("dummy"))
-    assertContains(ref, "WRYYY.FatalError")
+  test("BIO.FatalError") {
+    val ref = BIO.raiseFatalError(DummyException("dummy"))
+    assertContains(ref, "BIO.FatalError")
   }
 
-  test("WRYYY.Eval") {
-    val ref = WRYYY.eval("hello")
-    assertContains(ref, "WRYYY.Eval")
+  test("BIO.Eval") {
+    val ref = BIO.eval("hello")
+    assertContains(ref, "BIO.Eval")
   }
 
-  test("WRYYY.Async") {
-    val ref = WRYYY.cancelable0[Int, Int]((_, cb) => { cb.onSuccess(1); WRYYY.unit })
-    assertContains(ref, "WRYYY.Async")
+  test("BIO.Async") {
+    val ref = BIO.cancelable0[Int, Int]((_, cb) => { cb.onSuccess(1); BIO.unit })
+    assertContains(ref, "BIO.Async")
   }
 
-  test("WRYYY.FlatMap") {
-    val ref = WRYYY.now(1).flatMap(WRYYY.now)
-    assertContains(ref, "WRYYY.FlatMap")
+  test("BIO.FlatMap") {
+    val ref = BIO.now(1).flatMap(BIO.now)
+    assertContains(ref, "BIO.FlatMap")
   }
 
-  test("WRYYY.Suspend") {
-    val ref = Task.defer(WRYYY.now(1))
-    assertContains(ref, "WRYYY.Suspend")
+  test("BIO.Suspend") {
+    val ref = Task.defer(BIO.now(1))
+    assertContains(ref, "BIO.Suspend")
   }
 
-  test("WRYYY.Map") {
-    val ref = WRYYY.now(1).map(_ + 1)
-    assertContains(ref, "WRYYY.Map")
+  test("BIO.Map") {
+    val ref = BIO.now(1).map(_ + 1)
+    assertContains(ref, "BIO.Map")
   }
 }

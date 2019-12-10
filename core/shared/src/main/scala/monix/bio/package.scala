@@ -18,6 +18,6 @@
 package monix
 
 package object bio {
-  type UIO[+A] = WRYYY[Nothing, A]
-  type Task[+A] = WRYYY[Throwable, A]
+  type UIO[+A] = BIO[Nothing, A]
+  type Task[+A] = BIO[Throwable, A]
 }

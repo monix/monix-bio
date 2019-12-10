@@ -20,7 +20,7 @@ package monix.bio
 package internal
 
 import cats.effect.CancelToken
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO.{Async, Context}
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.{Callback, Scheduler}
 import monix.execution.atomic.{Atomic, AtomicBoolean}
@@ -31,13 +31,13 @@ private[bio] object TaskCancellation {
   /**
     * Implementation for `Task.uncancelable`.
     */
-  def uncancelable[E, A](fa: WRYYY[E, A]): WRYYY[E, A] =
-    WRYYY.ContextSwitch[E, A](fa, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], restoreConnection)
+  def uncancelable[E, A](fa: BIO[E, A]): BIO[E, A] =
+    BIO.ContextSwitch[E, A](fa, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], restoreConnection)
 
   /**
     * Implementation for `Task.onCancelRaiseError`.
     */
-  def raiseError[E, A](fa: WRYYY[E, A], e: E): WRYYY[E, A] = {
+  def raiseError[E, A](fa: BIO[E, A], e: E): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val sc = ctx.scheduler
       val canCall = Atomic(true)
@@ -51,7 +51,7 @@ private[bio] object TaskCancellation {
       // Registering a callback that races against the cancelable we
       // registered above
       val cb2 = new RaiseCallback[E, A](canCall, conn, cb)
-      WRYYY.unsafeStartNow(fa, ctx, cb2)
+      BIO.unsafeStartNow(fa, ctx, cb2)
     }
     Async(start, trampolineBefore = true, trampolineAfter = false, restoreLocals = false)
   }
@@ -104,15 +104,15 @@ private[bio] object TaskCancellation {
     conn: TaskConnection[E],
     conn2: TaskConnection[E],
     cb: Callback[E, A],
-    e: E): CancelToken[WRYYY[E, ?]] = {
+    e: E): CancelToken[BIO[E, ?]] = {
 
-    WRYYY.suspend {
+    BIO.suspend {
       if (waitsForResult.getAndSet(false))
         conn2.cancel.map { _ =>
           conn.tryReactivate()
           cb.onError(e)
         } else
-        WRYYY.unit
+        BIO.unit
     }
   }
 

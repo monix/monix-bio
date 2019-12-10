@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{Task, UIO, WRYYY}
+import monix.bio.{Task, UIO, BIO}
 import monix.catnap.CancelableF
 import monix.execution.internal.Platform
 import monix.execution.{Cancelable, Scheduler}
@@ -32,8 +32,8 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API.
     */
-  def taskToCancelable(task: WRYYY[Any, Unit])(implicit s: Scheduler): Cancelable = {
-    if (task == WRYYY.unit) Cancelable.empty
+  def taskToCancelable(task: BIO[Any, Unit])(implicit s: Scheduler): Cancelable = {
+    if (task == BIO.unit) Cancelable.empty
     else Cancelable(() => task.runAsyncAndForget(s))
   }
 
@@ -41,12 +41,12 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def cancelAllUnsafe[E](
-    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]): CancelToken[WRYYY[E, ?]] = {
+    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]): CancelToken[BIO[E, ?]] = {
 
     if (cursor.isEmpty)
-      WRYYY.unit
+      BIO.unit
     else
-      WRYYY.suspend {
+      BIO.suspend {
         val frame = new CancelAllFrame(cursor.iterator)
         frame.loop()
       }
@@ -56,16 +56,16 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def unsafeCancel[E](
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[WRYYY[E, ?]] = {
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[BIO[E, ?]] = {
 
     task match {
-      case ref: WRYYY[E, Unit] @unchecked =>
+      case ref: BIO[E, Unit] @unchecked =>
         ref
-      case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
+      case ref: CancelableF[BIO[E, ?]] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
         ref.cancel()
-        WRYYY.unit
+        BIO.unit
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -77,14 +77,14 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def getToken[E](
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[WRYYY[E, ?]] =
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[BIO[E, ?]] =
     task match {
-      case ref: WRYYY[E, Unit] @unchecked =>
+      case ref: BIO[E, Unit] @unchecked =>
         ref
-      case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
+      case ref: CancelableF[BIO[E, ?]] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
-        WRYYY.delay(ref.cancel()).hideErrors
+        BIO.delay(ref.cancel()).hideErrors
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -98,7 +98,7 @@ private[bio] object UnsafeCancelUtils {
     implicit s: Scheduler): Unit = {
 
     task match {
-      case ref: WRYYY[Any, Unit] @unchecked =>
+      case ref: BIO[Any, Unit] @unchecked =>
         ref.runAsyncAndForget
       case ref: CancelableF[Task] @unchecked =>
         ref.cancel.runAsyncAndForget
@@ -116,19 +116,19 @@ private[bio] object UnsafeCancelUtils {
 
   // Optimization for `cancelAll`
   private final class CancelAllFrame[E](cursor: Iterator[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ])
-      extends StackFrame[E, Unit, WRYYY[E, Unit]] {
+      extends StackFrame[E, Unit, BIO[E, Unit]] {
 
     private[this] val errors = ListBuffer.empty[E]
     private[this] val fatalErrors = ListBuffer.empty[Throwable]
 
-    def loop(): CancelToken[WRYYY[E, ?]] = {
-      var task: WRYYY[E, Unit] = null
+    def loop(): CancelToken[BIO[E, ?]] = {
+      var task: BIO[E, Unit] = null
 
       while ((task eq null) && cursor.hasNext) {
         cursor.next() match {
-          case ref: WRYYY[E, Unit] @unchecked =>
+          case ref: BIO[E, Unit] @unchecked =>
             task = ref
-          case ref: CancelableF[WRYYY[E, ?]] @unchecked =>
+          case ref: CancelableF[BIO[E, ?]] @unchecked =>
             task = ref.cancel
           case ref: Cancelable =>
             try {
@@ -149,30 +149,30 @@ private[bio] object UnsafeCancelUtils {
       } else {
         (fatalErrors.toList, errors.toList) match {
           case (first :: rest, rest2) =>
-            WRYYY.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
+            BIO.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
           case (Nil, first :: rest) =>
             (first, rest) match {
               case (th: Throwable, restTh: List[Throwable]) =>
-                WRYYY.raiseError(Platform.composeErrors(th, restTh: _*).asInstanceOf[E])
+                BIO.raiseError(Platform.composeErrors(th, restTh: _*).asInstanceOf[E])
               case _ =>
-                WRYYY.deferAction(s =>
+                BIO.deferAction(s =>
                   UIO(rest.foreach { e =>
                     s.reportFailure(WrappedException.wrap(e))
-                  })) >> WRYYY.raiseError(first)
+                  })) >> BIO.raiseError(first)
             }
-            WRYYY.raiseError(first)
+            BIO.raiseError(first)
 
           case (Nil, Nil) =>
-            WRYYY.unit
+            BIO.unit
 
         }
       }
     }
 
-    def apply(a: Unit): WRYYY[E, Unit] =
+    def apply(a: Unit): BIO[E, Unit] =
       loop()
 
-    def recover(e: E): WRYYY[E, Unit] = {
+    def recover(e: E): BIO[E, Unit] = {
       errors += e
       loop()
     }

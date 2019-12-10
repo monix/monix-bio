@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.WRYYY
-import monix.bio.WRYYY.{Async, Context}
+import monix.bio.BIO
+import monix.bio.BIO.{Async, Context}
 import monix.execution.ExecutionModel
 import monix.execution.ExecutionModel.{AlwaysAsyncExecution, BatchedExecution, SynchronousExecution}
 
@@ -27,7 +27,7 @@ private[bio] object TaskExecuteWithModel {
   /**
     * Implementation for `Task.executeWithModel`
     */
-  def apply[E, A](self: WRYYY[E, A], em: ExecutionModel): WRYYY[E, A] = {
+  def apply[E, A](self: BIO[E, A], em: ExecutionModel): BIO[E, A] = {
     val start = (context: Context[E], cb: BiCallback[E, A]) => {
       val context2 = context.withExecutionModel(em)
       val frame = context2.frameRef
