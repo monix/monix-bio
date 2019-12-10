@@ -29,7 +29,7 @@ object TaskMiscSuite extends BaseTestSuite {
 
   test("Task.raiseError.attempt should expose error") { implicit s =>
     val ex = DummyException("dummy")
-    val result = Task.raiseError[Int](ex).attempt.runToFuture.map(_.flatten)
+    val result = Task.raiseError[Int](ex).attempt.runToFuture.map(_.flatMap(identity))
     s.tickOne()
     assertEquals(result.value, Some(Success(Left(ex))))
   }
