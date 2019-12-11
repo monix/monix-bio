@@ -19,6 +19,52 @@ I will really appreciate feedback, bugs and complaints about API if you play wit
 If you'd like to join and help then look for issues tagged with [good first issue](https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
 I'm happy to guide anyone interested in contributing. Just let me know on specific issue or write to me on gitter.
 
+## Short introduction
+
+`BIO[E, A]` represents a specification for a possibly lazy or asynchronous computation, which when executed will produce
+a successful value `A`, an error `E`, never terminate or complete with a fatal error.
+
+It composes very well and can handle many use cases such as cancellation, resource safety, context propagation, error handling or parallelism.
+
+There are two type aliases:
+- `type UIO[A] = BIO[Nothing, A]` which represents an effect which never fails.
+- `type Task[A] = BIO[Throwable, A]` - an effect that can fail with a `Throwable` and is analogous to Monix `Task`.
+
+Usage example:
+
+```scala 
+case class TypedError(i: Int)
+
+// E = Nothing, the signature tells us it can't fail
+val taskA: UIO[Int] = BIO.now(10)
+  .delayExecution(2.seconds)
+  // executes the finalizer on cancelation
+  .doOnCancel(UIO(println("taskA has been cancelled")))
+
+val taskB: BIO[TypedError, Int] = BIO.raiseError(TypedError(-1))
+  .delayExecution(1.second)
+  // executes the finalizer regardless of exit condition
+  .guarantee(UIO(println("taskB has finished")))
+
+// runs ta and tb in parallel, takes the result of the first
+// one to complete and cancels the other effect
+val t: BIO[TypedError, Int] = BIO.race(taskA, taskB).map {
+  case Left(value) => value * 10 // ta has won
+  case Right(value) => value * 20 // tb has won
+}
+
+// The error is handled with and it is reflected in the signature
+val handled: UIO[Int] = t.onErrorHandle { case TypedError(i) => i}
+
+// Nothing happens until it runs, returns Right(-1) after completion
+val f: CancelableFuture[Either[Nothing, Int]] = handled.runToFuture
+    
+// => taskB has finished
+// => taskA has been cancelled
+```
+
+I will elaborate much more once the project is ready for general use.
+
 ## Stability
 
 Currently there are no backwards compatibility guarantees. It will take a bit of time for everything to stabilize so I strongly advise against using it in serious projects at the moment. :) On the other hand, please play with it, give feedback and report bugs! It will be a tremendous help in getting this production-ready faster.
