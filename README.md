@@ -53,7 +53,7 @@ val t: BIO[TypedError, Int] = BIO.race(taskA, taskB).map {
   case Right(value) => value * 20 // tb has won
 }
 
-// The error is handled with and it is reflected in the signature
+// The error is handled and it is reflected in the signature
 val handled: UIO[Int] = t.onErrorHandle { case TypedError(i) => i}
 
 // Nothing happens until it runs, returns Right(-1) after completion
