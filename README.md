@@ -1,5 +1,7 @@
 # Monix-BIO
 
+[![Join the chat at https://gitter.im/monix/monix-bio](https://badges.gitter.im/monix/monix-bio.svg)](https://gitter.im/monix/monix-bio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Experimental alternative to [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Task.html) from [Monix](https://github.com/monix/monix) which uses a second type parameter to represent recoverable errors.
 
 WORK IN PROGRESS.
