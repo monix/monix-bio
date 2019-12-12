@@ -19,7 +19,7 @@ libraryDependencies += "io.monix" %% "monix-bio" % "0.0.1-SNAPSHOT"
 I will really appreciate feedback, bugs and complaints about API if you play with it. Just please do not use it in production yet!
 
 If you'd like to join and help then look for issues tagged with [good first issue](https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
-I'm happy to guide anyone interested in contributing. Just let me know on specific issue or write to me on gitter.
+I'm happy to guide anyone interested in contributing. Just let me know on specific issue or write to me on [gitter](https://gitter.im/monix/monix-bio).
 
 ## Short introduction
 
