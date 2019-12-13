@@ -33,7 +33,7 @@ import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnab
 import monix.execution.{Callback, Scheduler, _}
 
 import scala.annotation.unchecked.{uncheckedVariance => uV}
-import scala.concurrent.duration.{Duration, FiniteDuration, TimeUnit}
+import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -1947,6 +1947,25 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   final def uncancelable: BIO[E, A] =
     TaskCancellation.uncancelable(this)
+
+  /** Measures execution time of the source task and returns both its duration
+    * and the computed value.
+    *
+    * Example:
+    * {{{
+    *   for {
+    *     result <- BIO(1 + 1).timed
+    *     (duration, value) = result
+    *     _ <- BIO(println("Executed in " + duration.toMillis + " ms"))
+    *   } yield value
+    * }}}
+    */
+  final def timed: BIO[E, (FiniteDuration, A)] =
+    for {
+      start <- BIO.clock.monotonic(NANOSECONDS)
+      a <- this
+      end <- BIO.clock.monotonic(NANOSECONDS)
+    } yield (FiniteDuration(end - start, NANOSECONDS), a)
 
   /** Hides all errors from the return type and raises them in the internal channel.
     *
