@@ -18,7 +18,7 @@
 package monix.bio
 
 import cats.Parallel
-import cats.effect.{ContextShift, CancelToken, Clock, Timer, ExitCase, Fiber => _}
+import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -31,6 +31,8 @@ import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
+import org.reactivestreams.Publisher
+
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
@@ -2263,6 +2265,20 @@ object BIO extends TaskInstancesLevel0 {
 
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
+
+  /** Converts an `org.reactivestreams.Publisher` into a [[BIO]].
+    *
+    * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
+    * Reactive Streams specification.
+    *
+    * @see [[BIO.toReactivePublisher]] for converting a [[BIO]] into
+    *      a reactive publisher.
+    *
+    * @param source is the `org.reactivestreams.Publisher` reference to
+    *        wrap into a [[BIO]].
+    */
+  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
+    TaskConversions.fromReactivePublisher(source)
 
   /** Builds a [[Task]] instance out of a Scala `Try`. */
   def fromTry[A](a: Try[A]): Task[A] =
