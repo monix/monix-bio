@@ -40,7 +40,7 @@ private[bio] object TaskToReactivePublisher {
             def request(n: Long): Unit = {
               require(n > 0, "n must be strictly positive, according to the Reactive Streams contract, rule 3.9")
               if (isActive) {
-                BIO.unsafeStartEnsureAsync(self, context, new PublisherCallback(out))
+                BIO.unsafeStartEnsureAsync(self, context, new PublisherCallback[E, A](out))
               }
             }
 
