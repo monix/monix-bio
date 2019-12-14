@@ -285,6 +285,29 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
+  test("Task.onErrorRestart should not restart on fatal error") { implicit s =>
+    var tries = 0
+    val ex = DummyException("dummy")
+    val task = Task.eval { tries += 1; throw ex }.hideErrors.onErrorRestart(5)
+    val f = task.runToFuture
+
+    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(tries, 1)
+  }
+
+  test("Task.onErrorRestart should restart on typed error") { implicit s =>
+    var tries = 0
+    val ex = DummyException("dummy")
+    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }.onErrorHandleWith {
+      case _: DummyException => BIO.raiseError("error")
+      case _ => BIO.pure(10)
+    }
+    val f = task.onErrorRestart(5).runToFuture
+
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 5)
+  }
+
   test("Task.onErrorRestartIf should mirror the source onSuccess") { implicit s =>
     var tries = 0
     val task = Task.eval { tries += 1; 1 }.onErrorRestartIf(_ => tries < 10)
@@ -324,6 +347,29 @@ object TaskErrorSuite extends BaseTestSuite {
     // cancelling after scheduled for execution, but before execution
     f.cancel(); s.tick()
     assertEquals(f.value, None)
+  }
+
+  test("Task.onErrorRestartIf should not restart on fatal error") { implicit s =>
+    var tries = 0
+    val ex = DummyException("dummy")
+    val task: Task[Int] = Task.eval { tries += 1; throw ex }.hideErrors
+    val f = task.onErrorRestartIf(_ => tries < 5).runToFuture
+
+    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(tries, 1)
+  }
+
+  test("Task.onErrorRestartIf should restart on typed error") { implicit s =>
+    var tries = 0
+    val ex = DummyException("dummy")
+    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }.onErrorHandleWith {
+      case _: DummyException => BIO.raiseError("error")
+      case _ => BIO.pure(10)
+    }
+    val f = task.onErrorRestartIf(_ == "error").runToFuture
+
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 5)
   }
 
   test("Task#onErrorRecoverWith should mirror source on success") { implicit s =>
