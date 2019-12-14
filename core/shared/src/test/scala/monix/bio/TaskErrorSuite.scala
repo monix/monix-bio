@@ -295,19 +295,6 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(tries, 1)
   }
 
-  test("Task.onErrorRestart should restart on typed error") { implicit s =>
-    var tries = 0
-    val ex = DummyException("dummy")
-    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }.onErrorHandleWith {
-      case _: DummyException => BIO.raiseError("error")
-      case _ => BIO.pure(10)
-    }
-    val f = task.onErrorRestart(5).runToFuture
-
-    assertEquals(f.value, Some(Success(Right(1))))
-    assertEquals(tries, 5)
-  }
-
   test("Task.onErrorRestartIf should mirror the source onSuccess") { implicit s =>
     var tries = 0
     val task = Task.eval { tries += 1; 1 }.onErrorRestartIf(_ => tries < 10)
@@ -361,13 +348,8 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("Task.onErrorRestartIf should restart on typed error") { implicit s =>
     var tries = 0
-    val ex = DummyException("dummy")
-    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }.onErrorHandleWith {
-      case _: DummyException => BIO.raiseError("error")
-      case _ => BIO.pure(10)
-    }
+    val task = BIO.unit.flatMap { _ => tries += 1; if (tries < 5) BIO.raiseError("error") else BIO.pure(1) }
     val f = task.onErrorRestartIf(_ == "error").runToFuture
-
     assertEquals(f.value, Some(Success(Right(1))))
     assertEquals(tries, 5)
   }
