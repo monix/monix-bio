@@ -35,6 +35,18 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(Left(ex))))
   }
 
+  test("Task.mapError.attempt should expose error") { implicit s =>
+    val ex = DummyException("dummy")
+    val result = Task
+      .raiseError[Int](new IllegalStateException("dummy"))
+      .mapError(e => DummyException(e.getMessage))
+      .attempt
+      .runToFuture
+      .map(_.flatMap(identity))
+    s.tickOne()
+    assertEquals(result.value, Some(Success(Left(ex))))
+  }
+
   test("Task.fail should expose error") { implicit s =>
     val dummy = DummyException("dummy")
     val f = Task.raiseError(dummy).failed.runToFuture
