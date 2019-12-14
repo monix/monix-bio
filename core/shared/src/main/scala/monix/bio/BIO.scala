@@ -1868,6 +1868,19 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def start: UIO[Fiber[E @uV, A @uV]] =
     TaskStart.forked(this)
 
+  /** Converts the source task into an `org.reactivestreams.Publisher`
+    * that emits a single item on success, or an error when there is
+    * a typed or fatal failure.
+    *
+    * Note that it's only applicable when the typed error [[E]] is also
+    * a [[Throwable]].
+    *
+    * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
+    * Reactive Streams specification.
+    */
+  final def toReactivePublisher(implicit s: Scheduler, ev: E <:< Throwable): org.reactivestreams.Publisher[A @uV] =
+    TaskToReactivePublisher(this)(s, ev)
+
   /** Returns a string representation of this task meant for
     * debugging purposes only.
     */
