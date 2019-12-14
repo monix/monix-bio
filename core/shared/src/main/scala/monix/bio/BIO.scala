@@ -1824,6 +1824,38 @@ sealed abstract class BIO[+E, +A] extends Serializable {
         Map(this, f, 0)
     }
 
+  /** Creates a new task that in case of error will retry executing the
+    * source again and again, until it succeeds.
+    *
+    * In case of continuous failure the total number of executions
+    * will be maxRetries + 1.
+    */
+  final def onErrorRestart(maxRetries: Long): BIO[E, A] =
+    this.onErrorHandleWith { error =>
+      if (maxRetries > 0) this.onErrorRestart(maxRetries - 1)
+      else raiseError(error)
+    }
+
+  /** Creates a new task that in case of error will retry executing the
+    * source again and again, until it succeeds, or until the given
+    * predicate returns `false`.
+    *
+    * In this sample we retry for as long as the error is a `TimeoutException`:
+    * {{{
+    *   import scala.concurrent.TimeoutException
+    *
+    *   Task("some long call that may timeout").onErrorRestartIf {
+    *     case _: TimeoutException => true
+    *     case _ => false
+    *   }
+    * }}}
+    *
+    * @param p is the predicate that is executed if an error is thrown and
+    *        that keeps restarting the source for as long as it returns `true`
+    */
+  final def onErrorRestartIf(p: E => Boolean): BIO[E, A] =
+    this.onErrorHandleWith(ex => if (p(ex)) this.onErrorRestartIf(p) else raiseError(ex))
+
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
     *
