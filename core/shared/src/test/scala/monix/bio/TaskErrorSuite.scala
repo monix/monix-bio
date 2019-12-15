@@ -348,7 +348,9 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("Task.onErrorRestartIf should restart on typed error") { implicit s =>
     var tries = 0
-    val task = BIO.unit.flatMap { _ => tries += 1; if (tries < 5) BIO.raiseError("error") else BIO.pure(1) }
+    val task = BIO.unit.flatMap { _ =>
+      tries += 1; if (tries < 5) BIO.raiseError("error") else BIO.pure(1)
+    }
     val f = task.onErrorRestartIf(_ == "error").runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
     assertEquals(tries, 5)

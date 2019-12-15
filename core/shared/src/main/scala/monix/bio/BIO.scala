@@ -18,7 +18,7 @@
 package monix.bio
 
 import cats.Parallel
-import cats.effect.{ContextShift, CancelToken, Clock, Timer, ExitCase, Fiber => _}
+import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -31,6 +31,8 @@ import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
+import org.reactivestreams.Publisher
+
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
@@ -1909,8 +1911,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
     * Reactive Streams specification.
     */
-  final def toReactivePublisher(implicit s: Scheduler, ev: E <:< Throwable): org.reactivestreams.Publisher[A @uV] =
-    TaskToReactivePublisher(this)(s, ev)
+  final def toReactivePublisher(implicit s: Scheduler, ev: E <:< Throwable): Publisher[A @uV] =
+    TaskToReactivePublisher(this.asInstanceOf[Task[A]])(s)
 
   /** Returns a string representation of this task meant for
     * debugging purposes only.
