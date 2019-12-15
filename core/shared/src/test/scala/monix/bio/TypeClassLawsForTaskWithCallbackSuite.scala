@@ -121,7 +121,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
 //    MonoidTests[Task[Int]].monoid
 //  }
 
-  checkAllAsync("Bifunctor[BIO[Int, Int]]") { implicit ec =>
-    BifunctorTests[BIO].bifunctor[Int, Int, Int, Int, Int, Int]
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
   }
 }

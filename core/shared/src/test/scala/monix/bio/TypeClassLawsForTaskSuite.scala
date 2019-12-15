@@ -64,7 +64,7 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
     SemigroupKTests[Task].semigroupK[Int]
   }
 
-  checkAllAsync("Bifunctor[BIO[Int, Int]]") { implicit ec =>
-    BifunctorTests[BIO].bifunctor[Int, Int, Int, Int, Int, Int]
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
   }
 }
