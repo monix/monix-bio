@@ -1855,6 +1855,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def onErrorRestartIf(p: E => Boolean): BIO[E, A] =
     this.onErrorHandleWith(ex => if (p(ex)) this.onErrorRestartIf(p) else raiseError(ex))
 
+  /** Returns a new `BIO` that applies the mapping function `fa` to the
+    * success channel and `fe` to the error channel.
+    */
+  final def bimap[E1, B](fe: E => E1, fa: A => B): BIO[E1, B] =
+    BIO.FlatMap(this, BIO.Bimap(fe, fa))
+
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
     *
@@ -3548,6 +3554,12 @@ object BIO extends TaskInstancesLevel0 {
 
     def recover(e: Any): UIO[Any] =
       Now(e)
+  }
+
+  /** Used as optimization by [[BIO.bimap]]. */
+  private final case class Bimap[E, E1, A, B](fe: E => E1, fa: A => B) extends StackFrame[E, A, BIO[E1, B]] {
+    def apply(a: A) = Now(fa(a))
+    def recover(e: E) = Error(fe(e))
   }
 
   /** Used as optimization by [[BIO.redeem]]. */
