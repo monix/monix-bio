@@ -17,30 +17,30 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.{BIO, Task}
 import monix.execution.rstreams.Subscription
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
-import org.reactivestreams.Subscriber
+import org.reactivestreams.{Publisher, Subscriber}
 
 private[bio] object TaskToReactivePublisher {
 
   /**
     * Implementation for `BIO.toReactivePublisher`
     */
-  def apply[E, A](self: BIO[E, A])(implicit s: Scheduler, ev: E <:< Throwable): org.reactivestreams.Publisher[A] =
-    new org.reactivestreams.Publisher[A] {
+  def apply[A](self: Task[A])(implicit s: Scheduler): Publisher[A] =
+    new Publisher[A] {
 
       def subscribe(out: Subscriber[_ >: A]): Unit = {
         out.onSubscribe {
           new Subscription {
             private[this] var isActive = true
-            private[this] val conn = TaskConnection[E]()
+            private[this] val conn = TaskConnection[Throwable]()
             private[this] val context = BIO.Context(s, BIO.defaultOptions.withSchedulerFeatures, conn)
 
             def request(n: Long): Unit = {
               require(n > 0, "n must be strictly positive, according to the Reactive Streams contract, rule 3.9")
               if (isActive) {
-                BIO.unsafeStartEnsureAsync(self, context, new PublisherCallback[E, A](out))
+                BIO.unsafeStartEnsureAsync(self, context, new PublisherCallback[A](out))
               }
             }
 
@@ -54,23 +54,21 @@ private[bio] object TaskToReactivePublisher {
 
     }
 
-  private final class PublisherCallback[E, A](
-    out: Subscriber[_ >: A]
-  )(implicit logger: UncaughtExceptionReporter, ev: E <:< Throwable)
-      extends BiCallback[E, A] {
+  private final class PublisherCallback[A](out: Subscriber[_ >: A])(implicit logger: UncaughtExceptionReporter)
+      extends BiCallback[Throwable, A] {
 
     private[this] var isActive = true
 
     override def onFatalError(e: Throwable): Unit =
+      onError(e)
+
+    override def onError(e: Throwable): Unit =
       if (isActive) {
         isActive = false
         out.onError(e)
       } else {
         logger.reportFailure(e)
       }
-
-    override def onError(e: E): Unit =
-      onFatalError(e)
 
     override def onSuccess(value: A): Unit =
       if (isActive) {
