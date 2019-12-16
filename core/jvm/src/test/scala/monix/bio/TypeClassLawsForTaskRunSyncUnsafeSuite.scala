@@ -19,12 +19,13 @@ package monix.bio
 
 import cats.effect.IO
 import cats.effect.laws.discipline._
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests}
-import cats.{Applicative, Eq}
+import cats.laws.discipline.{CoflatMapTests, BifunctorTests, ParallelTests, ApplicativeTests}
+import cats.{Eq, Applicative}
 import monix.bio.instances.CatsParallelForTask
+import monix.execution.schedulers.TestScheduler
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
-
 import scala.concurrent.ExecutionContext.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -69,6 +70,14 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
     stackSafeIterationsCount = 10000
   )
 
+  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E], ec: TestScheduler): Eq[BIO[E, A]] =
+    Eq.instance { (a, b) =>
+      val fa = a.runToFuture
+      val fb = b.runToFuture
+
+      Eq[Future[Either[E, A]]].eqv(fa, fb)
+    }
+
   implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task[A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.runSyncUnsafeOpt(timeout))
@@ -102,4 +111,8 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
   checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int])
 
 //  checkAll("Monoid[Task[Int]]", MonoidTests[Task[Int]].monoid)
+
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
+  }
 }

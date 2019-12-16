@@ -17,21 +17,21 @@
 
 package monix.bio.instances
 
-import cats.{CoflatMap, Eval, MonadError, SemigroupK}
+import cats.{Bifunctor, CoflatMap, Eval, MonadError, SemigroupK}
 import monix.bio.{BIO, UIO}
-
 import scala.util.Try
 
 /** Cats type class instances for [[monix.bio.Task Task]]
-  * for  `cats.MonadError` and `CoflatMap` (and implicitly for
-  * `Applicative`, `Monad`, etc).
+  * for  `cats.MonadError`, `CoflatMap`, `SemigroupK` and `Bifunctor`
+  * (and implicitly for `Applicative`, `Monad`, etc).
   *
   * References:
   *
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsBaseForTask[E] extends MonadError[BIO[E, ?], E] with CoflatMap[BIO[E, ?]] with SemigroupK[BIO[E, ?]] {
+class CatsBaseForTask[E]
+    extends MonadError[BIO[E, ?], E] with CoflatMap[BIO[E, ?]] with SemigroupK[BIO[E, ?]] with Bifunctor[BIO] {
 
   override def pure[A](a: A): UIO[A] =
     BIO.pure(a)
@@ -95,4 +95,7 @@ class CatsBaseForTask[E] extends MonadError[BIO[E, ?], E] with CoflatMap[BIO[E, 
 
   override def combineK[A](ta: BIO[E, A], tb: BIO[E, A]): BIO[E, A] =
     ta.onErrorHandleWith(_ => tb)
+
+  override def bimap[A, B, C, D](fab: BIO[A, B])(f: A => C, g: B => D): BIO[C, D] =
+    fab.bimap(f, g)
 }

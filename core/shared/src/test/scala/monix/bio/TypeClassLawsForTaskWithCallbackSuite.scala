@@ -18,13 +18,12 @@
 package monix.bio
 
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests}
-import cats.{Applicative, Eq}
+import cats.laws.discipline.{CoflatMapTests, ParallelTests, ApplicativeTests, BifunctorTests}
+import cats.{Eq, Applicative}
 import monix.bio.BIO.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.schedulers.TestScheduler
-
 import scala.concurrent.{Future, Promise}
 import scala.util.Either
 
@@ -121,4 +120,8 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
 //  checkAllAsync("Monoid[Task[Int]]") { implicit ec =>
 //    MonoidTests[Task[Int]].monoid
 //  }
+
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
+  }
 }
