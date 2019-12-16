@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import cats.effect.{Async, Effect, IO}
+import cats.effect.{Async, Concurrent, ConcurrentEffect, Effect, IO}
 import monix.bio.BIO.Context
 import monix.bio.{BIO, Task}
 import monix.execution.schedulers.TrampolinedRunnable
@@ -40,21 +40,22 @@ private[bio] object TaskConversions {
 //          toIO(eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync())
 //        }
 //    }
-//
-//  /**
-//    * Implementation for `Task#toConcurrent`.
-//    */
-//  def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
-//    source match {
-//      case Task.Now(value) => F.pure(value)
-//      case Task.Error(e) => F.raiseError(e)
-//      case Task.Eval(thunk) => F.delay(thunk())
-//      case _ =>
-//        F.cancelable { cb =>
-//          val token = eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync()
-//          toConcurrent(token)(F, eff)
-//        }
-//    }
+
+  /**
+    * Implementation for `BIO.toConcurrent`.
+    */
+  def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
+    source match {
+      case BIO.Now(value) => F.pure(value)
+      case BIO.Error(e) => F.raiseError(e)
+      case BIO.FatalError(e) => F.raiseError(e)
+      case BIO.Eval(thunk) => F.delay(thunk())
+      case _ =>
+        F.cancelable { cb =>
+          val token = eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync()
+          toConcurrent(token)(F, eff)
+        }
+    }
 
   /**
     * Implementation for `BIO.toAsync`.

@@ -18,7 +18,7 @@
 package monix.bio
 
 import cats.Parallel
-import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -1903,6 +1903,53 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     TaskStart.forked(this)
 
   /** Converts the source task into any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect.IO
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   BIO.eval(println("Hello!"))
+    *     .delayExecution(5.seconds)
+    *     .toConcurrent[IO]
+    * }}}
+    *
+    * A `ConcurrentEffect[Task]` instance is needed in scope, which itself
+    * might need a [[monix.execution.Scheduler Scheduler]] to be available.
+    * Such a requirement is needed because the `Task` has to be evaluated
+    * in order to be converted.
+    *
+    * Note that this method is only applicable when the typed error `E`
+    * is also a `Throwable`, or when the source task is an unexceptional
+    * one (i.e. it is a `UIO`). If you need a conversion from `E` into
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
+    * If you need a conversion into a `UIO`, take a look at [[attempt]],
+    * [[materialize]] or [[onErrorHandle]].
+    *
+    * NOTE: the resulting value is cancelable, via usage of
+    * `cats.effect.Concurrent`.
+    *
+    * @see [[to]] that is able to convert into any data type that has
+    *      a [[TaskLift]] implementation
+    *
+    * @see [[toAsync]] that is able to convert into non-cancelable values via the
+    *       [[https://typelevel.org/cats-effect/typeclasses/async.html Async]]
+    *       type class.
+    *
+    * @param F is the `cats.effect.Concurrent` instance required in
+    *        order to perform the conversion
+    *
+    * @param eff is the `ConcurrentEffect[Task]` instance needed to
+    *        evaluate tasks; when evaluating tasks, this is the pure
+    *        alternative to demanding a `Scheduler`
+    */
+  final def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[Task], ev: E <:< Throwable): F[A @uV] =
+    TaskConversions.toConcurrent(this.asInstanceOf[Task[A]])(F, eff)
+
+  /** Converts the source task into any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]].
     *
     * Example:
@@ -1917,7 +1964,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     .toAsync[IO]
     * }}}
     *
-    * An Effect[Task]` instance is needed in scope, which itself
+    * An `Effect[Task]` instance is needed in scope, which itself
     * might need a [[monix.execution.Scheduler Scheduler]] to
     * be available. Such requirement is needed because the `Task`
     * has to be evaluated in order to be converted.
