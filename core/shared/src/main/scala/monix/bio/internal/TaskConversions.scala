@@ -27,20 +27,6 @@ import scala.util.control.NonFatal
 
 private[bio] object TaskConversions {
 
-//  /**
-//    * Implementation for `Task#toIO`.
-//    */
-//  def toIO[A](source: Task[A])(implicit eff: ConcurrentEffect[Task]): IO[A] =
-//    source match {
-//      case Task.Now(value) => IO.pure(value)
-//      case Task.Error(e) => IO.raiseError(e)
-//      case Task.Eval(thunk) => IO(thunk())
-//      case _ =>
-//        IO.cancelable { cb =>
-//          toIO(eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync())
-//        }
-//    }
-
   /**
     * Implementation for `BIO.toConcurrent`.
     */
@@ -93,80 +79,34 @@ private[bio] object TaskConversions {
     BIO.Async(start, trampolineBefore = false, trampolineAfter = false)
   }
 
-//  /**
-//    * Implementation for `Task.fromConcurrent`.
-//    */
-//  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
-//    fa.asInstanceOf[AnyRef] match {
-//      case ref: Task[A] @unchecked => ref
-//      case io: IO[A] @unchecked => io.to[Task]
-//      case _ => fromConcurrentEffect0(fa)
-//    }
-//
-//  /**
-//    * Implementation for `Task.fromReactivePublisher`.
-//    */
-//  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
-//    Task.cancelable0 { (scheduler, cb) =>
-//      val sub = SingleAssignSubscription()
-//
-//      source.subscribe(new Subscriber[A] {
-//        private[this] var isActive = true
-//
-//        def onSubscribe(s: org.reactivestreams.Subscription): Unit = {
-//          sub := s
-//          sub.request(1)
-//        }
-//
-//        def onNext(a: A): Unit = {
-//          if (isActive) {
-//            isActive = false
-//            sub.cancel()
-//            cb.onSuccess(Some(a))
-//          }
-//        }
-//
-//        def onError(e: Throwable): Unit = {
-//          if (isActive) {
-//            isActive = false
-//            cb.onError(e)
-//          } else {
-//            scheduler.reportFailure(e)
-//          }
-//        }
-//
-//        def onComplete(): Unit = {
-//          if (isActive) {
-//            isActive = false
-//            cb.onSuccess(None)
-//          }
-//        }
-//      })
-//
-//      Task(sub.cancel())
-//    }
-//
-//  private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] = {
-//    val start = (ctx: Context, cb: Callback[Throwable, A]) => {
-//      try {
-//        implicit val sc = ctx.scheduler
-//        val conn = ctx.connection
-//        val cancelable = TaskConnectionRef()
-//        conn push cancelable.cancel
-//
-//        val syncIO = F.runCancelable(fa)(new CreateCallback[A](conn, cb))
-//        cancelable := fromEffect(syncIO.unsafeRunSync(): F[Unit])
-//      } catch {
-//        case e if NonFatal(e) =>
-//          ctx.scheduler.reportFailure(e)
-//      }
-//    }
-//    Task.Async(
-//      start,
-//      trampolineBefore = false,
-//      trampolineAfter = false
-//    )
-//  }
+  /**
+    * Implementation for `BIO.fromConcurrentEffect`.
+    */
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+    fa.asInstanceOf[AnyRef] match {
+      case task: Task[A] @unchecked => task
+      case io: IO[A] @unchecked => io.to[Task]
+      case _ => fromConcurrentEffect0(fa)
+    }
+
+  private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] = {
+    def start(ctx: Context[Throwable], cb: Callback[Throwable, A]): Unit = {
+      try {
+        implicit val sc: Scheduler = ctx.scheduler
+
+        val conn = ctx.connection
+        val cancelable = TaskConnectionRef[Throwable]()
+        conn.push(cancelable.cancel)
+
+        val syncIO = F.runCancelable(fa)(new CreateCallback[A](conn, cb))
+        cancelable := fromEffect(syncIO.unsafeRunSync())
+      } catch {
+        case e if NonFatal(e) => ctx.scheduler.reportFailure(e)
+      }
+    }
+
+    BIO.Async(start, trampolineBefore = false, trampolineAfter = false)
+  }
 
   private final class CreateCallback[A](
     conn: TaskConnection[Throwable],
