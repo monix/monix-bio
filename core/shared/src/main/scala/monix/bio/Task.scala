@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.{CancelToken, Effect}
+import cats.effect.{CancelToken, ConcurrentEffect, Effect}
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.{Callback, Scheduler}
@@ -111,6 +111,12 @@ object Task {
     */
   def never[A]: Task[A] =
     BIO.never
+
+  /**
+    * @see See [[monix.bio.BIO.fromConcurrentEffect]]
+    */
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+    BIO.fromConcurrentEffect(fa)
 
   /**
     * @see See [[monix.bio.BIO.fromEffect]]
