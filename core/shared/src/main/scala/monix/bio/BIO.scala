@@ -2360,6 +2360,39 @@ object BIO extends TaskInstancesLevel0 {
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
 
+  /** Builds a task out of any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]] and
+    * [[https://typelevel.org/cats-effect/typeclasses/effect.html Effect]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect._
+    *
+    *   val io: IO[Unit] = IO(println("Hello!")
+    *   val task: Task[Unit] = BIO.fromEffect(io)
+    * }}}
+    *
+    * WARNING: the resulting task might not carry the source's cancellation behavior
+    * if the source is cancelable! This is implicit in the usage of `Effect`.
+    *
+    * @see [[Task.fromConcurrentEffect]] for a version that can use
+    *      [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]]
+    *      for converting cancelable tasks.
+    *
+    * @see [[Task.from]] for a more generic version that works with
+    *      any [[TaskLike]] data type
+    *
+    * @see [[Task.liftToAsync]] for its dual
+    *
+    * @param F is the `cats.effect.Effect` type class instance necessary
+    *        for converting to `Task`; this instance can also be a
+    *        `cats.effect.Concurrent`, in which case the resulting
+    *        `Task` value is cancelable if the source also is
+    */
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+    TaskConversions.fromEffect(fa)
+
   /** Builds a [[Task]] instance out of a Scala `Try`. */
   def fromTry[A](a: Try[A]): Task[A] =
     a match {
