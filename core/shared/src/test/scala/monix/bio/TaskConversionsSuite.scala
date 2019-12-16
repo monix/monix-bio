@@ -23,9 +23,42 @@ import cats.laws.discipline._
 import cats.syntax.all._
 import monix.execution.exceptions.DummyException
 
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskConversionsSuite extends BaseTestSuite {
+
+  test("BIO.toConcurrent converts successful tasks") { implicit s =>
+    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+
+    val io = BIO.now(123).executeAsync.toConcurrent[IO]
+    val f = io.unsafeToFuture()
+
+    s.tick()
+    assertEquals(f.value, Some(Success(123)))
+  }
+
+  test("BIO.toConcurrent converts tasks with typed errors") { implicit s =>
+    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+
+    val ex = DummyException("Typed")
+    val io = BIO.raiseError(ex).executeAsync.toConcurrent[IO]
+    val f = io.unsafeToFuture()
+
+    s.tick()
+    assertEquals(f.value, Some(Failure(ex)))
+  }
+
+  test("BIO.toConcurrent converts tasks with fatal errors") { implicit s =>
+    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+
+    val ex = DummyException("Fatal")
+    val io = BIO.raiseFatalError(ex).executeAsync.toConcurrent[IO]
+    val f = io.unsafeToFuture()
+
+    s.tick()
+    assertEquals(f.value, Some(Failure(ex)))
+  }
 
   test("BIO.toAsync converts successful tasks") { implicit s =>
     val io = BIO.now(123).executeAsync.toAsync[IO]
@@ -36,7 +69,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("BIO.toAsync converts tasks with typed errors") { implicit s =>
-    val ex = DummyException("Error")
+    val ex = DummyException("Typed")
     val io = BIO.raiseError(ex).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()
 
@@ -314,26 +347,26 @@ object TaskConversionsSuite extends BaseTestSuite {
 //    s.tick(10.seconds)
 //    assertEquals(f.value, None)
 //  }
-//
-//  test("Task.fromAsync(task.to[IO]) preserves cancelability (because IO is known)") { implicit s =>
-//    implicit val cs = SchedulerEffect.contextShift[IO](s)
-//
-//    val task0 = Task(1).delayExecution(10.seconds)
-//    val task = Task.fromEffect(task0.toConcurrent[IO])
-//
-//    val f = task.runToFuture
-//    s.tick()
-//    assertEquals(f.value, None)
-//
-//    f.cancel()
-//    s.tick()
-//    assertEquals(f.value, None)
-//    assert(s.state.tasks.isEmpty, "tasks.isEmpty")
-//
-//    s.tick(10.seconds)
-//    assertEquals(f.value, None)
-//  }
-//
+
+  test("Task.fromEffect(task.toConcurrent[IO]) preserves cancellability") { implicit s =>
+    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+
+    val bio0 = BIO(123).delayExecution(10.seconds)
+    val bio = BIO.fromEffect(bio0.toConcurrent[IO])
+    val f = bio.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+
+    f.cancel()
+    s.tick()
+    assertEquals(f.value, None)
+    assert(s.state.tasks.isEmpty, "should not have any tasks left to execute")
+
+    s.tick(10.seconds)
+    assertEquals(f.value, None)
+  }
+
 //  test("Task.fromConcurrent(task.toConcurrent[F]) <-> task (Effect)") { implicit s =>
 //    implicit val cs = SchedulerEffect.contextShift[IO](s)
 //    implicit val effect = new CustomConcurrentEffect
