@@ -115,6 +115,24 @@ object TaskConversionsSuite extends BaseTestSuite {
     }
   }
 
+  test("BIO.fromEffect converts `IO`") { implicit s =>
+    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+
+    val f = BIO.fromEffect(IO(123)).runToFuture
+    assertEquals(f.value, Some(Success(Right(123))))
+
+    val io2 = IO.shift >> IO(123)
+    val f2 = BIO.fromEffect(io2).runToFuture
+    assertEquals(f2.value, None)
+    s.tick()
+    assertEquals(f2.value, Some(Success(Right(123))))
+
+    val ex = DummyException("Dummy")
+    val io3 = IO.raiseError(ex)
+    val f3 = BIO.fromEffect(io3).runToFuture
+    assertEquals(f3.value, Some(Success(Left(ex))))
+  }
+
   test("BIO.fromEffect converts valid custom effects") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: Effect[CIO] = new CustomEffect
