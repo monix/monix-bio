@@ -70,12 +70,12 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
     stackSafeIterationsCount = 10000
   )
 
-  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E], ec: TestScheduler): Eq[BIO[E, A]] =
+  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E]): Eq[BIO[E, A]] =
     Eq.instance { (a, b) =>
-      val fa = a.runToFuture
-      val fb = b.runToFuture
+      val ta = Try(a.attempt.runSyncUnsafeOpt(timeout))
+      val tb = Try(b.attempt.runSyncUnsafeOpt(timeout))
 
-      Eq[Future[Either[E, A]]].eqv(fa, fb)
+      equalityTry[Either[E, A]].eqv(ta, tb)
     }
 
   implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task[A]] =
