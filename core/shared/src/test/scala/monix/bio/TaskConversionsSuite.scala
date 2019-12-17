@@ -404,7 +404,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     override def start[A](fa: CIO[A]): CIO[effect.Fiber[CIO, A]] =
       CIO(fa.io.start.map(fiberT))
 
-    override def racePair[A, B](fa: CIO[A], fb: CIO[B]): CIO[Either[(A, Fiber[CIO, B]), (Fiber[CIO, A], B)]] =
+    override def racePair[A, B](fa: CIO[A], fb: CIO[B]) =
       CIO {
         IO.racePair(fa.io, fb.io).map {
           case Left((a, fiber)) => Left((a, fiberT(fiber)))
