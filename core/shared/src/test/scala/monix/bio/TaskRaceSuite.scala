@@ -18,11 +18,12 @@
 package monix.bio
 
 import monix.execution.CancelableFuture
+import monix.execution.atomic.Atomic
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Success, Failure}
 
 object TaskRaceSuite extends BaseTestSuite {
 //  test("Task.raceMany should switch to other") { implicit s =>
@@ -120,154 +121,178 @@ object TaskRaceSuite extends BaseTestSuite {
 //    assertEquals(f.value, Some(Success(1)))
 //  }
 
-//  test("Task#timeout should timeout") { implicit s =>
-//    val task = Task.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assert(f.value.isDefined && f.value.get.failed.get.isInstanceOf[TimeoutException], "isInstanceOf[TimeoutException]")
-//
-//    assert(s.state.tasks.isEmpty, "Main task was not canceled!")
-//  }
-//
-//  test("Task#timeout should mirror the source in case of success") { implicit s =>
-//    val task = Task.evalAsync(1).delayExecution(1.seconds).timeout(10.second)
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Success(1)))
-//    assert(s.state.tasks.isEmpty, "timer should be canceled")
-//  }
-//
-//  test("Task#timeout should mirror the source in case of error") { implicit s =>
-//    val ex = DummyException("dummy")
-//    val task = Task.evalAsync(throw ex).delayExecution(1.seconds).timeout(10.second)
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Failure(ex)))
-//    assert(s.state.tasks.isEmpty, "timer should be canceled")
-//  }
-//
-//  test("Task#timeout should cancel both the source and the timer") { implicit s =>
-//    val task = Task.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    f.cancel()
-//    s.tick()
-//
-//    assertEquals(f.value, None)
-//  }
-//
-//  test("Task#timeout with backup should timeout") { implicit s =>
-//    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Success(99)))
-//  }
-//
-//  test("Task#timeout with backup should mirror the source in case of success") { implicit s =>
-//    val task = Task.evalAsync(1).delayExecution(1.seconds).timeoutTo(10.second, Task.evalAsync(99))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Success(1)))
-//    assert(s.state.tasks.isEmpty, "timer should be canceled")
-//  }
-//
-//  test("Task#timeout with backup should mirror the source in case of error") { implicit s =>
-//    val ex = DummyException("dummy")
-//    val task = Task.evalAsync(throw ex).delayExecution(1.seconds).timeoutTo(10.second, Task.evalAsync(99))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Failure(ex)))
-//    assert(s.state.tasks.isEmpty, "timer should be canceled")
-//  }
-//
-//  test("Task#timeout should cancel both the source and the timer") { implicit s =>
-//    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    f.cancel()
-//    s.tick()
-//
-//    assertEquals(f.value, None)
-//    assert(s.state.tasks.isEmpty, "timer should be canceled")
-//  }
-//
-//  test("Task#timeout should cancel the backup") { implicit s =>
-//    val task =
-//      Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99).delayExecution(2.seconds))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.seconds)
-//    assertEquals(f.value, None)
-//
-//    f.cancel(); s.tick()
-//    assertEquals(f.value, None)
-//    assert(s.state.tasks.isEmpty, "backup should be canceled")
-//  }
-//
-//  test("Task#timeout should not return the source after timeout") { implicit s =>
-//    val task =
-//      Task.evalAsync(1).delayExecution(2.seconds).timeoutTo(1.second, Task.evalAsync(99).delayExecution(2.seconds))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//
-//    s.tick(3.seconds)
-//    assertEquals(f.value, Some(Success(99)))
-//  }
-//
-//  test("Task#timeout should cancel the source after timeout") { implicit s =>
-//    val backup = Task.evalAsync(99).delayExecution(1.seconds)
-//    val task = Task.evalAsync(1).delayExecution(5.seconds).timeoutTo(1.second, backup)
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//
-//    s.tick(1.seconds)
-//    assert(s.state.tasks.size == 1, "source should be canceled after timeout")
-//
-//    s.tick(1.seconds)
-//    assert(s.state.tasks.isEmpty, "all task should be completed")
-//  }
-//
-//  test("Task#timeoutL should evaluate as specified: lazy, no memoization") { implicit s =>
-//    val cnt = Atomic(0L)
-//    val timeout = Task(cnt.incrementAndGet().seconds)
-//    val loop = Task(10).delayExecution(2.9.seconds).timeoutL(timeout).onErrorRestart(3)
-//    val f = loop.runToFuture
-//
-//    s.tick(1.second)
-//    assertEquals(f.value, None)
-//    s.tick(2.seconds)
-//    assertEquals(f.value, None)
-//    s.tick(3.seconds)
-//    assertEquals(f.value, Some(Success(10)))
-//  }
+  test("Task#timeout should timeout") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(Option.empty[Int]))))
+
+    assert(s.state.tasks.isEmpty, "Main task was not canceled!")
+  }
+
+  test("Task#timeout should mirror the source in case of success") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(1.seconds).timeout(10.second)
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(Some(1)))))
+    assert(s.state.tasks.isEmpty, "timer should be canceled")
+  }
+
+  test("Task#timeout should mirror the source in case of error") { implicit s =>
+    val ex = DummyException("dummy")
+    val task = Task.evalAsync(throw ex).delayExecution(1.seconds).timeout(10.second)
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Left(ex))))
+    assert(s.state.tasks.isEmpty, "timer should be canceled")
+  }
+
+  test("Task#timeout should mirror the source in case of fatal error") { implicit s =>
+    val ex = DummyException("dummy")
+    val task = Task.evalAsync(throw ex).hideErrors.delayExecution(1.seconds).timeout(10.second)
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Failure(ex)))
+    assert(s.state.tasks.isEmpty, "timer should be canceled")
+  }
+
+  test("Task#timeout should cancel both the source and the timer") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    f.cancel()
+    s.tick()
+
+    assertEquals(f.value, None)
+  }
+
+  test("Task#timeout with backup should timeout") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(99))))
+  }
+
+  test("Task#timeout with backup should timeout with error") { implicit s =>
+    val ex = DummyException("dummy")
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.raiseError(ex))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Left(ex))))
+  }
+
+  test("Task#timeout with backup should mirror the source in case of success") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(1.seconds).timeoutTo(10.second, Task.evalAsync(99))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(1))))
+    assert(s.state.tasks.isEmpty, "timer should be canceled")
+  }
+
+  test("Task#timeout with backup should mirror the source in case of error") { implicit s =>
+    val ex = DummyException("dummy")
+    val task = Task.evalAsync(throw ex).delayExecution(1.seconds).timeoutTo(10.second, Task.evalAsync(99))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Left(ex))))
+    assert(s.state.tasks.isEmpty, "timer should be canceled")
+  }
+
+  test("Task#timeout should cancel both the source and the timer") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    f.cancel()
+    s.tick()
+
+    assertEquals(f.value, None)
+    assert(s.state.tasks.isEmpty, "timer should be canceled")
+  }
+
+  test("Task#timeout should cancel the backup") { implicit s =>
+    val task =
+      Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99).delayExecution(2.seconds))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.seconds)
+    assertEquals(f.value, None)
+
+    f.cancel(); s.tick()
+    assertEquals(f.value, None)
+    assert(s.state.tasks.isEmpty, "backup should be canceled")
+  }
+
+  test("Task#timeout should not return the source after timeout") { implicit s =>
+    val task =
+      Task.evalAsync(1).delayExecution(2.seconds).timeoutTo(1.second, Task.evalAsync(99).delayExecution(2.seconds))
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+
+    s.tick(3.seconds)
+    assertEquals(f.value, Some(Success(Right(99))))
+  }
+
+  test("Task#timeout should cancel the source after timeout") { implicit s =>
+    val backup = Task.evalAsync(99).delayExecution(1.seconds)
+    val task = Task.evalAsync(1).delayExecution(5.seconds).timeoutTo(1.second, backup)
+    val f = task.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+
+    s.tick(1.seconds)
+    assert(s.state.tasks.size == 1, "source should be canceled after timeout")
+
+    s.tick(1.seconds)
+    assert(s.state.tasks.isEmpty, "all task should be completed")
+  }
+
+  test("Task#timeoutToL should evaluate as specified: lazy, no memoization") { implicit s =>
+    val cnt = Atomic(0L)
+    val timeout = UIO(cnt.incrementAndGet().seconds)
+    val error = BIO.raiseError(DummyException("dummy"))
+    val loop = Task(10).delayExecution(2.9.seconds).timeoutToL(timeout, error).onErrorRestart(3)
+    val f = loop.runToFuture
+
+    s.tick(1.second)
+    assertEquals(f.value, None)
+    s.tick(2.seconds)
+    assertEquals(f.value, None)
+    s.tick(3.seconds)
+    assertEquals(f.value, Some(Success(Right(10))))
+  }
 //
 //  test("Task#timeoutL should evaluate as specified: lazy, with memoization") { implicit s =>
 //    val cnt = Atomic(0L)
@@ -289,26 +314,26 @@ object TaskRaceSuite extends BaseTestSuite {
 //    assert(f.value.get.isFailure)
 //    assert(f.value.get.failed.get.isInstanceOf[TimeoutException])
 //  }
-//
-//  test("Task#timeoutL considers time taken to evaluate the duration task") { implicit s =>
-//    val timeout = Task(3.seconds).delayExecution(2.seconds)
-//    val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
-//
-//    s.tick(2.seconds)
-//    assertEquals(f.value, None)
-//
-//    s.tick(1.seconds)
-//    assertEquals(f.value, Some(Success(-10)))
-//  }
-//
-//  test("Task#timeoutL: evaluation time took > timeout => timeout is immediately completed") { implicit s =>
-//    val timeout = Task(2.seconds).delayExecution(3.seconds)
-//    val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
-//
-//    s.tick(3.seconds)
-//    assertEquals(f.value, Some(Success(-10)))
-//  }
-//
+
+  test("Task#timeoutL considers time taken to evaluate the duration task") { implicit s =>
+    val timeout = UIO(3.seconds).delayExecution(2.seconds)
+    val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
+
+    s.tick(2.seconds)
+    assertEquals(f.value, None)
+
+    s.tick(1.seconds)
+    assertEquals(f.value, Some(Success(Right(-10))))
+  }
+
+  test("Task#timeoutL: evaluation time took > timeout => timeout is immediately completed") { implicit s =>
+    val timeout = UIO(2.seconds).delayExecution(3.seconds)
+    val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
+
+    s.tick(3.seconds)
+    assertEquals(f.value, Some(Success(Right(-10))))
+  }
+
   test("Task.racePair(a,b) should work if a completes first") { implicit s =>
     val ta = Task.now(10).delayExecution(1.second)
     val tb = Task.now(20).delayExecution(2.seconds)
