@@ -48,7 +48,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
 
   implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
 
-  override implicit def equalityWRYYY[E, A](
+  override implicit def equalityBIO[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],

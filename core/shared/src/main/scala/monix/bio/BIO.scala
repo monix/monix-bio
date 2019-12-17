@@ -845,7 +845,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Triggers the asynchronous execution in a "fire and forget"
     * fashion, like normal [[runAsyncAndForget]], but includes the
-    * ability to specify [[monix.bio.BIO.Options TasWRYYY.Options]] that
+    * ability to specify [[monix.bio.BIO.Options BIO.Options]] that
     * can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
@@ -3835,7 +3835,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * `cats.MonadError`, `cats.effect.Sync` and `cats.effect.Async`.
     *
     * Note this is different from
-    * [[monix.bio.BIO.catsAsync TWRYYYsk.catsAsync]] because we need an
+    * [[monix.bio.BIO.catsAsync BIO.catsAsync]] because we need an
     * implicit [[monix.execution.Scheduler Scheduler]] in scope in
     * order to trigger the execution of a `Task`. It's also lower
     * priority in order to not trigger conflicts, because
