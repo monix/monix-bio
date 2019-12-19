@@ -1826,6 +1826,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
         Map(this, f, 0)
     }
 
+  final def tapError[E1 >: E, B](f: E => BIO[E1, B]): BIO[E1, A] =
+    this.onErrorHandleWith(e => f(e).flatMap(_ => BIO.raiseError(e)))
+
   /** Creates a new task that in case of error will retry executing the
     * source again and again, until it succeeds.
     *
