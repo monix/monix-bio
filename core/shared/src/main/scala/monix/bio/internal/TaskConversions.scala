@@ -17,11 +17,24 @@
 
 package monix.bio.internal
 
-import monix.bio.Task
+import cats.effect._
+import monix.bio.{BIO, Task}
 import monix.execution.rstreams.SingleAssignSubscription
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 
 private[bio] object TaskConversions {
+
+  /**
+    * Implementation for `BIO.toAsync`.
+    */
+  def toAsync[F[_], A](source: Task[A])(implicit F: Async[F], eff: Effect[Task]): F[A] =
+    source match {
+      case BIO.Now(value) => F.pure(value)
+      case BIO.Error(e) => F.raiseError(e)
+      case BIO.FatalError(e) => F.raiseError(e)
+      case BIO.Eval(thunk) => F.delay(thunk())
+      case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); IO.unit }).unsafeRunSync())
+    }
 
   /**
     * Implementation for `BIO.fromReactivePublisher`.

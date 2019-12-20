@@ -18,7 +18,7 @@
 package monix.bio
 
 import cats.Parallel
-import cats.effect.{CancelToken, Clock, ContextShift, ExitCase, Timer, Fiber => _}
+import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -471,6 +471,7 @@ import scala.util.{Failure, Success, Try}
   */
 sealed abstract class BIO[+E, +A] extends Serializable {
   import BIO._
+  import cats.effect.Async
 
   /** Triggers the asynchronous execution, returning a cancelable
     * [[monix.execution.CancelableFuture CancelableFuture]] that can
@@ -1825,6 +1826,44 @@ sealed abstract class BIO[+E, +A] extends Serializable {
         Map(this, f, 0)
     }
 
+  /** Creates a new task that in case of error will retry executing the
+    * source again and again, until it succeeds.
+    *
+    * In case of continuous failure the total number of executions
+    * will be maxRetries + 1.
+    */
+  final def onErrorRestart(maxRetries: Long): BIO[E, A] =
+    this.onErrorHandleWith { error =>
+      if (maxRetries > 0) this.onErrorRestart(maxRetries - 1)
+      else raiseError(error)
+    }
+
+  /** Creates a new task that in case of error will retry executing the
+    * source again and again, until it succeeds, or until the given
+    * predicate returns `false`.
+    *
+    * In this sample we retry for as long as the error is a `TimeoutException`:
+    * {{{
+    *   import scala.concurrent.TimeoutException
+    *
+    *   Task("some long call that may timeout").onErrorRestartIf {
+    *     case _: TimeoutException => true
+    *     case _ => false
+    *   }
+    * }}}
+    *
+    * @param p is the predicate that is executed if an error is thrown and
+    *        that keeps restarting the source for as long as it returns `true`
+    */
+  final def onErrorRestartIf(p: E => Boolean): BIO[E, A] =
+    this.onErrorHandleWith(ex => if (p(ex)) this.onErrorRestartIf(p) else raiseError(ex))
+
+  /** Returns a new `BIO` that applies the mapping function `fa` to the
+    * success channel and `fe` to the error channel.
+    */
+  final def bimap[E1, B](fe: E => E1, fa: A => B): BIO[E1, B] =
+    BIO.FlatMap(this, BIO.Bimap(fe, fa))
+
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
     *
@@ -1869,18 +1908,73 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def start: UIO[Fiber[E @uV, A @uV]] =
     TaskStart.forked(this)
 
+  /** Converts the source task into any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect.IO
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   BIO.eval(println("Hello!"))
+    *     .delayExecution(5.seconds)
+    *     .toAsync[IO]
+    * }}}
+    *
+    * An Effect[Task]` instance is needed in scope, which itself
+    * might need a [[monix.execution.Scheduler Scheduler]] to
+    * be available. Such requirement is needed because the `Task`
+    * has to be evaluated in order to be converted.
+    *
+    * Note that this method is only applicable when the typed error `E`
+    * is also a `Throwable`, or when the source task is an unexceptional
+    * one (i.e. it is a `UIO`). If you need a conversion from `E` into
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
+    * If you need a conversion into a `UIO`, take a look at [[attempt]],
+    * [[materialize]] or [[onErrorHandle]].
+    *
+    * NOTE: the resulting instance will NOT be cancelable, as the
+    * Task's cancelation token doesn't get carried over. This is
+    * implicit in the usage of `cats.effect.Async` type class.
+    * In the example above what this means is that the task will
+    * still print `"Hello!"` after 5 seconds, even if the resulting
+    * task gets cancelled.
+    *
+    * @see [[to]] that is able to convert to any data type that has
+    *      a [[TaskLift]] implementation
+    *
+    * @see [[toConcurrent]] that is able to convert to cancelable values via the
+    *      [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]]
+    *      type class.
+    *
+    * @param F is the `cats.effect.Async` instance required in
+    *        order to perform the conversion
+    *
+    * @param eff is the `Effect[Task]` instance needed to
+    *        evaluate tasks; when evaluating tasks, this is the pure
+    *        alternative to demanding a `Scheduler`
+    */
+  final def toAsync[F[_]](implicit F: Async[F], eff: Effect[Task], ev: E <:< Throwable): F[A @uV] =
+    TaskConversions.toAsync(this.asInstanceOf[Task[A]])(F, eff)
+
   /** Converts the source task into an `org.reactivestreams.Publisher`
     * that emits a single item on success, or an error when there is
     * a typed or fatal failure.
     *
-    * Note that it's only applicable when the typed error [[E]] is also
-    * a [[Throwable]].
+    * Note that this method is only applicable when the typed error `E`
+    * is also a `Throwable`, or when the source task is an unexceptional
+    * one (i.e. it is a `UIO`). If you need a conversion from `E` into
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
+    * If you need a conversion into a `UIO`, take a look at [[attempt]],
+    * [[materialize]] or [[onErrorHandle]].
     *
     * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
     * Reactive Streams specification.
     */
-  final def toReactivePublisher(implicit s: Scheduler, ev: E <:< Throwable): org.reactivestreams.Publisher[A @uV] =
-    TaskToReactivePublisher(this)(s, ev)
+  final def toReactivePublisher(implicit s: Scheduler, ev: E <:< Throwable): Publisher[A @uV] =
+    TaskToReactivePublisher(this.asInstanceOf[Task[A]])(s)
 
   /** Returns a string representation of this task meant for
     * debugging purposes only.
@@ -1980,6 +2074,91 @@ sealed abstract class BIO[+E, +A] extends Serializable {
       a <- this
       end <- BIO.clock.monotonic(NANOSECONDS)
     } yield (FiniteDuration(end - start, NANOSECONDS), a)
+
+  /** Returns a Task that mirrors the source Task but returns `None`
+    * in case the given duration passes without the
+    * task emitting any item. Otherwise, returns `Some` of the resulting value.
+    */
+  final def timeout(after: FiniteDuration): BIO[E, Option[A]] =
+    timeoutL(now(after))
+
+  /** Returns a Task that mirrors the source Task but that triggers a
+    * specified error in case the given duration passes
+    * without the task emitting any item.
+    * @param error `Error` raised after given duration passes
+    */
+  final def timeoutWith[E1 >: E, B >: A](after: FiniteDuration, error: E1): BIO[E1, B] =
+    timeoutTo(after, raiseError(error))
+
+  /** Returns a Task that mirrors the source Task but switches to the
+    * given backup Task in case the given duration passes without the
+    * source emitting any item.
+    */
+  final def timeoutTo[E1 >: E, B >: A](after: FiniteDuration, backup: BIO[E1, B]): BIO[E1, B] =
+    timeoutToL(now(after), backup)
+
+  /** Returns a Task that mirrors the source Task but returns `None`
+    * in case the given duration passes without the
+    * task emitting any item. Otherwise, returns `Some` of the resulting value.
+    */
+  final def timeoutL(after: UIO[FiniteDuration]): BIO[E, Option[A]] =
+    this.map(Some(_)).timeoutToL(after, now(None))
+
+  /** Returns a Task that mirrors the source Task but switches to the
+    * given backup Task in case the given duration passes without the
+    * source emitting any item.
+    *
+    * Useful when timeout is variable, e.g. when task is running in a loop
+    * with deadline semantics.
+    *
+    * Example:
+    * {{{
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   val deadline = 10.seconds.fromNow
+    *
+    *   val singleCallTimeout = 2.seconds
+    *
+    *   // re-evaluate deadline time on every request
+    *   val actualTimeout = UIO(singleCallTimeout.min(deadline.timeLeft))
+    *   val error = BIO.raiseError(new TimeoutException("Task timed-out"))
+    *
+    *   // expensive remote call
+    *   def call(): Unit = ()
+    *
+    *   val remoteCall = BIO(call())
+    *     .timeoutToL(actualTimeout, error)
+    *     .onErrorRestart(100)
+    *     .timeout(deadline.time)
+    * }}}
+    * Note that this method respects the timeout task evaluation duration,
+    * e.g. if it took 3 seconds to evaluate `after`
+    * to a value of `5 seconds`, then this task will timeout
+    * in exactly 5 seconds from the moment computation started,
+    * which means in 2 seconds after the timeout task has been evaluated.
+    *
+    **/
+  final def timeoutToL[E1 >: E, B >: A](after: UIO[FiniteDuration], backup: BIO[E1, B]): BIO[E1, B] = {
+    val timeoutTask: UIO[Unit] =
+      after.timed.flatMap {
+        case (took, need) =>
+          val left = need - took
+          if (left.length <= 0) {
+            UIO.unit
+          } else {
+            sleep(left)
+          }
+      }
+
+    race(this, timeoutTask).flatMap {
+      case Left(a) =>
+        now(a)
+
+      case Right(_) =>
+        backup
+    }
+  }
 
   /** Hides all errors from the return type and raises them in the internal channel.
     *
@@ -3532,6 +3711,12 @@ object BIO extends TaskInstancesLevel0 {
 
     def recover(e: Any): UIO[Any] =
       Now(e)
+  }
+
+  /** Used as optimization by [[BIO.bimap]]. */
+  private final case class Bimap[E, E1, A, B](fe: E => E1, fa: A => B) extends StackFrame[E, A, BIO[E1, B]] {
+    def apply(a: A) = Now(fa(a))
+    def recover(e: E) = Error(fe(e))
   }
 
   /** Used as optimization by [[BIO.redeem]]. */

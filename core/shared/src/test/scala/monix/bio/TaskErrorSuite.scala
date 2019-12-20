@@ -243,87 +243,118 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-//  test("Task.onErrorRestart should mirror the source onSuccess") { implicit s =>
-//    var tries = 0
-//    val task = Task.eval { tries += 1; 1 }.onErrorRestart(10)
-//    val f = task.runToFuture
-//
-//    assertEquals(f.value, Some(Success(1)))
-//    assertEquals(tries, 1)
-//  }
-//
-//  test("Task.onErrorRestart should retry onError") { implicit s =>
-//    val ex = DummyException("dummy")
-//    var tries = 0
-//    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }.onErrorRestart(10)
-//    val f = task.runToFuture
-//
-//    assertEquals(f.value, Some(Success(1)))
-//    assertEquals(tries, 5)
-//  }
-//
-//  test("Task.onErrorRestart should emit onError after max retries") { implicit s =>
-//    val ex = DummyException("dummy")
-//    var tries = 0
-//    val task = Task.eval { tries += 1; throw ex }.onErrorRestart(10)
-//    val f = task.runToFuture
-//
-//    assertEquals(f.value, Some(Failure(ex)))
-//    assertEquals(tries, 11)
-//  }
-//
-//  test("Task.onErrorRestart should be cancelable if ExecutionModel permits") { implicit s =>
-//    val task = Task[Int](throw DummyException("dummy"))
-//      .onErrorRestart(s.executionModel.recommendedBatchSize * 2)
-//
-//    val f = task.executeWithOptions(_.enableAutoCancelableRunLoops).runToFuture
-//    assertEquals(f.value, None)
-//
-//    // cancelling after scheduled for execution, but before execution
-//    f.cancel(); s.tick()
-//    assertEquals(f.value, None)
-//  }
-//
-//  test("Task.onErrorRestartIf should mirror the source onSuccess") { implicit s =>
-//    var tries = 0
-//    val task = Task.eval { tries += 1; 1 }.onErrorRestartIf(ex => tries < 10)
-//    val f = task.runToFuture
-//
-//    assertEquals(f.value, Some(Success(1)))
-//    assertEquals(tries, 1)
-//  }
-//
-//  test("Task.onErrorRestartIf should retry onError") { implicit s =>
-//    val ex = DummyException("dummy")
-//    var tries = 0
-//    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }
-//      .onErrorRestartIf(_ => tries <= 10)
-//
-//    val f = task.runToFuture
-//    assertEquals(f.value, Some(Success(1)))
-//    assertEquals(tries, 5)
-//  }
-//
-//  test("Task.onErrorRestartIf should emit onError") { implicit s =>
-//    val ex = DummyException("dummy")
-//    var tries = 0
-//    val task = Task.eval { tries += 1; throw ex }
-//      .onErrorRestartIf(_ => tries <= 10)
-//
-//    val f = task.runToFuture
-//    assertEquals(f.value, Some(Failure(ex)))
-//    assertEquals(tries, 11)
-//  }
-//
-//  test("Task.onErrorRestartIf should be cancelable if ExecutionModel permits") { implicit s =>
-//    val task = Task[Int](throw DummyException("dummy")).onErrorRestartIf(_ => true)
-//    val f = task.executeWithOptions(_.enableAutoCancelableRunLoops).runToFuture
-//    assertEquals(f.value, None)
-//
-//    // cancelling after scheduled for execution, but before execution
-//    f.cancel(); s.tick()
-//    assertEquals(f.value, None)
-//  }
+  test("Task.onErrorRestart should mirror the source onSuccess") { implicit s =>
+    var tries = 0
+    val task = Task.eval { tries += 1; 1 }.onErrorRestart(10)
+    val f = task.runToFuture
+
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 1)
+  }
+
+  test("Task.onErrorRestart should retry onError") { implicit s =>
+    val ex = DummyException("dummy")
+    var tries = 0
+    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }.onErrorRestart(10)
+    val f = task.runToFuture
+
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 5)
+  }
+
+  test("Task.onErrorRestart should emit onError after max retries") { implicit s =>
+    val ex = DummyException("dummy")
+    var tries = 0
+    val task = Task.eval { tries += 1; throw ex }.onErrorRestart(10)
+    val f = task.runToFuture
+
+    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(tries, 11)
+  }
+
+  test("Task.onErrorRestart should be cancelable if ExecutionModel permits") { implicit s =>
+    val batchSize = (s.executionModel.recommendedBatchSize * 2).toLong
+    val task = Task[Int](throw DummyException("dummy"))
+      .onErrorRestart(batchSize)
+
+    val f = task.executeWithOptions(_.enableAutoCancelableRunLoops).runToFuture
+    assertEquals(f.value, None)
+
+    // cancelling after scheduled for execution, but before execution
+    f.cancel(); s.tick()
+    assertEquals(f.value, None)
+  }
+
+  test("Task.onErrorRestart should not restart on fatal error") { implicit s =>
+    var tries = 0
+    val ex = DummyException("dummy")
+    val task = Task.eval { tries += 1; throw ex }.hideErrors.onErrorRestart(5)
+    val f = task.runToFuture
+
+    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(tries, 1)
+  }
+
+  test("Task.onErrorRestartIf should mirror the source onSuccess") { implicit s =>
+    var tries = 0
+    val task = Task.eval { tries += 1; 1 }.onErrorRestartIf(_ => tries < 10)
+    val f = task.runToFuture
+
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 1)
+  }
+
+  test("Task.onErrorRestartIf should retry onError") { implicit s =>
+    val ex = DummyException("dummy")
+    var tries = 0
+    val task = Task.eval { tries += 1; if (tries < 5) throw ex else 1 }
+      .onErrorRestartIf(_ => tries <= 10)
+
+    val f = task.runToFuture
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 5)
+  }
+
+  test("Task.onErrorRestartIf should emit onError") { implicit s =>
+    val ex = DummyException("dummy")
+    var tries = 0
+    val task = Task.eval { tries += 1; throw ex }
+      .onErrorRestartIf(_ => tries <= 10)
+
+    val f = task.runToFuture
+    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(tries, 11)
+  }
+
+  test("Task.onErrorRestartIf should be cancelable if ExecutionModel permits") { implicit s =>
+    val task = Task[Int](throw DummyException("dummy")).onErrorRestartIf(_ => true)
+    val f = task.executeWithOptions(_.enableAutoCancelableRunLoops).runToFuture
+    assertEquals(f.value, None)
+
+    // cancelling after scheduled for execution, but before execution
+    f.cancel(); s.tick()
+    assertEquals(f.value, None)
+  }
+
+  test("Task.onErrorRestartIf should not restart on fatal error") { implicit s =>
+    var tries = 0
+    val ex = DummyException("dummy")
+    val task: Task[Int] = Task.eval { tries += 1; throw ex }.hideErrors
+    val f = task.onErrorRestartIf(_ => tries < 5).runToFuture
+
+    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(tries, 1)
+  }
+
+  test("Task.onErrorRestartIf should restart on typed error") { implicit s =>
+    var tries = 0
+    val task = BIO.unit.flatMap { _ =>
+      tries += 1; if (tries < 5) BIO.raiseError("error") else BIO.pure(1)
+    }
+    val f = task.onErrorRestartIf(_ == "error").runToFuture
+    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(tries, 5)
+  }
 
   test("Task#onErrorRecoverWith should mirror source on success") { implicit s =>
     val task = Task.evalAsync(1).onErrorRecoverWith { case _: Throwable => Task.evalAsync(99) }

@@ -19,7 +19,7 @@ package monix.bio
 
 import cats.Applicative
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests, SemigroupKTests}
+import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests, SemigroupKTests, BifunctorTests}
 import monix.bio.instances.CatsParallelForTask
 
 object TypeClassLawsForTaskSuite
@@ -62,5 +62,9 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
 
   checkAllAsync("SemigroupK[Task[Int]]") { implicit ec =>
     SemigroupKTests[Task].semigroupK[Int]
+  }
+
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
   }
 }
