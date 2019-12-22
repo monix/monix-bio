@@ -19,6 +19,8 @@ package monix.bio.internal
 
 import cats.effect._
 import monix.bio.{BIO, Task}
+import monix.execution.rstreams.SingleAssignSubscription
+import org.reactivestreams.{Publisher, Subscriber, Subscription}
 
 private[bio] object TaskConversions {
 
@@ -32,6 +34,51 @@ private[bio] object TaskConversions {
       case BIO.FatalError(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
       case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); IO.unit }).unsafeRunSync())
+    }
+
+  /**
+    * Implementation for `BIO.fromReactivePublisher`.
+    */
+  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
+    Task.cancelable0 { (scheduler, cb) =>
+      val sub = SingleAssignSubscription()
+
+      source.subscribe {
+        new Subscriber[A] {
+          private[this] var isActive = true
+
+          override def onSubscribe(s: Subscription): Unit = {
+            sub := s
+            sub.request(10)
+          }
+
+          override def onNext(a: A): Unit = {
+            if (isActive) {
+              isActive = false
+              sub.cancel()
+              cb.onSuccess(Some(a))
+            }
+          }
+
+          override def onError(e: Throwable): Unit = {
+            if (isActive) {
+              isActive = false
+              cb.onError(e)
+            } else {
+              scheduler.reportFailure(e)
+            }
+          }
+
+          override def onComplete(): Unit = {
+            if (isActive) {
+              isActive = false
+              cb.onSuccess(None)
+            }
+          }
+        }
+      }
+
+      Task(sub.cancel())
     }
 
 }
