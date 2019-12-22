@@ -30,6 +30,21 @@ import scala.util.control.NonFatal
 private[bio] object TaskConversions {
 
   /**
+    * Implementation for `BIO.toIO`.
+    */
+  def toIO[A](source: Task[A])(implicit eff: ConcurrentEffect[Task]): IO[A] =
+    source match {
+      case BIO.Now(value) => IO.pure(value)
+      case BIO.Error(e) => IO.raiseError(e)
+      case BIO.FatalError(e) => IO.raiseError(e)
+      case BIO.Eval(thunk) => IO(thunk())
+      case _ =>
+        IO.cancelable { cb =>
+          toIO(eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync())
+        }
+    }
+
+  /**
     * Implementation for `BIO.toConcurrent`.
     */
   def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
