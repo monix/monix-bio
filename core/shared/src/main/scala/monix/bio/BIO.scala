@@ -2122,6 +2122,91 @@ sealed abstract class BIO[+E, +A] extends Serializable {
       end <- BIO.clock.monotonic(NANOSECONDS)
     } yield (FiniteDuration(end - start, NANOSECONDS), a)
 
+  /** Returns a Task that mirrors the source Task but returns `None`
+    * in case the given duration passes without the
+    * task emitting any item. Otherwise, returns `Some` of the resulting value.
+    */
+  final def timeout(after: FiniteDuration): BIO[E, Option[A]] =
+    timeoutL(now(after))
+
+  /** Returns a Task that mirrors the source Task but that triggers a
+    * specified error in case the given duration passes
+    * without the task emitting any item.
+    * @param error `Error` raised after given duration passes
+    */
+  final def timeoutWith[E1 >: E, B >: A](after: FiniteDuration, error: E1): BIO[E1, B] =
+    timeoutTo(after, raiseError(error))
+
+  /** Returns a Task that mirrors the source Task but switches to the
+    * given backup Task in case the given duration passes without the
+    * source emitting any item.
+    */
+  final def timeoutTo[E1 >: E, B >: A](after: FiniteDuration, backup: BIO[E1, B]): BIO[E1, B] =
+    timeoutToL(now(after), backup)
+
+  /** Returns a Task that mirrors the source Task but returns `None`
+    * in case the given duration passes without the
+    * task emitting any item. Otherwise, returns `Some` of the resulting value.
+    */
+  final def timeoutL(after: UIO[FiniteDuration]): BIO[E, Option[A]] =
+    this.map(Some(_)).timeoutToL(after, now(None))
+
+  /** Returns a Task that mirrors the source Task but switches to the
+    * given backup Task in case the given duration passes without the
+    * source emitting any item.
+    *
+    * Useful when timeout is variable, e.g. when task is running in a loop
+    * with deadline semantics.
+    *
+    * Example:
+    * {{{
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   val deadline = 10.seconds.fromNow
+    *
+    *   val singleCallTimeout = 2.seconds
+    *
+    *   // re-evaluate deadline time on every request
+    *   val actualTimeout = UIO(singleCallTimeout.min(deadline.timeLeft))
+    *   val error = BIO.raiseError(new TimeoutException("Task timed-out"))
+    *
+    *   // expensive remote call
+    *   def call(): Unit = ()
+    *
+    *   val remoteCall = BIO(call())
+    *     .timeoutToL(actualTimeout, error)
+    *     .onErrorRestart(100)
+    *     .timeout(deadline.time)
+    * }}}
+    * Note that this method respects the timeout task evaluation duration,
+    * e.g. if it took 3 seconds to evaluate `after`
+    * to a value of `5 seconds`, then this task will timeout
+    * in exactly 5 seconds from the moment computation started,
+    * which means in 2 seconds after the timeout task has been evaluated.
+    *
+    **/
+  final def timeoutToL[E1 >: E, B >: A](after: UIO[FiniteDuration], backup: BIO[E1, B]): BIO[E1, B] = {
+    val timeoutTask: UIO[Unit] =
+      after.timed.flatMap {
+        case (took, need) =>
+          val left = need - took
+          if (left.length <= 0) {
+            UIO.unit
+          } else {
+            sleep(left)
+          }
+      }
+
+    race(this, timeoutTask).flatMap {
+      case Left(a) =>
+        now(a)
+
+      case Right(_) =>
+        backup
+    }
+  }
+
   /** Hides all errors from the return type and raises them in the internal channel.
     *
     * Use if you have a method that returns a possible error but you can't recover
@@ -2406,6 +2491,20 @@ object BIO extends TaskInstancesLevel0 {
 
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
+
+  /** Converts an `org.reactivestreams.Publisher` into a [[BIO]].
+    *
+    * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
+    * Reactive Streams specification.
+    *
+    * @see [[BIO.toReactivePublisher]] for converting a [[BIO]] into
+    *      a reactive publisher.
+    *
+    * @param source is the `org.reactivestreams.Publisher` reference to
+    *        wrap into a [[BIO]].
+    */
+  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
+    TaskConversions.fromReactivePublisher(source)
 
   /** Builds a [[Task]] out of any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]] and
