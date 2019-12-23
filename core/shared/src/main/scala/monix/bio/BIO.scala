@@ -3175,7 +3175,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[wanderN]] for a version that limits parallelism.
     */
   def wander[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] =
-  BIO.eval(in.map(f)).flatMap(col => TaskGather[E, B, M](col, () => newBuilder(bf, in)))
+  UIO.eval(in.map(f)).flatMap(col => TaskGather[E, B, M](col, () => newBuilder(bf, in)))
 
   /** Processes the given collection of tasks in parallel and
     * nondeterministically gather the results without keeping the original
