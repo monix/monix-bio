@@ -31,6 +31,57 @@ import scala.util.{Failure, Success}
 
 object TaskConversionsSuite extends BaseTestSuite {
 
+  test("BIO.now(value).to[IO]") { implicit s =>
+    assertEquals(BIO.now(123).to[IO].unsafeRunSync(), 123)
+  }
+
+  test("BIO.eval(thunk).to[IO]") { implicit s =>
+    assertEquals(BIO.eval(123).to[IO].unsafeRunSync(), 123)
+  }
+
+  test("BIO.eval(thunk).executeAsync.to[IO]") { implicit s =>
+    val io = BIO.eval(123).executeAsync.to[IO]
+    val f = io.unsafeToFuture()
+
+    assertEquals(f.value, None)
+    s.tick()
+    assertEquals(f.value, Some(Success(123)))
+  }
+
+  test("BIO.raiseError(dummy).to[IO]") { implicit s =>
+    val dummy = DummyException("dummy")
+    intercept[DummyException] {
+      BIO.raiseError(dummy).to[IO].unsafeRunSync()
+    }
+  }
+
+  test("BIO.raiseError(dummy).executeAsync.to[IO]") { implicit s =>
+    val dummy = DummyException("dummy")
+    val io = BIO.raiseError(dummy).executeAsync.to[IO]
+    val f = io.unsafeToFuture()
+
+    assertEquals(f.value, None)
+    s.tick()
+    assertEquals(f.value, Some(Failure(dummy)))
+  }
+
+  test("BIO.raiseFatalError(dummy).to[IO]") { implicit s =>
+    val dummy = DummyException("dummy")
+    intercept[DummyException] {
+      BIO.raiseFatalError(dummy).to[IO].unsafeRunSync()
+    }
+  }
+
+  test("BIO.raiseFatalError(dummy).executeAsync.to[IO]") { implicit s =>
+    val dummy = DummyException("dummy")
+    val io = BIO.raiseFatalError(dummy).executeAsync.to[IO]
+    val f = io.unsafeToFuture()
+
+    assertEquals(f.value, None)
+    s.tick()
+    assertEquals(f.value, Some(Failure(dummy)))
+  }
+
   test("BIO.toAsync converts successful tasks") { implicit s =>
     val io = BIO.now(123).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()

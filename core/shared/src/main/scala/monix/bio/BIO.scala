@@ -1908,6 +1908,48 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def start: UIO[Fiber[E @uV, A @uV]] =
     TaskStart.forked(this)
 
+  /** Generic conversion of `Task` to any data type for which there's
+    * a [[TaskLift]] implementation available.
+    *
+    * Supported data types:
+    *
+    *  - [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]]
+    *  - any data type implementing [[https://typelevel.org/cats-effect/typeclasses/concurrent.html cats.effect.Concurrent]]
+    *  - any data type implementing [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]]
+    *  - any data type implementing [[https://typelevel.org/cats-effect/typeclasses/liftio.html cats.effect.LiftIO]]
+    *  - `monix.reactive.Observable`
+    *  - `monix.tail.Iterant`
+    *
+    * This conversion guarantees:
+    *
+    *  - referential transparency
+    *  - similar runtime characteristics (e.g. if the source doesn't
+    *    block threads on evaluation, then the result shouldn't block
+    *    threads either)
+    *  - interruptibility, if the target data type is cancelable
+    *
+    * Note that this method is only applicable when the typed error `E`
+    * is also a `Throwable`, or when the source task is an unexceptional
+    * one (i.e. it is a `UIO`). If you need a conversion from `E` into
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
+    * If you need a conversion into a `UIO`, take a look at [[attempt]],
+    * [[materialize]] or [[onErrorHandle]].
+    *
+    * Sample:
+    *
+    * {{{
+    *   import cats.effect.IO
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   BIO.eval(println("Hello!"))
+    *     .delayExecution(5.seconds)
+    *     .to[IO]
+    * }}}
+    */
+  final def to[F[_]](implicit F: TaskLift[F], ev: E <:< Throwable): F[A @uV] =
+    F(this.asInstanceOf[Task[A]])
+
   /** Converts the source task into any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]].
     *
