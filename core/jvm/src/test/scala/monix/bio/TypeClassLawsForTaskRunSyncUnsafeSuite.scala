@@ -19,13 +19,11 @@ package monix.bio
 
 import cats.effect.IO
 import cats.effect.laws.discipline._
-import cats.laws.discipline.{CoflatMapTests, BifunctorTests, ParallelTests, ApplicativeTests}
-import cats.{Eq, Applicative}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
+import cats.{Applicative, Eq}
 import monix.bio.instances.CatsParallelForTask
-import monix.execution.schedulers.TestScheduler
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
 import scala.concurrent.ExecutionContext.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
 

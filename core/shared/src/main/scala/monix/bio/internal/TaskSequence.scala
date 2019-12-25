@@ -39,7 +39,7 @@ private[bio] object TaskSequence {
       }
     }
 
-    BIO.defer {
+    BIO.suspendTotal {
       val cursor: Iterator[BIO[E, A]] = toIterator(in)
       loop(cursor, newBuilder(bf, in))
     }
@@ -60,7 +60,7 @@ private[bio] object TaskSequence {
       }
     }
 
-    BIO.defer {
+    BIO.suspendTotal {
       loop(toIterator(in), newBuilder(bf, in))
     }
   }
