@@ -19,7 +19,7 @@ package monix.bio
 
 import cats.Applicative
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests, SemigroupKTests, BifunctorTests}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests, SemigroupKTests}
 import monix.bio.instances.CatsParallelForTask
 
 object TypeClassLawsForTaskSuite

@@ -117,7 +117,6 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                // Eval and Suspend are allowed to catch errors
                 current = FatalError(e)
             }
 
@@ -143,7 +142,6 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
@@ -344,7 +342,6 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                // Eval and Suspend are allowed to catch errors
                 current = FatalError(e)
             }
 
@@ -371,7 +368,6 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
@@ -501,7 +497,6 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                // Eval and Suspend are allowed to catch errors
                 current = FatalError(e)
             }
 
@@ -527,7 +522,6 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
@@ -637,7 +631,6 @@ private[bio] object TaskRunLoop {
               current = null
             } catch {
               case e if NonFatal(e) =>
-                // Eval and Suspend are allowed to catch errors
                 current = FatalError(e)
             }
 
@@ -663,7 +656,6 @@ private[bio] object TaskRunLoop {
             try {
               current = thunk()
             } catch {
-              // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = FatalError(ex)
             }
 

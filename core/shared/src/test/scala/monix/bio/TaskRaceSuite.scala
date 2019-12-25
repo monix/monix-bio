@@ -23,7 +23,7 @@ import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
 import scala.concurrent.duration._
-import scala.util.{Success, Failure}
+import scala.util.{Failure, Success}
 
 object TaskRaceSuite extends BaseTestSuite {
 //  test("Task.raceMany should switch to other") { implicit s =>

@@ -18,8 +18,8 @@
 package monix.bio
 
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{CoflatMapTests, ParallelTests, ApplicativeTests, BifunctorTests}
-import cats.{Eq, Applicative}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
+import cats.{Applicative, Eq}
 import monix.bio.BIO.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
