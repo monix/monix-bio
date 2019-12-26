@@ -3806,6 +3806,10 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     new CatsParallelForTask[E]
 
+  /** Given an `A` type that has a `cats.Monoid[A]` implementation,
+    * then this provides the evidence that `BIO[E, A]` also has
+    * a `Monoid[ BIO[E, A] ]` implementation.
+    */
   implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[BIO[E, A]] =
     new CatsMonadToMonoid[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 }
@@ -3847,14 +3851,14 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
   }
 
     /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
-    * then this provides the evidence that `Task[A]` also has
-    * a `Semigroup[ Task[A] ]` implementation.
+    * then this provides the evidence that `BIO[E, A]` also has
+    * a `Semigroup[ BIO[E, A] ]` implementation.
     *
-    * This has a lower-level priority than [[Task.catsMonoid]]
+    * This has a lower-level priority than [[BIO.catsMonoid]]
     * in order to avoid conflicts.
     */
-    implicit def catsSemigroup[A](implicit A: Semigroup[A]): Semigroup[BIO[Throwable, A]] =
-    new CatsMonadToSemigroup[BIO[Throwable, ?], A]()(CatsConcurrentForTask, A)
+    implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
+    new CatsMonadToSemigroup[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
