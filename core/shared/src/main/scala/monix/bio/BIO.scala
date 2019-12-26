@@ -3833,8 +3833,8 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     new CatsParallelForTask[E]
 
-  implicit def catsMonoid[A](implicit A: Monoid[A]): Monoid[BIO[Throwable, A]] =
-    new CatsMonadToMonoid[BIO[Throwable, ?], A]()(CatsConcurrentForTask, A)
+  implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[BIO[E, A]] =
+    new CatsMonadToMonoid[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 
     // implicit def catsMonoid[A](implicit A: Monoid[A]): Monoid[Task[A]] =
     // new CatsMonadToMonoid[Task, A]()(CatsConcurrentForTask, A)
