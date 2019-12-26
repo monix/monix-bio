@@ -17,40 +17,8 @@
 
 package monix.bio
 
-import cats.Parallel
-import cats.{Monoid, Semigroup}
-import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
-import monix.bio.compat.internal.newBuilder
-import monix.bio.instances._
-import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.internal._
-import monix.execution.ExecutionModel.AlwaysAsyncExecution
-import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
-import monix.execution.compat.BuildFrom
-import monix.execution.internal.Platform
-import monix.execution.internal.Platform.fusionMaxStackDepth
-import monix.execution.misc.Local
-import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
-import monix.execution.{Callback, Scheduler, _}
-import org.reactivestreams.Publisher
-
-import cats.Parallel
-import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
-import monix.bio.compat.internal.newBuilder
-import monix.bio.instances._
-import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.internal._
-import monix.execution.ExecutionModel.AlwaysAsyncExecution
-import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
-import monix.execution.compat.BuildFrom
-import monix.execution.internal.Platform
-import monix.execution.internal.Platform.fusionMaxStackDepth
-import monix.execution.misc.Local
-import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
-import monix.execution.{Callback, Scheduler, _}
-import org.reactivestreams.Publisher
-import cats.Parallel
 import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.{Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
