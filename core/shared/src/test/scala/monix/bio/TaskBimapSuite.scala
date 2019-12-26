@@ -18,6 +18,7 @@
 package monix.bio
 
 import monix.bio.BIO.{Error, Now}
+
 import scala.util.Success
 
 object TaskBimapSuite extends BaseTestSuite {
