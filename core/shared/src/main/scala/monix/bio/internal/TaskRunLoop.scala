@@ -19,7 +19,20 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO
-import monix.bio.BIO.{Async, Context, ContextSwitch, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
+import monix.bio.BIO.{
+  Async,
+  Context,
+  ContextSwitch,
+  Error,
+  Eval,
+  EvalTotal,
+  FatalError,
+  FlatMap,
+  Map,
+  Now,
+  Suspend,
+  SuspendTotal
+}
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
 import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
@@ -97,6 +110,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = FatalError(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirstRef ne null) {
               if (bRestRef eq null) bRestRef = ChunkedArrayStack()
@@ -112,6 +135,14 @@ private[bio] object TaskRunLoop {
             } catch {
               // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = Error(ex)
+            }
+
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -304,6 +335,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = FatalError(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -320,6 +361,14 @@ private[bio] object TaskRunLoop {
               case ex if NonFatal(ex) =>
                 // Eval and Suspend are allowed to catch errors
                 current = Error(ex)
+            }
+
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -441,6 +490,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = FatalError(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -456,6 +515,14 @@ private[bio] object TaskRunLoop {
             } catch {
               // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = Error(ex)
+            }
+
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>
@@ -557,6 +624,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = FatalError(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -572,6 +649,14 @@ private[bio] object TaskRunLoop {
             } catch {
               // Eval and Suspend are allowed to catch errors
               case ex if NonFatal(ex) => current = Error(ex)
+            }
+
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = FatalError(ex)
             }
 
           case Error(error) =>

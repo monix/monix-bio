@@ -30,7 +30,7 @@ import scala.annotation.tailrec
 private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny[State]) {
 
   val cancel: CancelToken[BIO[E, ?]] =
-    BIO.suspend {
+    BIO.suspendTotal {
       stateRef.getAndSet(Cancelled) match {
         case Cancelled => BIO.unit
         case Active(set) =>

@@ -18,9 +18,9 @@
 package monix.bio
 
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{CoflatMapTests, ParallelTests, ApplicativeTests, BifunctorTests}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
 import cats.kernel.laws.discipline.MonoidTests
-import cats.{Eq, Applicative}
+import cats.{Applicative, Eq}
 import monix.bio.BIO.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -118,9 +118,9 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
- checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
-   MonoidTests[BIO[Throwable, Int]].monoid
- }
+  checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
+    MonoidTests[BIO[Throwable, Int]].monoid
+  }
 
   checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
     BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]

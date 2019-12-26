@@ -20,7 +20,7 @@ package monix.bio
 import cats.Applicative
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
 import cats.kernel.laws.discipline.MonoidTests
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests, SemigroupKTests, BifunctorTests}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests, SemigroupKTests}
 import monix.bio.instances.CatsParallelForTask
 
 object TypeClassLawsForTaskSuite
@@ -57,9 +57,9 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
     ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
- checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
-   MonoidTests[BIO[Throwable, Int]].monoid
- }
+  checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
+    MonoidTests[BIO[Throwable, Int]].monoid
+  }
 
   checkAllAsync("SemigroupK[Task[Int]]") { implicit ec =>
     SemigroupKTests[Task].semigroupK[Int]

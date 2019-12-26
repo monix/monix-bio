@@ -2314,19 +2314,34 @@ object BIO extends TaskInstancesLevel0 {
   def pure[A](a: A): UIO[A] = now(a)
 
   /** Returns a task that on execution is always finishing in error
-    * emitting the specified exception.
+    * emitting the specified value in a typed error channel.
     */
   def raiseError[E](ex: E): BIO[E, Nothing] =
     Error(ex)
 
+  /** Returns a task that on execution is always finishing in a fatal (unexpected) error
+    * emitting the specified exception.
+    */
   def raiseFatalError(ex: Throwable): UIO[Nothing] =
     FatalError(ex)
 
-  /** Promote a non-strict value representing a Task to a Task of the
-    * same type.
+  /** Defers the creation of a `Task` in case it is effectful.
+    *
+    * It will catch any exceptions thrown in `fa` and expose them as
+    * a typed error.
+    *
+    * @see [[deferTotal]] if `fa` is not expected to throw any exceptions.
     */
-  def defer[E, A](fa: => BIO[E, A]): BIO[E, A] =
+  def defer[A](fa: => Task[A]): Task[A] =
     Suspend(fa _)
+
+  /** Defers the creation of a `BIO` in case it is effectful.
+    *
+    * @see [[defer]] if `fa` is expected to throw exceptions and you would
+    *      like to expose them as typed errors.
+    */
+  def deferTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
+    SuspendTotal(fa _)
 
   /** Defers the creation of a `Task` by using the provided
     * function, which has the ability to inject a needed
@@ -2413,8 +2428,12 @@ object BIO extends TaskInstancesLevel0 {
     TaskFromFuture.deferAction(f)
 
   /** Alias for [[defer]]. */
-  def suspend[E, A](fa: => BIO[E, A]): BIO[E, A] =
+  def suspend[A](fa: => Task[A]): Task[A] =
     Suspend(fa _)
+
+  /** Alias for [[deferTotal]]. */
+  def suspendTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
+    SuspendTotal(fa _)
 
   /** Promote a non-strict value, a thunk, to a `Task`, catching exceptions
     * in the process.
@@ -2423,9 +2442,24 @@ object BIO extends TaskInstancesLevel0 {
     * value each time the `Task` is executed, behaving like a function.
     *
     * @param a is the thunk to process on evaluation
+    *
+    * @see [[evalTotal]] if `a` is not expected to throw any exceptions.
     */
   def eval[A](a: => A): Task[A] =
     Eval(a _)
+
+  /** Promote a non-strict value which does not throw any unexpected errors to `UIO`.
+    *
+    * Note that since `BIO` is not memoized or strict, this will recompute the
+    * value each time the `BIO` is executed, behaving like a function.
+    *
+    * @param a is the thunk to process on evaluation
+    *
+    * @see [[eval]] if `a` is expected to throw exceptions and you want to expose them
+    *      in a typed error channel.
+    */
+  def evalTotal[A](a: => A): UIO[A] =
+    EvalTotal(a _)
 
   /** Lifts a non-strict value, a thunk, to a `Task` that will trigger a logical
     * fork before evaluation.
@@ -2480,7 +2514,7 @@ object BIO extends TaskInstancesLevel0 {
     * [[http://functorial.com/stack-safety-for-free/index.pdf Stack Safety for Free]].
     */
   def tailRecM[E, A, B](a: A)(f: A => BIO[E, Either[A, B]]): BIO[E, B] =
-    BIO.defer(f(a)).flatMap {
+    BIO.deferTotal(f(a)).flatMap {
       case Left(continueA) => tailRecM(continueA)(f)
       case Right(b) => BIO.now(b)
     }
@@ -3602,10 +3636,16 @@ object BIO extends TaskInstancesLevel0 {
   }
 
   /** [[BIO]] state describing an non-strict synchronous value. */
-  private[bio] final case class Eval[+E, +A](thunk: () => A) extends BIO[E, A]
+  private[bio] final case class Eval[+A](thunk: () => A) extends BIO[Throwable, A]
+
+  /** [[BIO]] state describing an non-strict synchronous value which doesn't throw any expected errors. */
+  private[bio] final case class EvalTotal[+A](thunk: () => A) extends BIO[Nothing, A]
 
   /** Internal state, the result of [[BIO.defer]] */
-  private[bio] final case class Suspend[+E, +A](thunk: () => BIO[E, A]) extends BIO[E, A]
+  private[bio] final case class Suspend[+A](thunk: () => BIO[Throwable, A]) extends BIO[Throwable, A]
+
+  /** Internal state, the result of [[BIO.deferTotal]]*/
+  private[bio] final case class SuspendTotal[+E, +A](thunk: () => BIO[E, A]) extends BIO[E, A]
 
   /** Internal [[BIO]] state that is the result of applying `flatMap`. */
   private[bio] final case class FlatMap[E, E1, A, +B](source: BIO[E, A], f: A => BIO[E1, B]) extends BIO[E1, B]
@@ -3850,14 +3890,14 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     new CatsConcurrentEffectForTask
   }
 
-    /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
+  /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
     * then this provides the evidence that `BIO[E, A]` also has
     * a `Semigroup[ BIO[E, A] ]` implementation.
     *
     * This has a lower-level priority than [[BIO.catsMonoid]]
     * in order to avoid conflicts.
     */
-    implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
+  implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
     new CatsMonadToSemigroup[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 }
 
