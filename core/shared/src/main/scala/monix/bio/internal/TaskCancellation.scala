@@ -106,7 +106,7 @@ private[bio] object TaskCancellation {
     cb: Callback[E, A],
     e: E): CancelToken[BIO[E, ?]] = {
 
-    BIO.suspend {
+    BIO.suspendTotal {
       if (waitsForResult.getAndSet(false))
         conn2.cancel.map { _ =>
           conn.tryReactivate()
