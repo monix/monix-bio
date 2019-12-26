@@ -20,6 +20,7 @@ package monix.bio
 import cats.effect.IO
 import cats.effect.laws.discipline._
 import cats.laws.discipline.{CoflatMapTests, BifunctorTests, ParallelTests, ApplicativeTests}
+import cats.kernel.laws.discipline.MonoidTests
 import cats.{Eq, Applicative}
 import monix.bio.instances.CatsParallelForTask
 import monix.execution.schedulers.TestScheduler
@@ -110,7 +111,7 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int])
 
-//  checkAll("Monoid[Task[Int]]", MonoidTests[Task[Int]].monoid)
+ checkAll("Monoid[BIO[Throwable, Int]]", MonoidTests[BIO[Throwable, Int]].monoid)
 
   checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
     BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]

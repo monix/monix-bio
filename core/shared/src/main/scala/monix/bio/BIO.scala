@@ -18,6 +18,7 @@
 package monix.bio
 
 import cats.Parallel
+import cats.{Monoid, Semigroup}
 import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
@@ -3817,6 +3818,12 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     */
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     new CatsParallelForTask[E]
+
+  implicit def catsMonoid[A](implicit A: Monoid[A]): Monoid[BIO[Throwable, A]] =
+    new CatsMonadToMonoid[BIO[Throwable, ?], A]()(CatsConcurrentForTask, A)
+
+    // implicit def catsMonoid[A](implicit A: Monoid[A]): Monoid[Task[A]] =
+    // new CatsMonadToMonoid[Task, A]()(CatsConcurrentForTask, A)
 }
 
 private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
@@ -3854,6 +3861,16 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     opts: BIO.Options = BIO.defaultOptions): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
+
+    /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
+    * then this provides the evidence that `Task[A]` also has
+    * a `Semigroup[ Task[A] ]` implementation.
+    *
+    * This has a lower-level priority than [[Task.catsMonoid]]
+    * in order to avoid conflicts.
+    */
+    implicit def catsSemigroup[A](implicit A: Semigroup[A]): Semigroup[BIO[Throwable, A]] =
+    new CatsMonadToSemigroup[BIO[Throwable, ?], A]()(CatsConcurrentForTask, A)
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
