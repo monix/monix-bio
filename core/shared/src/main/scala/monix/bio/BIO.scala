@@ -3165,33 +3165,6 @@ object BIO extends TaskInstancesLevel0 {
   def gatherN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskGatherN[E, A](parallelism, in)
 
-
-  /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
-    * nondeterministically apply the function to each element of the collection
-    * and return a task that will signal a collection of the results once all
-    * tasks are finished.
-    *
-    * This function is the nondeterministic analogue of `traverse` and should
-    * behave identically to `traverse` so long as there is no interaction between
-    * the effects being gathered. However, unlike `traverse`, which decides on
-    * a total order of effects, the effects in a `wander` are unordered with
-    * respect to each other.
-    *
-    * Although the effects are unordered, we ensure the order of results
-    * matches the order of the input sequence. Also see [[wanderUnordered]]
-    * for the more efficient alternative.
-    *
-    * It's a generalized version of [[gather]].
-    *
-    * $parallelismAdvice
-    *
-    * $parallelismNote
-    *
-    * @see [[wanderN]] for a version that limits parallelism.
-    */
-  def wander[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] =
-  UIO.eval(in.map(f)).flatMap(col => TaskGather[E, B, M](col, () => newBuilder(bf, in)))
-
   /** Processes the given collection of tasks in parallel and
     * nondeterministically gather the results without keeping the original
     * ordering of the given tasks.
