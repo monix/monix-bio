@@ -3835,9 +3835,6 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
 
   implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[BIO[E, A]] =
     new CatsMonadToMonoid[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
-
-    // implicit def catsMonoid[A](implicit A: Monoid[A]): Monoid[Task[A]] =
-    // new CatsMonadToMonoid[Task, A]()(CatsConcurrentForTask, A)
 }
 
 private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
