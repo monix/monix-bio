@@ -3890,14 +3890,14 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     new CatsConcurrentEffectForTask
   }
 
-    /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
+  /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
     * then this provides the evidence that `BIO[E, A]` also has
     * a `Semigroup[ BIO[E, A] ]` implementation.
     *
     * This has a lower-level priority than [[BIO.catsMonoid]]
     * in order to avoid conflicts.
     */
-    implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
+  implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
     new CatsMonadToSemigroup[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 }
 

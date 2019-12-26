@@ -31,7 +31,7 @@ import cats.{Monad, Monoid, Semigroup}
   * for every monad.
   */
 class CatsMonadToMonoid[F[_], A](implicit F: Monad[F], A: Monoid[A])
-  extends CatsMonadToSemigroup[F, A] with Monoid[F[A]] {
+    extends CatsMonadToSemigroup[F, A] with Monoid[F[A]] {
 
   override def empty: F[A] =
     F.pure(A.empty)
