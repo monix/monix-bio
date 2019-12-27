@@ -17,9 +17,8 @@
 
 package monix.bio
 
-import cats.Parallel
-import cats.{Monoid, Semigroup}
-import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.{Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -846,7 +845,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Triggers the asynchronous execution in a "fire and forget"
     * fashion, like normal [[runAsyncAndForget]], but includes the
-    * ability to specify [[monix.bio.BIO.Options TasWRYYY.Options]] that
+    * ability to specify [[monix.bio.BIO.Options BIO.Options]] that
     * can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
@@ -1934,6 +1933,53 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     TaskStart.forked(this)
 
   /** Converts the source task into any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect.IO
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   BIO.eval(println("Hello!"))
+    *     .delayExecution(5.seconds)
+    *     .toConcurrent[IO]
+    * }}}
+    *
+    * A `ConcurrentEffect[Task]` instance is needed in scope, which itself
+    * might need a [[monix.execution.Scheduler Scheduler]] to be available.
+    * Such a requirement is needed because the `Task` has to be evaluated
+    * in order to be converted.
+    *
+    * Note that this method is only applicable when the typed error `E`
+    * is also a `Throwable`, or when the source task is an unexceptional
+    * one (i.e. it is a `UIO`). If you need a conversion from `E` into
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
+    * If you need a conversion into a `UIO`, take a look at [[attempt]],
+    * [[materialize]] or [[onErrorHandle]].
+    *
+    * NOTE: the resulting value is cancelable, via usage of
+    * `cats.effect.Concurrent`.
+    *
+    * @see [[to]] that is able to convert into any data type that has
+    *      a [[TaskLift]] implementation
+    *
+    * @see [[toAsync]] that is able to convert into non-cancelable values via the
+    *       [[https://typelevel.org/cats-effect/typeclasses/async.html Async]]
+    *       type class.
+    *
+    * @param F is the `cats.effect.Concurrent` instance required in
+    *        order to perform the conversion
+    *
+    * @param eff is the `ConcurrentEffect[Task]` instance needed to
+    *        evaluate tasks; when evaluating tasks, this is the pure
+    *        alternative to demanding a `Scheduler`
+    */
+  final def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[Task], ev: E <:< Throwable): F[A @uV] =
+    TaskConversions.toConcurrent(this.asInstanceOf[Task[A]])(F, eff)
+
+  /** Converts the source task into any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]].
     *
     * Example:
@@ -1948,7 +1994,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     .toAsync[IO]
     * }}}
     *
-    * An Effect[Task]` instance is needed in scope, which itself
+    * An `Effect[Task]` instance is needed in scope, which itself
     * might need a [[monix.execution.Scheduler Scheduler]] to
     * be available. Such requirement is needed because the `Task`
     * has to be evaluated in order to be converted.
@@ -2517,6 +2563,78 @@ object BIO extends TaskInstancesLevel0 {
     */
   def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
     TaskConversions.fromReactivePublisher(source)
+
+  /** Builds a [[Task]] out of any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]] and
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html ConcurrentEffect]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect._
+    *   import cats.syntax.all._
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   implicit val timer = IO.timer(global)
+    *
+    *   val io = IO.sleep(5.seconds) *> IO(println("Hello!"))
+    *
+    *   // Resulting task is cancelable
+    *   val task: Task[Unit] = BIO.fromConcurrentEffect(io)
+    * }}}
+    *
+    * Cancellation / finalization behavior is carried over, so the
+    * resulting task can be safely cancelled.
+    *
+    * @see [[Task.liftToConcurrent]] for its dual
+    *
+    * @see [[Task.fromEffect]] for a version that works with simpler,
+    *      non-cancelable `Async` data types
+    *
+    * @see [[Task.from]] for a more generic version that works with
+    *      any [[TaskLike]] data type
+    *
+    * @param F is the `cats.effect.Effect` type class instance necessary
+    *        for converting to `Task`; this instance can also be a
+    *        `cats.effect.Concurrent`, in which case the resulting
+    *        `Task` value is cancelable if the source also is
+    */
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+    TaskConversions.fromConcurrentEffect(fa)(F)
+
+  /** Builds a [[Task]] out of any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]] and
+    * [[https://typelevel.org/cats-effect/typeclasses/effect.html Effect]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect._
+    *
+    *   val io: IO[Unit] = IO(println("Hello!")
+    *   val task: Task[Unit] = BIO.fromEffect(io)
+    * }}}
+    *
+    * WARNING: the resulting task might not carry the source's cancellation behavior
+    * if the source is cancelable! This is implicit in the usage of `Effect`.
+    *
+    * @see [[Task.fromConcurrentEffect]] for a version that can use
+    *      [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]]
+    *      for converting cancelable tasks.
+    *
+    * @see [[Task.from]] for a more generic version that works with
+    *      any [[TaskLike]] data type
+    *
+    * @see [[Task.liftToAsync]] for its dual
+    *
+    * @param F is the `cats.effect.Effect` type class instance necessary
+    *        for converting to `Task`; this instance can also be a
+    *        `cats.effect.Concurrent`, in which case the resulting
+    *        `Task` value is cancelable if the source also is
+    */
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+    TaskConversions.fromEffect(fa)
 
   /** Builds a [[Task]] instance out of a Scala `Try`. */
   def fromTry[A](a: Try[A]): Task[A] =
@@ -3887,7 +4005,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * `cats.MonadError`, `cats.effect.Sync` and `cats.effect.Async`.
     *
     * Note this is different from
-    * [[monix.bio.BIO.catsAsync TWRYYYsk.catsAsync]] because we need an
+    * [[monix.bio.BIO.catsAsync BIO.catsAsync]] because we need an
     * implicit [[monix.execution.Scheduler Scheduler]] in scope in
     * order to trigger the execution of a `Task`. It's also lower
     * priority in order to not trigger conflicts, because
