@@ -152,7 +152,7 @@ private[bio] object TaskConnection {
         PaddingStrategy.LeftRight128
       )
 
-    val cancel: BIO[E, Unit] = BIO.suspend {
+    val cancel: BIO[E, Unit] = BIO.suspendTotal {
       state.getAndSet(null) match {
         case null | Nil =>
           BIO.unit

@@ -19,6 +19,7 @@ package monix.bio.instances
 
 import cats.{Bifunctor, CoflatMap, Eval, MonadError, SemigroupK}
 import monix.bio.{BIO, UIO}
+
 import scala.util.Try
 
 /** Cats type class instances for [[monix.bio.Task Task]]
