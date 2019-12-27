@@ -21,7 +21,7 @@ import cats.laws._
 import cats.laws.discipline._
 import monix.execution.exceptions.DummyException
 
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TaskEvalAlwaysSuite extends BaseTestSuite {
   test("Task.eval should work synchronously") { implicit s =>
@@ -116,5 +116,15 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
     val dummy = new DummyException("dummy")
     val te = Task.delay { throw dummy }
     assertEquals(te.runToFuture.value, Some(Success(Left(dummy))))
+  }
+
+  test("BIO.evalTotal should protect against unexpected errors") { implicit s =>
+    val ex = DummyException("dummy")
+    val f = UIO.eval[Int](throw ex).redeemFatal(_ => 10, identity).runToFuture
+    val g = UIO.eval[Int](throw ex).onErrorHandle(_ => 10).runToFuture
+
+    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(g.value, Some(Failure(ex)))
+    assertEquals(s.state.lastReportedError, null)
   }
 }

@@ -25,7 +25,7 @@ object UIO {
     * @see See [[monix.bio.BIO.apply]]
     */
   def apply[A](a: => A): UIO[A] =
-    BIO.Eval(a _)
+    BIO.EvalTotal(a _)
 
   /**
     * @see See [[monix.bio.BIO.now]]
@@ -49,25 +49,43 @@ object UIO {
     * @see See [[monix.bio.BIO.defer]]
     */
   def defer[A](fa: => UIO[A]): UIO[A] =
-    BIO.defer(fa)
+    BIO.deferTotal(fa)
+
+  /**
+    * @see See [[monix.bio.BIO.deferTotal]]
+    */
+  def deferTotal[A](fa: => UIO[A]): UIO[A] =
+    BIO.deferTotal(fa)
 
   /**
     * @see See [[monix.bio.BIO.suspend]]
     */
   def suspend[A](fa: => UIO[A]): UIO[A] =
-    BIO.suspend(fa)
+    BIO.suspendTotal(fa)
+
+  /**
+    * @see See [[monix.bio.BIO.suspendTotal]]
+    */
+  def suspendTotal[A](fa: => UIO[A]): UIO[A] =
+    BIO.suspendTotal(fa)
 
   /**
     * @see See [[monix.bio.BIO.eval]]
     */
   def eval[A](a: => A): UIO[A] =
-    BIO.Eval(a _)
+    BIO.EvalTotal(a _)
+
+  /**
+    * @see See [[monix.bio.BIO.evalTotal]]
+    */
+  def evalTotal[A](a: => A): UIO[A] =
+    BIO.EvalTotal(a _)
 
   /**
     * @see See [[monix.bio.BIO.evalAsync]]
     */
   def evalAsync[A](a: => A): UIO[A] =
-    BIO.Eval(a _).executeAsync
+    BIO.EvalTotal(a _).executeAsync
 
   /**
     * @see See [[monix.bio.BIO.never]]

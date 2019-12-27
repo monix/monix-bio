@@ -95,7 +95,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       }
     } else {
       // $COVERAGE-OFF$
-      context.scheduler.reportFailure(WrappedException(error))
+      context.scheduler.reportFailure(WrappedException.wrap(error))
       // $COVERAGE-ON$
     }
 

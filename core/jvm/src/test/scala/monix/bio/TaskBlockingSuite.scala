@@ -19,9 +19,11 @@ package monix.bio
 
 import minitest.SimpleTestSuite
 import monix.execution.Scheduler.Implicits.global
+import monix.execution.exceptions.DummyException
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, TimeoutException}
+import scala.util.{Failure, Try}
 
 object TaskBlockingSuite extends SimpleTestSuite {
   test("blocking on future should work") {
@@ -48,6 +50,38 @@ object TaskBlockingSuite extends SimpleTestSuite {
     for (_ <- 0 until 1000) {
       val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2))
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
+    }
+  }
+
+  test("BIO.eval(throw ex).attempt.runSyncUnsafe") {
+    for (_ <- 0 until 1000) {
+      val dummy = DummyException("dummy")
+      val task = BIO.eval(throw dummy)
+      assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
+    }
+  }
+
+  test("BIO.evalTotal(throw ex).onErrorHandle.runSyncUnsafe") {
+    for (_ <- 0 until 1000) {
+      val dummy = DummyException("dummy")
+      val task: BIO[Int, Int] = BIO.evalTotal(throw dummy)
+      assertEquals(Try(task.onErrorHandle(_ => 10).runSyncUnsafe(Duration.Inf)), Failure(dummy))
+    }
+  }
+
+  test("BIO.suspend(throw ex).attempt.runSyncUnsafe") {
+    for (_ <- 0 until 1000) {
+      val dummy = DummyException("dummy")
+      val task = BIO.suspend(throw dummy)
+      assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
+    }
+  }
+
+  test("BIO.suspendTotal(throw ex).onErrorHandle.runSyncUnsafe") {
+    for (_ <- 0 until 1000) {
+      val dummy = DummyException("dummy")
+      val task: BIO[Int, Int] = BIO.suspendTotal(throw dummy)
+      assertEquals(Try(task.onErrorHandle(_ => 10).runSyncUnsafe(Duration.Inf)), Failure(dummy))
     }
   }
 

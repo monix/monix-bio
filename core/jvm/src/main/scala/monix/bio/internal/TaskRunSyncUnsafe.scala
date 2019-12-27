@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
 import monix.bio.BIO
-import monix.bio.BIO.{Async, Context, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
+import monix.bio.BIO.{Async, Context, Error, Eval, EvalTotal, FatalError, FlatMap, Map, Now, Suspend, SuspendTotal}
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
 import monix.execution.internal.collection.ChunkedArrayStack
@@ -64,6 +64,15 @@ private[bio] object TaskRunSyncUnsafe {
             hasUnboxed = true
           } catch {
             case e if NonFatal(e) =>
+              current = Error(e)
+          }
+
+        case EvalTotal(thunk) =>
+          try {
+            unboxed = thunk().asInstanceOf[AnyRef]
+            hasUnboxed = true
+          } catch {
+            case e if NonFatal(e) =>
               current = FatalError(e)
           }
 
@@ -76,6 +85,14 @@ private[bio] object TaskRunSyncUnsafe {
           current = fa
 
         case Suspend(thunk) =>
+          // Try/catch described as statement to prevent ObjectRef ;-)
+          try {
+            current = thunk()
+          } catch {
+            case ex if NonFatal(ex) => current = Error(ex)
+          }
+
+        case SuspendTotal(thunk) =>
           // Try/catch described as statement to prevent ObjectRef ;-)
           try {
             current = thunk()
