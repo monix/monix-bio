@@ -1827,17 +1827,20 @@ sealed abstract class BIO[+E, +A] extends Serializable {
         Map(this, f, 0)
     }
 
-  /** Creates a new task that will handle error with given function, ignoring its result
-   *  and returning original error `E` in case given function doesn't raise error.
-   *  An example could look like:
+  /** Creates a new task that will run a provided effect in case of a typed error
+   *  and raise the original error in case provided function is successful.
+   *
+   *  Example:
    *  {{{
    *    import monix.bio.{BIO, UIO}
    *    val raise: BIO[String, Nothing]   = BIO.raiseError("Error1")
-   *    val handle: String => UIO[Unit]   = err => BIO.pure(println(err))
+   *    val handle: String => UIO[Unit]   = err => BIO.evalTotal(println(err))
    *    // will result in Left("Error"), printing error to console
    *    val result: BIO[String, Nothing]  = raise.tapError(handle)
    *  }}}
+   *
    *  Passing a function that raises error will result in failed task with that raised error `E1`.
+   *  Example:
    *  {{{
    *    val raise: BIO[String, Nothing]             = BIO.raiseError("Error1")
    *    val handle: String => BIO[String, Nothing]  = err => BIO.raiseError("Error2")
