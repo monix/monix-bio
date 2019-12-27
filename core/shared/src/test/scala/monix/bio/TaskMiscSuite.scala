@@ -17,6 +17,7 @@
 
 package monix.bio
 
+import cats.syntax.either._
 import monix.execution.exceptions.DummyException
 import org.reactivestreams.{Subscriber, Subscription}
 
@@ -35,6 +36,26 @@ object TaskMiscSuite extends BaseTestSuite {
     val result = Task.raiseError[Int](ex).attempt.runToFuture.map(_.flatMap(identity))
     s.tickOne()
     assertEquals(result.value, Some(Success(Left(ex))))
+  }
+
+  test("Task.tapError should not alter original successful value") { implicit s =>
+    val result = BIO.fromEither[String, Int](1.asRight).tapError(e => BIO.raiseError(e)).runToFuture
+    assertEquals(result.value, Some(Success(Right(1))))
+  }
+
+  test("Task.tapError should not alter original error value") { implicit s =>
+    var effect = 0
+    val result = BIO.fromEither[String, Int]("Error".asLeft).tapError(_ => BIO.delay(effect += 1)).runToFuture
+    assertEquals(result.value, Some(Success(Left("Error"))))
+    assertEquals(effect, 1)
+  }
+
+  test("Task.tapError should not alter original fatal error") { implicit s =>
+    var effect = 0
+    val ex = DummyException("dummy")
+    val result = BIO.raiseFatalError(ex).tapError(_ => BIO.delay(effect += 1)).runToFuture
+    assertEquals(result.value, Some(Failure(ex)))
+    assertEquals(effect, 0)
   }
 
   test("Task.fail should expose error") { implicit s =>
