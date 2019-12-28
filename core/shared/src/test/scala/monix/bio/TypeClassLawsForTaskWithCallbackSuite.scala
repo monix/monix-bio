@@ -18,8 +18,9 @@
 package monix.bio
 
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{CoflatMapTests, ParallelTests, ApplicativeTests, BifunctorTests}
-import cats.{Eq, Applicative}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
+import cats.kernel.laws.discipline.MonoidTests
+import cats.{Applicative, Eq}
 import monix.bio.BIO.Options
 import monix.bio.instances.CatsParallelForTask
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -48,7 +49,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
 
   implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
 
-  override implicit def equalityWRYYY[E, A](
+  override implicit def equalityBIO[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],
@@ -117,9 +118,9 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
-//  checkAllAsync("Monoid[Task[Int]]") { implicit ec =>
-//    MonoidTests[Task[Int]].monoid
-//  }
+  checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
+    MonoidTests[BIO[Throwable, Int]].monoid
+  }
 
   checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
     BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]

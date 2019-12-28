@@ -17,8 +17,8 @@
 
 package monix.bio
 
-import cats.Parallel
-import cats.effect.{CancelToken, Clock, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.{Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
@@ -845,7 +845,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Triggers the asynchronous execution in a "fire and forget"
     * fashion, like normal [[runAsyncAndForget]], but includes the
-    * ability to specify [[monix.bio.BIO.Options TasWRYYY.Options]] that
+    * ability to specify [[monix.bio.BIO.Options BIO.Options]] that
     * can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
@@ -1826,6 +1826,30 @@ sealed abstract class BIO[+E, +A] extends Serializable {
         Map(this, f, 0)
     }
 
+  /** Creates a new task that will run a provided effect in case of a typed error
+   *  and raise the original error in case provided function is successful.
+   *
+   *  Example:
+   *  {{{
+   *    import monix.bio.{BIO, UIO}
+   *    val raise: BIO[String, Nothing]   = BIO.raiseError("Error1")
+   *    val handle: String => UIO[Unit]   = err => BIO.evalTotal(println(err))
+   *    // will result in Left("Error"), printing error to console
+   *    val result: BIO[String, Nothing]  = raise.tapError(handle)
+   *  }}}
+   *
+   *  Passing a function that raises error will result in failed task with that raised error `E1`.
+   *  Example:
+   *  {{{
+   *    val raise: BIO[String, Nothing]             = BIO.raiseError("Error1")
+   *    val handle: String => BIO[String, Nothing]  = err => BIO.raiseError("Error2")
+   *    // will result in Left("Error2")
+   *    val result: BIO[String, Nothing]            = raise.tapError(handle)
+   *  }}}
+   *  */
+  final def tapError[E1 >: E, B](f: E => BIO[E1, B]): BIO[E1, A] =
+    this.onErrorHandleWith(e => f(e).flatMap(_ => BIO.raiseError(e)))
+
   /** Creates a new task that in case of error will retry executing the
     * source again and again, until it succeeds.
     *
@@ -1909,6 +1933,53 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     TaskStart.forked(this)
 
   /** Converts the source task into any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect.IO
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   BIO.eval(println("Hello!"))
+    *     .delayExecution(5.seconds)
+    *     .toConcurrent[IO]
+    * }}}
+    *
+    * A `ConcurrentEffect[Task]` instance is needed in scope, which itself
+    * might need a [[monix.execution.Scheduler Scheduler]] to be available.
+    * Such a requirement is needed because the `Task` has to be evaluated
+    * in order to be converted.
+    *
+    * Note that this method is only applicable when the typed error `E`
+    * is also a `Throwable`, or when the source task is an unexceptional
+    * one (i.e. it is a `UIO`). If you need a conversion from `E` into
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
+    * If you need a conversion into a `UIO`, take a look at [[attempt]],
+    * [[materialize]] or [[onErrorHandle]].
+    *
+    * NOTE: the resulting value is cancelable, via usage of
+    * `cats.effect.Concurrent`.
+    *
+    * @see [[to]] that is able to convert into any data type that has
+    *      a [[TaskLift]] implementation
+    *
+    * @see [[toAsync]] that is able to convert into non-cancelable values via the
+    *       [[https://typelevel.org/cats-effect/typeclasses/async.html Async]]
+    *       type class.
+    *
+    * @param F is the `cats.effect.Concurrent` instance required in
+    *        order to perform the conversion
+    *
+    * @param eff is the `ConcurrentEffect[Task]` instance needed to
+    *        evaluate tasks; when evaluating tasks, this is the pure
+    *        alternative to demanding a `Scheduler`
+    */
+  final def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[Task], ev: E <:< Throwable): F[A @uV] =
+    TaskConversions.toConcurrent(this.asInstanceOf[Task[A]])(F, eff)
+
+  /** Converts the source task into any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]].
     *
     * Example:
@@ -1923,7 +1994,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     .toAsync[IO]
     * }}}
     *
-    * An Effect[Task]` instance is needed in scope, which itself
+    * An `Effect[Task]` instance is needed in scope, which itself
     * might need a [[monix.execution.Scheduler Scheduler]] to
     * be available. Such requirement is needed because the `Task`
     * has to be evaluated in order to be converted.
@@ -2313,19 +2384,34 @@ object BIO extends TaskInstancesLevel0 {
   def pure[A](a: A): UIO[A] = now(a)
 
   /** Returns a task that on execution is always finishing in error
-    * emitting the specified exception.
+    * emitting the specified value in a typed error channel.
     */
   def raiseError[E](ex: E): BIO[E, Nothing] =
     Error(ex)
 
+  /** Returns a task that on execution is always finishing in a fatal (unexpected) error
+    * emitting the specified exception.
+    */
   def raiseFatalError(ex: Throwable): UIO[Nothing] =
     FatalError(ex)
 
-  /** Promote a non-strict value representing a Task to a Task of the
-    * same type.
+  /** Defers the creation of a `Task` in case it is effectful.
+    *
+    * It will catch any exceptions thrown in `fa` and expose them as
+    * a typed error.
+    *
+    * @see [[deferTotal]] if `fa` is not expected to throw any exceptions.
     */
-  def defer[E, A](fa: => BIO[E, A]): BIO[E, A] =
+  def defer[A](fa: => Task[A]): Task[A] =
     Suspend(fa _)
+
+  /** Defers the creation of a `BIO` in case it is effectful.
+    *
+    * @see [[defer]] if `fa` is expected to throw exceptions and you would
+    *      like to expose them as typed errors.
+    */
+  def deferTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
+    SuspendTotal(fa _)
 
   /** Defers the creation of a `Task` by using the provided
     * function, which has the ability to inject a needed
@@ -2412,8 +2498,12 @@ object BIO extends TaskInstancesLevel0 {
     TaskFromFuture.deferAction(f)
 
   /** Alias for [[defer]]. */
-  def suspend[E, A](fa: => BIO[E, A]): BIO[E, A] =
+  def suspend[A](fa: => Task[A]): Task[A] =
     Suspend(fa _)
+
+  /** Alias for [[deferTotal]]. */
+  def suspendTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
+    SuspendTotal(fa _)
 
   /** Promote a non-strict value, a thunk, to a `Task`, catching exceptions
     * in the process.
@@ -2422,9 +2512,24 @@ object BIO extends TaskInstancesLevel0 {
     * value each time the `Task` is executed, behaving like a function.
     *
     * @param a is the thunk to process on evaluation
+    *
+    * @see [[evalTotal]] if `a` is not expected to throw any exceptions.
     */
   def eval[A](a: => A): Task[A] =
     Eval(a _)
+
+  /** Promote a non-strict value which does not throw any unexpected errors to `UIO`.
+    *
+    * Note that since `BIO` is not memoized or strict, this will recompute the
+    * value each time the `BIO` is executed, behaving like a function.
+    *
+    * @param a is the thunk to process on evaluation
+    *
+    * @see [[eval]] if `a` is expected to throw exceptions and you want to expose them
+    *      in a typed error channel.
+    */
+  def evalTotal[A](a: => A): UIO[A] =
+    EvalTotal(a _)
 
   /** Lifts a non-strict value, a thunk, to a `Task` that will trigger a logical
     * fork before evaluation.
@@ -2444,6 +2549,92 @@ object BIO extends TaskInstancesLevel0 {
 
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
+
+  /** Converts an `org.reactivestreams.Publisher` into a [[BIO]].
+    *
+    * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
+    * Reactive Streams specification.
+    *
+    * @see [[BIO.toReactivePublisher]] for converting a [[BIO]] into
+    *      a reactive publisher.
+    *
+    * @param source is the `org.reactivestreams.Publisher` reference to
+    *        wrap into a [[BIO]].
+    */
+  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
+    TaskConversions.fromReactivePublisher(source)
+
+  /** Builds a [[Task]] out of any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]] and
+    * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html ConcurrentEffect]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect._
+    *   import cats.syntax.all._
+    *   import monix.execution.Scheduler.Implicits.global
+    *   import scala.concurrent.duration._
+    *
+    *   implicit val timer = IO.timer(global)
+    *
+    *   val io = IO.sleep(5.seconds) *> IO(println("Hello!"))
+    *
+    *   // Resulting task is cancelable
+    *   val task: Task[Unit] = BIO.fromConcurrentEffect(io)
+    * }}}
+    *
+    * Cancellation / finalization behavior is carried over, so the
+    * resulting task can be safely cancelled.
+    *
+    * @see [[Task.liftToConcurrent]] for its dual
+    *
+    * @see [[Task.fromEffect]] for a version that works with simpler,
+    *      non-cancelable `Async` data types
+    *
+    * @see [[Task.from]] for a more generic version that works with
+    *      any [[TaskLike]] data type
+    *
+    * @param F is the `cats.effect.Effect` type class instance necessary
+    *        for converting to `Task`; this instance can also be a
+    *        `cats.effect.Concurrent`, in which case the resulting
+    *        `Task` value is cancelable if the source also is
+    */
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+    TaskConversions.fromConcurrentEffect(fa)(F)
+
+  /** Builds a [[Task]] out of any data type that implements
+    * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]] and
+    * [[https://typelevel.org/cats-effect/typeclasses/effect.html Effect]].
+    *
+    * Example:
+    *
+    * {{{
+    *   import cats.effect._
+    *
+    *   val io: IO[Unit] = IO(println("Hello!")
+    *   val task: Task[Unit] = BIO.fromEffect(io)
+    * }}}
+    *
+    * WARNING: the resulting task might not carry the source's cancellation behavior
+    * if the source is cancelable! This is implicit in the usage of `Effect`.
+    *
+    * @see [[Task.fromConcurrentEffect]] for a version that can use
+    *      [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]]
+    *      for converting cancelable tasks.
+    *
+    * @see [[Task.from]] for a more generic version that works with
+    *      any [[TaskLike]] data type
+    *
+    * @see [[Task.liftToAsync]] for its dual
+    *
+    * @param F is the `cats.effect.Effect` type class instance necessary
+    *        for converting to `Task`; this instance can also be a
+    *        `cats.effect.Concurrent`, in which case the resulting
+    *        `Task` value is cancelable if the source also is
+    */
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+    TaskConversions.fromEffect(fa)
 
   /** Builds a [[Task]] instance out of a Scala `Try`. */
   def fromTry[A](a: Try[A]): Task[A] =
@@ -2465,7 +2656,7 @@ object BIO extends TaskInstancesLevel0 {
     * [[http://functorial.com/stack-safety-for-free/index.pdf Stack Safety for Free]].
     */
   def tailRecM[E, A, B](a: A)(f: A => BIO[E, Either[A, B]]): BIO[E, B] =
-    BIO.defer(f(a)).flatMap {
+    BIO.deferTotal(f(a)).flatMap {
       case Left(continueA) => tailRecM(continueA)(f)
       case Right(b) => BIO.now(b)
     }
@@ -3614,10 +3805,16 @@ object BIO extends TaskInstancesLevel0 {
   }
 
   /** [[BIO]] state describing an non-strict synchronous value. */
-  private[bio] final case class Eval[+E, +A](thunk: () => A) extends BIO[E, A]
+  private[bio] final case class Eval[+A](thunk: () => A) extends BIO[Throwable, A]
+
+  /** [[BIO]] state describing an non-strict synchronous value which doesn't throw any expected errors. */
+  private[bio] final case class EvalTotal[+A](thunk: () => A) extends BIO[Nothing, A]
 
   /** Internal state, the result of [[BIO.defer]] */
-  private[bio] final case class Suspend[+E, +A](thunk: () => BIO[E, A]) extends BIO[E, A]
+  private[bio] final case class Suspend[+A](thunk: () => BIO[Throwable, A]) extends BIO[Throwable, A]
+
+  /** Internal state, the result of [[BIO.deferTotal]]*/
+  private[bio] final case class SuspendTotal[+E, +A](thunk: () => BIO[E, A]) extends BIO[E, A]
 
   /** Internal [[BIO]] state that is the result of applying `flatMap`. */
   private[bio] final case class FlatMap[E, E1, A, +B](source: BIO[E, A], f: A => BIO[E1, B]) extends BIO[E1, B]
@@ -3817,6 +4014,13 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     */
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     new CatsParallelForTask[E]
+
+  /** Given an `A` type that has a `cats.Monoid[A]` implementation,
+    * then this provides the evidence that `BIO[E, A]` also has
+    * a `Monoid[ BIO[E, A] ]` implementation.
+    */
+  implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[BIO[E, A]] =
+    new CatsMonadToMonoid[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
@@ -3828,7 +4032,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * `cats.MonadError`, `cats.effect.Sync` and `cats.effect.Async`.
     *
     * Note this is different from
-    * [[monix.bio.BIO.catsAsync TWRYYYsk.catsAsync]] because we need an
+    * [[monix.bio.BIO.catsAsync BIO.catsAsync]] because we need an
     * implicit [[monix.execution.Scheduler Scheduler]] in scope in
     * order to trigger the execution of a `Task`. It's also lower
     * priority in order to not trigger conflicts, because
@@ -3854,6 +4058,16 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     opts: BIO.Options = BIO.defaultOptions): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
+
+  /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
+    * then this provides the evidence that `BIO[E, A]` also has
+    * a `Semigroup[ BIO[E, A] ]` implementation.
+    *
+    * This has a lower-level priority than [[BIO.catsMonoid]]
+    * in order to avoid conflicts.
+    */
+  implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
+    new CatsMonadToSemigroup[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {

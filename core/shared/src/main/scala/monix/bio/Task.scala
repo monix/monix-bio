@@ -17,10 +17,11 @@
 
 package monix.bio
 
-import cats.effect.CancelToken
+import cats.effect.{CancelToken, ConcurrentEffect, Effect}
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.{Callback, Scheduler}
+import org.reactivestreams.Publisher
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -111,6 +112,24 @@ object Task {
     */
   def never[A]: Task[A] =
     BIO.never
+
+  /**
+    * @see See [[monix.bio.BIO.fromReactivePublisher]]
+    */
+  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
+    BIO.fromReactivePublisher(source)
+
+  /**
+    * @see See [[monix.bio.BIO.fromConcurrentEffect]]
+    */
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+    BIO.fromConcurrentEffect(fa)
+
+  /**
+    * @see See [[monix.bio.BIO.fromEffect]]
+    */
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+    BIO.fromEffect(fa)
 
   /**
     * @see See [[monix.bio.BIO.fromTry]]

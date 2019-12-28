@@ -83,7 +83,7 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
             // $COVERAGE-ON$
           }
       }
-    BIO.suspend(loop())
+    BIO.suspendTotal(loop())
   }
 
   private def raiseError(): Nothing = {

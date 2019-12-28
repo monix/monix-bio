@@ -223,7 +223,7 @@ private[monix] object TaskBracket {
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          BIO.suspend(unsafeApply(b))
+          BIO.suspendTotal(unsafeApply(b))
         else
           unsafeApply(b)
 
@@ -236,7 +236,7 @@ private[monix] object TaskBracket {
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          BIO.suspend(unsafeRecover(e))
+          BIO.suspendTotal(unsafeRecover(e))
         else
           unsafeRecover(e)
 
@@ -249,7 +249,7 @@ private[monix] object TaskBracket {
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          BIO.suspend(unsafeRecoverFatal(e))
+          BIO.suspendTotal(unsafeRecoverFatal(e))
         else
           unsafeRecoverFatal(e)
 

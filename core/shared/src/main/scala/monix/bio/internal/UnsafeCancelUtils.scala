@@ -46,7 +46,7 @@ private[bio] object UnsafeCancelUtils {
     if (cursor.isEmpty)
       BIO.unit
     else
-      BIO.suspend {
+      BIO.suspendTotal {
         val frame = new CancelAllFrame(cursor.iterator)
         frame.loop()
       }
