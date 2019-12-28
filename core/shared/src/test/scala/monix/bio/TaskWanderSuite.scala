@@ -114,6 +114,6 @@ object TaskWanderSuite extends BaseTestSuite {
     }
 
     val result1 = task1.runToFuture; s.tick()
-    assertEquals(result1.value, Some(Success(Left((ex)))))
+    assertEquals(result1.value, Some(Failure((ex))))
   }
 }
