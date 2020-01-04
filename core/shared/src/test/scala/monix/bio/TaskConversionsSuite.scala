@@ -546,9 +546,9 @@ object TaskConversionsSuite extends BaseTestSuite {
     }
   }
 
-  private final case class CIO[+A](io: IO[A])
+  final case class CIO[+A](io: IO[A])
 
-  private class CustomEffect(implicit cs: ContextShift[IO]) extends Effect[CIO] {
+  class CustomEffect(implicit cs: ContextShift[IO]) extends Effect[CIO] {
 
     override def runAsync[A](fa: CIO[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[Unit] =
       fa.io.runAsync(cb)
@@ -586,7 +586,7 @@ object TaskConversionsSuite extends BaseTestSuite {
 
   }
 
-  private class CustomConcurrentEffect(implicit cs: ContextShift[IO]) extends CustomEffect with ConcurrentEffect[CIO] {
+  class CustomConcurrentEffect(implicit cs: ContextShift[IO]) extends CustomEffect with ConcurrentEffect[CIO] {
 
     override def runCancelable[A](fa: CIO[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[CancelToken[CIO]] =
       fa.io.runCancelable(cb).map(CIO(_))

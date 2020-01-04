@@ -20,7 +20,8 @@ package monix.bio
 import cats.effect.{CancelToken, ConcurrentEffect, Effect}
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
-import monix.execution.{Callback, Scheduler}
+import monix.catnap.FutureLift
+import monix.execution.{Callback, CancelablePromise, Scheduler}
 import org.reactivestreams.Publisher
 
 import scala.concurrent.duration.FiniteDuration
@@ -114,6 +115,12 @@ object Task {
     BIO.never
 
   /**
+    * @see See [[monix.bio.BIO.from]]
+    */
+  def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): Task[A] =
+    BIO.from(fa)
+
+  /**
     * @see See [[monix.bio.BIO.fromReactivePublisher]]
     */
   def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
@@ -195,7 +202,19 @@ object Task {
     * @see See [[monix.bio.BIO.fromFuture]]
     */
   def fromFuture[A](f: Future[A]): Task[A] =
-    TaskFromFuture.strict(f)
+    BIO.fromFuture(f)
+
+  /**
+    * @see See [[monix.bio.BIO.fromCancelablePromise]]
+    */
+  def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
+    BIO.fromCancelablePromise(p)
+
+  /**
+    * @see See [[monix.bio.BIO.fromFutureLike]]
+    */
+  def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
+    BIO.fromFutureLike(tfa)
 
   /**
     * @see See [[monix.bio.BIO.race]]

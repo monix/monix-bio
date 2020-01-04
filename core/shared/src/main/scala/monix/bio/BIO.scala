@@ -23,6 +23,7 @@ import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.bio.internal._
+import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
 import monix.execution.compat.BuildFrom
@@ -2594,6 +2595,23 @@ object BIO extends TaskInstancesLevel0 {
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
 
+  /** Converts into a `Task` from any `F[_]` for which there exists
+    * a [[TaskLike]] implementation.
+    *
+    * Supported types include, but are not necessarily limited to:
+    *
+    *  - [[https://typelevel.org/cats/datatypes/eval.html cats.Eval]]
+    *  - [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]]
+    *  - [[https://typelevel.org/cats-effect/datatypes/syncio.html cats.effect.SyncIO]]
+    *  - [[https://typelevel.org/cats-effect/typeclasses/effect.html cats.effect.Effect (Async)]]
+    *  - [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
+    *  - [[scala.Either]]
+    *  - [[scala.util.Try]]
+    *  - [[scala.concurrent.Future]]
+    */
+  def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): Task[A] =
+    F.apply(fa)
+
   /** Converts an `org.reactivestreams.Publisher` into a [[BIO]].
     *
     * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
@@ -3183,6 +3201,12 @@ object BIO extends TaskInstancesLevel0 {
   /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
     TaskFromFuture.fromCancelablePromise(p)
+
+  /**
+    * Converts any Future-like data-type into a `Task`, via [[monix.catnap.FutureLift]].
+    */
+  def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
+    F.apply(tfa)
 
   /** Run two `Task` actions concurrently, and return the first to
     * finish, either in success or error. The loser of the race is
