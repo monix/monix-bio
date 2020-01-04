@@ -38,6 +38,7 @@ private[bio] object TaskConversions {
       case BIO.Error(e) => IO.raiseError(e)
       case BIO.FatalError(e) => IO.raiseError(e)
       case BIO.Eval(thunk) => IO(thunk())
+      case BIO.EvalTotal(thunk) => IO(thunk())
       case _ =>
         IO.cancelable { cb =>
           toIO(eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync())
@@ -53,6 +54,7 @@ private[bio] object TaskConversions {
       case BIO.Error(e) => F.raiseError(e)
       case BIO.FatalError(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
+      case BIO.EvalTotal(thunk) => F.delay(thunk())
       case _ =>
         F.cancelable { cb =>
           val token = eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync()
@@ -69,6 +71,7 @@ private[bio] object TaskConversions {
       case BIO.Error(e) => F.raiseError(e)
       case BIO.FatalError(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
+      case BIO.EvalTotal(thunk) => F.delay(thunk())
       case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); IO.unit }).unsafeRunSync())
     }
 

@@ -48,6 +48,19 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
+  test("BIO.evalTotal(thunk).to[IO]") { implicit s =>
+    assertEquals(BIO.evalTotal(123).to[IO].unsafeRunSync(), 123)
+  }
+
+  test("BIO.evalTotal(thunk).executeAsync.to[IO]") { implicit s =>
+    val io = BIO.evalTotal(123).executeAsync.to[IO]
+    val f = io.unsafeToFuture()
+
+    assertEquals(f.value, None)
+    s.tick()
+    assertEquals(f.value, Some(Success(123)))
+  }
+
   test("BIO.raiseError(dummy).to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
     intercept[DummyException] {
