@@ -30,6 +30,22 @@ import scala.util.control.NonFatal
 private[bio] object TaskConversions {
 
   /**
+    * Implementation for `BIO.toIO`.
+    */
+  def toIO[A](source: Task[A])(implicit eff: ConcurrentEffect[Task]): IO[A] =
+    source match {
+      case BIO.Now(value) => IO.pure(value)
+      case BIO.Error(e) => IO.raiseError(e)
+      case BIO.FatalError(e) => IO.raiseError(e)
+      case BIO.Eval(thunk) => IO(thunk())
+      case BIO.EvalTotal(thunk) => IO(thunk())
+      case _ =>
+        IO.cancelable { cb =>
+          toIO(eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync())
+        }
+    }
+
+  /**
     * Implementation for `BIO.toConcurrent`.
     */
   def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
@@ -38,6 +54,7 @@ private[bio] object TaskConversions {
       case BIO.Error(e) => F.raiseError(e)
       case BIO.FatalError(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
+      case BIO.EvalTotal(thunk) => F.delay(thunk())
       case _ =>
         F.cancelable { cb =>
           val token = eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync()
@@ -54,6 +71,7 @@ private[bio] object TaskConversions {
       case BIO.Error(e) => F.raiseError(e)
       case BIO.FatalError(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
+      case BIO.EvalTotal(thunk) => F.delay(thunk())
       case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); IO.unit }).unsafeRunSync())
     }
 
