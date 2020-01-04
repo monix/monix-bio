@@ -43,7 +43,7 @@ private[bio] object TaskGatherN {
           .withConfig[Task, (Deferred[Task, A], BIO[E, A])](BufferCapacity.Bounded(itemSize), ChannelType.SPMC)
           .hideErrors
         pairs <- BIO.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
-        _ <- queue.offerMany(pairs).hideErrors
+        _     <- queue.offerMany(pairs).hideErrors
         // TODO: figure out why it doesn't infer
         workers = BIO.gather[Nothing, Fiber[E, Nothing], List](List.fill(parallelism.min(itemSize)) {
           queue.poll.hideErrors.flatMap {

@@ -52,9 +52,10 @@ private[bio] object TaskEffect {
     execute(fa, cb)
   }
 
-  private def execute[A](fa: Task[A], cb: Either[Throwable, A] => IO[Unit])(
-    implicit s: Scheduler,
-    opts: BIO.Options) = {
+  private def execute[A](
+    fa: Task[A],
+    cb: Either[Throwable, A] => IO[Unit]
+  )(implicit s: Scheduler, opts: BIO.Options) = {
 
     fa.runAsyncOptF(new Callback[Cause[Throwable], A] {
       private def signal(value: Either[Throwable, A]): Unit =

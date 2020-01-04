@@ -69,7 +69,8 @@ private[bio] object TaskRunLoop {
     rcb: TaskRestartCallback,
     bFirst: Bind,
     bRest: CallStack,
-    frameIndex: FrameIndex): Unit = {
+    frameIndex: FrameIndex
+  ): Unit = {
 
     val cba = cb.asInstanceOf[BiCallback[Any, Any]]
     var current: Current = source
@@ -251,7 +252,8 @@ private[bio] object TaskRunLoop {
     cb: BiCallback[E, A],
     rcb: TaskRestartCallback,
     bindCurrent: Bind,
-    bindRest: CallStack): Unit = {
+    bindRest: CallStack
+  ): Unit = {
 
     val savedLocals =
       if (context.options.localContextPropagation) Local.getContext()
@@ -297,7 +299,8 @@ private[bio] object TaskRunLoop {
     opts: BIO.Options,
     // TODO: should it be [E, A]?
     cb: BiCallback[Any, A],
-    isCancelable: Boolean = true): CancelToken[BIO[E, ?]] = {
+    isCancelable: Boolean = true
+  ): CancelToken[BIO[E, ?]] = {
 
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
@@ -409,7 +412,8 @@ private[bio] object TaskRunLoop {
               bRest,
               frameIndex,
               forceFork = false,
-              isCancelable = isCancelable)
+              isCancelable = isCancelable
+            )
         }
 
         if (hasUnboxed) {
@@ -441,7 +445,8 @@ private[bio] object TaskRunLoop {
           bRest,
           frameIndex,
           forceFork = true,
-          isCancelable = true)
+          isCancelable = true
+        )
       }
     } while (true)
     // $COVERAGE-OFF$
@@ -731,7 +736,8 @@ private[bio] object TaskRunLoop {
     rcb: TaskRestartCallback,
     bFirst: Bind,
     bRest: CallStack,
-    nextFrame: FrameIndex): Unit = {
+    nextFrame: FrameIndex
+  ): Unit = {
 
     // We are going to resume the frame index from where we left,
     // but only if no real asynchronous execution happened. So in order
@@ -761,20 +767,23 @@ private[bio] object TaskRunLoop {
     bRest: CallStack,
     nextFrame: FrameIndex,
     isCancelable: Boolean,
-    forceFork: Boolean): CancelToken[BIO[E, ?]] = {
+    forceFork: Boolean
+  ): CancelToken[BIO[E, ?]] = {
 
     val context = Context(
       scheduler,
       opts,
       if (isCancelable) TaskConnection[E]()
-      else TaskConnection.uncancelable[E])
+      else TaskConnection.uncancelable[E]
+    )
 
     if (!forceFork) source match {
       case async: Async[Any, Any] =>
         executeAsyncTask(async, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, nextFrame)
-    } else {
+    }
+    else {
       restartAsync(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest)
     }
     context.connection.cancel
@@ -788,7 +797,8 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean): CancelableFuture[Either[E, A]] = {
+    forceFork: Boolean
+  ): CancelableFuture[Either[E, A]] = {
 
     val p = Promise[Either[E, A]]()
     val cb = BiCallback.fromPromise(p).asInstanceOf[BiCallback[Any, Any]]
@@ -800,7 +810,8 @@ private[bio] object TaskRunLoop {
         executeAsyncTask(async, context, cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context, cb, null, bFirst, bRest, nextFrame)
-    } else {
+    }
+    else {
       restartAsync(current, context, cb, null, bFirst, bRest)
     }
 
@@ -815,7 +826,8 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean): Either[BIO[E, A], A] = {
+    forceFork: Boolean
+  ): Either[BIO[E, A], A] = {
 
     val ctx = Context[Any](scheduler, opts)
     val start: Start[Any, Any] =
@@ -831,7 +843,8 @@ private[bio] object TaskRunLoop {
         start.asInstanceOf[Start[E, A]],
         trampolineBefore = false,
         trampolineAfter = false
-      ))
+      )
+    )
   }
 
   private[internal] def findErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, BIO[E, Any]] = {
@@ -857,7 +870,8 @@ private[bio] object TaskRunLoop {
 
   private[internal] def findFatalErrorHandler[E](
     bFirst: Bind,
-    bRest: CallStack): StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] = {
+    bRest: CallStack
+  ): StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] = {
     bFirst match {
       case ref: StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] @unchecked => ref
       case _ =>

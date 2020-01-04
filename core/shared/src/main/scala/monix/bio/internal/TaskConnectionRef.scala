@@ -42,8 +42,9 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
     unsafeSet(conn.cancel)
 
   @tailrec
-  private def unsafeSet(ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ )(
-    implicit s: Scheduler): Unit = {
+  private def unsafeSet(
+    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
+  )(implicit s: Scheduler): Unit = {
 
     if (!state.compareAndSet(Empty, IsActive(ref))) {
       state.get() match {
@@ -89,7 +90,8 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
   private def raiseError(): Nothing = {
     throw new IllegalStateException(
       "Cannot assign to SingleAssignmentCancelable, " +
-        "as it was already assigned once")
+        "as it was already assigned once"
+    )
   }
 
   private[this] val state = Atomic(Empty: State)

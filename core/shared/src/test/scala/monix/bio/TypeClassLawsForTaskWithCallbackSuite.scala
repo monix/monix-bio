@@ -54,7 +54,8 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: Options): Eq[BIO[E, A]] = {
+    opts: Options
+  ): Eq[BIO[E, A]] = {
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       task.runAsyncOpt {
@@ -69,7 +70,8 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[UIO[A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[UIO[A]] = {
     Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
       task.runAsyncOpt {
@@ -85,7 +87,8 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: Options): Eq[BIO.Par[E, A]] = {
+    opts: Options
+  ): Eq[BIO.Par[E, A]] = {
 
     import BIO.Par.unwrap
     Eq.by { task =>

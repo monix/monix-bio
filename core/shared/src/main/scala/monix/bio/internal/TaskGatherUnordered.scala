@@ -55,7 +55,8 @@ private[bio] object TaskGatherUnordered {
       ref: AtomicAny[State[A]],
       currentState: State[A],
       mainConn: TaskConnection[E],
-      finalCallback: Callback[E, List[A]])(implicit s: Scheduler): Unit = {
+      finalCallback: Callback[E, List[A]]
+    )(implicit s: Scheduler): Unit = {
 
       currentState match {
         case State.Active(list, 0) =>
@@ -77,7 +78,8 @@ private[bio] object TaskGatherUnordered {
       stateRef: AtomicAny[State[A]],
       mainConn: TaskConnection[E],
       ex: E,
-      finalCallback: Callback[E, List[A]])(implicit s: Scheduler): Unit = {
+      finalCallback: Callback[E, List[A]]
+    )(implicit s: Scheduler): Unit = {
 
       val currentState = stateRef.getAndSet(State.Complete)
       if (currentState != State.Complete) {
@@ -92,7 +94,8 @@ private[bio] object TaskGatherUnordered {
       stateRef: AtomicAny[State[A]],
       mainConn: TaskConnection[E],
       ex: Throwable,
-      finalCallback: BiCallback[E, List[A]])(implicit s: Scheduler): Unit = {
+      finalCallback: BiCallback[E, List[A]]
+    )(implicit s: Scheduler): Unit = {
 
       val currentState = stateRef.getAndSet(State.Complete)
       if (currentState != State.Complete) {
@@ -108,7 +111,8 @@ private[bio] object TaskGatherUnordered {
         stateRef: AtomicAny[State[A]],
         count: Int,
         conn: TaskConnection[E],
-        finalCallback: Callback[E, List[A]])(implicit s: Scheduler): Unit = {
+        finalCallback: Callback[E, List[A]]
+      )(implicit s: Scheduler): Unit = {
 
         stateRef.get match {
           case current @ State.Initializing(_, _) =>

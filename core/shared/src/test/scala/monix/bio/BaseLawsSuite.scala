@@ -53,7 +53,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     A: Eq[A],
     E: Eq[E],
     sc: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[BIO[E, A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[BIO[E, A]] = {
 
     new Eq[BIO[E, A]] {
       def eqv(lh: BIO[E, A], rh: BIO[E, A]): Boolean =
@@ -65,7 +66,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[UIO[A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[UIO[A]] = {
 
     new Eq[UIO[A]] {
       def eqv(lh: UIO[A], rh: UIO[A]): Boolean =
@@ -81,7 +83,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[BIO.Par[E, A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[BIO.Par[E, A]] = {
     new Eq[BIO.Par[E, A]] {
       import BIO.Par.unwrap
       def eqv(lh: BIO.Par[E, A], rh: BIO.Par[E, A]): Boolean =
@@ -153,20 +156,20 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
     def genFlatMap: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f <- getArbitrary[A => BIO[E, A]]
+        f   <- getArbitrary[A => BIO[E, A]]
       } yield ioa.flatMap(f)
 
     def getMapOne: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f <- getArbitrary[A => A]
+        f   <- getArbitrary[A => A]
       } yield ioa.map(f)
 
     def getMapTwo: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f1 <- getArbitrary[A => A]
-        f2 <- getArbitrary[A => A]
+        f1  <- getArbitrary[A => A]
+        f2  <- getArbitrary[A => A]
       } yield ioa.map(f1).map(f2)
 
     Arbitrary(
@@ -183,7 +186,8 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         1 -> getMapOne,
         1 -> getMapTwo,
         2 -> genFlatMap
-      ))
+      )
+    )
   }
 
   implicit def arbitraryUIO[A: Arbitrary: Cogen]: Arbitrary[UIO[A]] = {

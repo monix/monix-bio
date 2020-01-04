@@ -50,7 +50,8 @@ private[bio] object ForkedRegister {
       case Map(other, _, _) => detect(other, limit - 1)
       case ContextSwitch(other, _, _) => detect(other, limit - 1)
       case _ => false
-    } else {
+    }
+    else {
       false
     }
   }

@@ -34,7 +34,8 @@ private[bio] object TaskGather {
     */
   def apply[E, A, M[X] <: Iterable[X]](
     in: Iterable[BIO[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
+    makeBuilder: () => mutable.Builder[A, M[A]]
+  ): BIO[E, M[A]] = {
     Async(
       new Register(in, makeBuilder),
       trampolineBefore = true,
@@ -50,8 +51,8 @@ private[bio] object TaskGather {
   // a full async boundary!
   private final class Register[E, A, M[X] <: Iterable[X]](
     in: Iterable[BIO[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]])
-      extends ForkedRegister[E, M[A]] {
+    makeBuilder: () => mutable.Builder[A, M[A]]
+  ) extends ForkedRegister[E, M[A]] {
 
     def apply(context: Context[E], finalCallback: BiCallback[E, M[A]]): Unit = {
       // We need a monitor to synchronize on, per evaluation!
@@ -70,7 +71,8 @@ private[bio] object TaskGather {
       // MUST BE synchronized by `lock`!
       // MUST NOT BE called if isActive == false!
       def maybeSignalFinal(mainConn: TaskConnection[E], finalCallback: Callback[E, M[A]])(
-        implicit s: Scheduler): Unit = {
+        implicit s: Scheduler
+      ): Unit = {
 
         completed += 1
         if (completed >= tasksCount) {

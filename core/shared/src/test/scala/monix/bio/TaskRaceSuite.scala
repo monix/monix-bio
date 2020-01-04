@@ -499,7 +499,8 @@ object TaskRaceSuite extends BaseTestSuite {
       Task.racePair(acc, t).map {
         case Left((a, _)) => a
         case Right((_, b)) => b
-      })
+      }
+    )
 
     sum.runToFuture
     s.tick()
@@ -514,7 +515,8 @@ object TaskRaceSuite extends BaseTestSuite {
       Task.racePair(acc, t).map {
         case Left((a, _)) => a
         case Right((_, b)) => b
-      })
+      }
+    )
 
     sum.runToFuture
     s.tick()
@@ -655,7 +657,8 @@ object TaskRaceSuite extends BaseTestSuite {
       Task.race(acc, t).map {
         case Left(a) => a
         case Right(b) => b
-      })
+      }
+    )
 
     sum.runToFuture
     s.tick()
@@ -670,7 +673,8 @@ object TaskRaceSuite extends BaseTestSuite {
       Task.race(acc, t).map {
         case Left(a) => a
         case Right(b) => b
-      })
+      }
+    )
 
     sum.runToFuture
     s.tick()

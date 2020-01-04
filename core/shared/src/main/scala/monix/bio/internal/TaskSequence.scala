@@ -47,7 +47,8 @@ private[bio] object TaskSequence {
 
   /** Implementation for `Task.traverse`. */
   def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A], f: A => BIO[E, B])(
-    implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] = {
+    implicit bf: BuildFrom[M[A], B, M[B]]
+  ): BIO[E, M[B]] = {
 
     def loop(cursor: Iterator[A], acc: mutable.Builder[B, M[B]]): BIO[E, M[B]] = {
       if (cursor.hasNext) {

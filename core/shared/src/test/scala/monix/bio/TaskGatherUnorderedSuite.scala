@@ -30,7 +30,8 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     val seq = Seq(
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds))
+      Task.evalAsync(3).delayExecution(3.seconds)
+    )
     val f = Task.gatherUnordered(seq).runToFuture
 
     s.tick()
@@ -62,7 +63,8 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     val seq = Seq(
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds))
+      Task.evalAsync(3).delayExecution(3.seconds)
+    )
     val f = Task.gatherUnordered(seq).runToFuture
 
     s.tick()
