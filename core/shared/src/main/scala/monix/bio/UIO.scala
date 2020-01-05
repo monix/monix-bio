@@ -139,7 +139,6 @@ object UIO {
     BIO.cancelBoundary
 
   /**
-<<<<<<< 3d99a60857965629c009db81873e9a652c0c8330
    * @see See [[monix.bio.BIO.fromFutureEither]]
    */
   def fromFutureEither[A](f: Future[Either[Nothing, A]]): UIO[A] =
@@ -194,6 +193,7 @@ object UIO {
     TaskSequence.traverse(in, f)(bf)
 
   /**
+<<<<<<< f19a944d28f5f7d0edec0f719e7104e08180a1e6
    * @see See [[monix.bio.BIO.gather]]
    */
   def gather[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
@@ -212,8 +212,15 @@ object UIO {
     TaskGatherUnordered[Nothing, A](in)
 
   /**
+=======
    * @see See [[monix.bio.BIO.mapBoth]]
    */
   def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
     TaskMapBoth(fa1, fa2)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.readOptions]]
+   */
+  val readOptions: UIO[Options] =
+    BIO.readOptions
 }
