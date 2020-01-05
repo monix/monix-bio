@@ -17,8 +17,11 @@
 
 package monix.bio
 
-import monix.bio.internal.{TaskRace, TaskRacePair, TaskShift}
+import monix.bio.BIO.Options
+import monix.bio.compat.internal.newBuilder
+import monix.bio.internal.{TaskGather, TaskMapBoth, TaskRace, TaskRacePair, TaskSequence, TaskShift}
 import monix.execution.Scheduler
+import monix.execution.compat.BuildFrom
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -135,4 +138,28 @@ object UIO {
    */
   def sleep(timespan: FiniteDuration): UIO[Unit] =
     BIO.sleep(timespan)
+
+  /**
+   * @see See [[monix.bio.BIO.sequence]]
+   */
+  def sequence[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
+    TaskSequence.list(in)(bf)
+
+  /**
+   * @see See [[monix.bio.BIO.traverse]]
+   */
+  def traverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
+    TaskSequence.traverse(in, f)(bf)
+
+  /**
+   * @see See [[monix.bio.BIO.mapBoth]]
+   */
+  def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
+    TaskMapBoth(fa1, fa2)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.readOptions]]
+   */
+  val readOptions: UIO[Options] =
+    BIO.readOptions
 }
