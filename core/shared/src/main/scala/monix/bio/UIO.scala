@@ -139,6 +139,7 @@ object UIO {
     BIO.cancelBoundary
 
   /**
+<<<<<<< 3d99a60857965629c009db81873e9a652c0c8330
    * @see See [[monix.bio.BIO.fromFutureEither]]
    */
   def fromFutureEither[A](f: Future[Either[Nothing, A]]): UIO[A] =
