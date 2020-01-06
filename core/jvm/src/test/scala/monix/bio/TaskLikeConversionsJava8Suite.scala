@@ -60,11 +60,8 @@ object TaskLikeConversionsJava8Suite extends BaseTestSuite {
 
     f.cancel()
     s.tick()
-    assertEquals(f.value, None)
-
     assert(future.isDone)
     assert(future.isCancelled)
-    s.tick()
     assertEquals(f.value, None)
   }
 
