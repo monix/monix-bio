@@ -259,7 +259,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("BIO.from converts Future0") { implicit s =>
+  test("BIO.from converts Function0") { implicit s =>
     val task = BIO.from(() => 123)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Right(123))))
