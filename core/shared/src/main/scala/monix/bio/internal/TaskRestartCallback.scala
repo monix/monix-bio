@@ -146,7 +146,8 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       this,
       bFirst,
       bRest,
-      this.context.frameRef())
+      this.context.frameRef()
+    )
   }
 
   /** Reusable Runnable reference, to go lighter on memory allocations. */

@@ -23,6 +23,7 @@ import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.bio.internal._
+import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
 import monix.execution.compat.BuildFrom
@@ -807,7 +808,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   def runAsyncOptF[E1 >: E](
-    cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, ?]] = {
+    cb: Either[Cause[E], A] => Unit
+  )(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, ?]] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -1332,8 +1334,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *        as input the resource that needs that needs release, along with
     *        the result of `use` (cancellation, error or successful result)
     */
-  final def bracketE[E1 >: E, B](use: A => BIO[E1, B])(
-    release: (A, Either[Option[Cause[E1]], B]) => UIO[Unit]): BIO[E1, B] =
+  final def bracketE[E1 >: E, B](
+    use: A => BIO[E1, B]
+  )(release: (A, Either[Option[Cause[E1]], B]) => UIO[Unit]): BIO[E1, B] =
     TaskBracket.either(this, use, release)
 
   /**
@@ -2184,8 +2187,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def timed: BIO[E, (FiniteDuration, A)] =
     for {
       start <- BIO.clock.monotonic(NANOSECONDS)
-      a <- this
-      end <- BIO.clock.monotonic(NANOSECONDS)
+      a     <- this
+      end   <- BIO.clock.monotonic(NANOSECONDS)
     } yield (FiniteDuration(end - start, NANOSECONDS), a)
 
   /** Returns a Task that mirrors the source Task but returns `None`
@@ -2591,6 +2594,23 @@ object BIO extends TaskInstancesLevel0 {
 
   /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
+
+  /** Converts into a `Task` from any `F[_]` for which there exists
+    * a [[TaskLike]] implementation.
+    *
+    * Supported types include, but are not necessarily limited to:
+    *
+    *  - [[https://typelevel.org/cats/datatypes/eval.html cats.Eval]]
+    *  - [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]]
+    *  - [[https://typelevel.org/cats-effect/datatypes/syncio.html cats.effect.SyncIO]]
+    *  - [[https://typelevel.org/cats-effect/typeclasses/effect.html cats.effect.Effect (Async)]]
+    *  - [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
+    *  - [[scala.Either]]
+    *  - [[scala.util.Try]]
+    *  - [[scala.concurrent.Future]]
+    */
+  def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): Task[A] =
+    F.apply(fa)
 
   /** Converts an `org.reactivestreams.Publisher` into a [[BIO]].
     *
@@ -3182,6 +3202,12 @@ object BIO extends TaskInstancesLevel0 {
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
     TaskFromFuture.fromCancelablePromise(p)
 
+  /**
+    * Converts any Future-like data-type into a `Task`, via [[monix.catnap.FutureLift]].
+    */
+  def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
+    F.apply(tfa)
+
   /** Run two `Task` actions concurrently, and return the first to
     * finish, either in success or error. The loser of the race is
     * cancelled.
@@ -3307,8 +3333,9 @@ object BIO extends TaskInstancesLevel0 {
     *
     *  It's a simple version of [[traverse]].
     */
-  def sequence[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(
-    implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
+  def sequence[E, A, M[X] <: Iterable[X]](
+    in: M[BIO[E, A]]
+  )(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
     TaskSequence.list(in)(bf)
 
   /** Given a `Iterable[A]` and a function `A => Task[B]`, sequentially
@@ -3317,8 +3344,9 @@ object BIO extends TaskInstancesLevel0 {
     *
     *  It's a generalized version of [[sequence]].
     */
-  def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(
-    implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] =
+  def traverse[E, A, B, M[X] <: Iterable[X]](
+    in: M[A]
+  )(f: A => BIO[E, B])(implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] =
     TaskSequence.traverse(in, f)(bf)
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
@@ -3383,7 +3411,6 @@ object BIO extends TaskInstancesLevel0 {
   def gatherN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskGatherN[E, A](parallelism, in)
 
-
   /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
     * nondeterministically apply the function to each element of the collection
     * and return a task that will signal a collection of the results once all
@@ -3407,8 +3434,10 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see [[wanderN]] for a version that limits parallelism.
     */
-  def wander[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] =
-  UIO.eval(in.map(f)).flatMap(col => TaskGather[E, B, M](col, () => newBuilder(bf, in)))
+  def wander[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(
+    implicit bf: BuildFrom[M[A], B, M[B]]
+  ): BIO[E, M[B]] =
+    UIO.eval(in.map(f)).flatMap(col => TaskGather[E, B, M](col, () => newBuilder(bf, in)))
 
   /** Processes the given collection of tasks in parallel and
     * nondeterministically gather the results without keeping the original
@@ -3580,8 +3609,9 @@ object BIO extends TaskInstancesLevel0 {
       */
     private[bio] final class CreatePartiallyApplied[E, A](val dummy: Boolean = true) extends AnyVal {
 
-      def apply[CancelationToken](register: (Scheduler, Callback[E, A]) => CancelationToken)(
-        implicit B: AsyncBuilder[CancelationToken]): BIO[E, A] =
+      def apply[CancelationToken](
+        register: (Scheduler, Callback[E, A]) => CancelationToken
+      )(implicit B: AsyncBuilder[CancelationToken]): BIO[E, A] =
         B.create(register)
     }
 
@@ -3660,7 +3690,8 @@ object BIO extends TaskInstancesLevel0 {
     private val schedulerRef: Scheduler,
     options: Options,
     connection: TaskConnection[E],
-    frameRef: FrameIndexRef) {
+    frameRef: FrameIndexRef
+  ) {
 
     val scheduler: Scheduler = {
       if (options.localContextPropagation && !schedulerRef.features.contains(Scheduler.TRACING))
@@ -3706,7 +3737,8 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E](
-      cb: Either[Cause[Nothing], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, ?]] = {
+      cb: Either[Cause[Nothing], A] => Unit
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         BIO.unit
@@ -3722,7 +3754,8 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOpt(
-      cb: Either[Cause[Nothing], A] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      cb: Either[Cause[Nothing], A] => Unit
+    )(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         Cancelable.empty
@@ -3752,7 +3785,8 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: E](
-      cb: Either[Cause[E], Nothing] => Unit)(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
+      cb: Either[Cause[E], Nothing] => Unit
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         BIO.unit
@@ -3764,13 +3798,15 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runToFutureOpt[E1 >: E](
       implicit s: Scheduler,
-      opts: Options): CancelableFuture[Either[E1, Nothing]] = {
+      opts: Options
+    ): CancelableFuture[Either[E1, Nothing]] = {
       CancelableFuture.successful(Left(e))
     }
 
     // Optimization to avoid the run-loop
     override def runAsyncOpt(
-      cb: Either[Cause[E], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      cb: Either[Cause[E], Nothing] => Unit
+    )(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         Cancelable.empty
@@ -3803,9 +3839,9 @@ object BIO extends TaskInstancesLevel0 {
   private[bio] final case class FatalError(e: Throwable) extends BIO[Nothing, Nothing] {
 
     // Optimization to avoid the run-loop
-    override def runAsyncOptF[E1 >: Nothing](cb: Either[Cause[Nothing], Nothing] => Unit)(
-      implicit s: Scheduler,
-      opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
+    override def runAsyncOptF[E1 >: Nothing](
+      cb: Either[Cause[Nothing], Nothing] => Unit
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callFatalError(cb, e)
         BIO.unit
@@ -3821,7 +3857,8 @@ object BIO extends TaskInstancesLevel0 {
 
     // Optimization to avoid the run-loop
     override def runAsyncOpt(
-      cb: Either[Cause[Nothing], Nothing] => Unit)(implicit s: Scheduler, opts: Options): Cancelable = {
+      cb: Either[Cause[Nothing], Nothing] => Unit
+    )(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callFatalError(cb, e)
         Cancelable.empty
@@ -3889,8 +3926,8 @@ object BIO extends TaskInstancesLevel0 {
     register: (Context[E], BiCallback[E, A]) => Unit,
     trampolineBefore: Boolean = false,
     trampolineAfter: Boolean = true,
-    restoreLocals: Boolean = true)
-      extends BIO[E, A]
+    restoreLocals: Boolean = true
+  ) extends BIO[E, A]
 
   /** For changing the context for the rest of the run-loop.
     *
@@ -3899,8 +3936,8 @@ object BIO extends TaskInstancesLevel0 {
   private[monix] final case class ContextSwitch[E, A](
     source: BIO[E, A],
     modify: Context[E] => Context[E],
-    restore: (A, E, Context[E], Context[E]) => Context[E])
-      extends BIO[E, A]
+    restore: (A, E, Context[E], Context[E]) => Context[E]
+  ) extends BIO[E, A]
 
   /**
     * Internal API — starts the execution of a Task with a guaranteed
@@ -3916,7 +3953,8 @@ object BIO extends TaskInstancesLevel0 {
   private[monix] def unsafeStartEnsureAsync[E, A](
     source: BIO[E, A],
     context: Context[E],
-    cb: BiCallback[E, A]): Unit = {
+    cb: BiCallback[E, A]
+  ): Unit = {
     if (ForkedRegister.detect(source))
       unsafeStartNow(source, context, cb)
     else
@@ -4097,7 +4135,8 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     */
   implicit def catsEffect(
     implicit s: Scheduler,
-    opts: BIO.Options = BIO.defaultOptions): CatsConcurrentEffectForTask = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
 

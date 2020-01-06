@@ -28,7 +28,8 @@ object TaskGatherSuite extends BaseTestSuite {
     val seq = Seq(
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds))
+      Task.evalAsync(3).delayExecution(3.seconds)
+    )
     val f = BIO.gather(seq).runToFuture
 
     s.tick()
@@ -60,7 +61,8 @@ object TaskGatherSuite extends BaseTestSuite {
     val seq = Seq(
       Task.evalAsync(1).delayExecution(2.seconds),
       Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds))
+      Task.evalAsync(3).delayExecution(3.seconds)
+    )
     val f = BIO.gather(seq).runToFuture
 
     s.tick()

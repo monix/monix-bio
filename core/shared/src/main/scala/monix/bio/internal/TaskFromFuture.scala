@@ -120,7 +120,8 @@ private[bio] object TaskFromFuture {
     ctx: BIO.Context[Throwable],
     cb: Callback[Throwable, A],
     f: Future[A],
-    c: Cancelable): Unit = {
+    c: Cancelable
+  ): Unit = {
 
     f.value match {
       case Some(value) =>
@@ -138,7 +139,8 @@ private[bio] object TaskFromFuture {
   }
 
   private def trampolinedCB[A](cb: Callback[Throwable, A], conn: TaskConnection[Throwable])(
-    implicit ec: ExecutionContext): Try[A] => Unit = {
+    implicit ec: ExecutionContext
+  ): Try[A] => Unit = {
 
     new (Try[A] => Unit) with TrampolinedRunnable {
       private[this] var value: Try[A] = _

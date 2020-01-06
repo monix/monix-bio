@@ -41,7 +41,8 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def cancelAllUnsafe[E](
-    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]): CancelToken[BIO[E, ?]] = {
+    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]
+  ): CancelToken[BIO[E, ?]] = {
 
     if (cursor.isEmpty)
       BIO.unit
@@ -56,7 +57,8 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def unsafeCancel[E](
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[BIO[E, ?]] = {
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */
+  ): CancelToken[BIO[E, ?]] = {
 
     task match {
       case ref: BIO[E, Unit] @unchecked =>
@@ -77,7 +79,8 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def getToken[E](
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[BIO[E, ?]] =
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */
+  ): CancelToken[BIO[E, ?]] =
     task match {
       case ref: BIO[E, Unit] @unchecked =>
         ref
@@ -94,8 +97,9 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def triggerCancel(task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ )(
-    implicit s: Scheduler): Unit = {
+  private[internal] def triggerCancel(
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */
+  )(implicit s: Scheduler): Unit = {
 
     task match {
       case ref: BIO[Any, Unit] @unchecked =>
@@ -158,7 +162,8 @@ private[bio] object UnsafeCancelUtils {
                 BIO.deferAction(s =>
                   UIO(rest.foreach { e =>
                     s.reportFailure(WrappedException.wrap(e))
-                  })) >> BIO.raiseError(first)
+                  })
+                ) >> BIO.raiseError(first)
             }
 
           case (Nil, Nil) =>

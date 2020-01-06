@@ -52,14 +52,16 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
     runConcurrentCallbackTest(f =>
       Task.cancelable { cb =>
         f(cb); Task(())
-      })
+      }
+    )
   }
 
   test("Task.cancelable0 has a safe callback") {
     runConcurrentCallbackTest(f =>
       Task.cancelable0 { (_, cb) =>
         f(cb); Task(())
-      })
+      }
+    )
   }
 
   def runConcurrentCallbackTest(create: (Callback[Throwable, Int] => Unit) => Task[Int]): Unit = {
@@ -95,18 +97,18 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
     run(_.tryApply(Right(1)))
     run(_.tryApply(Success(1)))
 
-    run(
-      cb =>
-        try cb.onSuccess(1)
-        catch { case _: CallbackCalledMultipleTimesException => () })
-    run(
-      cb =>
-        try cb(Right(1))
-        catch { case _: CallbackCalledMultipleTimesException => () })
-    run(
-      cb =>
-        try cb(Success(1))
-        catch { case _: CallbackCalledMultipleTimesException => () })
+    run { cb =>
+      try cb.onSuccess(1)
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
+    run { cb =>
+      try cb(Right(1))
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
+    run { cb =>
+      try cb(Success(1))
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
 
     val dummy = DummyException("dummy")
 
@@ -114,18 +116,18 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
     run(_.tryApply(Left(dummy)))
     run(_.tryApply(Failure(dummy)))
 
-    run(
-      cb =>
-        try cb.onError(dummy)
-        catch { case _: CallbackCalledMultipleTimesException => () })
-    run(
-      cb =>
-        try cb(Left(dummy))
-        catch { case _: CallbackCalledMultipleTimesException => () })
-    run(
-      cb =>
-        try cb(Failure(dummy))
-        catch { case _: CallbackCalledMultipleTimesException => () })
+    run { cb =>
+      try cb.onError(dummy)
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
+    run { cb =>
+      try cb(Left(dummy))
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
+    run { cb =>
+      try cb(Failure(dummy))
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
   }
 
   def runConcurrently(sc: Scheduler)(f: => Unit): Unit = {

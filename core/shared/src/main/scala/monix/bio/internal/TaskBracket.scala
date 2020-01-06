@@ -88,7 +88,8 @@ private[monix] object TaskBracket {
   def either[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]): BIO[E, B] = {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
+  ): BIO[E, B] = {
 
     BIO.Async(
       new StartE(acquire, use, release),
@@ -101,8 +102,8 @@ private[monix] object TaskBracket {
   private final class StartE[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit])
-      extends BaseStart(acquire, use) {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
+  ) extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameE(ctx, value, release)
@@ -111,8 +112,8 @@ private[monix] object TaskBracket {
   private final class ReleaseFrameE[E, A, B](
     ctx: Context[E],
     a: A,
-    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit])
-      extends BaseReleaseFrame[E, A, B](ctx, a) {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
+  ) extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
       release(a, Right(b))
@@ -134,7 +135,8 @@ private[monix] object TaskBracket {
   def exitCase[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, ExitCase[Cause[E]]) => UIO[Unit]): BIO[E, B] =
+    release: (A, ExitCase[Cause[E]]) => UIO[Unit]
+  ): BIO[E, B] =
     BIO.Async(
       new StartCase(acquire, use, release),
       trampolineBefore = true,
@@ -145,8 +147,8 @@ private[monix] object TaskBracket {
   private final class StartCase[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, ExitCase[Cause[E]]) => UIO[Unit])
-      extends BaseStart(acquire, use) {
+    release: (A, ExitCase[Cause[E]]) => UIO[Unit]
+  ) extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameCase(ctx, value, release)

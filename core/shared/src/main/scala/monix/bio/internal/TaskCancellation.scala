@@ -104,7 +104,8 @@ private[bio] object TaskCancellation {
     conn: TaskConnection[E],
     conn2: TaskConnection[E],
     cb: Callback[E, A],
-    e: E): CancelToken[BIO[E, ?]] = {
+    e: E
+  ): CancelToken[BIO[E, ?]] = {
 
     BIO.suspendTotal {
       if (waitsForResult.getAndSet(false))

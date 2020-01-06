@@ -114,12 +114,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
     val effect = Atomic(false)
     val task = Task.unit
       .guarantee(UIO.sleep(10.seconds) *> UIO(effect.set(true)))
-      .flatMap(_ =>
-        BIO.Async[Nothing, Unit](
-          (ctx, cb) => {
-            cb.onSuccess(())
-          }
-        ))
+      .flatMap(_ => BIO.Async[Nothing, Unit]((_, cb) => cb.onSuccess(())))
       .flatMap(_ => Task.sleep(10.seconds))
 
     val f = task.runToFuture

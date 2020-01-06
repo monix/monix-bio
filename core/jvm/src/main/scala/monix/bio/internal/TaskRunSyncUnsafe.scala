@@ -154,7 +154,8 @@ private[bio] object TaskRunSyncUnsafe {
     scheduler: Scheduler,
     opts: BIO.Options,
     bFirst: Bind,
-    bRest: CallStack): A = {
+    bRest: CallStack
+  ): A = {
 
     val latch = new OneShotLatch
     val cb = new BlockingCallback[Any, Any](latch)
