@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.effect.{ContextShift, CancelToken, Clock, Timer, ConcurrentEffect, ExitCase, Concurrent, Effect, Fiber => _}
 import cats.{Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
@@ -33,7 +33,6 @@ import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
 import org.reactivestreams.Publisher
-
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
@@ -1101,6 +1100,84 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     }
     /*_*/
   }
+
+  /** Memoizes (caches) the result of the source task and reuses it on
+    * subsequent invocations of `runAsync`.
+    *
+    * The resulting task will be idempotent, meaning that
+    * evaluating the resulting task multiple times will have the
+    * same effect as evaluating it once.
+    *
+    * $memoizeCancel
+    *
+    * Example:
+    * {{{
+    *   import scala.concurrent.CancellationException
+    *   import scala.concurrent.duration._
+    *
+    *   val source = Task(1).delayExecution(5.seconds)
+    *
+    *   // Option 1: trigger error on cancellation
+    *   val err = new CancellationException
+    *   val cached1 = source.onCancelRaiseError(err).memoize
+    *
+    *   // Option 2: make it uninterruptible
+    *   val cached2 = source.uncancelable.memoize
+    * }}}
+    *
+    * When using [[onCancelRaiseError]] like in the example above, the
+    * behavior of `memoize` is to cache the error. If you want the ability
+    * to retry errors until a successful value happens, see [[memoizeOnSuccess]].
+    *
+    * $memoizeUnsafe
+    *
+    * @see [[memoizeOnSuccess]] for a version that only caches
+    *     successful results
+    *
+    * @return a `Task` that can be used to wait for the memoized value
+    */
+  @UnsafeBecauseImpure
+  final def memoize: BIO[E, A] =
+    TaskMemoize(this, cacheErrors = true)
+
+  /** Memoizes (cache) the successful result of the source task
+    * and reuses it on subsequent invocations of `runAsync`.
+    * Thrown exceptions are not cached.
+    *
+    * The resulting task will be idempotent, but only if the
+    * result is successful.
+    *
+    * $memoizeCancel
+    *
+    * Example:
+    * {{{
+    *   import scala.concurrent.CancellationException
+    *   import scala.concurrent.duration._
+    *
+    *   val source = Task(1).delayExecution(5.seconds)
+    *
+    *   // Option 1: trigger error on cancellation
+    *   val err = new CancellationException
+    *   val cached1 = source.onCancelRaiseError(err).memoizeOnSuccess
+    *
+    *   // Option 2: make it uninterruptible
+    *   val cached2 = source.uncancelable.memoizeOnSuccess
+    * }}}
+    *
+    * When using [[onCancelRaiseError]] like in the example above, the
+    * behavior of `memoizeOnSuccess` is to retry the source on subsequent
+    * invocations. Use [[memoize]] if that's not the desired behavior.
+    *
+    * $memoizeUnsafe
+    *
+    * @see [[memoize]] for a version that caches both successful
+    *     results and failures
+    *
+    * @return a `Task` that can be used to wait for the memoized value
+    */
+  @UnsafeBecauseImpure
+  final def memoizeOnSuccess: BIO[E, A] =
+    TaskMemoize(this, cacheErrors = false)
 
   /** Creates a new [[Task]] that will expose any triggered typed
     * from the source.
@@ -2711,6 +2788,13 @@ object BIO extends TaskInstancesLevel0 {
       case Right(v) => Now(v)
       case Left(ex) => Error(ex)
     }
+
+  /** Builds a [[BIO]] instance out of scala `Either` wrapped in scala `Try` */
+  def fromTryEither[E, A](a: Try[Either[E, A]]): BIO[E, A] = a match {
+    case Success(Right(a)) => Now(a)
+    case Success(Left(e)) => Error(e)
+    case Failure(t) => FatalError(t)
+  }
 
   /** Keeps calling `f` until it returns a `Right` result.
     *

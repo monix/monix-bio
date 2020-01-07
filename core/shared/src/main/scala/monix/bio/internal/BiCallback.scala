@@ -40,6 +40,12 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
     } catch {
       case _: CallbackCalledMultipleTimesException => false
     }
+
+  def apply(result: Try[Either[E, A]]): Unit = result match {
+    case Success(Right(a)) => onSuccess(a)
+    case Success(Left(e)) => onError(e)
+    case Failure(t) => onFatalError(t)
+  }
 }
 
 /**
