@@ -17,9 +17,8 @@
 
 package monix.bio
 
-import monix.bio.BIO.Options
 import monix.bio.compat.internal.newBuilder
-import monix.bio.internal.{TaskGather, TaskGatherN, TaskGatherUnordered, TaskMapBoth, TaskRace, TaskRacePair, TaskSequence, TaskShift}
+import monix.bio.internal._
 import monix.execution.Scheduler
 import monix.execution.compat.BuildFrom
 
