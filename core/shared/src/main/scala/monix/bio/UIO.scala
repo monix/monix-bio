@@ -159,7 +159,7 @@ object UIO {
   /**
    * @see See [[monix.bio.BIO.racePair]]
    */
-  def racePair[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
+  def racePair[A, B](fa: UIO[A], fb: UIO[A]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
     TaskRacePair(fa, fb)
 
   /**
@@ -193,7 +193,6 @@ object UIO {
     TaskSequence.traverse(in, f)(bf)
 
   /**
-<<<<<<< f19a944d28f5f7d0edec0f719e7104e08180a1e6
    * @see See [[monix.bio.BIO.gather]]
    */
   def gather[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
@@ -212,15 +211,26 @@ object UIO {
     TaskGatherUnordered[Nothing, A](in)
 
   /**
-=======
+   * @see See [[monix.bio.BIO.mapBoth]]
+   */
+  def gather[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
+    TaskGather[Nothing, A, M](in, () => newBuilder(bf, in))
+
+  /**
+   * @see See [[monix.bio.BIO.gatherN]]
+   */
+  def gatherN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskGatherN[Nothing, A](parallelism, in)
+
+  /**
+   * @see See [[monix.bio.BIO.gatherUnordered]]
+   */
+  def gatherUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskGatherUnordered[Nothing, A](in)
+
+  /**
    * @see See [[monix.bio.BIO.mapBoth]]
    */
   def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
     TaskMapBoth(fa1, fa2)(f)
-
-  /**
-   * @see See [[monix.bio.BIO.readOptions]]
-   */
-  val readOptions: UIO[Options] =
-    BIO.readOptions
 }
