@@ -123,7 +123,7 @@ object UIO {
   /**
    * @see See [[monix.bio.BIO.racePair]]
    */
-  def racePair[A, B](fa: UIO[A], fb: UIO[A]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
+  def racePair[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
     TaskRacePair(fa, fb)
 
   /**
