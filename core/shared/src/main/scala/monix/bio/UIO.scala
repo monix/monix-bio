@@ -19,7 +19,7 @@ package monix.bio
 
 import monix.bio.BIO.Options
 import monix.bio.compat.internal.newBuilder
-import monix.bio.internal.{TaskGather, TaskMapBoth, TaskRace, TaskRacePair, TaskSequence, TaskShift}
+import monix.bio.internal.{TaskGather, TaskGatherN, TaskGatherUnordered, TaskMapBoth, TaskRace, TaskRacePair, TaskSequence, TaskShift}
 import monix.execution.Scheduler
 import monix.execution.compat.BuildFrom
 
@@ -61,7 +61,7 @@ object UIO {
   /**
    * @see See [[monix.bio.BIO.deferAction]]
    */
-  def deferAction[E, A](f: Scheduler => UIO[A]): UIO[A] =
+  def deferAction[A](f: Scheduler => UIO[A]): UIO[A] =
     BIO.deferAction(f)
 
   /**
@@ -122,6 +122,12 @@ object UIO {
     TaskRace(fa, fb)
 
   /**
+   * @see See [[monix.bio.BIO.racePair]]
+   */
+  def racePair[A, B](fa: UIO[A], fb: UIO[A]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
+    TaskRacePair(fa, fb)
+
+  /**
    * @see See [[monix.bio.BIO.shift]]
    */
   val shift: UIO[Unit] =
@@ -143,7 +149,7 @@ object UIO {
    * @see See [[monix.bio.BIO.sequence]]
    */
   def sequence[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
-    TaskSequence.list(in)(bf)
+    TaskSequence.list[Nothing, A, M](in)(bf)
 
   /**
    * @see See [[monix.bio.BIO.traverse]]
@@ -152,14 +158,26 @@ object UIO {
     TaskSequence.traverse(in, f)(bf)
 
   /**
+   * @see See [[monix.bio.BIO.gather]]
+   */
+  def gather[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
+    TaskGather[Nothing, A, M](in, () => newBuilder(bf, in))
+
+  /**
+   * @see See [[monix.bio.BIO.gatherN]]
+   */
+  def gatherN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskGatherN[Nothing, A](parallelism, in)
+
+  /**
+   * @see See [[monix.bio.BIO.gatherUnordered]]
+   */
+  def gatherUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskGatherUnordered[Nothing, A](in)
+
+  /**
    * @see See [[monix.bio.BIO.mapBoth]]
    */
   def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
     TaskMapBoth(fa1, fa2)(f)
-
-  /**
-   * @see See [[monix.bio.BIO.readOptions]]
-   */
-  val readOptions: UIO[Options] =
-    BIO.readOptions
 }
