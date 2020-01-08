@@ -17,8 +17,6 @@
 
 package monix.bio.internal
 
-import java.util.concurrent.RejectedExecutionException
-
 import monix.bio.BIO.{Async, Context}
 import monix.bio.UIO
 
@@ -46,16 +44,12 @@ private[bio] object TaskSleep {
       val c = TaskConnectionRef[Nothing]()
       ctx.connection.push(c.cancel)
 
-      try {
-        c := ctx.scheduler.scheduleOnce(
-          timespan.length,
-          timespan.unit,
-          new SleepRunnable(ctx, cb)
-        )
-      } catch {
-        case e: RejectedExecutionException =>
-          cb.onFatalError(e)
-      }
+      c := ctx.scheduler.scheduleOnce(
+        timespan.length,
+        timespan.unit,
+        new SleepRunnable(ctx, cb)
+      )
+
     }
   }
 

@@ -47,6 +47,11 @@ object TaskToStringSuite extends SimpleTestSuite {
     assertContains(ref, "BIO.Eval")
   }
 
+  test("BIO.EvalTotal") {
+    val ref = BIO.evalTotal("hello")
+    assertContains(ref, "BIO.EvalTotal")
+  }
+
   test("BIO.Async") {
     val ref = BIO.cancelable0[Int, Int]((_, cb) => { cb.onSuccess(1); BIO.unit })
     assertContains(ref, "BIO.Async")
@@ -60,6 +65,11 @@ object TaskToStringSuite extends SimpleTestSuite {
   test("BIO.Suspend") {
     val ref = Task.defer(BIO.now(1))
     assertContains(ref, "BIO.Suspend")
+  }
+
+  test("BIO.SuspendTotal") {
+    val ref = BIO.suspendTotal(BIO.now(1))
+    assertContains(ref, "BIO.SuspendTotal")
   }
 
   test("BIO.Map") {
