@@ -47,7 +47,8 @@ private[bio] object TaskMemoize {
           new Register(source, cacheErrors),
           trampolineBefore = false,
           trampolineAfter = true,
-          restoreLocals = true)
+          restoreLocals = true
+        )
     }
 
   /** Registration function, used in `Task.Async`. */
@@ -128,7 +129,8 @@ private[bio] object TaskMemoize {
       * that will receive the result once the task is complete.
       */
     private def registerListener(p: Promise[Either[E, A]], context: Context[E], cb: BiCallback[E, A])(
-      implicit ec: ExecutionContext): Unit = {
+      implicit ec: ExecutionContext
+    ): Unit = {
 
       p.future.onComplete { r =>
         // Listener is cancelable: we simply ensure that the result isn't streamed

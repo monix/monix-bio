@@ -17,8 +17,6 @@
 
 package monix.bio.internal
 
-import java.util.concurrent.RejectedExecutionException
-
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
 import monix.execution.Scheduler
@@ -50,42 +48,37 @@ private[bio] object TaskExecuteOn {
       val oldS = ctx.scheduler
       val ctx2 = ctx.withScheduler(s)
 
-      try {
-        BIO.unsafeStartAsync(
-          source,
-          ctx2,
-          new BiCallback[E, A] with Runnable {
-            private[this] var value: A = _
-            private[this] var error: E = _
-            private[this] var fatalError: Throwable = _
+      BIO.unsafeStartAsync(
+        source,
+        ctx2,
+        new BiCallback[E, A] with Runnable {
+          private[this] var value: A = _
+          private[this] var error: E = _
+          private[this] var fatalError: Throwable = _
 
-            def onSuccess(value: A): Unit = {
-              this.value = value
-              oldS.execute(this)
-            }
-
-            def onError(ex: E): Unit = {
-              this.error = ex
-              oldS.execute(this)
-            }
-
-            override def onFatalError(e: Throwable): Unit = {
-              this.fatalError = e
-              oldS.execute(this)
-            }
-
-            def run() = {
-              if (fatalError ne null) cb.onFatalError(fatalError)
-              else if (error != null) cb.onError(error)
-              else cb.onSuccess(value)
-            }
-
+          def onSuccess(value: A): Unit = {
+            this.value = value
+            oldS.execute(this)
           }
-        )
-      } catch {
-        case e: RejectedExecutionException =>
-          cb.onFatalError(e)
-      }
+
+          def onError(ex: E): Unit = {
+            this.error = ex
+            oldS.execute(this)
+          }
+
+          override def onFatalError(e: Throwable): Unit = {
+            this.fatalError = e
+            oldS.execute(this)
+          }
+
+          def run() = {
+            if (fatalError ne null) cb.onFatalError(fatalError)
+            else if (error != null) cb.onError(error)
+            else cb.onSuccess(value)
+          }
+
+        }
+      )
     }
   }
 
@@ -94,12 +87,7 @@ private[bio] object TaskExecuteOn {
 
     def apply(ctx: Context[E], cb: BiCallback[E, A]): Unit = {
       val ctx2 = ctx.withScheduler(s)
-      try {
-        BIO.unsafeStartNow(source, ctx2, cb)
-      } catch {
-        case e: RejectedExecutionException =>
-          BiCallback.signalFatalErrorTrampolined(cb, e)
-      }
+      BIO.unsafeStartNow(source, ctx2, cb)
     }
   }
 }
