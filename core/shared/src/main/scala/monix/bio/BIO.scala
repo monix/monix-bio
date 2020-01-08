@@ -2175,6 +2175,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   override def toString: String = this match {
     case Now(a) => s"BIO.Now($a)"
     case Error(e) => s"BIO.Error($e)"
+    case FatalError(e) => s"BIO.FatalError($e)"
     case _ =>
       val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.BIO[$.]", "")
       s"BIO.$n$$${System.identityHashCode(this)}"
