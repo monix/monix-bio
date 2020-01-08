@@ -17,8 +17,6 @@
 
 package monix.bio.internal
 
-import java.util.concurrent.RejectedExecutionException
-
 import monix.bio.BIO.{Async, Context}
 import monix.bio.UIO
 import monix.execution.Scheduler
@@ -62,17 +60,12 @@ private[bio] object TaskShift {
           ec
         }
 
-      try {
-        ec2.execute(new Runnable {
-          def run(): Unit = {
-            context.frameRef.reset()
-            cb.onSuccess(())
-          }
-        })
-      } catch {
-        case e: RejectedExecutionException =>
-          cb.onFatalError(e)
-      }
+      ec2.execute(new Runnable {
+        def run(): Unit = {
+          context.frameRef.reset()
+          cb.onSuccess(())
+        }
+      })
     }
   }
 }

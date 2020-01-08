@@ -17,8 +17,6 @@
 
 package monix.bio.internal
 
-import java.util.concurrent.RejectedExecutionException
-
 import monix.bio.BIO
 import monix.bio.BIO.{Context, Error, FatalError, Now}
 import monix.bio.internal.TaskRunLoop.{Bind, CallStack, startFull}
@@ -61,8 +59,9 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     } else {
       try task.register(context, this)
       catch {
+        // Due to C-E law: ConcurrentEffect[Task].concurrentEffect.repeated callback ignored
+        // but we don't want to lose any errors
         case cbError: CallbackCalledMultipleTimesException => context.scheduler.reportFailure(cbError)
-        case r: RejectedExecutionException => onFatalError(r)
         case NonFatal(e) => onFatalError(e)
       }
     }
@@ -109,7 +108,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       }
     } else {
       // $COVERAGE-OFF$
-      context.scheduler.reportFailure(UncaughtErrorException.wrap(error))
+      context.scheduler.reportFailure(error)
       // $COVERAGE-ON$
     }
   }
