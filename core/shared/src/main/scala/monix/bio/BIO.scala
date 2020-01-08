@@ -21,7 +21,7 @@ import cats.effect.{ContextShift, CancelToken, Clock, Timer, ConcurrentEffect, E
 import cats.{Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.internal._
 import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
@@ -1809,9 +1809,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Creates a new [[Task]] that will expose any triggered error from
     * the source.
+    *
+    * Typed errors will be exposed as an `E` in `Either[E, A]`
+    * Unexpected errors from internal channel will be exposed as a `Failure` in `Try`
+    *
     */
-  final def materialize: UIO[Try[A]] =
-    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[A]]])
+  final def materialize: UIO[Try[Either[E, A]]] =
+    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[Either[E, A]]]])
 
   /** Dematerializes the source's result from a `Try`. */
   final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B] =
@@ -3903,7 +3907,7 @@ object BIO extends TaskInstancesLevel0 {
     override def runAsyncAndForgetOpt(implicit s: Scheduler, opts: Options): Unit = {
       e match {
         case th: Throwable => s.reportFailure(th)
-        case _ => s.reportFailure(WrappedException(e))
+        case _ => s.reportFailure(UncaughtErrorException(e))
       }
     }
 
@@ -4118,12 +4122,14 @@ object BIO extends TaskInstancesLevel0 {
   }
 
   /** Used as optimization by [[BIO.materialize]]. */
-  private object MaterializeTask extends StackFrame[Throwable, Any, UIO[Try[Any]]] {
+  private object MaterializeTask extends StackFrame.FatalStackFrame[Any, Any, UIO[Try[Either[Any, Any]]]] {
+    override def apply(a: Any): UIO[Try[Either[Any, Any]]] =
+      new Now(new Success(new Right(a)))
 
-    override def apply(a: Any): UIO[Try[Any]] =
-      new Now(new Success(a))
+    override def recover(e: Any): UIO[Try[Either[Any, Any]]] =
+      new Now(new Success(new Left(e)))
 
-    override def recover(e: Throwable): UIO[Try[Any]] =
+    override def recoverFatal(e: Throwable): UIO[Try[Either[Any, Any]]] =
       new Now(new Failure(e))
   }
 }

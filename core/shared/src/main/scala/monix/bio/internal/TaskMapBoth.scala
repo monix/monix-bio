@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.Ack.Stop
 import monix.execution.Scheduler
 import monix.execution.atomic.PaddingStrategy.LeftRight128
@@ -73,7 +73,7 @@ private[bio] object TaskMapBoth {
       state.get match {
         case Stop =>
           // We've got nowhere to send the error, so report it
-          s.reportFailure(WrappedException.wrap(ex))
+          s.reportFailure(UncaughtErrorException.wrap(ex))
         case other =>
           if (!state.compareAndSet(other, Stop))
             sendError(mainConn, state, cb, ex)(s) // retry

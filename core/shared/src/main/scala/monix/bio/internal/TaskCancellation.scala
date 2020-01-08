@@ -21,7 +21,7 @@ package internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.atomic.{Atomic, AtomicBoolean}
 import monix.execution.schedulers.TrampolinedRunnable
 import monix.execution.{Callback, Scheduler}
@@ -86,7 +86,7 @@ private[bio] object TaskCancellation {
         this.error = e
         s.execute(this)
       } else {
-        s.reportFailure(WrappedException.wrap(e))
+        s.reportFailure(UncaughtErrorException.wrap(e))
       }
 
     override def onFatalError(e: Throwable): Unit =

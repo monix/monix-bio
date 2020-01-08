@@ -20,7 +20,7 @@ package monix.bio.internal
 import cats.effect.CancelToken
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{Callback, Scheduler}
 
 import scala.collection.mutable
@@ -103,7 +103,7 @@ private[bio] object TaskGather {
           results = null // GC relief
           finalCallback.onError(ex)
         } else {
-          s.reportFailure(WrappedException.wrap(ex))
+          s.reportFailure(UncaughtErrorException.wrap(ex))
         }
       }
 

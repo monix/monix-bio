@@ -18,8 +18,10 @@
 package monix.bio
 
 import monix.bio.internal.BiCallback
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
+
 import scala.concurrent.Promise
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
@@ -133,10 +135,10 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
   }
 
   test("BIO.raiseError(error).memoizeOnSuccess.materialize") { implicit s =>
-    val dummy = DummyException("dummy")
+    val dummy = "dummy"
     val f = BIO.raiseError(dummy).memoizeOnSuccess.materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
+    assertEquals(f.value, Some(Success(Right(Failure(UncaughtErrorException.wrap(dummy))))))
   }
 
   test("BIO.raiseFatalError(error).memoizeOnSuccess.materialize") { implicit s =>

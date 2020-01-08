@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.atomic.Atomic
 
 private[bio] object TaskRace {
@@ -70,7 +70,7 @@ private[bio] object TaskRace {
               connB.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              sc.reportFailure(WrappedException.wrap(ex))
+              sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
           override def onFatalError(e: Throwable): Unit =
@@ -102,7 +102,7 @@ private[bio] object TaskRace {
               connA.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              sc.reportFailure(WrappedException.wrap(ex))
+              sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
           override def onFatalError(e: Throwable): Unit =

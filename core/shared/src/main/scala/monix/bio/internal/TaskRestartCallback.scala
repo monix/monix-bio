@@ -21,8 +21,8 @@ import java.util.concurrent.RejectedExecutionException
 
 import monix.bio.BIO
 import monix.bio.BIO.{Context, Error, FatalError, Now}
-import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack, WrappedException}
-import monix.execution.exceptions.CallbackCalledMultipleTimesException
+import monix.bio.internal.TaskRunLoop.{Bind, CallStack, startFull}
+import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.misc.Local
 import monix.execution.schedulers.TrampolinedRunnable
 
@@ -95,7 +95,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       }
     } else {
       // $COVERAGE-OFF$
-      context.scheduler.reportFailure(WrappedException.wrap(error))
+      context.scheduler.reportFailure(UncaughtErrorException.wrap(error))
       // $COVERAGE-ON$
     }
 
@@ -109,7 +109,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       }
     } else {
       // $COVERAGE-OFF$
-      context.scheduler.reportFailure(WrappedException.wrap(error))
+      context.scheduler.reportFailure(UncaughtErrorException.wrap(error))
       // $COVERAGE-ON$
     }
   }
@@ -140,7 +140,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     this.bFirst = null
     this.bRest = null
     startFull(
-      FatalError(WrappedException.wrap(error)),
+      FatalError(UncaughtErrorException.wrap(error)),
       context,
       this.wrappedCallback,
       this,

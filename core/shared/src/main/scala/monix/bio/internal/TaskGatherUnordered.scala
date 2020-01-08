@@ -21,7 +21,7 @@ import cats.effect.CancelToken
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
 import monix.bio.compat.internal.toIterator
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{Callback, Scheduler}
 import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.execution.atomic.{Atomic, AtomicAny}
@@ -86,7 +86,7 @@ private[bio] object TaskGatherUnordered {
         mainConn.pop().runAsyncAndForget
         finalCallback.onError(ex)
       } else {
-        s.reportFailure(WrappedException.wrap(ex))
+        s.reportFailure(UncaughtErrorException.wrap(ex))
       }
     }
 
