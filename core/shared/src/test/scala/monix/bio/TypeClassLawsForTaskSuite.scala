@@ -17,11 +17,15 @@
 
 package monix.bio
 
-import cats.Applicative
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
 import cats.kernel.laws.discipline.MonoidTests
-import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests, SemigroupKTests}
-import monix.bio.instances.CatsParallelForTask
+import cats.laws.discipline.{
+  BifunctorTests,
+  CoflatMapTests,
+  CommutativeApplicativeTests,
+  ParallelTests,
+  SemigroupKTests
+}
 
 object TypeClassLawsForTaskSuite
     extends BaseTypeClassLawsForTaskSuite()(
@@ -35,8 +39,6 @@ object TypeClassLawsForTaskAutoCancelableSuite
 
 class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
 
-  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
-
   checkAllAsync("CoflatMap[Task]") { implicit ec =>
     CoflatMapTests[Task].coflatMap[Int, Int, Int]
   }
@@ -49,16 +51,16 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
     ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int]
   }
 
-  checkAllAsync("Applicative[Task.Par]") { implicit ec =>
-    ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int]
+  checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
+    CommutativeApplicativeTests[BIO.Par[String, ?]].commutativeApplicative[Int, Int, Int]
   }
 
-  checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
+  checkAllAsync("Parallel[BIO, BIO.Par]") { implicit ec =>
     ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
-  checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
-    MonoidTests[BIO[Throwable, Int]].monoid
+  checkAllAsync("Monoid[BIO[String, Int]]") { implicit ec =>
+    MonoidTests[BIO[String, Int]].monoid
   }
 
   checkAllAsync("SemigroupK[Task[Int]]") { implicit ec =>

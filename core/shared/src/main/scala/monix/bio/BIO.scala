@@ -17,8 +17,8 @@
 
 package monix.bio
 
-import cats.effect.{ContextShift, CancelToken, Clock, Timer, ConcurrentEffect, ExitCase, Concurrent, Effect, Fiber => _}
-import cats.{Monoid, Parallel, Semigroup}
+import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.execution.exceptions.UncaughtErrorException
@@ -33,6 +33,7 @@ import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Callback, Scheduler, _}
 import org.reactivestreams.Publisher
+
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
@@ -4184,7 +4185,18 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
     */
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
-    new CatsParallelForTask[E]
+    catsParallelAny.asInstanceOf[Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]]]
+
+  private[this] final val catsParallelAny: CatsParallelForTask[Any] =
+    new CatsParallelForTask[Any]
+
+  /** Global instance for `cats.CommutativeApplicative`
+    */
+  implicit def commutativeApplicative[E]: CommutativeApplicative[BIO.Par[E, ?]] =
+    commutativeApplicativeAny.asInstanceOf[CommutativeApplicative[BIO.Par[E, ?]]]
+
+  private[this] final val commutativeApplicativeAny: CommutativeApplicative[BIO.Par[Any, ?]] =
+    catsParallelAny.applicative
 
   /** Given an `A` type that has a `cats.Monoid[A]` implementation,
     * then this provides the evidence that `BIO[E, A]` also has
@@ -4239,13 +4251,16 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * in order to avoid conflicts.
     */
   implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
-    new CatsMonadToSemigroup[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
+    new CatsMonadToSemigroup[BIO[E, ?], A]()(monadError[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
 
   implicit def monadError[E]: CatsBaseForTask[E] =
-    new CatsBaseForTask[E]
+    monadErrorAny.asInstanceOf[CatsBaseForTask[E]]
+
+  private[this] final val monadErrorAny: CatsBaseForTask[Any] =
+    new CatsBaseForTask[Any]
 }
 
 private[bio] abstract class TaskParallelNewtype extends TaskContextShift {

@@ -17,14 +17,14 @@
 
 package monix.bio
 
+import cats.Eq
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
 import cats.kernel.laws.discipline.MonoidTests
-import cats.{Applicative, Eq}
+import cats.laws.discipline.{BifunctorTests, CoflatMapTests, CommutativeApplicativeTests, ParallelTests}
 import monix.bio.BIO.Options
-import monix.bio.instances.CatsParallelForTask
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.schedulers.TestScheduler
+
 import scala.concurrent.{Future, Promise}
 import scala.util.Either
 
@@ -46,9 +46,6 @@ object TypeClassLawsForTaskAutoCancelableWithCallbackSuite
     )
 
 class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
-
-  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
-
   override implicit def equalityBIO[E, A](
     implicit
     A: Eq[A],
@@ -113,8 +110,8 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     ConcurrentEffectTests[Task].effect[Int, Int, Int]
   }
 
-  checkAllAsync("Applicative[Task.Par]") { implicit ec =>
-    ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int]
+  checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
+    CommutativeApplicativeTests[BIO.Par[String, ?]].commutativeApplicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
