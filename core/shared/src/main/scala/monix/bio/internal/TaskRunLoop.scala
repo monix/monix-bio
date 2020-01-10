@@ -19,20 +19,8 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO
-import monix.bio.BIO.{
-  Async,
-  Context,
-  ContextSwitch,
-  Error,
-  Eval,
-  EvalTotal,
-  FatalError,
-  FlatMap,
-  Map,
-  Now,
-  Suspend,
-  SuspendTotal
-}
+import monix.bio.BIO.{Async, Context, ContextSwitch, Error, Eval, EvalTotal, FatalError, FlatMap, Map, Now, Suspend, SuspendTotal}
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
 import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
@@ -44,17 +32,6 @@ private[bio] object TaskRunLoop {
   type Current = BIO[Any, Any]
   type Bind = Any => BIO[Any, Any]
   type CallStack = ChunkedArrayStack[Bind]
-
-  // Wrapper to report any error type to Scheduler
-  final case class WrappedException[E](e: E) extends Exception(e.toString, null, true, false)
-
-  object WrappedException {
-
-    def wrap[E](e: E): Throwable = e match {
-      case th: Throwable => th
-      case _ => new WrappedException(e)
-    }
-  }
 
   /** Starts or resumes evaluation of the run-loop from where it left
     * off. This is the complete run-loop.
@@ -532,7 +509,7 @@ private[bio] object TaskRunLoop {
 
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
-              case null => throw WrappedException.wrap(error)
+              case null => throw UncaughtErrorException.wrap(error)
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {

@@ -23,7 +23,7 @@ import cats.kernel.laws.discipline.MonoidTests
 import cats.{Applicative, Eq}
 import monix.bio.BIO.Options
 import monix.bio.instances.CatsParallelForTask
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.schedulers.TestScheduler
 import scala.concurrent.{Future, Promise}
 import scala.util.Either
@@ -59,7 +59,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       task.runAsyncOpt {
-        case Left(e) => p.failure(WrappedException.wrap(e)) // todo: should it be failure or left
+        case Left(e) => p.failure(UncaughtErrorException.wrap(e)) // todo: should it be failure or left
         case Right(a) => p.success(Right(a))
       }
       p.future
@@ -75,7 +75,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
       task.runAsyncOpt {
-        case Left(e) => p.failure(WrappedException.wrap(e))
+        case Left(e) => p.failure(UncaughtErrorException.wrap(e))
         case Right(a) => p.success(a)
       }
       p.future
@@ -94,7 +94,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       unwrap(task).runAsyncOpt {
-        case Left(e) => p.failure(WrappedException.wrap(e))
+        case Left(e) => p.failure(UncaughtErrorException.wrap(e))
         case Right(a) => p.success(Right(a))
       }
       p.future

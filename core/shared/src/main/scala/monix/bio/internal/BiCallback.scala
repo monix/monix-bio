@@ -18,7 +18,6 @@
 package monix.bio.internal
 
 import monix.bio.Cause
-import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.schedulers.{TrampolineExecutionContext, TrampolinedRunnable}
 import monix.execution.{Callback, UncaughtExceptionReporter}
@@ -115,7 +114,7 @@ object BiCallback {
 
       override def onError(e: E): Unit = {
         if (!tryOnError(e)) {
-          throw new CallbackCalledMultipleTimesException("onError", WrappedException.wrap(e))
+          throw new CallbackCalledMultipleTimesException("onError", UncaughtErrorException.wrap(e))
         }
       }
 

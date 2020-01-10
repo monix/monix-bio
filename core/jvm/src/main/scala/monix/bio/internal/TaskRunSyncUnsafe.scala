@@ -24,6 +24,7 @@ import monix.bio.BIO
 import monix.bio.BIO.{Async, Context, Error, Eval, EvalTotal, FatalError, FlatMap, Map, Now, Suspend, SuspendTotal}
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 
 import scala.concurrent.blocking
@@ -102,7 +103,7 @@ private[bio] object TaskRunSyncUnsafe {
 
         case Error(error) =>
           findErrorHandler[Any](bFirst, bRest) match {
-            case null => throw WrappedException.wrap(error)
+            case null => throw UncaughtErrorException.wrap(error)
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
@@ -199,8 +200,7 @@ private[bio] object TaskRunSyncUnsafe {
       else
         error match {
           case null => success
-          case th: Throwable => throw th
-          case e => throw new WrappedException(e)
+          case e => throw UncaughtErrorException.wrap(e)
         }
     }
 

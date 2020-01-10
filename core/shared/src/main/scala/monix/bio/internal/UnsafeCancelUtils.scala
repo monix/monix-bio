@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.{BIO, Task, UIO}
 import monix.catnap.CancelableF
 import monix.execution.internal.Platform
@@ -153,7 +153,7 @@ private[bio] object UnsafeCancelUtils {
       } else {
         (fatalErrors.toList, errors.toList) match {
           case (first :: rest, rest2) =>
-            BIO.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
+            BIO.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(UncaughtErrorException.wrap): _*))
           case (Nil, first :: rest) =>
             (first, rest) match {
               case (th: Throwable, restTh: List[Throwable]) =>
@@ -161,7 +161,7 @@ private[bio] object UnsafeCancelUtils {
               case _ =>
                 BIO.deferAction(s =>
                   UIO(rest.foreach { e =>
-                    s.reportFailure(WrappedException.wrap(e))
+                    s.reportFailure(UncaughtErrorException.wrap(e))
                   })
                 ) >> BIO.raiseError(first)
             }

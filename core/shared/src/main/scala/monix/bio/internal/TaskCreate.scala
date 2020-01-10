@@ -21,7 +21,7 @@ import java.util.concurrent.RejectedExecutionException
 
 import cats.effect.CancelToken
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.{BIO, Task}
 import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
@@ -144,7 +144,7 @@ private[bio] object TaskCreate {
 
     override def onError(e: E): Unit =
       if (!cb.tryOnError(e)) {
-        r.reportFailure(WrappedException.wrap(e))
+        r.reportFailure(UncaughtErrorException.wrap(e))
       }
 
     override def onFatalError(e: Throwable): Unit =
@@ -183,7 +183,7 @@ private[bio] object TaskCreate {
 
     override def onError(e: E): Unit = {
       if (!tryOnError(e)) {
-        throw new CallbackCalledMultipleTimesException("onError", WrappedException.wrap(e))
+        throw new CallbackCalledMultipleTimesException("onError", UncaughtErrorException.wrap(e))
       }
     }
 
@@ -259,7 +259,7 @@ private[bio] object TaskCreate {
       if (error != null) {
         val e = error
         error = null.asInstanceOf[E]
-        ctx.scheduler.reportFailure(WrappedException.wrap(e))
+        ctx.scheduler.reportFailure(UncaughtErrorException.wrap(e))
       }
 
       if (fatalError != null) {

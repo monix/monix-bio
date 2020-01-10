@@ -21,7 +21,7 @@ import cats.effect.ExitCase
 import cats.effect.ExitCase.{Canceled, Completed, Error}
 import monix.bio.BIO.{Context, ContextSwitch}
 import monix.bio.internal.StackFrame.FatalStackFrame
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.{BIO, Cause, UIO}
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
@@ -312,11 +312,11 @@ private[monix] object TaskBracket {
     }
 
     def recover(e2: Throwable): BIO[E, Nothing] = {
-      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, WrappedException.wrap), e2))
+      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, UncaughtErrorException.wrap), e2))
     }
 
     override def recoverFatal(e2: Throwable): BIO[E, Nothing] = {
-      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, WrappedException.wrap), e2))
+      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, UncaughtErrorException.wrap), e2))
     }
   }
 

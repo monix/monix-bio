@@ -18,8 +18,10 @@
 package monix.bio
 
 import monix.bio.internal.BiCallback
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
+
 import scala.concurrent.Promise
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
@@ -129,21 +131,21 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
   test("BIO.memoizeOnSuccess.materialize") { implicit s =>
     val f = BIO.evalAsync(10).memoizeOnSuccess.materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Success(10)))))
+    assertEquals(f.value, Some(Success(Right(Success(Right(10))))))
   }
 
   test("BIO.raiseError(error).memoizeOnSuccess.materialize") { implicit s =>
-    val dummy = DummyException("dummy")
+    val dummy = "dummy"
     val f = BIO.raiseError(dummy).memoizeOnSuccess.materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
+    assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
   }
 
   test("BIO.raiseFatalError(error).memoizeOnSuccess.materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO.raiseFatalError(dummy).memoizeOnSuccess.materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
   test("BIO.eval.memoizeOnSuccess should work for first subscriber") { implicit s =>
