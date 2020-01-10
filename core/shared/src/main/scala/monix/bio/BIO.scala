@@ -4187,7 +4187,7 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
   implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
     catsParallelAny.asInstanceOf[Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]]]
 
-  private[this] final val catsParallelAny: CatsParallelForTask[Any] =
+  private[this] final lazy val catsParallelAny: CatsParallelForTask[Any] =
     new CatsParallelForTask[Any]
 
   /** Global instance for `cats.CommutativeApplicative`
@@ -4195,7 +4195,7 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
   implicit def commutativeApplicative[E]: CommutativeApplicative[BIO.Par[E, ?]] =
     commutativeApplicativeAny.asInstanceOf[CommutativeApplicative[BIO.Par[E, ?]]]
 
-  private[this] final val commutativeApplicativeAny: CommutativeApplicative[BIO.Par[Any, ?]] =
+  private[this] final lazy val commutativeApplicativeAny: CommutativeApplicative[BIO.Par[Any, ?]] =
     catsParallelAny.applicative
 
   /** Given an `A` type that has a `cats.Monoid[A]` implementation,
@@ -4259,7 +4259,7 @@ private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
   implicit def monadError[E]: CatsBaseForTask[E] =
     monadErrorAny.asInstanceOf[CatsBaseForTask[E]]
 
-  private[this] final val monadErrorAny: CatsBaseForTask[Any] =
+  private[this] final lazy val monadErrorAny: CatsBaseForTask[Any] =
     new CatsBaseForTask[Any]
 }
 

@@ -52,7 +52,7 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
   }
 
   checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
-    CommutativeApplicativeTests[BIO.Par[String, ?]].commutativeApplicative[Int, Int, Int]
+    CommutativeApplicativeTests[BIO.Par[Throwable, ?]].commutativeApplicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[BIO, BIO.Par]") { implicit ec =>
