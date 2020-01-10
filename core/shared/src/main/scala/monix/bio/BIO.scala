@@ -1818,8 +1818,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[Either[E, A]]]])
 
   /** Dematerializes the source's result from a `Try`. */
-  final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B] =
-    this.asInstanceOf[UIO[Try[B]]].flatMap(fromTry)
+  final def dematerialize[E1, B](implicit evE: E <:< Nothing, evA: A <:< Try[Either[E1, B]]): BIO[E1, B] =
+    this.asInstanceOf[UIO[Try[Either[E1, B]]]].flatMap(BIO.fromTryEither)
 
   /** Returns a new task that mirrors the source task for normal termination,
     * but that triggers the given error on cancellation.
