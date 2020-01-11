@@ -107,16 +107,19 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       getArbitrary[A].map(BIO.pure)
 
     def genEvalAsync: Gen[BIO[E, A]] =
-      getArbitrary[A].map(BIO.evalAsync(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)))
+      getArbitrary[A].map(UIO.evalAsync(_))
 
     def genEval: Gen[BIO[E, A]] =
       Gen.frequency(
-        1 -> getArbitrary[A].map(BIO.eval(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex))),
-        1 -> getArbitrary[A].map(BIO(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)))
+        1 -> getArbitrary[A].map(BIO.evalTotal(_)),
+        1 -> getArbitrary[A].map(UIO(_))
       )
 
-    def genFail: Gen[BIO[E, A]] =
+    def genError: Gen[BIO[E, A]] =
       getArbitrary[E].map(BIO.raiseError)
+
+    def genFatalError: Gen[BIO[E, A]] =
+      getArbitrary[Throwable].map(BIO.raiseFatalError)
 
     def genAsync: Gen[BIO[E, A]] =
       getArbitrary[(Either[E, A] => Unit) => Unit].map(TaskCreate.async)
@@ -136,13 +139,14 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         .map(k => TaskCreate.async(k).flatMap(x => x))
 
     def genBindSuspend: Gen[BIO[E, A]] =
-      getArbitrary[A].map(BIO.evalAsync(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)).flatMap(BIO.pure))
+      getArbitrary[A].map(UIO.evalAsync(_).flatMap(BIO.pure))
 
     def genSimpleTask = Gen.frequency(
       1 -> genPure,
       1 -> genEval,
       1 -> genEvalAsync,
-      1 -> genFail,
+      1 -> genError,
+      1 -> genFatalError,
       1 -> genAsync,
       1 -> genNestedAsync,
       1 -> genBindSuspend
@@ -177,7 +181,8 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         1 -> genPure,
         1 -> genEvalAsync,
         1 -> genEval,
-        1 -> genFail,
+        1 -> genError,
+        1 -> genFatalError,
         1 -> genContextSwitch,
         1 -> genCancelable,
         1 -> genBindSuspend,
