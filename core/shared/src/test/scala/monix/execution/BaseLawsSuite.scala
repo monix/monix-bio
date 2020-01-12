@@ -127,9 +127,10 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
             case Some(Success(Left(a))) =>
               y.value match {
                 case Some(Success(Left(b))) => (a.isInstanceOf[Throwable] && b.isInstanceOf[Throwable]) || E.eqv(a, b)
+                case Some(Failure(ex)) => a.isInstanceOf[Throwable] && (a.getClass == ex.getClass)
                 case _ => false
               }
-            case Some(Failure(_)) =>
+            case Some(Failure(ex)) =>
               y.value match {
                 case Some(Failure(_)) =>
                   // Exceptions aren't values, it's too hard to reason about
@@ -137,6 +138,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
                   // yielding non-terminating futures and tasks from a type
                   // theory point of view, so we simply consider them all equal
                   true
+                case Some(Success(Left(b))) => b.isInstanceOf[Throwable] && (b.getClass == ex.getClass)
                 case _ =>
                   false
               }
