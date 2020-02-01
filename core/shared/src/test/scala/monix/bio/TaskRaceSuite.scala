@@ -22,6 +22,7 @@ import monix.execution.atomic.Atomic
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
+import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -293,27 +294,28 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick(3.seconds)
     assertEquals(f.value, Some(Success(Right(10))))
   }
-//
-//  test("Task#timeoutL should evaluate as specified: lazy, with memoization") { implicit s =>
-//    val cnt = Atomic(0L)
-//    val timeout = Task.evalOnce(cnt.incrementAndGet().seconds)
-//    val loop = Task(10).delayExecution(10.seconds).timeoutL(timeout).onErrorRestart(3)
-//    val f = loop.runToFuture
-//
-//    s.tick(1.second)
-//    assertEquals(f.value, None)
-//
-//    s.tick(1.seconds)
-//    assertEquals(f.value, None)
-//
-//    s.tick(1.seconds)
-//    assertEquals(f.value, None)
-//
-//    s.tick(1.seconds)
-//    assert(f.value.isDefined)
-//    assert(f.value.get.isFailure)
-//    assert(f.value.get.failed.get.isInstanceOf[TimeoutException])
-//  }
+
+  test("Task#timeoutL should evaluate as specified: lazy, with memoization") { implicit s =>
+    val cnt = Atomic(0L)
+    val timeoutError = new TimeoutException("Task timed-out")
+    val timeout = UIO.eval(cnt.incrementAndGet().seconds).memoize
+    val loop = Task(10).delayExecution(10.seconds).timeoutToL(timeout, BIO.raiseError(timeoutError)).onErrorRestart(3)
+    val f = loop.runToFuture
+
+    s.tick(1.second)
+    assertEquals(f.value, None)
+
+    s.tick(1.seconds)
+    assertEquals(f.value, None)
+
+    s.tick(1.seconds)
+    assertEquals(f.value, None)
+
+    s.tick(1.seconds)
+    assert(f.value.isDefined)
+    assert(f.value.get.isSuccess)
+    assertEquals(f.value.get.get, Left(timeoutError))
+  }
 
   test("Task#timeoutL considers time taken to evaluate the duration task") { implicit s =>
     val timeout = UIO(3.seconds).delayExecution(2.seconds)
