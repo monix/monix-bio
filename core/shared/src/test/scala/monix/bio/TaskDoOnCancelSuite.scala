@@ -209,20 +209,20 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-//  testAsync("local.write.doOnCancel works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//    val onCancel = Task.evalAsync(throw DummyException("dummy"))
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).doOnCancel(onCancel)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("local.write.doOnCancel works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    val onCancel = UIO.evalAsync(throw DummyException("dummy"))
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).doOnCancel(onCancel)
+      _ <- Task.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 }

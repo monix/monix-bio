@@ -68,36 +68,35 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(2))))
   }
 
-  // TODO: uncomment when TaskLocal is implemented
-//  testAsync("Task.asyncBoundary should preserve locals") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).asyncBoundary
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
-//
-//  testAsync("Task.asyncBoundary(scheduler) should preserve locals") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).asyncBoundary(global)
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("Task.asyncBoundary should preserve locals") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).asyncBoundary
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
+
+  testAsync("Task.asyncBoundary(scheduler) should preserve locals") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).asyncBoundary(global)
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 
   test("Task.asyncBoundary is stack safe in flatMap loops, test 1") { implicit sc =>
     def loop(n: Int, acc: Long): Task[Long] =
