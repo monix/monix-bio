@@ -38,22 +38,22 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
     assert(!opt2.localContextPropagation, "!opt2.localContextPropagation")
   }
 
-//  testAsync("local.write.executeWithOptions") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).executeWithOptions(_.enableAutoCancelableRunLoops)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("local.write.executeWithOptions") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).executeWithOptions(_.enableAutoCancelableRunLoops)
+      _ <- Task.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 
   test("executeWithOptions is stack safe in flatMap loops") { implicit sc =>
     val sc2 = TestScheduler()

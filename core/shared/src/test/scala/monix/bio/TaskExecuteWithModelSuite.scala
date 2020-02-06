@@ -38,37 +38,37 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(AlwaysAsyncExecution))))
   }
 
-//  testAsync("local.write.executeWithModel(AlwaysAsyncExecution) works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).executeWithModel(AlwaysAsyncExecution)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("local.write.executeWithModel(AlwaysAsyncExecution) works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
-//  testAsync("local.write.executeWithModel(SynchronousExecution) works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).executeWithModel(SynchronousExecution)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).executeWithModel(AlwaysAsyncExecution)
+      _ <- UIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
+
+  testAsync("local.write.executeWithModel(SynchronousExecution) works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).executeWithModel(SynchronousExecution)
+      _ <- UIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 
   test("executeWithModel is stack safe in flatMap loops") { implicit sc =>
     def loop(n: Int, acc: Long): Task[Long] =

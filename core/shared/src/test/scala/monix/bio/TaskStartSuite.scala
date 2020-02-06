@@ -52,25 +52,25 @@ object TaskStartSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-//  testAsync("task.start shares Local.Context with fibers") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    import cats.syntax.all._
-//    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      local <- TaskLocal(0)
-//      _     <- local.write(100)
-//      v1    <- local.read
-//      f     <- (Task.shift *> local.read <* local.write(200)).start
-//      // Here, before joining, reads are nondeterministic
-//      v2 <- f.join
-//      v3 <- local.read
-//    } yield (v1, v2, v3)
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, (100, 100, 200))
-//    }
-//  }
+  testAsync("task.start shares Local.Context with fibers") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    import cats.syntax.all._
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      local <- TaskLocal(0)
+      _     <- local.write(100)
+      v1    <- local.read
+      f     <- (Task.shift *> local.read <* local.write(200)).start
+      // Here, before joining, reads are nondeterministic
+      v2 <- f.join
+      v3 <- local.read
+    } yield (v1, v2, v3)
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right((100, 100, 200)))
+    }
+  }
 
   test("task.start is stack safe") { implicit sc =>
     val count = if (Platform.isJVM) 10000 else 1000
