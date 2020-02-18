@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
+import monix.bio.{BIO, UIO}
 import monix.bio.BIO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{Callback, Scheduler}
@@ -142,7 +142,7 @@ private[bio] object TaskGather {
           // Collecting all cancelables in a buffer, because adding
           // cancelables one by one in our `CompositeCancelable` is
           // expensive, so we do it at the end
-          val allCancelables = ListBuffer.empty[CancelToken[BIO[E, ?]]]
+          val allCancelables = ListBuffer.empty[CancelToken[UIO]]
 
           // We need a composite because we are potentially starting tasks
           // in parallel and thus we need to cancel everything
