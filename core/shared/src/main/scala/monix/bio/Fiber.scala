@@ -69,7 +69,7 @@ trait Fiber[E, A] extends cats.effect.Fiber[BIO[E, ?], A] {
     * of the underlying fiber is already complete, then there's nothing
     * to cancel.
     */
-  def cancel: CancelToken[BIO[E, ?]]
+  def cancel: CancelToken[UIO]
 
   /** Returns a new task that will await for the completion of the
     * underlying fiber, (asynchronously) blocking the current run-loop
