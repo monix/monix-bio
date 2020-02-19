@@ -118,21 +118,20 @@ object TaskGatherNSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(Right(count))))
   }
 
-  // TODO: uncomment once memoize is added
-//  test("Task.gatherN runAsync multiple times") { implicit s =>
-//    var effect = 0
-//    val task1 = Task.evalAsync { effect += 1; 3 }.memoize
-//    val task2 = task1 map { x =>
-//      effect += 1; x + 1
-//    }
-//    val task3 = BIO.gatherN(2)(List(task2, task2, task2))
-//
-//    val result1 = task3.runToFuture; s.tick()
-//    assertEquals(result1.value, Some(Success(List(4, 4, 4))))
-//    assertEquals(effect, 1 + 3)
-//
-//    val result2 = task3.runToFuture; s.tick()
-//    assertEquals(result2.value, Some(Success(List(4, 4, 4))))
-//    assertEquals(effect, 1 + 3 + 3)
-//  }
+  test("Task.gatherN runAsync multiple times") { implicit s =>
+    var effect = 0
+    val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
+    val task2 = task1 map { x =>
+      effect += 1; x + 1
+    }
+    val task3 = BIO.gatherN(2)(List(task2, task2, task2))
+
+    val result1 = task3.runToFuture; s.tick()
+    assertEquals(result1.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(effect, 1 + 3)
+
+    val result2 = task3.runToFuture; s.tick()
+    assertEquals(result2.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(effect, 1 + 3 + 3)
+  }
 }

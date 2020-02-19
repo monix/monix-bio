@@ -17,7 +17,18 @@
 
 package monix.bio
 
-import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, Timer, Fiber => _}
+import cats.effect.{
+  CancelToken,
+  Clock,
+  Concurrent,
+  ConcurrentEffect,
+  ContextShift,
+  Effect,
+  ExitCase,
+  IO,
+  Timer,
+  Fiber => _
+}
 import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
@@ -3713,27 +3724,27 @@ object BIO extends TaskInstancesLevel0 {
           TaskCreate.async0(register)
       }
 
-    // TODO: implement create forIO
-    //    /** Implicit `AsyncBuilder` for cancelable tasks, using
-    //      * `cats.effect.IO` values for specifying cancelation actions,
-    //      * see [[https://typelevel.org/cats-effect/ Cats Effect]].
-    //      */
-    //    implicit val forIO: AsyncBuilder[IO[Unit]] =
-    //      new AsyncBuilder[IO[Unit]] {
-    //        def create[A](register: (Scheduler, Callback[E, A]) => CancelToken[IO]): Task[A] =
-    //          TaskCreate.cancelableIO(register)
-    //      }
+    /** Implicit `AsyncBuilder` for cancelable tasks, using
+      * `cats.effect.IO` values for specifying cancelation actions,
+      * see [[https://typelevel.org/cats-effect/ Cats Effect]].
+      */
+    implicit val forIO: AsyncBuilder[IO[Unit]] =
+      new AsyncBuilder[IO[Unit]] {
+        override def create[E, A](register: (Scheduler, Callback[E, A]) => IO[Unit]): BIO[E, A] =
+          TaskCreate.cancelableIO(register)
+      }
 
-    // TODO: Task.create
-    //    /** Implicit `AsyncBuilder` for cancelable tasks, using
-    //      * [[Task]] values for specifying cancelation actions.
-    //      */
-    //    implicit def forTask[E1]: AsyncBuilder[BIO[E1, Unit]] =
-    //      new AsyncBuilder[BIO[E1, Unit]] {
-    //
-    //        override def create[E, A](register: (Scheduler, Callback[E, A]) => BIO[E1, Unit]): BIO[E, A] =
-    //          TaskCreate.cancelable0(register)
-    //      }
+    /** Implicit `AsyncBuilder` for cancelable tasks, using
+      * [[BIO]] values for specifying cancelation actions.
+      */
+    implicit def forBIO[E]: AsyncBuilder[BIO[E, Unit]] =
+      forBIORef.asInstanceOf[AsyncBuilder[BIO[E, Unit]]]
+
+    private[this] val forBIORef: AsyncBuilder[BIO[Any, Unit]] =
+      new AsyncBuilder[BIO[Any, Unit]] {
+        override def create[E, A](register: (Scheduler, Callback[E, A]) => BIO[Any, Unit]): BIO[E, A] =
+          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]])
+      }
 
     /** Implicit `AsyncBuilder` for non-cancelable tasks built by a function
       * returning a [[monix.execution.Cancelable.Empty Cancelable.Empty]].
