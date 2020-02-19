@@ -67,8 +67,8 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
     }
   }
 
-  val cancel: CancelToken[BIO[E, ?]] = {
-    @tailrec def loop(): CancelToken[BIO[E, ?]] =
+  val cancel: CancelToken[UIO] = {
+    @tailrec def loop(): CancelToken[UIO] =
       state.get() match {
         case IsCanceled | IsEmptyCanceled =>
           BIO.unit

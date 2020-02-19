@@ -178,8 +178,8 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("cancelBoundary cancels") { implicit ec =>
     check1 { (task: Task[Int]) =>
-      (Task.cancelBoundary *> task).start
-        .flatMap(f => f.cancel *> f.join) <-> Task.never
+      (Task.cancelBoundary >> task).start
+        .flatMap(f => f.cancel >> f.join) <-> Task.never
     }
   }
 
@@ -192,7 +192,7 @@ object TaskCancellationSuite extends BaseTestSuite {
       .onCancelRaiseError(err)
       .onErrorRecoverWith { case `err` => Task.cancelBoundary *> Task(10) }
       .start
-      .flatMap(f => f.cancel *> f.join)
+      .flatMap(f => f.cancel >> f.join)
 
     val f = task.runToFutureOpt
     ec.tick()

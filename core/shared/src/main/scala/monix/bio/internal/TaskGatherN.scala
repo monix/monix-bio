@@ -23,7 +23,6 @@ import monix.bio.{BIO, Fiber, Task, UIO}
 import monix.catnap.ConcurrentQueue
 import monix.execution.{BufferCapacity, ChannelType}
 
-// TODO: see if it is possible to reimplement without orFatal everywhere
 private[bio] object TaskGatherN {
 
   def apply[E, A](
@@ -72,7 +71,7 @@ private[bio] object TaskGatherN {
           case (fiber, exit) =>
             exit match {
               case ExitCase.Completed => UIO.unit
-              case _ => BIO.traverse(fiber)(_.cancel).redeem(_ => (), _ => ()) // TODO: confirm it's ok
+              case _ => BIO.traverse(fiber)(_.cancel).void
             }
         }
       } yield res

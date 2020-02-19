@@ -56,8 +56,8 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
   test("cancels Task references") { implicit sc =>
     var effect = 0
     val conn = TaskConnectionComposite[Throwable]()
-    val b1 = Task { effect += 1 }
-    val b2 = Task { effect += 1 }
+    val b1 = UIO { effect += 1 }
+    val b2 = UIO { effect += 1 }
 
     conn += b1
     conn += b2
@@ -77,8 +77,8 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
   test("cancels Task references after cancel on assignment") { implicit sc =>
     var effect = 0
     val conn = TaskConnectionComposite[Throwable]()
-    val b1 = Task { effect += 1 }
-    val b2 = Task { effect += 1 }
+    val b1 = UIO { effect += 1 }
+    val b2 = UIO { effect += 1 }
 
     conn.cancel.runAsyncAndForget; sc.tick()
 
@@ -94,8 +94,8 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
   test("cancels CancelableF references") { implicit sc =>
     var effect = 0
     val conn = TaskConnectionComposite[Throwable]()
-    val b1 = CancelableF.wrap(Task { effect += 1 })
-    val b2 = CancelableF.wrap(Task { effect += 1 })
+    val b1 = CancelableF.wrap(UIO { effect += 1 })
+    val b2 = CancelableF.wrap(UIO { effect += 1 })
 
     conn += b1
     conn += b2
@@ -115,8 +115,8 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
   test("cancels CancelableF references after cancel on assignment") { implicit sc =>
     var effect = 0
     val conn = TaskConnectionComposite[Throwable]()
-    val b1 = CancelableF.wrap(Task { effect += 1 })
-    val b2 = CancelableF.wrap(Task { effect += 1 })
+    val b1 = CancelableF.wrap(UIO { effect += 1 })
+    val b2 = CancelableF.wrap(UIO { effect += 1 })
 
     conn.cancel.runAsyncAndForget; sc.tick()
 
@@ -131,9 +131,9 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
 
   test("addAll") { implicit sc =>
     var effect = 0
-    val task1 = Task { effect += 1 }
-    val task2 = Task { effect += 2 }
-    val task3 = Task { effect += 3 }
+    val task1 = UIO { effect += 1 }
+    val task2 = UIO { effect += 2 }
+    val task3 = UIO { effect += 3 }
 
     val conn = TaskConnectionComposite[Throwable]()
     conn.addAll(Seq(task1, task2, task3))
@@ -148,9 +148,9 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
 
   test("remove Task") { implicit sc =>
     var effect = 0
-    val task1 = Task { effect += 1 }
-    val task2 = Task { effect += 2 }
-    val task3 = Task { effect += 3 }
+    val task1 = UIO { effect += 1 }
+    val task2 = UIO { effect += 2 }
+    val task3 = UIO { effect += 3 }
 
     val conn = TaskConnectionComposite[Throwable]()
     conn.addAll(Seq(task1, task2, task3))
@@ -184,9 +184,9 @@ object TaskConnectionCompositeSuite extends BaseTestSuite {
 
   test("remove CancelableF") { implicit sc =>
     var effect = 0
-    val task1 = CancelableF.wrap(Task { effect += 1 })
-    val task2 = CancelableF.wrap(Task { effect += 2 })
-    val task3 = CancelableF.wrap(Task { effect += 3 })
+    val task1 = CancelableF.wrap(UIO { effect += 1 })
+    val task2 = CancelableF.wrap(UIO { effect += 2 })
+    val task3 = CancelableF.wrap(UIO { effect += 3 })
 
     val conn = TaskConnectionComposite[Throwable]()
     for (ref <- Seq(task1, task2, task3)) conn += ref

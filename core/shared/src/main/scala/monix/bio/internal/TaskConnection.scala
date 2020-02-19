@@ -20,6 +20,7 @@ package monix.bio
 package internal
 
 import cats.effect.CancelToken
+import monix.bio.UIO
 import monix.catnap.CancelableF
 import monix.execution.atomic.{Atomic, PaddingStrategy}
 import monix.execution.{Cancelable, Scheduler}
@@ -38,7 +39,7 @@ import scala.annotation.tailrec
   * Used in the implementation of `cats.effect.Task`. Inspired by the
   * implementation of `StackedCancelable` from the Monix library.
   */
-private[bio] sealed abstract class TaskConnection[E] extends CancelableF[BIO[E, ?]] {
+private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
 
   /**
     * Cancels the unit of work represented by this reference.
@@ -47,7 +48,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[BIO[E, 
     * same side-effect as calling it only once. Implementations
     * of this method should also be thread-safe.
     */
-  def cancel: CancelToken[BIO[E, ?]]
+  def cancel: CancelToken[UIO]
 
   /**
     * @return true in case this cancelable hasn't been canceled,
@@ -63,7 +64,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[BIO[E, 
     * to work because in case the connection was already cancelled,
     * then the given `token` needs to be cancelled as well.
     */
-  def push(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit
+  def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit
 
   /**
     * Pushes a [[monix.execution.Cancelable]] on the stack, to be
@@ -83,7 +84,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[BIO[E, 
     * to work because in case the connection was already cancelled,
     * then the given `token` needs to be cancelled as well.
     */
-  def push(connection: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit
+  def push(connection: CancelableF[UIO])(implicit s: Scheduler): Unit
 
   /**
     * Pushes multiple connections on the stack.
@@ -92,14 +93,14 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[BIO[E, 
     * to work because in case the connection was already cancelled,
     * then the given connections need to be cancelled as well.
     */
-  def pushConnections(seq: CancelableF[BIO[E, ?]]*)(implicit s: Scheduler): Unit
+  def pushConnections(seq: CancelableF[UIO]*)(implicit s: Scheduler): Unit
 
   /**
     * Removes a cancelable reference from the stack in FIFO order.
     *
     * @return the cancelable reference that was removed.
     */
-  def pop(): CancelToken[BIO[E, ?]]
+  def pop(): CancelToken[UIO]
 
   /**
     * Tries to reset an `TaskConnection`, from a cancelled state,
@@ -133,12 +134,12 @@ private[bio] object TaskConnection {
   private object Uncancelable extends TaskConnection[Any] {
     def cancel = BIO.unit
     def isCanceled: Boolean = false
-    def pop(): CancelToken[BIO[Any, ?]] = BIO.unit
+    def pop(): CancelToken[UIO] = BIO.unit
     def tryReactivate(): Boolean = true
-    def push(token: CancelToken[BIO[Any, ?]])(implicit s: Scheduler): Unit = ()
+    def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit = ()
     def push(cancelable: Cancelable)(implicit s: Scheduler): Unit = ()
-    def push(connection: CancelableF[BIO[Any, ?]])(implicit s: Scheduler): Unit = ()
-    def pushConnections(seq: CancelableF[BIO[Any, ?]]*)(implicit s: Scheduler): Unit = ()
+    def push(connection: CancelableF[UIO])(implicit s: Scheduler): Unit = ()
+    def pushConnections(seq: CancelableF[UIO]*)(implicit s: Scheduler): Unit = ()
 
     def toCancelable(implicit s: Scheduler): Cancelable =
       Cancelable.empty
@@ -152,7 +153,7 @@ private[bio] object TaskConnection {
         PaddingStrategy.LeftRight128
       )
 
-    val cancel: BIO[E, Unit] = BIO.suspendTotal {
+    val cancel: UIO[Unit] = UIO.suspendTotal {
       state.getAndSet(null) match {
         case null | Nil =>
           BIO.unit
@@ -164,13 +165,13 @@ private[bio] object TaskConnection {
     def isCanceled: Boolean =
       state.get eq null
 
-    def push(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
+    def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit =
       pushAny(token)
 
     def push(cancelable: Cancelable)(implicit s: Scheduler): Unit =
       pushAny(cancelable)
 
-    def push(connection: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
+    def push(connection: CancelableF[UIO])(implicit s: Scheduler): Unit =
       pushAny(connection)
 
     @tailrec
@@ -188,10 +189,10 @@ private[bio] object TaskConnection {
       }
     }
 
-    def pushConnections(seq: CancelableF[BIO[E, ?]]*)(implicit s: Scheduler): Unit =
+    def pushConnections(seq: CancelableF[UIO]*)(implicit s: Scheduler): Unit =
       push(UnsafeCancelUtils.cancelAllUnsafe(seq))
 
-    @tailrec def pop(): CancelToken[BIO[E, ?]] =
+    @tailrec def pop(): CancelToken[UIO] =
       state.get() match {
         case null | Nil => BIO.unit
         case current @ (x :: xs) =>

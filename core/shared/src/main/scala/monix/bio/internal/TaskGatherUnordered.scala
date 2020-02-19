@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
+import monix.bio.{BIO, UIO}
 import monix.bio.BIO.{Async, Context}
 import monix.bio.compat.internal.toIterator
 import monix.execution.exceptions.UncaughtErrorException
@@ -140,7 +140,7 @@ private[bio] object TaskGatherUnordered {
         // Collecting all cancelables in a buffer, because adding
         // cancelables one by one in our `CompositeCancelable` is
         // expensive, so we do it at the end
-        val allCancelables = ListBuffer.empty[CancelToken[BIO[E, ?]]]
+        val allCancelables = ListBuffer.empty[CancelToken[UIO]]
         val batchSize = s.executionModel.recommendedBatchSize
         val cursor = toIterator(in)
 
