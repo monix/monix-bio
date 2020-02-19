@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import java.util.concurrent.RejectedExecutionException
 
-import cats.effect.CancelToken
+import cats.effect.{CancelToken, IO}
 import monix.bio.BIO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.{BIO, Task}
@@ -39,7 +39,7 @@ private[bio] object TaskCreate {
 
   /**
     * Implementation for `Task.cancelable`
-    */ // TODO: should it take CancelToken[UIO]?
+    */
   def cancelable0[E, A](fn: (Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] = {
     val start = new Cancelable0Start[E, A, CancelToken[BIO[E, ?]]](fn) {
       def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
@@ -52,12 +52,11 @@ private[bio] object TaskCreate {
     )
   }
 
-  // TODO: implement TaskCreate.cancelableIO
-//  /**
-//    * Implementation for `Task.create`, used via `TaskBuilder`.
-//    */
-//  def cancelableIO[A](start: (Scheduler, Callback[Throwable, A]) => CancelToken[IO]): Task[A] =
-//    cancelable0((sc, cb) => Task.from(start(sc, cb)))
+  /**
+    * Implementation for `Task.create`, used via `TaskBuilder`.
+    */
+  def cancelableIO[E, A](start: (Scheduler, Callback[E, A]) => CancelToken[IO]): BIO[E, A] =
+    cancelable0[E, A]((sc, cb) => Task.from(start(sc, cb)).hideErrors)
 
   /**
     * Implementation for `Task.create`, used via `TaskBuilder`.

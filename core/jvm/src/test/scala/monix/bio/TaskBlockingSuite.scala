@@ -85,14 +85,13 @@ object TaskBlockingSuite extends SimpleTestSuite {
     }
   }
 
-  // TODO: add when memoize is implemented
-//  test("blocking on memoize") {
-//    for (_ <- 0 until 1000) {
-//      val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2)).memoize
-//      assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
-//      assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
-//    }
-//  }
+  test("blocking on memoize") {
+    for (_ <- 0 until 1000) {
+      val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2)).memoize
+      assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
+      assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
+    }
+  }
 
   test("timeout exception") {
     intercept[TimeoutException] {

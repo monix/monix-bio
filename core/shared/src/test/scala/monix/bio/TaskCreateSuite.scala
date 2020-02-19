@@ -17,6 +17,7 @@
 
 package monix.bio
 
+import cats.effect.IO
 import monix.execution.Cancelable
 import monix.execution.exceptions.DummyException
 
@@ -86,64 +87,63 @@ object TaskCreateSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  // TODO: TaskCreate
-//  test("can use IO[Unit] as return type") { implicit sc =>
-//    val task = Task.create[Int] { (sc, cb) =>
-//      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
-//      IO(c.cancel())
-//    }
-//
-//    val f = task.runToFuture
-//    sc.tick()
-//    assertEquals(f.value, None)
-//
-//    sc.tick(1.second)
-//    assertEquals(f.value, Some(Success(1)))
-//  }
-//
-//  test("returning IO[Unit] yields a cancelable task") { implicit sc =>
-//    val task = Task.create[Int] { (sc, cb) =>
-//      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
-//      IO(c.cancel())
-//    }
-//
-//    val f = task.runToFuture
-//    sc.tick()
-//    assertEquals(f.value, None)
-//
-//    f.cancel()
-//    sc.tick(1.second)
-//    assertEquals(f.value, None)
-//  }
-//
-//  test("can use Task[Unit] as return type") { implicit sc =>
-//    val task = Task.create[Int] { (sc, cb) =>
-//      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
-//      Task.evalAsync(c.cancel())
-//    }
-//
-//    val f = task.runToFuture
-//    sc.tick()
-//    assertEquals(f.value, None)
-//
-//    sc.tick(1.second)
-//    assertEquals(f.value, Some(Success(1)))
-//  }
-//
-//  test("returning Task[Unit] yields a cancelable task") { implicit sc =>
-//    val task = Task.create[Int] { (sc, cb) =>
-//      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
-//      Task.evalAsync(c.cancel())
-//    }
-//
-//    val f = task.runToFuture
-//    sc.tick()
-//    assertEquals(f.value, None)
-//
-//    f.cancel()
-//    sc.tick(1.second)
-//    assertEquals(f.value, None)
-//  }
+  test("can use IO[Unit] as return type") { implicit sc =>
+    val task = BIO.create[String, Int] { (sc, cb) =>
+      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
+      IO(c.cancel())
+    }
+
+    val f = task.runToFuture
+    sc.tick()
+    assertEquals(f.value, None)
+
+    sc.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(1))))
+  }
+
+  test("returning IO[Unit] yields a cancelable task") { implicit sc =>
+    val task = BIO.create[String, Int] { (sc, cb) =>
+      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
+      IO(c.cancel())
+    }
+
+    val f = task.runToFuture
+    sc.tick()
+    assertEquals(f.value, None)
+
+    f.cancel()
+    sc.tick(1.second)
+    assertEquals(f.value, None)
+  }
+
+  test("can use BIO[E, Unit] as return type") { implicit sc =>
+    val task = BIO.create[String, Int] { (sc, cb) =>
+      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
+      UIO.evalAsync(c.cancel())
+    }
+
+    val f = task.runToFuture
+    sc.tick()
+    assertEquals(f.value, None)
+
+    sc.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(1))))
+  }
+
+  test("returning BIO[E, Unit] yields a cancelable task") { implicit sc =>
+    val task = BIO.create[String, Int] { (sc, cb) =>
+      val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
+      UIO.evalAsync(c.cancel())
+    }
+
+    val f = task.runToFuture
+    sc.tick()
+    assertEquals(f.value, None)
+
+    f.cancel()
+    sc.tick(1.second)
+    assertEquals(f.value, None)
+  }
 
   test("throwing error when returning Unit") { implicit sc =>
     val dummy = DummyException("dummy")
