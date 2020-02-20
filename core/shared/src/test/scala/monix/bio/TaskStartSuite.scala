@@ -20,7 +20,7 @@ package monix.bio
 import cats.laws._
 import cats.laws.discipline._
 import monix.execution.internal.Platform
-
+import scala.concurrent.duration._
 import scala.util.Success
 
 object TaskStartSuite extends BaseTestSuite {
@@ -30,18 +30,17 @@ object TaskStartSuite extends BaseTestSuite {
     }
   }
 
-  // TODO: investigate
-//  test("task.start.flatMap(id) is cancelable, but the source is memoized") { implicit sc =>
-//    var effect = 0
-//    val task = Task { effect += 1; effect }.delayExecution(1.second).start.flatMap(_.join)
-//    val f = task.runToFuture
-//    sc.tick()
-//    f.cancel()
-//
-//    sc.tick(1.second)
-//    assertEquals(f.value, None)
-//    assertEquals(effect, 1)
-//  }
+  test("task.start.flatMap(id) is cancelable, but the source is memoized") { implicit sc =>
+    var effect = 0
+    val task = Task { effect += 1; effect }.delayExecution(1.second).start.flatMap(_.join)
+    val f = task.runToFuture
+    sc.tick()
+    f.cancel()
+
+    sc.tick(1.second)
+    assertEquals(f.value, None)
+    assertEquals(effect, 1)
+  }
 
   test("task.start is stack safe") { implicit sc =>
     var task: Task[Any] = Task.evalAsync(1)

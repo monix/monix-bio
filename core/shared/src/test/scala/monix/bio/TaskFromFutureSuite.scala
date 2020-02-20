@@ -39,12 +39,6 @@ object TaskFromFutureSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("Task.fromFuture should be faster for completed futures, success") { implicit s =>
-    val t = Task.fromFuture(Future.successful(10))
-    val f = t.runToFuture
-    assertEquals(f.value, Some(Success(Right(10))))
-  }
-
   test("Task.fromFuture should work onSuccess") { implicit s =>
     val t = Task.fromFuture(Future(10))
     val f = t.runToFuture

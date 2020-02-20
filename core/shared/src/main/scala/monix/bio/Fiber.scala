@@ -18,11 +18,6 @@
 package monix.bio
 
 import cats.effect.CancelToken
-import monix.bio.internal.TaskConnection
-import monix.execution.schedulers.TrampolineExecutionContext
-
-import scala.concurrent.Promise
-import scala.util.{Failure, Success}
 
 /** `Fiber` represents the (pure) result of a [[BIO]] being started concurrently
   * and that can be either joined or cancelled.
@@ -85,30 +80,6 @@ object Fiber {
     */
   def apply[E, A](task: BIO[E, A], cancel: CancelToken[UIO]): Fiber[E, A] =
     new Tuple(task, cancel)
-
-  private[bio] def fromPromise[E, A](p: Promise[Either[E, A]], conn: TaskConnection[E]): Fiber[E, A] = {
-    val join = BIO.Async[E, A] { (ctx, cb) =>
-      // Short-circuit for already completed `Future`
-      p.future.value match {
-        case Some(Success(value)) =>
-          cb(value)
-        case Some(Failure(ex)) =>
-          cb.onFatalError(ex)
-        case None =>
-          // Cancellation needs to be linked to the active task
-          ctx.connection.push(conn.cancel)(ctx.scheduler)
-          p.future.onComplete {
-            case Success(value) =>
-              ctx.connection.pop()
-              cb(value)
-            case Failure(ex) =>
-              ctx.connection.pop()
-              cb.onFatalError(ex)
-          }(TrampolineExecutionContext.immediate)
-      }
-    }
-    new Tuple(join, conn.cancel)
-  }
 
   private final case class Tuple[E, A](join: BIO[E, A], cancel: CancelToken[UIO]) extends Fiber[E, A]
 }
