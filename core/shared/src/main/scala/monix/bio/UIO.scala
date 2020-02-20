@@ -19,10 +19,10 @@ package monix.bio
 
 import monix.bio.compat.internal.newBuilder
 import monix.bio.internal._
-import monix.execution.Scheduler
+import monix.execution.{CancelablePromise, Scheduler}
 import monix.execution.compat.BuildFrom
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 
 object UIO {
@@ -68,6 +68,12 @@ object UIO {
     */
   def deferAction[A](f: Scheduler => UIO[A]): UIO[A] =
     BIO.deferAction(f)
+
+  /**
+    * @see See [[monix.bio.BIO.deferFutureEither]]
+    */
+  def deferFutureEither[A](fa: => Future[Either[Nothing, A]]): UIO[A] =
+    BIO.deferFutureEither(fa)
 
   /**
     * @see See [[monix.bio.BIO.suspend]]
@@ -131,6 +137,18 @@ object UIO {
     */
   val cancelBoundary: UIO[Unit] =
     BIO.cancelBoundary
+
+  /**
+    * @see See [[monix.bio.BIO.fromFutureEither]]
+    */
+  def fromFutureEither[A](f: Future[Either[Nothing, A]]): UIO[A] =
+    BIO.fromFutureEither(f)
+
+  /**
+    * @see See [[monix.bio.BIO.fromCancelablePromiseEither]]
+    */
+  def fromCancelablePromiseEither[A](p: CancelablePromise[Either[Nothing, A]]): UIO[A] =
+    BIO.fromCancelablePromiseEither(p)
 
   /**
     * @see See [[monix.bio.BIO.race]]

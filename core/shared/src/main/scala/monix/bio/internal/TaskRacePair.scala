@@ -66,7 +66,7 @@ private[bio] object TaskRacePair {
         new BiCallback[E, A] {
           override def onSuccess(valueA: A): Unit =
             if (isActive.getAndSet(false)) {
-              val fiberB = Fiber.fromPromise(pb, connB)
+              val fiberB = Fiber(TaskFromFutureEither.strict(pb.future), connB.cancel)
               conn.pop()
               cb.onSuccess(Left((valueA, fiberB)))
             } else {
@@ -100,7 +100,7 @@ private[bio] object TaskRacePair {
         new BiCallback[E, B] {
           override def onSuccess(valueB: B): Unit =
             if (isActive.getAndSet(false)) {
-              val fiberA = Fiber.fromPromise(pa, connA)
+              val fiberA = Fiber(TaskFromFutureEither.strict(pa.future), connA.cancel)
               conn.pop()
               cb.onSuccess(Right((fiberA, valueB)))
             } else {
@@ -113,7 +113,6 @@ private[bio] object TaskRacePair {
               connA.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              // TODO: should it be trySuccess?
               pb.success(Left(ex))
             }
 

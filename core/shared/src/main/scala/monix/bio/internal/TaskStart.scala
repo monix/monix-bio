@@ -19,9 +19,7 @@ package monix.bio.internal
 
 import monix.bio.BIO.{Async, Context}
 import monix.bio.{BIO, Fiber, UIO}
-import monix.execution.Callback
-
-import scala.concurrent.Promise
+import monix.execution.{Callback, CancelablePromise}
 
 private[bio] object TaskStart {
 
@@ -48,14 +46,16 @@ private[bio] object TaskStart {
       implicit val sc = ctx.scheduler
       // Cancelable Promise gets used for storing or waiting
       // for the final result
-      val p = Promise[Either[E, A]]()
+      val p = CancelablePromise[Either[E, A]]()
       // Building the Task to signal, linked to the above Promise.
       // It needs its own context, its own cancelable
       val ctx2 = BIO.Context[E](ctx.scheduler, ctx.options)
       // Starting actual execution of our newly created task;
       BIO.unsafeStartEnsureAsync(fa, ctx2, BiCallback.fromPromise(p))
+
+      val task = BIO.fromCancelablePromiseEither(p)
       // Signal the created fiber
-      cb.onSuccess(Fiber.fromPromise(p, ctx2.connection))
+      cb.onSuccess(Fiber(task, ctx2.connection.cancel))
     }
   }
 }

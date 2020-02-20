@@ -2592,6 +2592,21 @@ object BIO extends TaskInstancesLevel0 {
   def deferFuture[A](fa: => Future[A]): Task[A] =
     defer(fromFuture(fa))
 
+  /** Promote a non-strict Scala `Future` to a `BIO` of the same type.
+    *
+    * The equivalent of doing:
+    * {{{
+    *   import scala.concurrent.Future
+    *   def mkFuture = Future.successful(Right(27))
+    *
+    *   BIO.deferTotal(BIO.fromFutureEither(mkFuture))
+    * }}}
+    *
+    * All errors in the `Future` will be treated as an unexpected errors.
+    */
+  def deferFutureEither[E, A](fa: => Future[Either[E, A]]): BIO[E, A] =
+    deferTotal(fromFutureEither(fa))
+
   /** Wraps calls that generate `Future` results into [[Task]], provided
     * a callback with an injected [[monix.execution.Scheduler Scheduler]]
     * to act as the necessary `ExecutionContext`.
@@ -2619,7 +2634,7 @@ object BIO extends TaskInstancesLevel0 {
     * But this is not only superfluous, but against the best practices
     * of using `Task`. The difference is that `Task` takes a
     * [[monix.execution.Scheduler Scheduler]] (inheriting from
-    * `ExecutionContext`) only when [[Task.runAsync runAsync]] happens.
+    * `ExecutionContext`) only when [[BIO.runAsync runAsync]] happens.
     * But with `deferFutureAction` we get to have an injected
     * `Scheduler` in the passed callback:
     *
@@ -3290,6 +3305,7 @@ object BIO extends TaskInstancesLevel0 {
   def create[E, A]: AsyncBuilder.CreatePartiallyApplied[E, A] = new AsyncBuilder.CreatePartiallyApplied[E, A]
 
   /** Converts the given Scala `Future` into a `Task`.
+    *
     * There is an async boundary inserted at the end to guarantee
     * that we stay on the main Scheduler.
     *
@@ -3299,9 +3315,26 @@ object BIO extends TaskInstancesLevel0 {
   def fromFuture[A](f: Future[A]): Task[A] =
     TaskFromFuture.strict(f)
 
+  /** Converts the given Scala `Future` into a `BIO`.
+    *
+    * All errors in the `Future` will be treated as an unexpected errors.
+    *
+    * There is an async boundary inserted at the end to guarantee
+    * that we stay on the main Scheduler.
+    *
+    * NOTE: if you want to defer the creation of the future, use
+    * in combination with [[defer]].
+    */
+  def fromFutureEither[E, A](f: Future[Either[E, A]]): BIO[E, A] =
+    TaskFromFutureEither.strict(f)
+
   /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
     TaskFromFuture.fromCancelablePromise(p)
+
+  /** Wraps a [[monix.execution.CancelablePromise]] into `BIO`. */
+  def fromCancelablePromiseEither[E, A](p: CancelablePromise[Either[E, A]]): BIO[E, A] =
+    TaskFromFutureEither.fromCancelablePromise(p)
 
   /**
     * Converts any Future-like data-type into a `Task`, via [[monix.catnap.FutureLift]].
