@@ -26,7 +26,7 @@ import scala.util.{Failure, Success}
 
 object TaskCreateSuite extends BaseTestSuite {
   test("can use Unit as return type") { implicit sc =>
-    val task = Task.create[Int]((_, cb) => cb.onSuccess(1))
+    val task = BIO.create[Long, Int]((_, cb) => cb.onSuccess(1))
     val f = task.runToFuture
 
     sc.tick()
@@ -34,7 +34,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("can use Cancelable.empty as return type") { implicit sc =>
-    val task = Task.create[Int] { (_, cb) =>
+    val task = BIO.create[Long, Int] { (_, cb) =>
       cb.onSuccess(1); Cancelable.empty
     }
     val f = task.runToFuture
@@ -46,7 +46,7 @@ object TaskCreateSuite extends BaseTestSuite {
   test("returning Unit yields non-cancelable tasks") { implicit sc =>
     implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 
-    val task = Task.create[Int] { (sc, cb) =>
+    val task = BIO.create[Long, Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
       ()
     }
@@ -61,7 +61,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("can use Cancelable as return type") { implicit sc =>
-    val task = Task.create[Int] { (sc, cb) =>
+    val task = BIO.create[Long, Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
     }
 
@@ -74,7 +74,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("returning Cancelable yields a cancelable task") { implicit sc =>
-    val task = Task.create[Int] { (sc, cb) =>
+    val task = BIO.create[Long, Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
     }
 
@@ -147,7 +147,7 @@ object TaskCreateSuite extends BaseTestSuite {
 
   test("throwing error when returning Unit") { implicit sc =>
     val dummy = DummyException("dummy")
-    val task = Task.create[Int] { (_, _) =>
+    val task = BIO.create[Long, Int] { (_, _) =>
       (throw dummy): Unit
     }
 
@@ -160,7 +160,7 @@ object TaskCreateSuite extends BaseTestSuite {
 
   test("throwing error when returning Cancelable") { implicit sc =>
     val dummy = DummyException("dummy")
-    val task = Task.create[Int] { (_, _) =>
+    val task = BIO.create[Long, Int] { (_, _) =>
       (throw dummy): Cancelable
     }
 

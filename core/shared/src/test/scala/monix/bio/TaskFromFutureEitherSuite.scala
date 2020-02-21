@@ -61,7 +61,7 @@ object TaskFromFutureEitherSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.fromFutureEither should work onFatalError") { implicit s =>
+  test("BIO.fromFutureEither should work onTermination") { implicit s =>
     val dummy = DummyException("dummy")
     val t = BIO.fromFutureEither(Future(throw dummy))
     val f = t.runToFuture
@@ -85,7 +85,7 @@ object TaskFromFutureEitherSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left("dummy"))))
   }
 
-  test("BIO.fromFutureEither should be short-circuited onFatalError") { implicit s =>
+  test("BIO.fromFutureEither should be short-circuited onTermination") { implicit s =>
     val dummy = DummyException("dummy")
     val p = Promise[Either[String, Int]]()
     val t = BIO.fromFutureEither(p.future)
@@ -131,7 +131,7 @@ object TaskFromFutureEitherSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.fromFutureEither(cancelable) should be short-circuited onFatalError") { implicit s =>
+  test("BIO.fromFutureEither(cancelable) should be short-circuited onTermination") { implicit s =>
     val dummy = DummyException("dummy")
     val p = Promise[Either[String, Int]]()
     val t = BIO.fromFutureEither(CancelableFuture(p.future, Cancelable.empty))
@@ -159,7 +159,7 @@ object TaskFromFutureEitherSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.fromFutureEither(cancelable) should work onFatalError") { implicit s =>
+  test("BIO.fromFutureEither(cancelable) should work onTermination") { implicit s =>
     val dummy = DummyException("dummy")
     val p = Promise[Either[String, Int]]()
     val t = BIO.fromFutureEither(CancelableFuture(p.future, Cancelable.empty))

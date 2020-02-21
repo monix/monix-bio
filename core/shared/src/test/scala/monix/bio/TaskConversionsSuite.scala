@@ -78,16 +78,16 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.raiseFatalError(dummy).to[IO]") { implicit s =>
+  test("BIO.terminate(dummy).to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
     intercept[DummyException] {
-      BIO.raiseFatalError(dummy).to[IO].unsafeRunSync()
+      BIO.terminate(dummy).to[IO].unsafeRunSync()
     }
   }
 
-  test("BIO.raiseFatalError(dummy).executeAsync.to[IO]") { implicit s =>
+  test("BIO.terminate(dummy).executeAsync.to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
-    val io = BIO.raiseFatalError(dummy).executeAsync.to[IO]
+    val io = BIO.terminate(dummy).executeAsync.to[IO]
     val f = io.unsafeToFuture()
 
     assertEquals(f.value, None)
@@ -104,7 +104,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("BIO.toAsync converts tasks with typed errors") { implicit s =>
-    val ex = DummyException("Typed")
+    val ex = DummyException("TypedError")
     val io = BIO.raiseError(ex).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()
 
@@ -112,9 +112,9 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.toAsync converts tasks with fatal errors") { implicit s =>
+  test("BIO.toAsync converts tasks with terminal errors") { implicit s =>
     val ex = DummyException("Fatal")
-    val io = BIO.raiseFatalError(ex).executeAsync.toAsync[IO]
+    val io = BIO.terminate(ex).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
@@ -134,7 +134,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   test("BIO.toConcurrent converts tasks with typed errors") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    val ex = DummyException("Typed")
+    val ex = DummyException("TypedError")
     val io = BIO.raiseError(ex).executeAsync.toConcurrent[IO]
     val f = io.unsafeToFuture()
 
@@ -142,11 +142,11 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.toConcurrent converts tasks with fatal errors") { implicit s =>
+  test("BIO.toConcurrent converts tasks with terminal errors") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val ex = DummyException("Fatal")
-    val io = BIO.raiseFatalError(ex).executeAsync.toConcurrent[IO]
+    val io = BIO.terminate(ex).executeAsync.toConcurrent[IO]
     val f = io.unsafeToFuture()
 
     s.tick()

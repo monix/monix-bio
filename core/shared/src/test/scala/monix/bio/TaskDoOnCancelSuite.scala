@@ -20,7 +20,7 @@ package monix.bio
 import monix.execution.exceptions.DummyException
 
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TaskDoOnCancelSuite extends BaseTestSuite {
   test("doOnCancel should normally mirror the source") { implicit s =>
@@ -28,7 +28,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     var effect2 = 0
     var effect3 = 0
 
-    val f = Task
+    val f = UIO
       .eval(1)
       .delayExecution(1.second)
       .doOnCancel(UIO.eval { effect1 += 1 })
@@ -47,8 +47,8 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
 
   test("doOnCancel should mirror failed sources") { implicit s =>
     var effect = 0
-    val dummy = new RuntimeException("dummy")
-    val f = Task
+    val dummy = "dummy"
+    val f = BIO
       .raiseError(dummy)
       .executeAsync
       .doOnCancel(UIO.eval { effect += 1 })
@@ -59,12 +59,26 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     assertEquals(effect, 0)
   }
 
+  test("doOnCancel should mirror terminated sources") { implicit s =>
+    var effect = 0
+    val dummy = new RuntimeException("dummy")
+    val f = BIO
+      .terminate(dummy)
+      .executeAsync
+      .doOnCancel(UIO.eval { effect += 1 })
+      .runToFuture
+
+    s.tick()
+    assertEquals(f.value, Some(Failure(dummy)))
+    assertEquals(effect, 0)
+  }
+
   test("doOnCancel should cancel delayResult #1") { implicit s =>
     var effect1 = 0
     var effect2 = 0
     var effect3 = 0
 
-    val f = Task
+    val f = UIO
       .eval(1)
       .delayResult(1.second)
       .doOnCancel(UIO.eval { effect1 += 1 })
@@ -91,7 +105,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     var effect2 = 0
     var effect3 = 0
 
-    val f = Task
+    val f = UIO
       .eval(1)
       .delayResult(1.second)
       .doOnCancel(UIO.eval { effect1 += 1 })
@@ -118,7 +132,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     var effect2 = 0
     var effect3 = 0
 
-    val f = Task
+    val f = UIO
       .eval(1)
       .delayResult(1.second)
       .doOnCancel(UIO.eval { effect1 += 1 })
@@ -145,7 +159,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     var effect2 = 0
     var effect3 = 0
 
-    val f = Task
+    val f = UIO
       .eval(1)
       .doOnCancel(UIO.eval { effect1 += 1 })
       .delayExecution(1.second)
@@ -172,7 +186,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     var effect2 = 0
     var effect3 = 0
 
-    val f = Task
+    val f = UIO
       .eval(1)
       .doOnCancel(UIO.eval { effect1 += 1 })
       .delayExecution(1.second)
@@ -197,12 +211,12 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
   test("doOnCancel is stack safe in flatMap loops") { implicit sc =>
     val onCancel = UIO.evalAsync(throw DummyException("dummy"))
 
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.doOnCancel(onCancel).flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      UIO.unit.doOnCancel(onCancel).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          UIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()

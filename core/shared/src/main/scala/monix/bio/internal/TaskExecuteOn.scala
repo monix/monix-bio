@@ -54,7 +54,7 @@ private[bio] object TaskExecuteOn {
         new BiCallback[E, A] with Runnable {
           private[this] var value: A = _
           private[this] var error: E = _
-          private[this] var fatalError: Throwable = _
+          private[this] var terminalError: Throwable = _
 
           def onSuccess(value: A): Unit = {
             this.value = value
@@ -66,13 +66,13 @@ private[bio] object TaskExecuteOn {
             oldS.execute(this)
           }
 
-          override def onFatalError(e: Throwable): Unit = {
-            this.fatalError = e
+          override def onTermination(e: Throwable): Unit = {
+            this.terminalError = e
             oldS.execute(this)
           }
 
           def run() = {
-            if (fatalError ne null) cb.onFatalError(fatalError)
+            if (terminalError ne null) cb.onTermination(terminalError)
             else if (error != null) cb.onError(error)
             else cb.onSuccess(value)
           }

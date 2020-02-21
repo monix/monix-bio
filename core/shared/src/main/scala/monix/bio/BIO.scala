@@ -42,7 +42,7 @@ import monix.execution.internal.Platform
 import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
-import monix.execution.{Callback, Scheduler, _}
+import monix.execution.{Scheduler, _}
 import org.reactivestreams.Publisher
 
 import scala.annotation.unchecked.{uncheckedVariance => uV}
@@ -1191,8 +1191,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def memoizeOnSuccess: BIO[E, A] =
     TaskMemoize(this, cacheErrors = false)
 
-  /** Creates a new [[Task]] that will expose any triggered typed
-    * from the source.
+  /** Creates a new [[BIO]] that will expose any triggered typed
+    * errors from the source.
     */
   final def attempt: UIO[Either[E, A]] =
     FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
@@ -1743,7 +1743,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Returns a failed projection of this task.
     *
-    * The failed projection is a `Task` holding a value of type `Throwable`,
+    * The failed projection is a `BIO` holding a value of type `E`,
     * emitting the error yielded by the source, in case the source fails,
     * otherwise if the source succeeds the result will fail with a
     * `NoSuchElementException`.
@@ -1767,7 +1767,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Returns a new task that upon evaluation will execute the given
     * function for the generated element, transforming the source into
-    * a `Task[Unit]`.
+    * a `BIO[E, Unit]`.
     *
     * Similar in spirit with normal [[foreach]], but lazy, as
     * obviously nothing gets executed at this point.
@@ -2191,7 +2191,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   override def toString: String = this match {
     case Now(a) => s"BIO.Now($a)"
     case Error(e) => s"BIO.Error($e)"
-    case FatalError(e) => s"BIO.FatalError($e)"
+    case Termination(e) => s"BIO.Termination($e)"
     case _ =>
       val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.BIO[$.]", "")
       s"BIO.$n$$${System.identityHashCode(this)}"
@@ -2376,7 +2376,6 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * from it anyway and do not want to drag it everywhere.
     *
     * {{{
-    *   import monix.execution.CancelableFuture
     *   import monix.execution.exceptions.DummyException
     *   import monix.execution.Scheduler.Implicits.global
     *
@@ -2390,7 +2389,29 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * }}}
     */
   final def hideErrors(implicit E: E <:< Throwable): UIO[A] =
-    onErrorHandleWith(ex => BIO.raiseFatalError(E(ex)))
+    onErrorHandleWith(ex => BIO.terminate(E(ex)))
+
+  /** Hides all errors from the return type and raises them in the internal channel,
+    * using supplied function to transform `E` into `Throwable`.
+    *
+    * Use if you have a method that returns a possible error but you can't recover
+    * from it anyway and do not want to drag it everywhere.
+    *
+    * {{{
+    *   import monix.execution.exceptions.DummyException
+    *   import monix.execution.Scheduler.Implicits.global
+    *
+    *   val task: UIO[Int] = BIO
+    *     .raiseError("boom!")
+    *     .hideErrorsWith(e => DummyException(e))
+    *     .map(_ => 10)
+    *
+    *   // Some(Failure(DummyException(boom!)))
+    *   task.runToFuture.value
+    * }}}
+    */
+  final def hideErrorsWith(f: E => Throwable): UIO[A] =
+    onErrorHandleWith(ex => BIO.terminate(f(ex)))
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `map` functions, which get executed depending
@@ -2403,7 +2424,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[BIO.redeem]] for a version which works on typed errors
     */
-  final def redeemFatal[B](recover: Throwable => B, map: A => B): UIO[B] =
+  final def redeemCause[B](recover: Cause[E] => B, map: A => B): UIO[B] =
     BIO.FlatMap(this, new BIO.RedeemFatal(recover, map))
 
   /** Returns a new value that transforms the result of the source,
@@ -2412,7 +2433,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Usage of `redeemWith` also subsumes [[flatMap]] because:
     *
-    * `task.redeemFatalWith(BIO.raiseError, fs) <-> task.flatMap(fs)`
+    * `task.redeemCauseWith(BIO.raiseError, fs) <-> task.flatMap(fs)`
     *
     * @param recover is the function that gets called to recover the source
     *        in case of error
@@ -2421,7 +2442,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[BIO.redeemWith]] for a version which only works on typed errors
     */
-  final def redeemFatalWith[E1, B](recover: Throwable => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
+  final def redeemCauseWith[E1, B](recover: Cause[E] => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
     BIO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 
   /** Returns this task mapped to unit
@@ -2530,9 +2551,12 @@ object BIO extends TaskInstancesLevel0 {
 
   /** Returns a task that on execution is always finishing in a fatal (unexpected) error
     * emitting the specified exception.
+    *
+    * This type of errors is not reflected in the type signature and it skips all regular
+    * error handlers, except for [[BIO.redeemCause]] and [[BIO.redeemCauseWith]].
     */
-  def raiseFatalError(ex: Throwable): UIO[Nothing] =
-    FatalError(ex)
+  def terminate(ex: Throwable): UIO[Nothing] =
+    Termination(ex)
 
   /** Defers the creation of a `Task` in case it is effectful.
     *
@@ -2825,7 +2849,7 @@ object BIO extends TaskInstancesLevel0 {
   def fromTryEither[E, A](a: Try[Either[E, A]]): BIO[E, A] = a match {
     case Success(Right(a)) => Now(a)
     case Success(Left(e)) => Error(e)
-    case Failure(t) => FatalError(t)
+    case Failure(t) => Termination(t)
   }
 
   /** Keeps calling `f` until it returns a `Right` result.
@@ -2898,7 +2922,7 @@ object BIO extends TaskInstancesLevel0 {
     *      for creating cancelable tasks
     * @see [[BIO.create]] for the builder that does it all
     */
-  def async[E, A](register: Callback[E, A] => Unit): BIO[E, A] =
+  def async[E, A](register: BiCallback[E, A] => Unit): BIO[E, A] =
     TaskCreate.async(register)
 
   /** Create a non-cancelable `Task` from an asynchronous computation,
@@ -2964,7 +2988,7 @@ object BIO extends TaskInstancesLevel0 {
     *      for creating cancelable tasks
     * @see [[BIO.create]] for the builder that does it all
     */
-  def async0[E, A](register: (Scheduler, Callback[E, A]) => Unit): BIO[E, A] =
+  def async0[E, A](register: (Scheduler, BiCallback[E, A]) => Unit): BIO[E, A] =
     TaskCreate.async0(register)
 
   /** Suspends an asynchronous side effect in `Task`, this being a
@@ -2993,7 +3017,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[BIO.cancelable[A](register* Task.cancelable]] and
     *      [[BIO.cancelable0]] for creating cancelable tasks
     */
-  def asyncF[E, A](register: Callback[E, A] => BIO[E, Unit]): BIO[E, A] =
+  def asyncF[E, A](register: BiCallback[E, A] => BIO[E, Unit]): BIO[E, A] =
     TaskCreate.asyncF(register)
 
   /** Create a cancelable `Task` from an asynchronous computation that
@@ -3072,7 +3096,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[BIO.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable[E, A](register: Callback[E, A] => CancelToken[BIO[E, ?]]): BIO[E, A] =
+  def cancelable[E, A](register: BiCallback[E, A] => CancelToken[BIO[E, ?]]): BIO[E, A] =
     cancelable0[E, A]((_, cb) => register(cb))
 
   /** Create a cancelable `Task` from an asynchronous computation,
@@ -3173,7 +3197,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[BIO.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable0[E, A](register: (Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] =
+  def cancelable0[E, A](register: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] =
     TaskCreate.cancelable0(register)
 
   /** Returns a cancelable boundary — a `Task` that checks for the
@@ -3726,7 +3750,7 @@ object BIO extends TaskInstancesLevel0 {
     * increasing performance.
     */
   abstract class AsyncBuilder[CancelationToken] {
-    def create[E, A](register: (Scheduler, Callback[E, A]) => CancelationToken): BIO[E, A]
+    def create[E, A](register: (Scheduler, BiCallback[E, A]) => CancelationToken): BIO[E, A]
   }
 
   object AsyncBuilder extends AsyncBuilder0 {
@@ -3744,7 +3768,7 @@ object BIO extends TaskInstancesLevel0 {
     private[bio] final class CreatePartiallyApplied[E, A](val dummy: Boolean = true) extends AnyVal {
 
       def apply[CancelationToken](
-        register: (Scheduler, Callback[E, A]) => CancelationToken
+        register: (Scheduler, BiCallback[E, A]) => CancelationToken
       )(implicit B: AsyncBuilder[CancelationToken]): BIO[E, A] =
         B.create(register)
     }
@@ -3753,7 +3777,7 @@ object BIO extends TaskInstancesLevel0 {
     implicit val forUnit: AsyncBuilder[Unit] =
       new AsyncBuilder[Unit] {
 
-        def create[E, A](register: (Scheduler, Callback[E, A]) => Unit): BIO[E, A] =
+        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Unit): BIO[E, A] =
           TaskCreate.async0(register)
       }
 
@@ -3763,7 +3787,7 @@ object BIO extends TaskInstancesLevel0 {
       */
     implicit val forIO: AsyncBuilder[IO[Unit]] =
       new AsyncBuilder[IO[Unit]] {
-        override def create[E, A](register: (Scheduler, Callback[E, A]) => IO[Unit]): BIO[E, A] =
+        override def create[E, A](register: (Scheduler, BiCallback[E, A]) => IO[Unit]): BIO[E, A] =
           TaskCreate.cancelableIO(register)
       }
 
@@ -3775,8 +3799,8 @@ object BIO extends TaskInstancesLevel0 {
 
     private[this] val forBIORef: AsyncBuilder[BIO[Any, Unit]] =
       new AsyncBuilder[BIO[Any, Unit]] {
-        override def create[E, A](register: (Scheduler, Callback[E, A]) => BIO[Any, Unit]): BIO[E, A] =
-          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]])
+        override def create[E, A](register: (Scheduler, BiCallback[E, A]) => BIO[Any, Unit]): BIO[E, A] =
+          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]])
       }
 
     /** Implicit `AsyncBuilder` for non-cancelable tasks built by a function
@@ -3792,7 +3816,7 @@ object BIO extends TaskInstancesLevel0 {
     private[this] val forCancelableDummyRef: AsyncBuilder[Cancelable.Empty] =
       new AsyncBuilder[Cancelable.Empty] {
 
-        def create[E, A](register: (Scheduler, Callback[E, A]) => Cancelable.Empty): BIO[E, A] =
+        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Cancelable.Empty): BIO[E, A] =
           TaskCreate.async0(register)
       }
   }
@@ -3810,7 +3834,7 @@ object BIO extends TaskInstancesLevel0 {
     private[this] val forCancelableRef =
       new AsyncBuilder[Cancelable] {
 
-        def create[E, A](register: (Scheduler, Callback[E, A]) => Cancelable): BIO[E, A] =
+        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Cancelable): BIO[E, A] =
           TaskCreate.cancelableCancelable(register)
       }
   }
@@ -3970,14 +3994,14 @@ object BIO extends TaskInstancesLevel0 {
   }
 
   /** [[Task]] state describing an immediate exception. */
-  private[bio] final case class FatalError(e: Throwable) extends BIO[Nothing, Nothing] {
+  private[bio] final case class Termination(e: Throwable) extends BIO[Nothing, Nothing] {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: Nothing](
       cb: Either[Cause[Nothing], Nothing] => Unit
     )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
-        BiCallback.callFatalError(cb, e)
+        BiCallback.callTermination(cb, e)
         BIO.unit
       } else {
         super.runAsyncOptF(cb)(s, opts)
@@ -3994,7 +4018,7 @@ object BIO extends TaskInstancesLevel0 {
       cb: Either[Cause[Nothing], Nothing] => Unit
     )(implicit s: Scheduler, opts: Options): Cancelable = {
       if (s.executionModel != AlwaysAsyncExecution) {
-        BiCallback.callFatalError(cb, e)
+        BiCallback.callTermination(cb, e)
         Cancelable.empty
       } else {
         super.runAsyncOpt(cb)(s, opts)
@@ -4011,7 +4035,7 @@ object BIO extends TaskInstancesLevel0 {
       opts: Options
     ): Unit = {
       if (s.executionModel != AlwaysAsyncExecution)
-        BiCallback.callFatalError(cb, e)
+        BiCallback.callTermination(cb, e)
       else
         super.runAsyncUncancelableOpt(cb)(s, opts)
     }
@@ -4131,7 +4155,7 @@ object BIO extends TaskInstancesLevel0 {
   private object Failed extends StackFrame[Any, Any, UIO[Any]] {
 
     def apply(a: Any): UIO[Any] =
-      FatalError(new NoSuchElementException("failed"))
+      Termination(new NoSuchElementException("failed"))
 
     def recover(e: Any): UIO[Any] =
       Now(e)
@@ -4149,12 +4173,12 @@ object BIO extends TaskInstancesLevel0 {
     def recover(e: E): UIO[B] = new Now(fe(e))
   }
 
-  /** Used as optimization by [[BIO.redeemFatal]]. */
-  private final class RedeemFatal[A, B](fe: Throwable => B, fs: A => B)
-      extends StackFrame.FatalStackFrame[Throwable, A, UIO[B]] {
+  /** Used as optimization by [[BIO.redeemCause]]. */
+  private final class RedeemFatal[E, A, B](fe: Cause[E] => B, fs: A => B)
+      extends StackFrame.FatalStackFrame[E, A, UIO[B]] {
     override def apply(a: A): UIO[B] = new Now(fs(a))
-    override def recover(e: Throwable): UIO[B] = new Now(fe(e))
-    override def recoverFatal(e: Throwable): UIO[B] = new Now(fe(e))
+    override def recover(e: E): UIO[B] = new Now(fe(Cause.typed(e)))
+    override def recoverFatal(e: Throwable): UIO[B] = new Now(fe(Cause.terminate(e)))
   }
 
   /** Used as optimization by [[BIO.attempt]]. */

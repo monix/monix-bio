@@ -99,10 +99,10 @@ object TaskMemoizeSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("BIO.raiseFatalError(error).memoize should work") { implicit s =>
+  test("BIO.terminate(error).memoize should work") { implicit s =>
     var effect = 0
     val dummy = DummyException("dummy")
-    val task = BIO.raiseFatalError { effect += 1; dummy }.memoize
+    val task = BIO.terminate { effect += 1; dummy }.memoize
       .flatMap(BIO.now[Int])
       .flatMap(BIO.now[Int])
 
@@ -604,8 +604,8 @@ object TaskMemoizeSuite extends BaseTestSuite {
     assertEquals(task, task.memoize)
   }
 
-  test("BIO.raiseFatalError.memoize eq Task.raiseError") { implicit s =>
-    val task = BIO.raiseFatalError(DummyException("dummy"))
+  test("BIO.terminate.memoize eq Task.raiseError") { implicit s =>
+    val task = BIO.terminate(DummyException("dummy"))
     assertEquals(task, task.memoize)
   }
 

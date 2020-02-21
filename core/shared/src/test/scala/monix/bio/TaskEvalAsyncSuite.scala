@@ -84,7 +84,7 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
   test("Task.evalAsync.flatMap should protect against user code") { implicit s =>
     val ex = DummyException("dummy")
     val t = Task.evalAsync(1).flatMap[Throwable, Int](_ => throw ex)
-    check(t <-> Task.raiseFatalError(ex))
+    check(t <-> Task.terminate(ex))
   }
 
   test("Task.evalAsync should be tail recursive") { implicit s =>

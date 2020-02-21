@@ -17,107 +17,107 @@
 
 package monix.bio
 
-import monix.execution.Callback
+import monix.bio.internal.BiCallback
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TestScheduler
 
 import scala.util.{Failure, Success}
 
 object TaskCallbackSafetySuite extends BaseTestSuite {
-  test("Task.async's callback can be called multiple times") { implicit sc =>
-    runTestCanCallMultipleTimes(Task.async)
+  test("BIO.async's callback can be called multiple times") { implicit sc =>
+    runTestCanCallMultipleTimes(BIO.async)
   }
 
-  test("Task.async0's callback can be called multiple times") { implicit sc =>
-    runTestCanCallMultipleTimes(r => Task.async0((_, cb) => r(cb)))
+  test("BIO.async0's callback can be called multiple times") { implicit sc =>
+    runTestCanCallMultipleTimes(r => BIO.async0((_, cb) => r(cb)))
   }
 
-  test("Task.asyncF's callback can be called multiple times") { implicit sc =>
-    runTestCanCallMultipleTimes(r => Task.asyncF(cb => Task(r(cb))))
+  test("BIO.asyncF's callback can be called multiple times") { implicit sc =>
+    runTestCanCallMultipleTimes(r => BIO.asyncF(cb => BIO.evalTotal(r(cb))))
   }
 
-  test("Task.cancelable's callback can be called multiple times") { implicit sc =>
+  test("BIO.cancelable's callback can be called multiple times") { implicit sc =>
     runTestCanCallMultipleTimes(r =>
-      Task.cancelable { cb =>
-        r(cb); Task.unit
+      BIO.cancelable[Int, Int] { cb =>
+        r(cb); BIO.unit
       }
     )
   }
 
-  test("Task.cancelable0's callback can be called multiple times") { implicit sc =>
+  test("BIO.cancelable0's callback can be called multiple times") { implicit sc =>
     runTestCanCallMultipleTimes(r =>
-      Task.cancelable0 { (_, cb) =>
-        r(cb); Task.unit
+      BIO.cancelable0[Int, Int] { (_, cb) =>
+        r(cb); BIO.unit
       }
     )
   }
 
-  test("Task.async's register throwing is signaled as error") { implicit sc =>
-    runTestRegisterCanThrow(Task.async)
+  test("BIO.async's register throwing is signaled as error") { implicit sc =>
+    runTestRegisterCanThrow(BIO.async)
   }
 
-  test("Task.async0's register throwing is signaled as error") { implicit sc =>
-    runTestRegisterCanThrow(r => Task.async0((_, cb) => r(cb)))
+  test("BIO.async0's register throwing is signaled as error") { implicit sc =>
+    runTestRegisterCanThrow(r => BIO.async0((_, cb) => r(cb)))
   }
 
-  test("Task.asyncF's register throwing is signaled as error (1)") { implicit sc =>
-    runTestRegisterCanThrow(r => Task.asyncF(cb => Task(r(cb))))
+  test("BIO.asyncF's register throwing is signaled as error (1)") { implicit sc =>
+    runTestRegisterCanThrow(r => BIO.asyncF(cb => BIO.evalTotal(r(cb))))
   }
 
-  test("Task.asyncF's register throwing is signaled as error (2)") { implicit sc =>
-    runTestRegisterCanThrow(r => Task.asyncF(cb => { r(cb); Task.unit }))
+  test("BIO.asyncF's register throwing is signaled as error (2)") { implicit sc =>
+    runTestRegisterCanThrow(r => BIO.asyncF(cb => { r(cb); BIO.unit }))
   }
 
-  test("Task.cancelable's register throwing is signaled as error") { implicit sc =>
+  test("BIO.cancelable's register throwing is signaled as error") { implicit sc =>
     runTestRegisterCanThrow(r =>
-      Task.cancelable { cb =>
-        r(cb); Task.unit
+      BIO.cancelable[Int, Int] { cb =>
+        r(cb); BIO.unit
       }
     )
   }
 
-  test("Task.cancelable0's register throwing is signaled as error") { implicit sc =>
+  test("BIO.cancelable0's register throwing is signaled as error") { implicit sc =>
     runTestRegisterCanThrow(r =>
-      Task.cancelable0 { (_, cb) =>
-        r(cb); Task.unit
+      BIO.cancelable0[Int, Int] { (_, cb) =>
+        r(cb); BIO.unit
       }
     )
   }
 
-  test("Task.async's register throwing, after result, is reported") { implicit sc =>
-    runTestRegisterThrowingCanBeReported(Task.async)
+  test("BIO.async's register throwing, after result, is reported") { implicit sc =>
+    runTestRegisterThrowingCanBeReported(BIO.async)
   }
 
-  test("Task.async0's register throwing, after result, is reported") { implicit sc =>
-    runTestRegisterThrowingCanBeReported(r => Task.async0((_, cb) => r(cb)))
+  test("BIO.async0's register throwing, after result, is reported") { implicit sc =>
+    runTestRegisterThrowingCanBeReported(r => BIO.async0((_, cb) => r(cb)))
   }
 
-  test("Task.asyncF's register throwing, after result, is reported (1)") { implicit sc =>
-    runTestRegisterThrowingCanBeReported(r => Task.asyncF(cb => Task(r(cb))))
+  test("BIO.asyncF's register throwing, after result, is reported (1)") { implicit sc =>
+    runTestRegisterThrowingCanBeReported(r => BIO.asyncF(cb => BIO.evalTotal(r(cb))))
   }
 
-  test("Task.asyncF's register throwing, after result, is reported (2)") { implicit sc =>
-    runTestRegisterThrowingCanBeReported(r => Task.asyncF(cb => { r(cb); Task.unit }))
+  test("BIO.asyncF's register throwing, after result, is reported (2)") { implicit sc =>
+    runTestRegisterThrowingCanBeReported(r => BIO.asyncF(cb => { r(cb); BIO.unit }))
   }
 
-  test("Task.cancelable's register throwing, after result, is reported") { implicit sc =>
+  test("BIO.cancelable's register throwing, after result, is reported") { implicit sc =>
     runTestRegisterThrowingCanBeReported(r =>
-      Task.cancelable { cb =>
-        r(cb); Task.unit
+      BIO.cancelable[Int, Int] { cb =>
+        r(cb); BIO.unit
       }
     )
   }
 
-  test("Task.cancelable0's register throwing, after result, is reported") { implicit sc =>
+  test("BIO.cancelable0's register throwing, after result, is reported") { implicit sc =>
     runTestRegisterThrowingCanBeReported(r =>
-      Task.cancelable0 { (_, cb) =>
-        r(cb); Task.unit
+      BIO.cancelable0[Int, Int] { (_, cb) =>
+        r(cb); BIO.unit
       }
     )
   }
 
   def runTestRegisterCanThrow(
-    create: (Callback[Throwable, Int] => Unit) => Task[Int]
+    create: (BiCallback[Int, Int] => Unit) => BIO[Int, Int]
   )(implicit sc: TestScheduler): Unit = {
 
     var effect = 0
@@ -127,10 +127,11 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
     task.runAsync {
       case Right(_) => ()
-      case Left(value) =>
-        value.fold(identity, identity) match {
+      case Left(Cause.Error(nr)) => effect += nr
+      case Left(Cause.Termination(ex)) =>
+        ex match {
           case WrappedEx(nr) => effect += nr
-          case e => throw e
+          case other => throw other
         }
     }
 
@@ -140,7 +141,7 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
   }
 
   def runTestRegisterThrowingCanBeReported(
-    create: (Callback[Throwable, Int] => Unit) => Task[Int]
+    create: (BiCallback[Int, Int] => Unit) => BIO[Int, Int]
   )(implicit sc: TestScheduler): Unit = {
 
     var effect = 0
@@ -151,10 +152,11 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
     task.runAsync {
       case Right(_) => effect += 1
-      case Left(value) =>
-        value.fold(identity, identity) match {
+      case Left(Cause.Error(nr)) => effect += nr
+      case Left(Cause.Termination(ex)) =>
+        ex match {
           case WrappedEx(nr) => effect += nr
-          case e => throw e
+          case other => throw other
         }
     }
 
@@ -164,10 +166,10 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
   }
 
   def runTestCanCallMultipleTimes(
-    create: (Callback[Throwable, Int] => Unit) => Task[Int]
+    create: (BiCallback[Int, Int] => Unit) => BIO[Int, Int]
   )(implicit sc: TestScheduler): Unit = {
 
-    def run(expected: Int)(trySignal: Callback[Throwable, Int] => Boolean) = {
+    def run(expected: Int)(trySignal: BiCallback[Int, Int] => Boolean) = {
       var effect = 0
       val task = create { cb =>
         assert(trySignal(cb))
@@ -177,10 +179,11 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
       task.runAsync {
         case Right(nr) => effect += nr
-        case Left(value) =>
-          value.fold(identity, identity) match {
+        case Left(Cause.Error(nr)) => effect += nr
+        case Left(Cause.Termination(ex)) =>
+          ex match {
             case WrappedEx(nr) => effect += nr
-            case e => throw e
+            case other => throw other
           }
       }
 
@@ -190,7 +193,7 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
     }
 
     run(1)(_.tryOnSuccess(1))
-    run(1)(_.tryApply(Success(1)))
+    run(1)(_.tryApply(Success(Right(1))))
     run(1)(_.tryApply(Right(1)))
 
     run(1)(cb =>
@@ -205,22 +208,28 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
     )
     run(1)(cb =>
       try {
-        cb(Success(1)); true
+        cb(Success(Right(1))); true
       } catch { case _: CallbackCalledMultipleTimesException => false }
     )
 
-    run(10)(_.tryOnError(WrappedEx(10)))
+    run(10)(_.tryOnTermination(WrappedEx(10)))
+    run(10)(_.tryOnError(10))
     run(10)(_.tryApply(Failure(WrappedEx(10))))
-    run(10)(_.tryApply(Left(WrappedEx(10))))
+    run(10)(_.tryApply(Left(10)))
 
     run(10)(cb =>
       try {
-        cb.onError(WrappedEx(10)); true
+        cb.onTermination(WrappedEx(10)); true
       } catch { case _: CallbackCalledMultipleTimesException => false }
     )
     run(10)(cb =>
       try {
-        cb(Left(WrappedEx(10))); true
+        cb.onError(10); true
+      } catch { case _: CallbackCalledMultipleTimesException => false }
+    )
+    run(10)(cb =>
+      try {
+        cb(Left(10)); true
       } catch { case _: CallbackCalledMultipleTimesException => false }
     )
     run(10)(cb =>

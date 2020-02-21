@@ -194,7 +194,7 @@ private[monix] object TaskBracket {
               val onNext = {
                 val fb =
                   try use(value)
-                  catch { case NonFatal(e) => BIO.raiseFatalError(e) }
+                  catch { case NonFatal(e) => BIO.terminate(e) }
                 fb.flatMap(releaseFrame)
               }
 
@@ -205,8 +205,8 @@ private[monix] object TaskBracket {
           def onError(ex: E): Unit =
             cb.onError(ex)
 
-          override def onFatalError(e: Throwable): Unit = {
-            cb.onFatalError(e)
+          override def onTermination(e: Throwable): Unit = {
+            cb.onTermination(e)
           }
         }
       )
@@ -278,8 +278,8 @@ private[monix] object TaskBracket {
     private final def unsafeRecover(e: E): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        val re = Right(e)
-        releaseOnError(a, Cause(re)).flatMap[E, B](new ReleaseRecover(re))
+        val cause = Cause.typed(e)
+        releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
       } else {
         BIO.never
       }
@@ -288,8 +288,8 @@ private[monix] object TaskBracket {
     private final def unsafeRecoverFatal(e: Throwable): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        val le = Left(e)
-        releaseOnError(a, Cause(le)).flatMap[E, B](new ReleaseRecover(le))
+        val cause = Cause.terminate(e)
+        releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
       } else {
         BIO.never
       }
@@ -304,19 +304,18 @@ private[monix] object TaskBracket {
     }
   }
 
-  private final class ReleaseRecover[E](e: Either[Throwable, E])
-      extends FatalStackFrame[Throwable, Unit, BIO[E, Nothing]] {
+  private final class ReleaseRecover[E](e: Cause[E]) extends FatalStackFrame[Nothing, Unit, BIO[E, Nothing]] {
 
     def apply(a: Unit): BIO[E, Nothing] = {
-      e.fold(BIO.raiseFatalError, BIO.raiseError)
+      e.fold(BIO.terminate, BIO.raiseError)
     }
 
-    def recover(e2: Throwable): BIO[E, Nothing] = {
-      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, UncaughtErrorException.wrap), e2))
+    def recover(e2: Nothing): BIO[E, Nothing] = {
+      e.fold(BIO.terminate, BIO.raiseError)
     }
 
-    override def recoverFatal(e2: Throwable): BIO[E, Nothing] = {
-      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, UncaughtErrorException.wrap), e2))
+    override def recoverFatal(e2: Throwable): BIO[Nothing, Nothing] = {
+      BIO.terminate(Platform.composeErrors(e.fold(identity, UncaughtErrorException.wrap), e2))
     }
   }
 

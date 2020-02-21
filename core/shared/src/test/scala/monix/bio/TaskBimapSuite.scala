@@ -17,22 +17,22 @@
 
 package monix.bio
 
-import monix.bio.BIO.{Error, Now}
-
 import scala.util.Success
 
 object TaskBimapSuite extends BaseTestSuite {
-  test("it should map the success channel") { implicit s =>
-    val f = Now(1)
-      .bimap(identity, _ => "Success")
+  test("BIO.bimap should map the success channel") { implicit s =>
+    val f = BIO
+      .now(1)
+      .bimap(_ => "Error", _ => "Success")
       .runToFuture
 
     assertEquals(f.value, Some(Success(Right("Success"))))
   }
 
-  test("it should map the error channel") { implicit s =>
-    val f = Error(1)
-      .bimap(_ => "Error", identity)
+  test("BIO.bimap should map the error channel") { implicit s =>
+    val f = BIO
+      .raiseError(1)
+      .bimap(_ => "Error", _ => "Success")
       .runToFuture
 
     assertEquals(f.value, Some(Success(Left("Error"))))

@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO.{Context, Error, FatalError, Now}
+import monix.bio.BIO.{Context, Error, Now, Termination}
 import monix.bio.internal.TaskRunLoop.startFull
 import monix.bio.BIO
 import monix.execution.Scheduler
@@ -33,7 +33,7 @@ private[bio] object TaskMemoize {
     */
   def apply[E, A](source: BIO[E, A], cacheErrors: Boolean): BIO[E, A] =
     source match {
-      case Now(_) | Error(_) | FatalError(_) =>
+      case Now(_) | Error(_) | Termination(_) =>
         source
 
 //      TODO: implement this optimization once `Coeval` is implemented
@@ -121,7 +121,7 @@ private[bio] object TaskMemoize {
         def onError(e: E): Unit =
           self.cacheValue(Success(Left(e)))
 
-        def onFatalError(ex: Throwable): Unit =
+        def onTermination(ex: Throwable): Unit =
           self.cacheValue(Failure(ex))
       }
 
@@ -180,7 +180,7 @@ private[bio] object TaskMemoize {
   }
 
   /**
-    * Separates success case from expected and fatal error case.
+    * Separates success case from expected and terminal error case.
     */
   private def isSuccess[E, A](result: Try[Either[E, A]]): Boolean = result match {
     case Success(Right(_)) => true

@@ -122,7 +122,7 @@ private[bio] object UnsafeCancelUtils {
   private final class CancelAllFrame(cursor: Iterator[AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */ ])
       extends FatalStackFrame[Nothing, Unit, UIO[Unit]] {
 
-    private[this] val fatalErrors = ListBuffer.empty[Throwable]
+    private[this] val terminalErrors = ListBuffer.empty[Throwable]
 
     def loop(): CancelToken[UIO] = {
       var task: UIO[Unit] = null
@@ -138,7 +138,7 @@ private[bio] object UnsafeCancelUtils {
               ref.cancel()
             } catch {
               case NonFatal(e) =>
-                fatalErrors += e
+                terminalErrors += e
             }
           case other =>
             // $COVERAGE-OFF$
@@ -150,11 +150,11 @@ private[bio] object UnsafeCancelUtils {
       if (task ne null) {
         task.flatMap(this)
       } else {
-        fatalErrors.toList match {
+        terminalErrors.toList match {
           case Nil =>
             UIO.unit
           case first :: rest =>
-            BIO.raiseFatalError(Platform.composeErrors(first, rest: _*))
+            BIO.terminate(Platform.composeErrors(first, rest: _*))
         }
       }
     }
@@ -167,7 +167,7 @@ private[bio] object UnsafeCancelUtils {
     }
 
     def recoverFatal(e: Throwable): UIO[Unit] = {
-      fatalErrors += e
+      terminalErrors += e
       loop()
     }
   }

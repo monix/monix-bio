@@ -27,7 +27,7 @@ import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.internal.Platform
 import monix.execution.schedulers.{StartAsyncBatchRunnable, TrampolinedRunnable}
-import monix.execution.{Callback, Cancelable, Scheduler, UncaughtExceptionReporter}
+import monix.execution.{Cancelable, Scheduler, UncaughtExceptionReporter}
 
 private[bio] object TaskCreate {
 
@@ -40,7 +40,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.cancelable`
     */
-  def cancelable0[E, A](fn: (Scheduler, Callback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] = {
+  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] = {
     val start = new Cancelable0Start[E, A, CancelToken[BIO[E, ?]]](fn) {
       def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
         ref := token
@@ -55,13 +55,13 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.create`, used via `TaskBuilder`.
     */
-  def cancelableIO[E, A](start: (Scheduler, Callback[E, A]) => CancelToken[IO]): BIO[E, A] =
+  def cancelableIO[E, A](start: (Scheduler, BiCallback[E, A]) => CancelToken[IO]): BIO[E, A] =
     cancelable0[E, A]((sc, cb) => Task.from(start(sc, cb)).hideErrors)
 
   /**
     * Implementation for `Task.create`, used via `TaskBuilder`.
     */
-  def cancelableCancelable[E, A](fn: (Scheduler, Callback[E, A]) => Cancelable): BIO[E, A] = {
+  def cancelableCancelable[E, A](fn: (Scheduler, BiCallback[E, A]) => Cancelable): BIO[E, A] = {
     val start = new Cancelable0Start[E, A, Cancelable](fn) {
       def setConnection(ref: TaskConnectionRef[E], token: Cancelable)(implicit s: Scheduler): Unit =
         ref := token
@@ -72,7 +72,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.async0`
     */
-  def async0[E, A](fn: (Scheduler, Callback[E, A]) => Any): BIO[E, A] = {
+  def async0[E, A](fn: (Scheduler, BiCallback[E, A]) => Any): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
@@ -88,7 +88,7 @@ private[bio] object TaskCreate {
     * It duplicates the implementation of `Task.async0` with the purpose
     * of avoiding extraneous callback allocations.
     */
-  def async[E, A](k: Callback[E, A] => Unit): BIO[E, A] = {
+  def async[E, A](k: BiCallback[E, A] => Unit): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
@@ -100,7 +100,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.asyncF`.
     */
-  def asyncF[E, A](k: Callback[E, A] => BIO[E, Unit]): BIO[E, A] = {
+  def asyncF[E, A](k: BiCallback[E, A] => BIO[E, Unit]): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       // Creating new connection, because we can have a race condition
@@ -117,7 +117,7 @@ private[bio] object TaskCreate {
     Async(start, trampolineBefore = false, trampolineAfter = false)
   }
 
-  private abstract class Cancelable0Start[E, A, Token](fn: (Scheduler, Callback[E, A]) => Token)
+  private abstract class Cancelable0Start[E, A, Token](fn: (Scheduler, BiCallback[E, A]) => Token)
       extends ((Context[E], BiCallback[E, A]) => Unit) {
 
     def setConnection(ref: TaskConnectionRef[E], token: Token)(implicit s: Scheduler): Unit
@@ -146,8 +146,8 @@ private[bio] object TaskCreate {
         r.reportFailure(UncaughtErrorException.wrap(e))
       }
 
-    override def onFatalError(e: Throwable): Unit =
-      if (!cb.tryOnFatalError(e)) {
+    override def onTermination(e: Throwable): Unit =
+      if (!cb.tryOnTermination(e)) {
         r.reportFailure(e)
       }
   }
@@ -158,7 +158,7 @@ private[bio] object TaskCreate {
     private[this] val state = AtomicInt(0)
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
     private[this] var isSameThread = false
 
     def this(ctx: Context[E], shouldPop: Boolean, cb: BiCallback[E, A]) =
@@ -196,15 +196,15 @@ private[bio] object TaskCreate {
       }
     }
 
-    override def onFatalError(e: Throwable): Unit = {
-      if (!tryOnFatalError(e)) {
-        throw new CallbackCalledMultipleTimesException("onError", e)
+    override def onTermination(e: Throwable): Unit = {
+      if (!tryOnTermination(e)) {
+        throw new CallbackCalledMultipleTimesException("onTermination", e)
       }
     }
 
-    override def tryOnFatalError(e: Throwable): Boolean = {
+    override def tryOnTermination(e: Throwable): Boolean = {
       if (state.compareAndSet(0, 3)) {
-        this.fatalError = e
+        this.terminalError = e
         startExecution()
         true
       } else {
@@ -247,9 +247,9 @@ private[bio] object TaskCreate {
           error = null.asInstanceOf[E]
           cb.onError(e)
         case 3 =>
-          val e = fatalError
-          fatalError = null
-          cb.onFatalError(e)
+          val e = terminalError
+          terminalError = null
+          cb.onTermination(e)
       }
     }
 
@@ -261,13 +261,13 @@ private[bio] object TaskCreate {
         ctx.scheduler.reportFailure(UncaughtErrorException.wrap(e))
       }
 
-      if (fatalError != null) {
-        val e = fatalError
-        fatalError = null
+      if (terminalError != null) {
+        val e = terminalError
+        terminalError = null
         ctx.scheduler.reportFailure(e)
       }
 
-      BiCallback.signalFatalErrorTrampolined(cb, e)
+      BiCallback.signalTerminationTrampolined(cb, e)
     }
   }
 }

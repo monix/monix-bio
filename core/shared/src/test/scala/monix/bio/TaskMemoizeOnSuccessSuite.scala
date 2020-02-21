@@ -18,7 +18,6 @@
 package monix.bio
 
 import monix.bio.internal.BiCallback
-import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 
@@ -110,11 +109,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 2)
   }
 
-  test("BIO.raiseFatalError(error).memoizeOnSuccess should not be idempotent") { implicit s =>
+  test("BIO.terminate(error).memoizeOnSuccess should not be idempotent") { implicit s =>
     var effect = 0
     val dummy = DummyException("dummy")
     val task = BIO
-      .suspendTotal(BIO.raiseFatalError { effect += 1; dummy })
+      .suspendTotal(BIO.terminate { effect += 1; dummy })
       .memoizeOnSuccess
       .flatMap(BIO.now[Int])
       .flatMap(BIO.now[Int])
@@ -141,9 +140,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
   }
 
-  test("BIO.raiseFatalError(error).memoizeOnSuccess.materialize") { implicit s =>
+  test("BIO.terminate(error).memoizeOnSuccess.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = BIO.raiseFatalError(dummy).memoizeOnSuccess.materialize.runToFuture
+    val f = BIO.terminate(dummy).memoizeOnSuccess.materialize.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
@@ -264,9 +263,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.raiseFatalError.memoizeOnSuccess should work") { implicit s =>
+  test("BIO.terminate.memoizeOnSuccess should work") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.raiseFatalError(dummy).memoizeOnSuccess
+    val task = BIO.terminate(dummy).memoizeOnSuccess
 
     val f1 = task.runToFuture
     assertEquals(f1.value, Some(Failure(dummy)))
@@ -625,8 +624,8 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("BIO.raiseFatalError.memoizeOnSuccess eq Task.raiseError") { implicit s =>
-    val task = BIO.raiseFatalError(DummyException("dummy"))
+  test("BIO.terminate.memoizeOnSuccess eq Task.raiseError") { implicit s =>
+    val task = BIO.terminate(DummyException("dummy"))
     assertEquals(task, task.memoizeOnSuccess)
   }
 }

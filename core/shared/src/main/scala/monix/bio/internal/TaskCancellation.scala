@@ -65,10 +65,10 @@ private[bio] object TaskCancellation {
 
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     def run(): Unit = {
-      if (fatalError ne null) cb.onFatalError(fatalError)
+      if (terminalError ne null) cb.onTermination(terminalError)
       else if (error != null) cb.onError(error)
       else cb.onSuccess(value)
     }
@@ -89,10 +89,10 @@ private[bio] object TaskCancellation {
         s.reportFailure(UncaughtErrorException.wrap(e))
       }
 
-    override def onFatalError(e: Throwable): Unit =
+    override def onTermination(e: Throwable): Unit =
       if (waitsForResult.getAndSet(false)) {
         conn.pop()
-        this.fatalError = e
+        this.terminalError = e
         s.execute(this)
       } else {
         s.reportFailure(e)

@@ -63,7 +63,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
   test("if finalizer throws, report finalizer error and signal use error") { implicit sc =>
     val useError = DummyException("useError")
     val finalizerError = DummyException("finalizerError")
-    val task = Task.raiseError(useError).guarantee(BIO.raiseFatalError(finalizerError))
+    val task = Task.raiseError(useError).guarantee(BIO.terminate(finalizerError))
 
     val result = task.runToFuture
     sc.tick()

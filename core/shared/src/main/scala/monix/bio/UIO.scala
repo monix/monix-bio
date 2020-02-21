@@ -46,10 +46,10 @@ object UIO {
     BIO.pure(a)
 
   /**
-    * @see See [[monix.bio.BIO.raiseFatalError]]
+    * @see See [[monix.bio.BIO.terminate]]
     */
-  def raiseFatalError(ex: Throwable): UIO[Nothing] =
-    BIO.raiseFatalError(ex)
+  def terminate(ex: Throwable): UIO[Nothing] =
+    BIO.terminate(ex)
 
   /**
     * @see See [[monix.bio.BIO.defer]]

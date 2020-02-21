@@ -50,10 +50,10 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("Task.tapError should not alter original fatal error") { implicit s =>
+  test("Task.tapError should not alter original terminal error") { implicit s =>
     var effect = 0
     val ex = DummyException("dummy")
-    val result = BIO.raiseFatalError(ex).tapError(_ => BIO.delay(effect += 1)).runToFuture
+    val result = BIO.terminate(ex).tapError(_ => BIO.delay(effect += 1)).runToFuture
     assertEquals(result.value, Some(Failure(ex)))
     assertEquals(effect, 0)
   }
@@ -137,9 +137,9 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(received, expected)
   }
 
-  test("BIO.toReactivePublisher should convert tasks with fatal errors") { implicit s =>
+  test("BIO.toReactivePublisher should convert tasks with terminal errors") { implicit s =>
     val expected = DummyException("Error")
-    val publisher = BIO.raiseFatalError(expected).toReactivePublisher
+    val publisher = BIO.terminate(expected).toReactivePublisher
     var received: Throwable = null
 
     publisher.subscribe {
@@ -226,10 +226,10 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(p.future.value, Some(Success(Left(ex))))
   }
 
-  test("Task.fatalError.runAsync with Try-based callback") { implicit s =>
+  test("Task.terminate.runAsync with Try-based callback") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.raiseFatalError[Int](ex).runAsync {
+    Task.terminate[Int](ex).runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -257,10 +257,10 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(p.future.value, Some(Success(Left(ex))))
   }
 
-  test("task.executeAsync.runAsync with Try-based callback for fatal error") { implicit s =>
+  test("task.executeAsync.runAsync with Try-based callback for terminal error") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.raiseFatalError[Int](ex).executeAsync.runAsync {
+    Task.terminate[Int](ex).executeAsync.runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }

@@ -30,11 +30,11 @@ import scala.util.{Failure, Success, Try}
   * Callback type which supports two channels of errors.
   */
 abstract class BiCallback[-E, -A] extends Callback[E, A] {
-  def onFatalError(e: Throwable): Unit
+  def onTermination(e: Throwable): Unit
 
-  def tryOnFatalError(e: Throwable): Boolean =
+  def tryOnTermination(e: Throwable): Boolean =
     try {
-      onFatalError(e)
+      onTermination(e)
       true
     } catch {
       case _: CallbackCalledMultipleTimesException => false
@@ -43,7 +43,13 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   def apply(result: Try[Either[E, A]]): Unit = result match {
     case Success(Right(a)) => onSuccess(a)
     case Success(Left(e)) => onError(e)
-    case Failure(t) => onFatalError(t)
+    case Failure(t) => onTermination(t)
+  }
+
+  def tryApply(result: Try[Either[E, A]]): Boolean = result match {
+    case Success(Right(a)) => tryOnSuccess(a)
+    case Success(Left(e)) => tryOnError(e)
+    case Failure(t) => tryOnTermination(t)
   }
 }
 
@@ -121,10 +127,10 @@ object BiCallback {
       override def apply(result: Try[A])(implicit ev: Throwable <:< E): Unit =
         if (!tryApply(result)) throw CallbackCalledMultipleTimesException.forResult(result)
 
-      override def onFatalError(e: Throwable): Unit =
-        if (!tryOnFatalError(e)) throw new CallbackCalledMultipleTimesException("onFatalError")
+      override def onTermination(e: Throwable): Unit =
+        if (!tryOnTermination(e)) throw new CallbackCalledMultipleTimesException("onTermination")
 
-      override def tryOnFatalError(e: Throwable): Boolean =
+      override def tryOnTermination(e: Throwable): Boolean =
         p.tryFailure(e)
     }
 
@@ -196,15 +202,15 @@ object BiCallback {
               false
             }
 
-          override def onFatalError(e: Throwable): Unit =
-            if (!tryOnFatalError(e)) {
-              throw new CallbackCalledMultipleTimesException("onFatalError", e)
+          override def onTermination(e: Throwable): Unit =
+            if (!tryOnTermination(e)) {
+              throw new CallbackCalledMultipleTimesException("onTermination", e)
             }
 
-          override def tryOnFatalError(e: Throwable): Boolean = {
+          override def tryOnTermination(e: Throwable): Boolean = {
             if (isActive) {
               isActive = false
-              cb.apply(Left(Cause.fatal(e)))
+              cb.apply(Left(Cause.terminate(e)))
               true
             } else {
               false
@@ -225,7 +231,7 @@ object BiCallback {
       private[this] var isActive = true
       override def onSuccess(value: A): Unit = apply(Success(value))
       override def onError(e: Throwable): Unit = apply(Failure(e))
-      override def onFatalError(e: Throwable): Unit = apply(Failure(e))
+      override def onTermination(e: Throwable): Unit = apply(Failure(e))
 
       override def apply(result: Try[A])(implicit ev: Throwable <:< Throwable): Unit =
         if (!tryApply(result)) {
@@ -256,10 +262,10 @@ object BiCallback {
       case _ => cb(Left(Cause.typed(value)))
     }
 
-  private[monix] def callFatalError[E, A](cb: Either[Cause[E], A] => Unit, value: Throwable): Unit =
+  private[monix] def callTermination[E, A](cb: Either[Cause[E], A] => Unit, value: Throwable): Unit =
     cb match {
-      case ref: BiCallback[Cause[E], A] @unchecked => ref.onFatalError(value)
-      case _ => cb(Left(Cause.fatal(value)))
+      case ref: BiCallback[Cause[E], A] @unchecked => ref.onTermination(value)
+      case _ => cb(Left(Cause.terminate(value)))
     }
 
   private[monix] def signalErrorTrampolined[E, A](cb: BiCallback[E, A], e: E): Unit =
@@ -269,11 +275,11 @@ object BiCallback {
         cb.onError(e)
     })
 
-  private[monix] def signalFatalErrorTrampolined[E, A](cb: BiCallback[E, A], e: Throwable): Unit =
+  private[monix] def signalTerminationTrampolined[E, A](cb: BiCallback[E, A], e: Throwable): Unit =
     TrampolineExecutionContext.immediate.execute(new Runnable {
 
       override def run(): Unit =
-        cb.onFatalError(e)
+        cb.onTermination(e)
     })
 
   /** Functions exposed via [[apply]]. */
@@ -318,7 +324,7 @@ object BiCallback {
     private[this] val state = monix.execution.atomic.AtomicInt(0)
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     override final def onSuccess(value: A): Unit =
       if (!tryOnSuccess(value)) {
@@ -353,17 +359,17 @@ object BiCallback {
       }
     }
 
-    override final def onFatalError(e: Throwable): Unit =
-      if (!tryOnFatalError(e)) {
+    override final def onTermination(e: Throwable): Unit =
+      if (!tryOnTermination(e)) {
         throw new CallbackCalledMultipleTimesException(
-          "Callback.onError",
+          "Callback.onTermination",
           e
         )
       }
 
-    override final def tryOnFatalError(e: Throwable): Boolean = {
+    override final def tryOnTermination(e: Throwable): Boolean = {
       if (state.compareAndSet(0, 3)) {
-        this.fatalError = e
+        this.terminalError = e
         ec.execute(this)
         true
       } else {
@@ -382,9 +388,9 @@ object BiCallback {
           error = null.asInstanceOf[E]
           cb.onError(e)
         case 3 =>
-          val e = fatalError
-          fatalError = null
-          cb.onFatalError(e)
+          val e = terminalError
+          terminalError = null
+          cb.onTermination(e)
       }
     }
   }
@@ -398,7 +404,7 @@ object BiCallback {
     def onError(error: Any): Unit =
       r.reportFailure(UncaughtErrorException.wrap(error))
 
-    override def onFatalError(e: Throwable): Unit = {
+    override def onTermination(e: Throwable): Unit = {
       r.reportFailure(e)
     }
   }
@@ -444,10 +450,10 @@ object BiCallback {
       }
     }
 
-    override def onFatalError(e: Throwable): Unit = {
+    override def onTermination(e: Throwable): Unit = {
       if (isActive.compareAndSet(true, false)) {
         try {
-          underlying.onFatalError(e)
+          underlying.onTermination(e)
         } catch {
           case e: CallbackCalledMultipleTimesException =>
             throw e
@@ -457,7 +463,7 @@ object BiCallback {
         }
       } else {
         val ex = UncaughtErrorException.wrap(e)
-        throw new CallbackCalledMultipleTimesException("onFatalError", ex)
+        throw new CallbackCalledMultipleTimesException("onTermination", ex)
       }
     }
   }

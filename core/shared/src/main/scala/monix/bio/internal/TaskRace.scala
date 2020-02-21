@@ -73,11 +73,11 @@ private[bio] object TaskRace {
               sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connB.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               sc.reportFailure(e)
             }
@@ -105,11 +105,11 @@ private[bio] object TaskRace {
               sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connA.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               sc.reportFailure(e)
             }

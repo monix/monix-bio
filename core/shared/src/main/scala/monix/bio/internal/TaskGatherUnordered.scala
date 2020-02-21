@@ -90,7 +90,7 @@ private[bio] object TaskGatherUnordered {
       }
     }
 
-    def reportFatalError(
+    def reportTermination(
       stateRef: AtomicAny[State[A]],
       mainConn: TaskConnection[E],
       ex: Throwable,
@@ -100,7 +100,7 @@ private[bio] object TaskGatherUnordered {
       val currentState = stateRef.getAndSet(State.Complete)
       if (currentState != State.Complete) {
         mainConn.pop().runAsyncAndForget
-        finalCallback.onFatalError(ex)
+        finalCallback.onTermination(ex)
       } else {
         s.reportFailure(ex)
       }
@@ -178,8 +178,8 @@ private[bio] object TaskGatherUnordered {
               def onError(ex: E): Unit =
                 reportError(stateRef, mainConn, ex, finalCallback)
 
-              override def onFatalError(e: Throwable): Unit =
-                reportFatalError(stateRef, mainConn, e, finalCallback)
+              override def onTermination(e: Throwable): Unit =
+                reportTermination(stateRef, mainConn, e, finalCallback)
             }
           )
         }
@@ -192,7 +192,7 @@ private[bio] object TaskGatherUnordered {
         activate(stateRef, count, mainConn, finalCallback)(s)
       } catch {
         case ex if NonFatal(ex) =>
-          reportFatalError(stateRef, context.connection, ex, finalCallback)
+          reportTermination(stateRef, context.connection, ex, finalCallback)
       }
     }
   }

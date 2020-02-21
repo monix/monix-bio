@@ -17,22 +17,21 @@
 
 package monix.bio
 
-import monix.bio.internal.BiCallback
 import monix.execution.exceptions.DummyException
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskAsyncSuite extends BaseTestSuite {
-  test("Task.never should never complete") { implicit s =>
-    val t = Task.never[Int]
+  test("BIO.never should never complete") { implicit s =>
+    val t = BIO.never[Int]
     val f = t.runToFuture
     s.tick(365.days)
     assertEquals(f.value, None)
   }
 
-  test("Task.async should execute") { implicit s =>
-    val task = Task.async0[Int] { (ec, cb) =>
+  test("BIO.async should execute") { implicit s =>
+    val task = BIO.async0[String, Int] { (ec, cb) =>
       ec.executeAsync { () =>
         cb.onSuccess(1)
       }
@@ -44,111 +43,111 @@ object TaskAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.async should signal errors in register") { implicit s =>
+  test("BIO.async should signal errors in register") { implicit s =>
     val ex = DummyException("dummy")
-    val task = Task.async0[Int]((_, _) => throw ex)
+    val task = BIO.async0[String, Int]((_, _) => throw ex)
     val result = task.runToFuture; s.tick()
     assertEquals(result.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
-  test("Task.async should be stack safe") { implicit s =>
-    def signal(n: Int) = Task.async0[Int]((_, cb) => cb.onSuccess(n))
-    def loop(n: Int, acc: Int): Task[Int] =
+  test("BIO.async should be stack safe") { implicit s =>
+    def signal(n: Int) = BIO.async0[String, Int]((_, cb) => cb.onSuccess(n))
+    def loop(n: Int, acc: Int): BIO[String, Int] =
       signal(1).flatMap { x =>
         if (n > 0) loop(n - 1, acc + x)
-        else Task.now(acc)
+        else BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; s.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-  test("Task.async works for immediate successful value") { implicit sc =>
-    val task = Task.async[Int](_.onSuccess(1))
+  test("BIO.async works for immediate successful value") { implicit sc =>
+    val task = BIO.async[String, Int](_.onSuccess(1))
     assertEquals(task.runToFuture.value, Some(Success(Right(1))))
   }
 
-  test("Task.async works for immediate error") { implicit sc =>
-    val e = DummyException("dummy")
-    val task = Task.async[Int](_.onError(e))
+  test("BIO.async works for immediate error") { implicit sc =>
+    val e = "dummy"
+    val task = BIO.async[String, Int](_.onError(e))
     assertEquals(task.runToFuture.value, Some(Success(Left(e))))
   }
 
-  test("Task.async works for immediate fatal error") { implicit sc =>
+  test("BIO.async works for immediate terminate error") { implicit sc =>
     val e = DummyException("dummy")
-    val task = BIO.async[Int, Int](_.asInstanceOf[BiCallback[Int, Int]].onFatalError(e))
+    val task = BIO.async[Int, Int](_.onTermination(e))
     assertEquals(task.runToFuture.value, Some(Failure(e)))
   }
 
-  test("Task.async is memory safe in flatMap loops") { implicit sc =>
-    def signal(n: Int): Task[Int] = Task.async(_.onSuccess(n))
+  test("BIO.async is memory safe in flatMap loops") { implicit sc =>
+    def signal(n: Int): UIO[Int] = BIO.async(_.onSuccess(n))
 
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): UIO[Int] =
       signal(n).flatMap { n =>
         if (n > 0) loop(n - 1, acc + 1)
-        else Task.now(acc)
+        else BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-  test("Task.async0 works for immediate successful value") { implicit sc =>
-    val task = Task.async0[Int]((_, cb) => cb.onSuccess(1))
+  test("BIO.async0 works for immediate successful value") { implicit sc =>
+    val task = BIO.async0[String, Int]((_, cb) => cb.onSuccess(1))
     assertEquals(task.runToFuture.value, Some(Success(Right(1))))
   }
 
-  test("Task.async0 works for async successful value") { implicit sc =>
-    val f = Task
-      .async0[Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
+  test("BIO.async0 works for async successful value") { implicit sc =>
+    val f = BIO
+      .async0[String, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
       .runToFuture
 
     sc.tick()
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.async0 works for async error") { implicit sc =>
-    val e = DummyException("dummy")
-    val f = Task
-      .async0[Int]((s, cb) => s.executeAsync(() => cb.onError(e)))
+  test("BIO.async0 works for async error") { implicit sc =>
+    val e = "dummy"
+    val f = BIO
+      .async0[String, Int]((s, cb) => s.executeAsync(() => cb.onError(e)))
       .runToFuture
 
     sc.tick()
     assertEquals(f.value, Some(Success(Left(e))))
   }
 
-  test("Task.async0 works for async fatal error") { implicit sc =>
+  test("BIO.async0 works for async terminate error") { implicit sc =>
     val e = DummyException("dummy")
     val f = BIO
-      .async0[Int, Int]((s, cb) => s.executeAsync(() => cb.asInstanceOf[BiCallback[Int, Int]].onFatalError(e)))
+      .async0[Int, Int]((s, cb) => s.executeAsync(() => cb.onTermination(e)))
       .runToFuture
 
     sc.tick()
     assertEquals(f.value, Some(Failure(e)))
   }
 
-  test("Task.async0 is memory safe in synchronous flatMap loops") { implicit sc =>
-    def signal(n: Int): Task[Int] = Task.async0((_, cb) => cb.onSuccess(n))
+  test("BIO.async0 is memory safe in synchronous flatMap loops") { implicit sc =>
+    def signal(n: Int): UIO[Int] = BIO.async0((_, cb) => cb.onSuccess(n))
 
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): UIO[Int] =
       signal(n).flatMap { n =>
         if (n > 0) loop(n - 1, acc + 1)
-        else Task.now(acc)
+        else BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-  test("Task.async0 is memory safe in async flatMap loops") { implicit sc =>
-    def signal(n: Int): Task[Int] =
-      Task.async0((s, cb) => s.executeAsync(() => cb.onSuccess(n)))
+  test("BIO.async0 is memory safe in async flatMap loops") { implicit sc =>
+    def signal(n: Int): BIO[String, Int] =
+      BIO.async0((s, cb) => s.executeAsync(() => cb.onSuccess(n)))
 
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): BIO[String, Int] =
       signal(n).flatMap { n =>
         if (n > 0) loop(n - 1, acc + 1)
-        else Task.now(acc)
+        else BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()

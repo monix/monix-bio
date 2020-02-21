@@ -162,7 +162,7 @@ object TaskNowSuite extends BaseTestSuite {
   test("Task.now.flatMap should protect against user code") { implicit s =>
     val ex = DummyException("dummy")
     val t = BIO.now(1).flatMap[String, Int](_ => throw ex)
-    check(t <-> BIO.raiseFatalError(ex))
+    check(t <-> BIO.terminate(ex))
   }
 
   test("Task.now.flatMap should be tail recursive") { implicit s =>

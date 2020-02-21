@@ -37,9 +37,9 @@ object TaskToStringSuite extends SimpleTestSuite {
     assertContains(ref, "BIO.Error")
   }
 
-  test("BIO.FatalError") {
-    val ref = BIO.raiseFatalError(DummyException("dummy"))
-    assertContains(ref, "BIO.FatalError")
+  test("BIO.Termination") {
+    val ref = BIO.terminate(DummyException("dummy"))
+    assertContains(ref, "BIO.Termination")
   }
 
   test("BIO.Eval") {

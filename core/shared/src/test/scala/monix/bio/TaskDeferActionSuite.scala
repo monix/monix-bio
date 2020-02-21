@@ -80,19 +80,19 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-//  testAsync("deferAction(local.write) works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- Task.deferAction(_ => l.write(100))
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("BIO.deferAction(local.write) works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- BIO.deferAction(_ => l.write(100))
+      _ <- BIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 }

@@ -121,7 +121,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     gatherSpecial(tasks)
       .map(_.sum)
       .runAsync(new BiCallback[Cause[Throwable], Int] {
-        override def onFatalError(e: Throwable): Unit =
+        override def onTermination(e: Throwable): Unit =
           result = Some(Failure(e))
 
         override def onSuccess(value: Int): Unit =

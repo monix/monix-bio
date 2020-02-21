@@ -82,11 +82,11 @@ private[bio] object TaskRacePair {
               pa.success(Left(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connB.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               pa.failure(e)
             }
@@ -116,11 +116,11 @@ private[bio] object TaskRacePair {
               pb.success(Left(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connA.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               pb.failure(e)
             }

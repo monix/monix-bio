@@ -128,11 +128,11 @@ object TaskMapBothSuite extends BaseTestSuite {
     }
   }
 
-  test("both task can fail with fatal error") { implicit s =>
+  test("both task can fail with terminal error") { implicit s =>
     val err1 = new RuntimeException("Error 1")
-    val t1: Task[Int] = Task.defer(Task.raiseFatalError(err1)).executeAsync
+    val t1: Task[Int] = Task.defer(Task.terminate(err1)).executeAsync
     val err2 = new RuntimeException("Error 2")
-    val t2: Task[Int] = Task.defer(Task.raiseFatalError(err2)).executeAsync
+    val t2: Task[Int] = Task.defer(Task.terminate(err2)).executeAsync
 
     val fb = BIO
       .mapBoth(t1, t2)(_ + _)

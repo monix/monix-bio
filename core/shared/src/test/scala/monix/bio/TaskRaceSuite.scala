@@ -157,7 +157,7 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("Task#timeout should mirror the source in case of fatal error") { implicit s =>
+  test("Task#timeout should mirror the source in case of terminal error") { implicit s =>
     val ex = DummyException("dummy")
     val task = Task.evalAsync(throw ex).hideErrors.delayExecution(1.seconds).timeout(10.second)
     val f = task.runToFuture

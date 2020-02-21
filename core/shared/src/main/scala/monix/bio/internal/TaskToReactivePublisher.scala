@@ -59,7 +59,7 @@ private[bio] object TaskToReactivePublisher {
 
     private[this] var isActive = true
 
-    override def onFatalError(e: Throwable): Unit =
+    override def onTermination(e: Throwable): Unit =
       onError(e)
 
     override def onError(e: Throwable): Unit =

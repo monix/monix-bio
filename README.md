@@ -24,7 +24,7 @@ I'm happy to guide anyone interested in contributing. Just let me know on specif
 ## Short introduction
 
 `BIO[E, A]` represents a specification for a possibly lazy or asynchronous computation, which when executed will produce
-a successful value `A`, an error `E`, never terminate or complete with a fatal error.
+a successful value `A`, an error `E`, never terminate or complete with a terminal (untyped) error.
 
 It composes very well and can handle many use cases such as cancellation, resource safety, context propagation, error handling or parallelism.
 

@@ -118,8 +118,8 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
     def genError: Gen[BIO[E, A]] =
       getArbitrary[E].map(BIO.raiseError)
 
-    def genFatalError: Gen[BIO[E, A]] =
-      getArbitrary[Throwable].map(BIO.raiseFatalError)
+    def genTerminate: Gen[BIO[E, A]] =
+      getArbitrary[Throwable].map(BIO.terminate)
 
     def genAsync: Gen[BIO[E, A]] =
       getArbitrary[(Either[E, A] => Unit) => Unit].map(TaskCreate.async)
@@ -146,7 +146,7 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       1 -> genEval,
       1 -> genEvalAsync,
       1 -> genError,
-      1 -> genFatalError,
+      1 -> genTerminate,
       1 -> genAsync,
       1 -> genNestedAsync,
       1 -> genBindSuspend
@@ -182,7 +182,7 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         1 -> genEvalAsync,
         1 -> genEval,
         1 -> genError,
-        1 -> genFatalError,
+        1 -> genTerminate,
         1 -> genContextSwitch,
         1 -> genCancelable,
         1 -> genBindSuspend,
