@@ -21,27 +21,32 @@ import minitest.SimpleTestSuite
 import monix.bio.BIO.Options
 import monix.execution.Scheduler.Implicits.global
 
+import scala.concurrent.Promise
+
 object TaskOptionsSuite extends SimpleTestSuite {
   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
-  def extractOptions[A](fa: Task[A]): Task[Options] =
-    BIO.Async[Throwable, Options] { (ctx, cb) =>
+  def extractOptions[E]: BIO[E, Options] =
+    BIO.Async[E, Options] { (ctx, cb) =>
       cb.onSuccess(ctx.options)
     }
 
   testAsync("change options with future") {
-    val task = extractOptions(Task.now(1)).map { r =>
+    val task = extractOptions.map { r =>
       assertEquals(r, opts)
     }
     task.runToFutureOpt.map(_ => ())
   }
 
-//  testAsync("change options with callback") {
-//    val p = Promise[Options]()
-//    extractOptions(Task.now(1)).runAsyncOpt(Callback.fromPromise(p))
-//
-//    for (r <- p.future) yield {
-//      assertEquals(r, opts)
-//    }
-//  }
+  testAsync("change options with callback") {
+    val p = Promise[Either[Int, Options]]()
+    extractOptions[Int].runAsyncOpt {
+      case Left(value) => value.fold(p.failure, i => p.success(Left(i)))
+      case Right(value) => p.success(Right(value))
+    }
+
+    for (r <- p.future) yield {
+      assertEquals(r, Right(opts))
+    }
+  }
 }

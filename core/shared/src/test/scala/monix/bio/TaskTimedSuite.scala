@@ -59,8 +59,8 @@ object TaskTimedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left("Error"))))
   }
 
-  test("not measure tasks with fatal errors") { implicit s =>
-    val bio = BIO.raiseFatalError(DummyException("Fatal")).delayExecution(2.second).timed
+  test("not measure tasks with terminal errors") { implicit s =>
+    val bio = BIO.terminate(DummyException("Fatal")).delayExecution(2.second).timed
     val f = bio.runToFuture
 
     s.tick()
@@ -93,8 +93,8 @@ object TaskTimedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(2.second -> Left("Error")))))
   }
 
-  test("not measure tasks with fatal errors followed by `.attempt`") { implicit s =>
-    val bio = BIO.raiseFatalError(DummyException("Fatal")).delayExecution(2.second).attempt.timed
+  test("not measure tasks with terminal errors followed by `.attempt`") { implicit s =>
+    val bio = BIO.terminate(DummyException("Fatal")).delayExecution(2.second).attempt.timed
     val f = bio.runToFuture
 
     s.tick()

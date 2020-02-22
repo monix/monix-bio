@@ -65,7 +65,7 @@ private[bio] object TaskEffect {
       override def onSuccess(value: A): Unit =
         signal(Right(value))
       override def onError(e: Cause[Throwable]): Unit = {
-        signal(Left(e.flatten))
+        signal(Left(e.toThrowable))
       }
     })
   }

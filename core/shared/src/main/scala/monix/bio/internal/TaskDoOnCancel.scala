@@ -48,7 +48,7 @@ private[bio] object TaskDoOnCancel {
     private[this] var isActive = true
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     override def onSuccess(value: A): Unit =
       if (!tryOnSuccess(value)) {
@@ -60,9 +60,9 @@ private[bio] object TaskDoOnCancel {
         throw new CallbackCalledMultipleTimesException("onError")
       }
 
-    override def onFatalError(e: Throwable): Unit =
-      if (!tryOnFatalError(e)) {
-        throw new CallbackCalledMultipleTimesException("onError")
+    override def onTermination(e: Throwable): Unit =
+      if (!tryOnTermination(e)) {
+        throw new CallbackCalledMultipleTimesException("onTermination")
       }
 
     override def tryOnSuccess(value: A): Boolean = {
@@ -89,11 +89,11 @@ private[bio] object TaskDoOnCancel {
       }
     }
 
-    override def tryOnFatalError(e: Throwable): Boolean = {
+    override def tryOnTermination(e: Throwable): Boolean = {
       if (isActive) {
         isActive = false
         ctx.connection.pop()
-        this.fatalError = e
+        this.terminalError = e
         ctx.scheduler.execute(this)
         true
       } else {
@@ -102,10 +102,10 @@ private[bio] object TaskDoOnCancel {
     }
 
     override def run(): Unit = {
-      if (fatalError != null) {
-        val e = fatalError
-        fatalError = null
-        cb.onFatalError(e)
+      if (terminalError != null) {
+        val e = terminalError
+        terminalError = null
+        cb.onTermination(e)
       } else if (error != null) {
         val e = error
         error = null.asInstanceOf[E]

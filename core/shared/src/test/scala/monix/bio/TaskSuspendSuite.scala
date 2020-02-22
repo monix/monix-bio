@@ -46,7 +46,7 @@ object TaskSuspendSuite extends BaseTestSuite {
 
   test("BIO.suspendTotal should protect against unexpected errors") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.suspendTotal[Int, Int](throw ex).redeemFatal(_ => 10, identity).runToFuture
+    val f = BIO.suspendTotal[Int, Int](throw ex).redeemCause(_ => 10, identity).runToFuture
     val g = BIO.suspendTotal[Int, Int](throw ex).onErrorHandle(_ => 10).runToFuture
 
     assertEquals(f.value, Some(Success(Right(10))))

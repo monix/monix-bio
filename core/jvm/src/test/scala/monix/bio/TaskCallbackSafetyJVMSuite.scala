@@ -20,9 +20,10 @@ package monix.bio
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import minitest.SimpleTestSuite
+import monix.bio.internal.BiCallback
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, DummyException}
 import monix.execution.schedulers.SchedulerService
-import monix.execution.{Callback, Scheduler}
+import monix.execution.Scheduler
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
@@ -36,36 +37,36 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
   val WORKERS = 10
   val RETRIES = if (!isTravis) 1000 else 100
 
-  test("Task.async has a safe callback") {
-    runConcurrentCallbackTest(Task.async)
+  test("BIO.async has a safe callback") {
+    runConcurrentCallbackTest(BIO.async)
   }
 
-  test("Task.async0 has a safe callback") {
-    runConcurrentCallbackTest(f => Task.async0((_, cb) => f(cb)))
+  test("BIO.async0 has a safe callback") {
+    runConcurrentCallbackTest(f => BIO.async0((_, cb) => f(cb)))
   }
 
-  test("Task.asyncF has a safe callback") {
-    runConcurrentCallbackTest(f => Task.asyncF(cb => Task(f(cb))))
+  test("BIO.asyncF has a safe callback") {
+    runConcurrentCallbackTest(f => BIO.asyncF(cb => BIO.evalTotal(f(cb))))
   }
 
-  test("Task.cancelable has a safe callback") {
+  test("BIO.cancelable has a safe callback") {
     runConcurrentCallbackTest(f =>
-      Task.cancelable { cb =>
-        f(cb); Task(())
+      BIO.cancelable[String, Int] { cb =>
+        f(cb); BIO.evalTotal(())
       }
     )
   }
 
-  test("Task.cancelable0 has a safe callback") {
+  test("BIO.cancelable0 has a safe callback") {
     runConcurrentCallbackTest(f =>
-      Task.cancelable0 { (_, cb) =>
-        f(cb); Task(())
+      BIO.cancelable0[String, Int] { (_, cb) =>
+        f(cb); BIO.evalTotal(())
       }
     )
   }
 
-  def runConcurrentCallbackTest(create: (Callback[Throwable, Int] => Unit) => Task[Int]): Unit = {
-    def run(trigger: Callback[Throwable, Int] => Unit): Unit = {
+  def runConcurrentCallbackTest(create: (BiCallback[String, Int] => Unit) => BIO[String, Int]): Unit = {
+    def run(trigger: BiCallback[String, Int] => Unit): Unit = {
       implicit val sc: SchedulerService = Scheduler.io("task-callback-safety")
       try {
         for (_ <- 0 until RETRIES) {
@@ -95,7 +96,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
 
     run(_.tryOnSuccess(1))
     run(_.tryApply(Right(1)))
-    run(_.tryApply(Success(1)))
+    run(_.tryApply(Success(Right(1))))
 
     run { cb =>
       try cb.onSuccess(1)
@@ -106,22 +107,33 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
-      try cb(Success(1))
+      try cb(Success(Right(1)))
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
 
+    val dummyMsg = "dummy"
     val dummy = DummyException("dummy")
 
-    run(_.tryOnError(dummy))
-    run(_.tryApply(Left(dummy)))
+    run(_.tryOnError(dummyMsg))
+    run(_.tryOnTermination(dummy))
+    run(_.tryApply(Left(dummyMsg)))
+    run(_.tryApply(Success(Left(dummyMsg))))
     run(_.tryApply(Failure(dummy)))
 
     run { cb =>
-      try cb.onError(dummy)
+      try cb.onError(dummyMsg)
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
-      try cb(Left(dummy))
+      try cb.onTermination(dummy)
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
+    run { cb =>
+      try cb(Left(dummyMsg))
+      catch { case _: CallbackCalledMultipleTimesException => () }
+    }
+    run { cb =>
+      try cb(Success(Left(dummyMsg)))
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>

@@ -36,7 +36,7 @@ private[bio] object TaskConversions {
     source match {
       case BIO.Now(value) => IO.pure(value)
       case BIO.Error(e) => IO.raiseError(e)
-      case BIO.FatalError(e) => IO.raiseError(e)
+      case BIO.Termination(e) => IO.raiseError(e)
       case BIO.Eval(thunk) => IO(thunk())
       case BIO.EvalTotal(thunk) => IO(thunk())
       case _ =>
@@ -52,7 +52,7 @@ private[bio] object TaskConversions {
     source match {
       case BIO.Now(value) => F.pure(value)
       case BIO.Error(e) => F.raiseError(e)
-      case BIO.FatalError(e) => F.raiseError(e)
+      case BIO.Termination(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
       case BIO.EvalTotal(thunk) => F.delay(thunk())
       case _ =>
@@ -69,7 +69,7 @@ private[bio] object TaskConversions {
     source match {
       case BIO.Now(value) => F.pure(value)
       case BIO.Error(e) => F.raiseError(e)
-      case BIO.FatalError(e) => F.raiseError(e)
+      case BIO.Termination(e) => F.raiseError(e)
       case BIO.Eval(thunk) => F.delay(thunk())
       case BIO.EvalTotal(thunk) => F.delay(thunk())
       case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); IO.unit }).unsafeRunSync())

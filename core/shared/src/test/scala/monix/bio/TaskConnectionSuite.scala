@@ -330,7 +330,7 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("throwing error in Task on cancel all") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.raiseFatalError(dummy)
+    val task = BIO.terminate(dummy)
 
     val c = TaskConnection[Throwable]()
     c.push(task)
@@ -341,9 +341,9 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("throwing multiple errors in Tasks on cancel all") { implicit s =>
     val dummy1 = DummyException("dummy1")
-    val task1 = BIO.raiseFatalError(dummy1)
+    val task1 = BIO.terminate(dummy1)
     val dummy2 = DummyException("dummy2")
-    val task2 = BIO.raiseFatalError(dummy2)
+    val task2 = BIO.terminate(dummy2)
 
     val c = TaskConnection[Throwable]()
     c.push(task1)
@@ -368,7 +368,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     c.cancel.runAsyncAndForget; s.tick()
 
     val dummy = DummyException("dummy")
-    val task = BIO.raiseFatalError(dummy)
+    val task = BIO.terminate(dummy)
     c.push(task); s.tick()
 
     assertEquals(s.state.lastReportedError, dummy)

@@ -19,6 +19,7 @@ package monix.bio
 
 import cats.implicits._
 import monix.catnap.{ConcurrentChannel, ConsumerF}
+import monix.execution.exceptions.DummyException
 import monix.execution.misc.Local
 import monix.execution.{BufferCapacity, Scheduler}
 
@@ -150,7 +151,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("TaskLocals get restored in Task.create on error") {
+  testAsync("TaskLocals get restored in BIO.create on error") {
     val dummy = "dummy"
     val task = BIO.create[String, Int] { (_, cb) =>
       ec.execute(new Runnable {
@@ -162,6 +163,26 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
       local <- TaskLocal(0)
       _     <- local.write(10)
       i     <- task.onErrorRecover { case `dummy` => 10 }
+      l     <- local.read
+      _     <- UIO.eval(assertEquals(i, 10))
+      _     <- UIO.eval(assertEquals(l, 10))
+    } yield ()
+
+    t.runToFutureOpt
+  }
+
+  testAsync("TaskLocals get restored in BIO.create on termination") {
+    val dummy = DummyException("dummy")
+    val task = BIO.create[String, Int] { (_, cb) =>
+      ec.execute(new Runnable {
+        def run() = cb.onTermination(dummy)
+      })
+    }
+
+    val t = for {
+      local <- TaskLocal(0)
+      _     <- local.write(10)
+      i     <- task.redeemCause(_ => 10, identity)
       l     <- local.read
       _     <- UIO.eval(assertEquals(i, 10))
       _     <- UIO.eval(assertEquals(l, 10))

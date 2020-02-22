@@ -961,7 +961,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       .async0[Nothing, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
       .executeOn(s2)
       .redeem(_ => 2, identity)
-      .redeemFatal(_ => 3, identity)
+      .redeemCause(_ => 3, identity)
       .runToFuture(s)
 
     for (result <- f) yield {

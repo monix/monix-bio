@@ -29,7 +29,7 @@ private[bio] object TaskStart {
   def forked[E, A](fa: BIO[E, A]): UIO[Fiber[E, A]] =
     fa match {
       // There's no point in evaluating strict stuff
-      case BIO.Now(_) | BIO.Error(_) | BIO.FatalError(_) =>
+      case BIO.Now(_) | BIO.Error(_) | BIO.Termination(_) =>
         BIO.Now(Fiber(fa, BIO.unit))
       case _ =>
         Async[Nothing, Fiber[E, A]](

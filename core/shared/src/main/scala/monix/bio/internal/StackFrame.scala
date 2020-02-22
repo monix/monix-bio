@@ -17,6 +17,8 @@
 
 package monix.bio.internal
 
+import monix.bio.Cause
+
 /** A mapping function type that is also able to handle errors.
   *
   * Used in the `Task` and `Coeval` implementations to specify
@@ -27,8 +29,6 @@ private[bio] abstract class StackFrame[E, -A, +R] extends (A => R) { self =>
   def apply(a: A): R
   def recover(e: E): R
 }
-
-// TODO: maybe add recoverFatal to StackFrame itself and throw when it's not possible?
 
 private[bio] object StackFrame {
 
@@ -48,17 +48,19 @@ private[bio] object StackFrame {
     def recover(e: E): R = fe(e)
   }
 
+  /** [[StackFrame]] for terminal errors.
+    */
   abstract class FatalStackFrame[E, -A, +R] extends StackFrame[E, A, R] {
     def apply(a: A): R
     def recover(e: E): R
     def recoverFatal(e: Throwable): R
   }
 
-  final class RedeemFatalWith[-A, +R](fe: Throwable => R, fa: A => R) extends FatalStackFrame[Throwable, A, R] {
+  final class RedeemFatalWith[E, -A, +R](fe: Cause[E] => R, fa: A => R) extends FatalStackFrame[E, A, R] {
     override def apply(a: A): R = fa(a)
 
-    override def recover(e: Throwable): R = fe(e)
+    override def recover(e: E): R = fe(Cause.Error(e))
 
-    override def recoverFatal(e: Throwable): R = fe(e)
+    override def recoverFatal(e: Throwable): R = fe(Cause.Termination(e))
   }
 }

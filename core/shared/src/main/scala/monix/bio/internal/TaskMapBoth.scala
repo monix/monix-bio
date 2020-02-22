@@ -59,7 +59,7 @@ private[bio] object TaskMapBoth {
           // Both tasks completed by this point, so we don't need
           // to worry about the `state` being a `Stop`
           mainConn.pop()
-          cb.onFatalError(ex)
+          cb.onTermination(ex)
       }
     }
 
@@ -84,8 +84,8 @@ private[bio] object TaskMapBoth {
       }
     }
 
-    /* For signaling a fatal error. */
-    @tailrec def sendFatalError(
+    /* For signaling a terminal error. */
+    @tailrec def sendTermination(
       mainConn: TaskConnection[E],
       state: AtomicAny[AnyRef],
       cb: BiCallback[E, R],
@@ -100,10 +100,10 @@ private[bio] object TaskMapBoth {
           s.reportFailure(ex)
         case other =>
           if (!state.compareAndSet(other, Stop))
-            sendFatalError(mainConn, state, cb, ex)(s) // retry
+            sendTermination(mainConn, state, cb, ex)(s) // retry
           else {
             mainConn.pop().runAsyncAndForget
-            cb.onFatalError(ex)
+            cb.onTermination(ex)
           }
       }
     }
@@ -137,15 +137,15 @@ private[bio] object TaskMapBoth {
               case s @ Left(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                onFatalError(new IllegalStateException(s.toString))
+                onTermination(new IllegalStateException(s.toString))
             }
 
           def onError(ex: E): Unit = {
             sendError(mainConn, state, cb, ex)(s)
           }
 
-          override def onFatalError(e: Throwable): Unit =
-            sendFatalError(mainConn, state, cb, e)
+          override def onTermination(e: Throwable): Unit =
+            sendTermination(mainConn, state, cb, e)
         }
       )
 
@@ -165,15 +165,15 @@ private[bio] object TaskMapBoth {
               case s @ Right(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                onFatalError(new IllegalStateException(s.toString))
+                onTermination(new IllegalStateException(s.toString))
             }
 
           def onError(ex: E): Unit = {
             sendError(mainConn, state, cb, ex)(s)
           }
 
-          override def onFatalError(e: Throwable): Unit =
-            sendFatalError(mainConn, state, cb, e)
+          override def onTermination(e: Throwable): Unit =
+            sendTermination(mainConn, state, cb, e)
         }
       )
     }

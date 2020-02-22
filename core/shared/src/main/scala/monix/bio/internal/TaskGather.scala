@@ -108,7 +108,7 @@ private[bio] object TaskGather {
       }
 
       // MUST BE synchronized by `lock`!
-      def reportFatalError(mainConn: TaskConnection[E], ex: Throwable)(implicit s: Scheduler): Unit = {
+      def reportTermination(mainConn: TaskConnection[E], ex: Throwable)(implicit s: Scheduler): Unit = {
 
         if (isActive) {
           isActive = false
@@ -116,7 +116,7 @@ private[bio] object TaskGather {
           mainConn.pop().runAsyncAndForget
           tasks = null // GC relief
           results = null // GC relief
-          finalCallback.onFatalError(ex)
+          finalCallback.onTermination(ex)
         } else {
           s.reportFailure(ex)
         }
@@ -172,8 +172,8 @@ private[bio] object TaskGather {
                 def onError(ex: E): Unit =
                   lock.synchronized(reportError(mainConn, ex))
 
-                override def onFatalError(e: Throwable): Unit =
-                  lock.synchronized(reportFatalError(mainConn, e))
+                override def onTermination(e: Throwable): Unit =
+                  lock.synchronized(reportTermination(mainConn, e))
               }
             )
 
@@ -189,7 +189,7 @@ private[bio] object TaskGather {
         case ex if NonFatal(ex) =>
           // We are still under the lock.synchronize block
           // so this call is safe
-          reportFatalError(context.connection, ex)(context.scheduler)
+          reportTermination(context.connection, ex)(context.scheduler)
       }
     }
   }
