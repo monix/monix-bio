@@ -1,7 +1,7 @@
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
-addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test ;microsite/publishMicrosite")
+addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
 
 val monixVersion = "3.1.0"
 val minitestVersion = "2.7.0"
