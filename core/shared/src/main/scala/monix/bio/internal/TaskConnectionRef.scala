@@ -26,11 +26,11 @@ import monix.execution.{Cancelable, Scheduler}
 
 import scala.annotation.tailrec
 
-private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
+private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, *]] {
   import TaskConnectionRef._
 
   @throws(classOf[IllegalStateException])
-  def `:=`(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def `:=`(token: CancelToken[BIO[E, *]])(implicit s: Scheduler): Unit =
     unsafeSet(token)
 
   @throws(classOf[IllegalStateException])
@@ -38,7 +38,7 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
     unsafeSet(cancelable)
 
   @throws(classOf[IllegalStateException])
-  def `:=`(conn: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def `:=`(conn: CancelableF[BIO[E, *]])(implicit s: Scheduler): Unit =
     unsafeSet(conn.cancel)
 
   @tailrec

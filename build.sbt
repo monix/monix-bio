@@ -13,6 +13,7 @@ lazy val `monix-bio` = project.in(file("."))
   .settings(releaseSettings, skipOnPublishSettings)
   .aggregate(coreJVM, coreJS)
   .enablePlugins(ScalaUnidocPlugin)
+  .settings(unidocSettings(coreJVM))
 
 lazy val core = crossProject(JSPlatform, JVMPlatform)
   .in(file("core"))
@@ -32,6 +33,27 @@ lazy val benchmarks = project.in(file("benchmarks"))
       "dev.zio" %% "zio" % "1.0.0-RC17",
       "io.monix" %% "monix-eval" % "3.1.0"
     ))
+
+/**
+  * Configures generated API documentation website.
+  */
+def unidocSettings(projects: ProjectReference*) = Seq(
+  // Only include JVM sub-projects, exclude JS or Native sub-projects
+  unidocProjectFilter in (ScalaUnidoc, unidoc) := inProjects(projects:_*),
+
+  scalacOptions in (ScalaUnidoc, unidoc) +=
+    "-Xfatal-warnings",
+  scalacOptions in (ScalaUnidoc, unidoc) --=
+    Seq("-Ywarn-unused-import", "-Ywarn-unused:imports"),
+  scalacOptions in (ScalaUnidoc, unidoc) ++=
+    Opts.doc.title("Monix BIO"),
+  scalacOptions in (ScalaUnidoc, unidoc) ++=
+    Opts.doc.sourceUrl(s"https://github.com/monix/monix-bio/tree/v${version.value}€{FILE_PATH}.scala"),
+  scalacOptions in (ScalaUnidoc, unidoc) ++=
+    Seq("-doc-root-content", file("rootdoc.txt").getAbsolutePath),
+  scalacOptions in (ScalaUnidoc, unidoc) ++=
+    Opts.doc.version(version.value)
+)
 
 lazy val contributors = Seq(
   "Avasil" -> "Piotr Gawrys"
@@ -56,6 +78,7 @@ lazy val sharedSettings = Seq(
 
   scalaVersion := "2.13.1",
   crossScalaVersions := Seq("2.12.10", "2.13.1"),
+  autoAPIMappings := true,
   scalacOptions ++= compilerOptions,
   scalacOptions ++= (
     if (priorTo2_13(scalaVersion.value))
@@ -71,6 +94,7 @@ lazy val sharedSettings = Seq(
     ),
 
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
+  incOptions := incOptions.value.withLogRecompileOnMacro(false),
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
   libraryDependencies ++= Seq(
     "io.monix" %%% "monix-catnap" % monixVersion,
@@ -166,6 +190,7 @@ lazy val microsite = project
   .enablePlugins(MicrositesPlugin, SiteScaladocPlugin, MdocPlugin)
   .settings(sharedSettings ++ skipOnPublishSettings)
   .dependsOn(coreJVM)
+  .settings(doNotPublishArtifact)
   .settings {
     import microsites._
     Seq(
@@ -193,7 +218,19 @@ lazy val microsite = project
       ),
       micrositeCompilingDocsTool := WithMdoc,
       fork in mdoc := true,
-//      scalacOptions.in(Tut) ~= filterConsoleScalacOptions,
+      scalacOptions in mdoc ~= (_.filterNot(
+        Set(
+          "-Xfatal-warnings",
+          "-Ywarn-numeric-widen",
+          "-Ywarn-unused:imports",
+          "-Ywarn-unused:locals",
+          "-Ywarn-unused:patvars",
+          "-Ywarn-unused:privates",
+          "-Ywarn-numeric-widen",
+          "-Ywarn-dead-code",
+          "-Xlint:-missing-interpolator,_"
+        ).contains
+      )),
       libraryDependencies += "com.47deg" %% "github4s" % "0.21.0",
       micrositePushSiteWith := GitHub4s,
       micrositeGithubToken := sys.env.get("GITHUB_TOKEN"),

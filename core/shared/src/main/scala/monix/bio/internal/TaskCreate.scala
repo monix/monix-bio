@@ -40,9 +40,9 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.cancelable`
     */
-  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] = {
-    val start = new Cancelable0Start[E, A, CancelToken[BIO[E, ?]]](fn) {
-      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]): BIO[E, A] = {
+    val start = new Cancelable0Start[E, A, CancelToken[BIO[E, *]]](fn) {
+      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, *]])(implicit s: Scheduler): Unit =
         ref := token
     }
     Async[E, A](

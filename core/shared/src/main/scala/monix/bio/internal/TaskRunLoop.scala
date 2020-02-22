@@ -290,7 +290,7 @@ private[bio] object TaskRunLoop {
     // TODO: should it be [E, A]?
     cb: BiCallback[Any, A],
     isCancelable: Boolean = true
-  ): CancelToken[BIO[E, ?]] = {
+  ): CancelToken[BIO[E, *]] = {
 
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
@@ -758,7 +758,7 @@ private[bio] object TaskRunLoop {
     nextFrame: FrameIndex,
     isCancelable: Boolean,
     forceFork: Boolean
-  ): CancelToken[BIO[E, ?]] = {
+  ): CancelToken[BIO[E, *]] = {
 
     val context = Context(
       scheduler,

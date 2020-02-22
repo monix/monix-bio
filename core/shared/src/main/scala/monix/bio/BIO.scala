@@ -780,7 +780,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  final def runAsyncF[E1 >: E](cb: Either[Cause[E1], A] => Unit)(implicit s: Scheduler): CancelToken[BIO[E1, ?]] =
+  final def runAsyncF[E1 >: E](cb: Either[Cause[E1], A] => Unit)(implicit s: Scheduler): CancelToken[BIO[E1, *]] =
     runAsyncOptF(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
@@ -820,7 +820,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   @UnsafeBecauseImpure
   def runAsyncOptF[E1 >: E](
     cb: Either[Cause[E], A] => Unit
-  )(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, ?]] = {
+  )(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, *]] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -3096,7 +3096,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[BIO.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable[E, A](register: BiCallback[E, A] => CancelToken[BIO[E, ?]]): BIO[E, A] =
+  def cancelable[E, A](register: BiCallback[E, A] => CancelToken[BIO[E, *]]): BIO[E, A] =
     cancelable0[E, A]((_, cb) => register(cb))
 
   /** Create a cancelable `Task` from an asynchronous computation,
@@ -3197,7 +3197,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[BIO.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable0[E, A](register: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] =
+  def cancelable0[E, A](register: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]): BIO[E, A] =
     TaskCreate.cancelable0(register)
 
   /** Returns a cancelable boundary — a `Task` that checks for the
@@ -3800,7 +3800,7 @@ object BIO extends TaskInstancesLevel0 {
     private[this] val forBIORef: AsyncBuilder[BIO[Any, Unit]] =
       new AsyncBuilder[BIO[Any, Unit]] {
         override def create[E, A](register: (Scheduler, BiCallback[E, A]) => BIO[Any, Unit]): BIO[E, A] =
-          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]])
+          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]])
       }
 
     /** Implicit `AsyncBuilder` for non-cancelable tasks built by a function
@@ -3896,7 +3896,7 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E](
       cb: Either[Cause[Nothing], A] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, ?]] = {
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, *]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         BIO.unit
@@ -3944,7 +3944,7 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: E](
       cb: Either[Cause[E], Nothing] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, *]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         BIO.unit
@@ -3999,7 +3999,7 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: Nothing](
       cb: Either[Cause[Nothing], Nothing] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, ?]] = {
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, *]] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callTermination(cb, e)
         BIO.unit
@@ -4252,18 +4252,18 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     *  - [[https://typelevel.org/cats/ typelevel/cats]]
     *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
     */
-  implicit def catsParallel[E]: Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]] =
-    catsParallelAny.asInstanceOf[Parallel.Aux[BIO[E, ?], BIO.Par[E, ?]]]
+  implicit def catsParallel[E]: Parallel.Aux[BIO[E, *], BIO.Par[E, *]] =
+    catsParallelAny.asInstanceOf[Parallel.Aux[BIO[E, *], BIO.Par[E, *]]]
 
   private[this] final lazy val catsParallelAny: CatsParallelForTask[Any] =
     new CatsParallelForTask[Any]
 
   /** Global instance for `cats.CommutativeApplicative`
     */
-  implicit def commutativeApplicative[E]: CommutativeApplicative[BIO.Par[E, ?]] =
-    commutativeApplicativeAny.asInstanceOf[CommutativeApplicative[BIO.Par[E, ?]]]
+  implicit def commutativeApplicative[E]: CommutativeApplicative[BIO.Par[E, *]] =
+    commutativeApplicativeAny.asInstanceOf[CommutativeApplicative[BIO.Par[E, *]]]
 
-  private[this] final lazy val commutativeApplicativeAny: CommutativeApplicative[BIO.Par[Any, ?]] =
+  private[this] final lazy val commutativeApplicativeAny: CommutativeApplicative[BIO.Par[Any, *]] =
     catsParallelAny.applicative
 
   /** Given an `A` type that has a `cats.Monoid[A]` implementation,
@@ -4271,7 +4271,7 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     * a `Monoid[ BIO[E, A] ]` implementation.
     */
   implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[BIO[E, A]] =
-    new CatsMonadToMonoid[BIO[E, ?], A]()(new CatsBaseForTask[E], A)
+    new CatsMonadToMonoid[BIO[E, *], A]()(new CatsBaseForTask[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
@@ -4319,7 +4319,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * in order to avoid conflicts.
     */
   implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
-    new CatsMonadToSemigroup[BIO[E, ?], A]()(monadError[E], A)
+    new CatsMonadToSemigroup[BIO[E, *], A]()(monadError[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
@@ -4360,11 +4360,11 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[BIO.runToFuture]]).
     */
-  implicit def contextShift[E]: ContextShift[BIO[E, ?]] =
-    contextShiftAny.asInstanceOf[ContextShift[BIO[E, ?]]]
+  implicit def contextShift[E]: ContextShift[BIO[E, *]] =
+    contextShiftAny.asInstanceOf[ContextShift[BIO[E, *]]]
 
-  private[this] final val contextShiftAny: ContextShift[BIO[Any, ?]] =
-    new ContextShift[BIO[Any, ?]] {
+  private[this] final val contextShiftAny: ContextShift[BIO[Any, *]] =
+    new ContextShift[BIO[Any, *]] {
 
       override def shift: BIO[Any, Unit] =
         BIO.shift
@@ -4380,8 +4380,8 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
   /** Builds a `cats.effect.ContextShift` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def contextShift(s: Scheduler): ContextShift[BIO[Any, ?]] =
-    new ContextShift[BIO[Any, ?]] {
+  def contextShift(s: Scheduler): ContextShift[BIO[Any, *]] =
+    new ContextShift[BIO[Any, *]] {
 
       override def shift: BIO[Any, Unit] =
         BIO.shift(s)
@@ -4403,29 +4403,29 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[BIO.runToFuture]]).
     */
-  implicit def timer[E]: Timer[BIO[E, ?]] =
-    timerAny.asInstanceOf[Timer[BIO[E, ?]]]
+  implicit def timer[E]: Timer[BIO[E, *]] =
+    timerAny.asInstanceOf[Timer[BIO[E, *]]]
 
-  private[this] final val timerAny: Timer[BIO[Any, ?]] =
-    new Timer[BIO[Any, ?]] {
+  private[this] final val timerAny: Timer[BIO[Any, *]] =
+    new Timer[BIO[Any, *]] {
 
       override def sleep(duration: FiniteDuration): BIO[Any, Unit] =
         BIO.sleep(duration)
 
-      override def clock: Clock[BIO[Any, ?]] =
+      override def clock: Clock[BIO[Any, *]] =
         BIO.clock
     }
 
   /** Builds a `cats.effect.Timer` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def timer(s: Scheduler): Timer[BIO[Any, ?]] =
-    new Timer[BIO[Any, ?]] {
+  def timer(s: Scheduler): Timer[BIO[Any, *]] =
+    new Timer[BIO[Any, *]] {
 
       override def sleep(duration: FiniteDuration): BIO[Any, Unit] =
         BIO.sleep(duration).executeOn(s)
 
-      override def clock: Clock[BIO[Any, ?]] =
+      override def clock: Clock[BIO[Any, *]] =
         BIO.clock(s)
     }
 }
@@ -4438,11 +4438,11 @@ private[bio] abstract class TaskClocks {
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[BIO.runToFuture]]).
     */
-  def clock[E]: Clock[BIO[E, ?]] =
-    clockAny.asInstanceOf[Clock[BIO[E, ?]]]
+  def clock[E]: Clock[BIO[E, *]] =
+    clockAny.asInstanceOf[Clock[BIO[E, *]]]
 
-  private[this] final val clockAny: Clock[BIO[Any, ?]] =
-    new Clock[BIO[Any, ?]] {
+  private[this] final val clockAny: Clock[BIO[Any, *]] =
+    new Clock[BIO[Any, *]] {
 
       override def realTime(unit: TimeUnit): BIO[Any, Long] =
         BIO.deferAction(sc => BIO.now(sc.clockRealTime(unit)))
@@ -4455,8 +4455,8 @@ private[bio] abstract class TaskClocks {
     * Builds a `cats.effect.Clock` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def clock(s: Scheduler): Clock[BIO[Any, ?]] =
-    new Clock[BIO[Any, ?]] {
+  def clock(s: Scheduler): Clock[BIO[Any, *]] =
+    new Clock[BIO[Any, *]] {
 
       override def realTime(unit: TimeUnit): BIO[Any, Long] =
         BIO.eval(s.clockRealTime(unit))

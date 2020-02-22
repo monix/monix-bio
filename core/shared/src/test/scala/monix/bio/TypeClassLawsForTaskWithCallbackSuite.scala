@@ -111,11 +111,11 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
   }
 
   checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
-    CommutativeApplicativeTests[BIO.Par[String, ?]].commutativeApplicative[Int, Int, Int]
+    CommutativeApplicativeTests[BIO.Par[String, *]].commutativeApplicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
-    ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
+    ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int]
   }
 
   checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>

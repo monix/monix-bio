@@ -52,7 +52,7 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
   implicit val cs = IO.contextShift(sc)
-  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[BIO.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
 
   val timeout = {
     if (System.getenv("TRAVIS") == "true" || System.getenv("CI") == "true")
@@ -105,9 +105,9 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   checkAll("ConcurrentEffect[Task]", ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int])
 
-  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int])
+  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, *]].applicative[Int, Int, Int])
 
-  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int])
+  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int])
 
   checkAll("Monoid[BIO[Throwable, Int]]", MonoidTests[BIO[Throwable, Int]].monoid)
 
