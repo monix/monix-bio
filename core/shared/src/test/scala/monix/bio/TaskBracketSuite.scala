@@ -75,7 +75,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(Cause.terminate(dummy))))))
+    assertEquals(input, Some((1, Left(Some(Cause.Termination(dummy))))))
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
@@ -103,7 +103,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(Cause.typed(-99))))))
+    assertEquals(input, Some((1, Left(Some(Cause.Error(-99))))))
     assertEquals(f.value, Some(Success(Left(-99))))
   }
 
@@ -118,7 +118,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(Cause.terminate(dummy))))))
+    assertEquals(input, Some((1, Left(Some(Cause.Termination(dummy))))))
     assertEquals(f.value, Some(Failure(dummy)))
   }
 

@@ -20,15 +20,15 @@ package monix.bio
 import monix.execution.exceptions.DummyException
 
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TaskTraverseSuite extends BaseTestSuite {
-  test("Task.traverse should not execute in parallel") { implicit s =>
+  test("BIO.traverse should not execute in parallel") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = BIO
       .traverse(seq) {
         case (i, d) =>
-          Task.evalAsync(i + 1).delayExecution(d.seconds)
+          UIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -42,14 +42,14 @@ object TaskTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(Seq(2, 3, 4)))))
   }
 
-  test("Task.traverse should onError if one of the tasks terminates in error") { implicit s =>
-    val ex = DummyException("dummy")
+  test("BIO.traverse should onError if one of the tasks terminates in error") { implicit s =>
+    val ex = 1111
     val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
     val f = BIO
       .traverse(seq) {
         case (i, d) =>
-          Task
-            .evalAsync(if (i < 0) throw ex else i + 1)
+          BIO
+            .suspendTotal(if (i < 0) BIO.raiseError(ex) else BIO.now(i + 1))
             .delayExecution(d.seconds)
       }
       .runToFuture
@@ -62,11 +62,31 @@ object TaskTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("Task.traverse should be canceled") { implicit s =>
+  test("BIO.traverse should onError if one of the tasks terminates in error") { implicit s =>
+    val ex = DummyException("dummy")
+    val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
+    val f = BIO
+      .traverse(seq) {
+        case (i, d) =>
+          UIO
+            .evalAsync(if (i < 0) throw ex else i + 1)
+            .delayExecution(d.seconds)
+      }
+      .runToFuture
+
+    // First
+    s.tick(1.second)
+    assertEquals(f.value, None)
+    // Second
+    s.tick(2.second)
+    assertEquals(f.value, Some(Failure(ex)))
+  }
+
+  test("BIO.traverse should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = BIO
       .traverse(seq) {
-        case (i, d) => Task.evalAsync(i + 1).delayExecution(d.seconds)
+        case (i, d) => UIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 

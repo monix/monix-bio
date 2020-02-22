@@ -584,32 +584,32 @@ object TaskMemoizeSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("BIO.eval.memoize eq Task.eval.memoize.memoize") { implicit s =>
+  test("BIO.eval.memoize eq BIO.eval.memoize.memoize") { implicit s =>
     val task = BIO.eval(1).memoize
     assertEquals(task, task.memoize)
   }
 
-  test("BIO.eval.map.memoize eq Task.eval.map.memoize.memoize") { implicit s =>
+  test("BIO.eval.map.memoize eq BIO.eval.map.memoize.memoize") { implicit s =>
     val task = BIO.eval(1).map(_ + 1).memoize
     assertEquals(task, task.memoize)
   }
 
-  test("BIO.now.memoize eq Task.now") { implicit s =>
+  test("BIO.now.memoize eq BIO.now") { implicit s =>
     val task = BIO.now(1)
     assertEquals(task, task.memoize)
   }
 
-  test("BIO.raiseError.memoize eq Task.raiseError") { implicit s =>
+  test("BIO.raiseError.memoize eq BIO.raiseError") { implicit s =>
     val task = BIO.raiseError("dummy")
     assertEquals(task, task.memoize)
   }
 
-  test("BIO.terminate.memoize eq Task.raiseError") { implicit s =>
+  test("BIO.terminate.memoize eq BIO.raiseError") { implicit s =>
     val task = BIO.terminate(DummyException("dummy"))
     assertEquals(task, task.memoize)
   }
 
-  test("BIO.eval.memoizeOnSuccess.memoize !== Task.eval.memoizeOnSuccess") { implicit s =>
+  test("BIO.eval.memoizeOnSuccess.memoize !== BIO.eval.memoizeOnSuccess") { implicit s =>
     val task = BIO.eval(1).memoizeOnSuccess
     assert(task != task.memoize, "task != task.memoize")
   }

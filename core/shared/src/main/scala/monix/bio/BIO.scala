@@ -4177,8 +4177,8 @@ object BIO extends TaskInstancesLevel0 {
   private final class RedeemFatal[E, A, B](fe: Cause[E] => B, fs: A => B)
       extends StackFrame.FatalStackFrame[E, A, UIO[B]] {
     override def apply(a: A): UIO[B] = new Now(fs(a))
-    override def recover(e: E): UIO[B] = new Now(fe(Cause.typed(e)))
-    override def recoverFatal(e: Throwable): UIO[B] = new Now(fe(Cause.terminate(e)))
+    override def recover(e: E): UIO[B] = new Now(fe(Cause.Error(e)))
+    override def recoverFatal(e: Throwable): UIO[B] = new Now(fe(Cause.Termination(e)))
   }
 
   /** Used as optimization by [[BIO.attempt]]. */

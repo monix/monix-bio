@@ -278,7 +278,7 @@ private[monix] object TaskBracket {
     private final def unsafeRecover(e: E): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        val cause = Cause.typed(e)
+        val cause = Cause.Error(e)
         releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
       } else {
         BIO.never
@@ -288,7 +288,7 @@ private[monix] object TaskBracket {
     private final def unsafeRecoverFatal(e: Throwable): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        val cause = Cause.terminate(e)
+        val cause = Cause.Termination(e)
         releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
       } else {
         BIO.never

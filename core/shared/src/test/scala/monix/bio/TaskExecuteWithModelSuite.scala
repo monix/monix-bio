@@ -24,8 +24,8 @@ import scala.util.Success
 
 object TaskExecuteWithModelSuite extends BaseTestSuite {
 
-  def readModel: Task[ExecutionModel] =
-    Task.deferAction(s => Task.now(s.executionModel))
+  def readModel: UIO[ExecutionModel] =
+    BIO.deferAction(s => BIO.now(s.executionModel))
 
   test("executeWithModel works") { implicit sc =>
     assertEquals(sc.executionModel, ExecutionModel.Default)
@@ -71,12 +71,12 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
   }
 
   test("executeWithModel is stack safe in flatMap loops") { implicit sc =>
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.executeWithModel(SynchronousExecution).flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.executeWithModel(SynchronousExecution).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()

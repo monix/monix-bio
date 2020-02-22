@@ -27,15 +27,11 @@ sealed abstract class Cause[+E] extends Product with Serializable {
       case Cause.Termination(value) => fa(value)
     }
 
-  def flatten(implicit E: E <:< Throwable): Throwable =
+  def toThrowable(implicit E: E <:< Throwable): Throwable =
     fold(identity, e => E(e))
 }
 
 object Cause {
-  def terminate(t: Throwable): Cause[Nothing] = Termination(t)
-
-  def typed[E](e: E): Cause[E] = Error(e)
-
   final case class Error[+E](value: E) extends Cause[E]
 
   final case class Termination(value: Throwable) extends Cause[Nothing]

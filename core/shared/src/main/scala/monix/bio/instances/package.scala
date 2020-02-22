@@ -23,7 +23,7 @@ package object instances {
 
   @inline private[instances] final def exitCaseFromCause(exit: ExitCase[Cause[Throwable]]): ExitCase[Throwable] =
     exit match {
-      case ExitCase.Error(e) => ExitCase.Error(e.flatten)
+      case ExitCase.Error(e) => ExitCase.Error(e.toThrowable)
       case ExitCase.Completed => ExitCase.Completed
       case ExitCase.Canceled => ExitCase.Canceled
     }

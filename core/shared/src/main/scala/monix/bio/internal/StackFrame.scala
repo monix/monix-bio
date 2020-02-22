@@ -59,8 +59,8 @@ private[bio] object StackFrame {
   final class RedeemFatalWith[E, -A, +R](fe: Cause[E] => R, fa: A => R) extends FatalStackFrame[E, A, R] {
     override def apply(a: A): R = fa(a)
 
-    override def recover(e: E): R = fe(Cause.typed(e))
+    override def recover(e: E): R = fe(Cause.Error(e))
 
-    override def recoverFatal(e: Throwable): R = fe(Cause.terminate(e))
+    override def recoverFatal(e: Throwable): R = fe(Cause.Termination(e))
   }
 }

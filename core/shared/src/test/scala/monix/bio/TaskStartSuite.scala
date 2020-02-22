@@ -25,14 +25,14 @@ import scala.util.Success
 
 object TaskStartSuite extends BaseTestSuite {
   test("task.start.flatMap(_.join) <-> task") { implicit sc =>
-    check1 { (task: Task[Int]) =>
+    check1 { task: BIO[Long, Int] =>
       task.start.flatMap(_.join) <-> task
     }
   }
 
   test("task.start.flatMap(id) is cancelable, but the source is memoized") { implicit sc =>
     var effect = 0
-    val task = Task { effect += 1; effect }.delayExecution(1.second).start.flatMap(_.join)
+    val task = UIO { effect += 1; effect }.delayExecution(1.second).start.flatMap(_.join)
     val f = task.runToFuture
     sc.tick()
     f.cancel()
@@ -43,7 +43,7 @@ object TaskStartSuite extends BaseTestSuite {
   }
 
   test("task.start is stack safe") { implicit sc =>
-    var task: Task[Any] = Task.evalAsync(1)
+    var task: UIO[Any] = UIO.evalAsync(1)
     for (_ <- 0 until 5000) task = task.start.flatMap(_.join)
 
     val f = task.runToFuture
@@ -73,18 +73,18 @@ object TaskStartSuite extends BaseTestSuite {
 
   test("task.start is stack safe") { implicit sc =>
     val count = if (Platform.isJVM) 10000 else 1000
-    def loop(n: Int): Task[Unit] =
+    def loop(n: Int): UIO[Unit] =
       if (n > 0)
-        Task(n - 1).start.flatMap(_.join).flatMap(loop)
+        UIO(n - 1).start.flatMap(_.join).flatMap(loop)
       else
-        Task.unit
+        UIO.unit
 
     val f = loop(count).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(Right(()))))
   }
 
   test("task.start executes asynchronously") { implicit sc =>
-    val task = Task(1 + 1).start.flatMap(_.join)
+    val task = UIO(1 + 1).start.flatMap(_.join)
     val f = task.runToFuture
 
     assertEquals(f.value, None)

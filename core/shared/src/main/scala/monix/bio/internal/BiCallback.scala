@@ -28,10 +28,48 @@ import scala.util.{Failure, Success, Try}
 
 /**
   * Callback type which supports two channels of errors.
+  *
+  * @define safetyIssues Can be called at most once by contract.
+  *         Not necessarily thread-safe, depends on implementation.
+  *
+  *         @throws CallbackCalledMultipleTimesException depending on
+  *                 implementation, when signaling via this callback is
+  *                 attempted multiple times and the protocol violation
+  *                 is detected.
+  *
+  * @define tryMethodDescription In case the underlying callback
+  *         implementation protects against protocol violations, then
+  *         this method should return `false` in case the final result
+  *         was already signaled once via [[Callback.onSuccess]],
+  *         [[Callback.onError]] or [[onTermination]].
+  *
+  *         The default implementation relies on catching
+  *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]]
+  *         in case of violations, which is what thread-safe implementations
+  *         of `onSuccess` or `onError` are usually throwing.
+  *
+  *         WARNING: this method is only provided as a
+  *         convenience. The presence of this method does not
+  *         guarantee that the underlying callback is thread-safe or
+  *         that it protects against protocol violations.
+  *
+  *         @return `true` if the invocation completes normally or
+  *                 `false` in case another concurrent call succeeded
+  *                 first in signaling a result
   */
 abstract class BiCallback[-E, -A] extends Callback[E, A] {
+  /**
+    * Signals a a terminal error which will not be reflected in the type signature.
+    *
+    * $safetyIssues
+    */
   def onTermination(e: Throwable): Unit
 
+  /**
+    * Attempts to call [[BiCallback.onTermination]].
+    *
+    * $tryMethodDescription
+    */
   def tryOnTermination(e: Throwable): Boolean =
     try {
       onTermination(e)
@@ -40,12 +78,23 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
       case _: CallbackCalledMultipleTimesException => false
     }
 
+  /**
+    * Signals a value via Scala's `Try` of `Either` (`Left` is typed error, `Right` is
+    * the successful value and `Failure` is a terminal error (a defect)).
+    *
+    * $safetyIssues
+    */
   def apply(result: Try[Either[E, A]]): Unit = result match {
     case Success(Right(a)) => onSuccess(a)
     case Success(Left(e)) => onError(e)
     case Failure(t) => onTermination(t)
   }
 
+  /**
+    * Attempts to call [[BiCallback.tryApply(result:Try[Either* BiCallback.apply]].
+    *
+    * $tryMethodDescription
+    */
   def tryApply(result: Try[Either[E, A]]): Boolean = result match {
     case Success(Right(a)) => tryOnSuccess(a)
     case Success(Left(e)) => tryOnError(e)
@@ -196,7 +245,7 @@ object BiCallback {
           override def tryApply(result: Either[E, A]): Boolean =
             if (isActive) {
               isActive = false
-              cb(result.left.map(Cause.typed))
+              cb(result.left.map(Cause.Error(_)))
               true
             } else {
               false
@@ -210,7 +259,7 @@ object BiCallback {
           override def tryOnTermination(e: Throwable): Boolean = {
             if (isActive) {
               isActive = false
-              cb.apply(Left(Cause.terminate(e)))
+              cb.apply(Left(Cause.Termination(e)))
               true
             } else {
               false
@@ -258,14 +307,14 @@ object BiCallback {
 
   private[monix] def callError[E, A](cb: Either[Cause[E], A] => Unit, value: E): Unit =
     cb match {
-      case ref: BiCallback[Cause[E], A] @unchecked => ref.onError(Cause.typed(value))
-      case _ => cb(Left(Cause.typed(value)))
+      case ref: BiCallback[Cause[E], A] @unchecked => ref.onError(Cause.Error(value))
+      case _ => cb(Left(Cause.Error(value)))
     }
 
   private[monix] def callTermination[E, A](cb: Either[Cause[E], A] => Unit, value: Throwable): Unit =
     cb match {
       case ref: BiCallback[Cause[E], A] @unchecked => ref.onTermination(value)
-      case _ => cb(Left(Cause.terminate(value)))
+      case _ => cb(Left(Cause.Termination(value)))
     }
 
   private[monix] def signalErrorTrampolined[E, A](cb: BiCallback[E, A], e: E): Unit =

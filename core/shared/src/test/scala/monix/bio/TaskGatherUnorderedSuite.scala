@@ -17,8 +17,9 @@
 
 package monix.bio
 
-import monix.bio.internal.BiCallback
-import monix.execution.exceptions.DummyException
+import cats.effect.ExitCase
+import monix.execution.Callback
+import monix.execution.exceptions.{DummyException, UncaughtErrorException}
 import monix.execution.internal.Platform
 
 import scala.collection.mutable.ListBuffer
@@ -26,13 +27,13 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 object TaskGatherUnorderedSuite extends BaseTestSuite {
-  test("Task.gatherUnordered should execute in parallel") { implicit s =>
+  test("BIO.gatherUnordered should execute in parallel") { implicit s =>
     val seq = Seq(
-      Task.evalAsync(1).delayExecution(2.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds)
+      BIO.evalAsync(1).delayExecution(2.seconds),
+      BIO.evalAsync(2).delayExecution(1.second),
+      BIO.evalAsync(3).delayExecution(3.seconds)
     )
-    val f = Task.gatherUnordered(seq).runToFuture
+    val f = BIO.gatherUnordered(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -42,16 +43,16 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(List(3, 1, 2)))))
   }
 
-  test("Task.gatherUnordered should onError if one of the tasks terminates in error") { implicit s =>
+  test("BIO.gatherUnordered should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq(
-      Task.evalAsync(3).delayExecution(3.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(throw ex).delayExecution(2.seconds),
-      Task.evalAsync(3).delayExecution(1.seconds)
+      BIO.evalAsync(3).delayExecution(3.seconds),
+      BIO.evalAsync(2).delayExecution(1.second),
+      BIO.evalAsync(throw ex).delayExecution(2.seconds),
+      BIO.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = Task.gatherUnordered(seq).runToFuture
+    val f = BIO.gatherUnordered(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -59,13 +60,30 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("Task.gatherUnordered should be canceled") { implicit s =>
+  test("BIO.gatherUnordered should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
+    val ex = DummyException("dummy")
     val seq = Seq(
-      Task.evalAsync(1).delayExecution(2.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds)
+      UIO.evalAsync(3).delayExecution(3.seconds),
+      UIO.evalAsync(2).delayExecution(1.second),
+      UIO.evalAsync(throw ex).delayExecution(2.seconds),
+      UIO.evalAsync(3).delayExecution(1.seconds)
     )
-    val f = Task.gatherUnordered(seq).runToFuture
+
+    val f = UIO.gatherUnordered(seq).runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(2.seconds)
+    assertEquals(f.value, Some(Failure(ex)))
+  }
+
+  test("BIO.gatherUnordered should be canceled") { implicit s =>
+    val seq = Seq(
+      UIO.evalAsync(1).delayExecution(2.seconds),
+      UIO.evalAsync(2).delayExecution(1.second),
+      UIO.evalAsync(3).delayExecution(3.seconds)
+    )
+    val f = BIO.gatherUnordered(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -77,26 +95,26 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("Task.gatherUnordered should run over an iterable") { implicit s =>
+  test("BIO.gatherUnordered should run over an iterable") { implicit s =>
     val count = 10
     val seq = 0 until count
-    val it = seq.map(x => Task.eval(x + 1))
-    val sum = Task.gatherUnordered(it).map(_.sum)
+    val it = seq.map(x => BIO.eval(x + 1))
+    val sum = BIO.gatherUnordered(it).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
     assertEquals(result.value.get, Success(Right((count + 1) * count / 2)))
   }
 
-  test("Task.gatherUnordered should be stack-safe on handling many tasks") { implicit s =>
+  test("BIO.gatherUnordered should be stack-safe on handling many tasks") { implicit s =>
     val count = 10000
-    val tasks = (0 until count).map(x => Task.eval(x))
-    val sum = Task.gatherUnordered(tasks).map(_.sum)
+    val tasks = (0 until count).map(x => BIO.eval(x))
+    val sum = BIO.gatherUnordered(tasks).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
     assertEquals(result.value.get, Success(Right(count * (count - 1) / 2)))
   }
 
-  test("Task.gatherUnordered should be stack safe on success") { implicit s =>
+  test("BIO.gatherUnordered should be stack safe on success") { implicit s =>
     def fold[A, B](ta: Task[ListBuffer[A]], tb: Task[A]): Task[ListBuffer[A]] =
       Task.gatherUnordered(List(ta, tb)).map {
         case a :: b :: Nil =>
@@ -120,68 +138,102 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
 
     gatherSpecial(tasks)
       .map(_.sum)
-      .runAsync(new BiCallback[Cause[Throwable], Int] {
-        override def onTermination(e: Throwable): Unit =
-          result = Some(Failure(e))
-
+      .runAsync(new Callback[Cause[Throwable], Int] {
         override def onSuccess(value: Int): Unit =
           result = Some(Success(value))
 
         override def onError(e: Cause[Throwable]): Unit =
-          result = Some(Failure(e.flatten))
+          result = Some(Failure(e.toThrowable))
       })
 
     s.tick()
     assertEquals(result, Some(Success(count * (count - 1) / 2)))
   }
 
-//  test("Task.gatherUnordered should log errors if multiple errors happen") { implicit s =>
-//    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
-//
-//    val ex = DummyException("dummy1")
-//    var errorsThrow = 0
-//
-//    val task1 = Task
-//      .raiseError[Int](ex)
-//      .executeAsync
-//      .doOnFinish { x =>
-//        if (x.isDefined) errorsThrow += 1
-//        Task.unit
-//      }
-//      .uncancelable
-//
-//    val task2 = Task
-//      .raiseError[Int](ex)
-//      .executeAsync
-//      .doOnFinish { x =>
-//        if (x.isDefined) errorsThrow += 1
-//        Task.unit
-//      }
-//      .uncancelable
-//
-//    val gather = Task.gatherUnordered(Seq(task1, task2))
-//    val result = gather.runToFutureOpt
-//    s.tick()
-//
-//    assertEquals(result.value, Some(Failure(ex)))
-//    assertEquals(s.state.lastReportedError, ex)
-//    assertEquals(errorsThrow, 2)
-//  }
+  test("BIO.gatherUnordered should log errors if multiple errors happen") { implicit s =>
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 
-//  test("Task.gatherUnordered runAsync multiple times") { implicit s =>
-//    var effect = 0
-//    val task1 = Task.evalAsync { effect += 1; 3 }.memoize
-//    val task2 = task1 map { x =>
-//      effect += 1; x + 1
-//    }
-//    val task3 = Task.gatherUnordered(List(task2, task2, task2))
-//
-//    val result1 = task3.runToFuture; s.tick()
-//    assertEquals(result1.value, Some(Success(List(4, 4, 4))))
-//    assertEquals(effect, 1 + 3)
-//
-//    val result2 = task3.runToFuture; s.tick()
-//    assertEquals(result2.value, Some(Success(List(4, 4, 4))))
-//    assertEquals(effect, 1 + 3 + 3)
-//  }
+    val ex = "dummy1"
+    var errorsThrow = 0
+
+    val task1: BIO[String, Int] = BIO
+      .raiseError(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val task2: BIO[String, Int] = BIO
+      .raiseError(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val gather = BIO.gatherUnordered(Seq(task1, task2))
+    val result = gather.runToFutureOpt
+    s.tick()
+
+    assertEquals(result.value, Some(Success(Left(ex))))
+    assertEquals(s.state.lastReportedError.toString, UncaughtErrorException.wrap(ex).toString)
+    assertEquals(errorsThrow, 2)
+  }
+
+  test("BIO.gatherUnordered should log terminal errors if multiple errors happen") { implicit s =>
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
+
+    val ex = DummyException("dummy1")
+    var errorsThrow = 0
+
+    val task1: BIO[String, Int] = BIO
+      .terminate(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val task2: BIO[String, Int] = BIO
+      .terminate(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val gather = BIO.gatherUnordered(Seq(task1, task2))
+    val result = gather.runToFutureOpt
+    s.tick()
+
+    assertEquals(result.value, Some(Failure(ex)))
+    assertEquals(s.state.lastReportedError, ex)
+    assertEquals(errorsThrow, 2)
+  }
+
+  test("BIO.gatherUnordered runAsync multiple times") { implicit s =>
+    var effect = 0
+    val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
+    val task2 = task1 map { x =>
+      effect += 1; x + 1
+    }
+    val task3 = BIO.gatherUnordered(List(task2, task2, task2))
+
+    val result1 = task3.runToFuture; s.tick()
+    assertEquals(result1.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(effect, 1 + 3)
+
+    val result2 = task3.runToFuture; s.tick()
+    assertEquals(result2.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(effect, 1 + 3 + 3)
+  }
 }

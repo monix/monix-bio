@@ -25,7 +25,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   test("executeOn(forceAsync = false)") { implicit sc =>
     val sc2 = TestScheduler()
-    val fa = Task.eval(1).executeOn(sc2, forceAsync = false)
+    val fa = BIO.eval(1).executeOn(sc2, forceAsync = false)
     val f = fa.runToFuture
 
     assertEquals(f.value, Some(Success(Right(1))))
@@ -33,7 +33,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   test("executeOn(forceAsync = true)") { implicit sc =>
     val sc2 = TestScheduler()
-    val fa = Task.eval(1).executeOn(sc2)
+    val fa = BIO.eval(1).executeOn(sc2)
     val f = fa.runToFuture
 
     assertEquals(f.value, None)
@@ -48,12 +48,12 @@ object TaskExecuteOnSuite extends BaseTestSuite {
   test("executeOn(forceAsync = false) is stack safe in flatMap loops, test 1") { implicit sc =>
     val sc2 = TestScheduler()
 
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.executeOn(sc2, forceAsync = false).flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.executeOn(sc2, forceAsync = false).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
@@ -63,12 +63,12 @@ object TaskExecuteOnSuite extends BaseTestSuite {
   test("executeOn(forceAsync = false) is stack safe in flatMap loops, test 2") { implicit sc =>
     val sc2 = TestScheduler()
 
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1).executeOn(sc2, forceAsync = false)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture
@@ -85,7 +85,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     val task = for {
       l <- TaskLocal(10)
       _ <- l.write(100).executeOn(global, forceAsync = false)
-      _ <- Task.shift
+      _ <- BIO.shift
       v <- l.read
     } yield v
 
@@ -101,7 +101,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     val task = for {
       l <- TaskLocal(10)
       _ <- l.write(100).executeOn(global)
-      _ <- Task.shift
+      _ <- BIO.shift
       v <- l.read
     } yield v
 
