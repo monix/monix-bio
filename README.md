@@ -13,7 +13,7 @@ There is a SNAPSHOT version (compatible with Monix 3.x and Cats and Cats-Effect 
 ```scala
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies += "io.monix" %% "monix-bio" % "0.0.1-SNAPSHOT"
+libraryDependencies += "io.monix" %% "monix-bio" % "0.0.2-SNAPSHOT"
 ```
 
 I will really appreciate feedback, bugs and complaints about API if you play with it. Just please do not use it in production yet!
