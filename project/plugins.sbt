@@ -9,3 +9,6 @@ addSbtPlugin("org.scala-js"              % "sbt-scalajs"              % "0.6.31"
 addSbtPlugin("de.heikoseeberger"         % "sbt-header"               % "5.3.1")
 addSbtPlugin("org.scalameta"        % "sbt-scalafmt"    % "2.2.1")
 addSbtPlugin("pl.project13.scala"   % "sbt-jmh"         % "0.3.7")
+addSbtPlugin("com.47deg"  % "sbt-microsites" % "1.1.2")
+addSbtPlugin("org.scalameta"             % "sbt-mdoc"                      % "2.1.1")
+addSbtPlugin("com.eed3si9n"              % "sbt-unidoc"                    % "0.4.2")

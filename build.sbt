@@ -1,7 +1,7 @@
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
-addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
+addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test ;microsite/publishMicrosite")
 
 val monixVersion = "3.1.0"
 val minitestVersion = "2.7.0"
@@ -12,6 +12,7 @@ lazy val `monix-bio` = project.in(file("."))
   .enablePlugins(ScalaJSPlugin)
   .settings(releaseSettings, skipOnPublishSettings)
   .aggregate(coreJVM, coreJS)
+  .enablePlugins(ScalaUnidocPlugin)
 
 lazy val core = crossProject(JSPlatform, JVMPlatform)
   .in(file("core"))
@@ -156,6 +157,62 @@ lazy val scalaJSSettings = Seq(
     s"-P:scalajs:mapSourceURI:$l->$g"
   }
 )
+
+lazy val docsMappingsAPIDir =
+  settingKey[String]("Name of subdirectory in site target directory for api docs")
+
+lazy val microsite = project
+  .in(file("docs"))
+  .enablePlugins(MicrositesPlugin, SiteScaladocPlugin, MdocPlugin)
+  .settings(sharedSettings ++ skipOnPublishSettings)
+  .dependsOn(coreJVM)
+  .settings {
+    import microsites._
+    Seq(
+      micrositeName := "Monix BIO",
+      micrositeDescription := "Monix Bifunctor IO implementation",
+      micrositeAuthor := "Monix Developers",
+      micrositeTwitterCreator := "@Avasil",
+      micrositeGithubOwner := "monix",
+      micrositeGithubRepo := "monix/monix-bio",
+      micrositeUrl := "https://monix-bio.github.io/",
+      micrositeBaseUrl := "/",
+      micrositeDocumentationUrl := "https://monix-bio.github.io/",
+      micrositeGitterChannelUrl := "monix/monix-bio",
+      micrositeFooterText := None,
+      micrositeHighlightTheme := "atom-one-light",
+      micrositePalette := Map(
+        "brand-primary" -> "#3e5b95",
+        "brand-secondary" -> "#294066",
+        "brand-tertiary" -> "#2d5799",
+        "gray-dark" -> "#49494B",
+        "gray" -> "#7B7B7E",
+        "gray-light" -> "#E5E5E6",
+        "gray-lighter" -> "#F4F3F4",
+        "white-color" -> "#FFFFFF"
+      ),
+      micrositeCompilingDocsTool := WithMdoc,
+      fork in mdoc := true,
+//      scalacOptions.in(Tut) ~= filterConsoleScalacOptions,
+      libraryDependencies += "com.47deg" %% "github4s" % "0.21.0",
+      micrositePushSiteWith := GitHub4s,
+      micrositeGithubToken := sys.env.get("GITHUB_TOKEN"),
+      micrositeExtraMdFiles := Map(
+        file("CODE_OF_CONDUCT.md") -> ExtraMdFileConfig("CODE_OF_CONDUCT.md", "page", Map("title" -> "Code of Conduct",   "section" -> "code of conduct", "position" -> "100")),
+        file("LICENSE.md") -> ExtraMdFileConfig("LICENSE.md", "page", Map("title" -> "License",   "section" -> "license",   "position" -> "101"))
+      ),
+      docsMappingsAPIDir := s"api",
+      addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc) in `monix-bio`, docsMappingsAPIDir),
+      sourceDirectory in Compile := baseDirectory.value / "src",
+      sourceDirectory in Test := baseDirectory.value / "test",
+      mdocIn := (sourceDirectory in Compile).value / "mdoc",
+
+      // Bug in sbt-microsites
+      micrositeConfigYaml := microsites.ConfigYml(
+        yamlCustomProperties = Map("exclude" -> List.empty[String])
+      ),
+    )
+  }
 
 lazy val releaseSettings = {
   import ReleaseTransformations._

@@ -22,6 +22,10 @@ matrix:
       scala: 2.13.1
       env: COMMAND=ci-js
 
+install:
+  - rvm use 2.6.5 --install --fuzzy
+  - gem install jekyll -v 4
+
 script:
   - sbt -J-Xmx6144m ++$TRAVIS_SCALA_VERSION $COMMAND
 
