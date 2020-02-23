@@ -57,8 +57,8 @@ object Task {
     BIO.raiseError(ex)
 
   /**
-    * @see See [[monix.bio.BIO.terminate]]
-    */
+   * @see See [[monix.bio.BIO.terminate]]
+   */
   def terminate[A](ex: Throwable): Task[A] =
     BIO.terminate(ex)
 
@@ -117,32 +117,32 @@ object Task {
     BIO.never
 
   /**
-    * @see See [[monix.bio.BIO.from]]
-    */
+   * @see See [[monix.bio.BIO.from]]
+   */
   def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): Task[A] =
     BIO.from(fa)
 
   /**
-    * @see See [[monix.bio.BIO.fromReactivePublisher]]
-    */
+   * @see See [[monix.bio.BIO.fromReactivePublisher]]
+   */
   def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
     BIO.fromReactivePublisher(source)
 
   /**
-    * @see See [[monix.bio.BIO.fromConcurrentEffect]]
-    */
+   * @see See [[monix.bio.BIO.fromConcurrentEffect]]
+   */
   def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
     BIO.fromConcurrentEffect(fa)
 
   /**
-    * @see See [[monix.bio.BIO.fromEffect]]
-    */
+   * @see See [[monix.bio.BIO.fromEffect]]
+   */
   def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
     BIO.fromEffect(fa)
 
   /**
-    * @see See [[monix.bio.BIO.fromTry]]
-    */
+   * @see See [[monix.bio.BIO.fromTry]]
+   */
   def fromTry[A](a: Try[A]): Task[A] =
     BIO.fromTry(a)
 
@@ -213,22 +213,16 @@ object Task {
     BIO.fromFuture(f)
 
   /**
-    * @see See [[monix.bio.BIO.fromCancelablePromise]]
-    */
-  def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
-    BIO.fromCancelablePromise(p)
-
-  /**
-    * @see See [[monix.bio.BIO.fromFutureLike]]
-    */
-  def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
-    BIO.fromFutureLike(tfa)
-
-  /**
    * @see See [[monix.bio.BIO.fromCancelablePromise]]
    */
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
     BIO.fromCancelablePromise(p)
+
+  /**
+   * @see See [[monix.bio.BIO.fromFutureLike]]
+   */
+  def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
+    BIO.fromFutureLike(tfa)
 
   /**
    * @see See [[monix.bio.BIO.race]]
