@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,9 @@ import scala.util.Success
 
 object TaskExecuteWithOptionsSuite extends BaseTestSuite {
   test("executeWithOptions works") { implicit s =>
-    val task = Task
+    val task = BIO
       .eval(1)
-      .flatMap(_ => Task.eval(2))
+      .flatMap(_ => BIO.eval(2))
       .flatMap(_ => BIO.readOptions)
       .executeWithOptions(_.enableLocalContextPropagation)
       .flatMap(opt1 => BIO.readOptions.map(opt2 => (opt1, opt2)))
@@ -38,32 +38,30 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
     assert(!opt2.localContextPropagation, "!opt2.localContextPropagation")
   }
 
-//  testAsync("local.write.executeWithOptions") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).executeWithOptions(_.enableAutoCancelableRunLoops)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("local.write.executeWithOptions") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).executeWithOptions(_.enableAutoCancelableRunLoops)
+      _ <- BIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 
   test("executeWithOptions is stack safe in flatMap loops") { implicit sc =>
-    val sc2 = TestScheduler()
-
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.executeWithOptions(_.enableAutoCancelableRunLoops).flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.executeWithOptions(_.enableAutoCancelableRunLoops).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()

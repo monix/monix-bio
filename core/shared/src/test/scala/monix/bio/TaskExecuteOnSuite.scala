@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   test("executeOn(forceAsync = false)") { implicit sc =>
     val sc2 = TestScheduler()
-    val fa = Task.eval(1).executeOn(sc2, forceAsync = false)
+    val fa = BIO.eval(1).executeOn(sc2, forceAsync = false)
     val f = fa.runToFuture
 
     assertEquals(f.value, Some(Success(Right(1))))
@@ -33,7 +33,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   test("executeOn(forceAsync = true)") { implicit sc =>
     val sc2 = TestScheduler()
-    val fa = Task.eval(1).executeOn(sc2)
+    val fa = BIO.eval(1).executeOn(sc2)
     val f = fa.runToFuture
 
     assertEquals(f.value, None)
@@ -48,12 +48,12 @@ object TaskExecuteOnSuite extends BaseTestSuite {
   test("executeOn(forceAsync = false) is stack safe in flatMap loops, test 1") { implicit sc =>
     val sc2 = TestScheduler()
 
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.executeOn(sc2, forceAsync = false).flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.executeOn(sc2, forceAsync = false).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
@@ -63,12 +63,12 @@ object TaskExecuteOnSuite extends BaseTestSuite {
   test("executeOn(forceAsync = false) is stack safe in flatMap loops, test 2") { implicit sc =>
     val sc2 = TestScheduler()
 
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.flatMap { _ =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1).executeOn(sc2, forceAsync = false)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture
@@ -78,35 +78,35 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-//  testAsync("local.write.executeOn(forceAsync = false) works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).executeOn(global, forceAsync = false)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("local.write.executeOn(forceAsync = false) works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
-//  testAsync("local.write.executeOn(forceAsync = true) works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).executeOn(global)
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).executeOn(global, forceAsync = false)
+      _ <- BIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
+
+  testAsync("local.write.executeOn(forceAsync = true) works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).executeOn(global)
+      _ <- BIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 }

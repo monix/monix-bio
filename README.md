@@ -13,7 +13,7 @@ There is a SNAPSHOT version (compatible with Monix 3.x and Cats and Cats-Effect 
 ```scala
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies += "io.monix" %% "monix-bio" % "0.0.1-SNAPSHOT"
+libraryDependencies += "io.monix" %% "monix-bio" % "0.0.2-SNAPSHOT"
 ```
 
 I will really appreciate feedback, bugs and complaints about API if you play with it. Just please do not use it in production yet!
@@ -24,7 +24,7 @@ I'm happy to guide anyone interested in contributing. Just let me know on specif
 ## Short introduction
 
 `BIO[E, A]` represents a specification for a possibly lazy or asynchronous computation, which when executed will produce
-a successful value `A`, an error `E`, never terminate or complete with a fatal error.
+a successful value `A`, an error `E`, never terminate or complete with a terminal (untyped) error.
 
 It composes very well and can handle many use cases such as cancellation, resource safety, context propagation, error handling or parallelism.
 

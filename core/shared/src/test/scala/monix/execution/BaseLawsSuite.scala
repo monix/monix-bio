@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
   implicit def equalityCancelableFuture[E, A](
     implicit A: Eq[A],
     E: Eq[E],
-    ec: TestScheduler): Eq[CancelableFuture[Either[E, A]]] =
+    ec: TestScheduler
+  ): Eq[CancelableFuture[Either[E, A]]] =
     new Eq[CancelableFuture[Either[E, A]]] {
       val inst = equalityFutureEither[E, A]
 
@@ -126,9 +127,10 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
             case Some(Success(Left(a))) =>
               y.value match {
                 case Some(Success(Left(b))) => (a.isInstanceOf[Throwable] && b.isInstanceOf[Throwable]) || E.eqv(a, b)
+                case Some(Failure(ex)) => a.isInstanceOf[Throwable] && (a.getClass == ex.getClass)
                 case _ => false
               }
-            case Some(Failure(_)) =>
+            case Some(Failure(ex)) =>
               y.value match {
                 case Some(Failure(_)) =>
                   // Exceptions aren't values, it's too hard to reason about
@@ -136,6 +138,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
                   // yielding non-terminating futures and tasks from a type
                   // theory point of view, so we simply consider them all equal
                   true
+                case Some(Success(Left(b))) => b.isInstanceOf[Throwable] && (b.getClass == ex.getClass)
                 case _ =>
                   false
               }

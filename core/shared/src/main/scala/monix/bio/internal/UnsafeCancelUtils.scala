@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{BIO, Task, UIO}
+import monix.bio.internal.StackFrame.FatalStackFrame
+import monix.bio.{BIO, UIO}
 import monix.catnap.CancelableF
 import monix.execution.internal.Platform
 import monix.execution.{Cancelable, Scheduler}
@@ -40,13 +40,14 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def cancelAllUnsafe[E](
-    cursor: Iterable[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ]): CancelToken[BIO[E, ?]] = {
+  private[internal] def cancelAllUnsafe(
+    cursor: Iterable[AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */ ]
+  ): CancelToken[UIO] = {
 
     if (cursor.isEmpty)
       BIO.unit
     else
-      BIO.suspend {
+      BIO.suspendTotal {
         val frame = new CancelAllFrame(cursor.iterator)
         frame.loop()
       }
@@ -55,13 +56,14 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def unsafeCancel[E](
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[BIO[E, ?]] = {
+  private[internal] def unsafeCancel(
+    task: AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */
+  ): CancelToken[UIO] = {
 
     task match {
-      case ref: BIO[E, Unit] @unchecked =>
+      case ref: UIO[Unit] @unchecked =>
         ref
-      case ref: CancelableF[BIO[E, ?]] @unchecked =>
+      case ref: CancelableF[UIO] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
         ref.cancel()
@@ -76,12 +78,13 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def getToken[E](
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ): CancelToken[BIO[E, ?]] =
+  private[internal] def getToken(
+    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */
+  ): CancelToken[UIO] =
     task match {
-      case ref: BIO[E, Unit] @unchecked =>
+      case ref: UIO[Unit] @unchecked =>
         ref
-      case ref: CancelableF[BIO[E, ?]] @unchecked =>
+      case ref: CancelableF[UIO] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
         BIO.delay(ref.cancel()).hideErrors
@@ -94,13 +97,14 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API — very unsafe!
     */
-  private[internal] def triggerCancel(task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ )(
-    implicit s: Scheduler): Unit = {
+  private[internal] def triggerCancel(
+    task: AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */
+  )(implicit s: Scheduler): Unit = {
 
     task match {
       case ref: BIO[Any, Unit] @unchecked =>
         ref.runAsyncAndForget
-      case ref: CancelableF[Task] @unchecked =>
+      case ref: CancelableF[UIO] @unchecked =>
         ref.cancel.runAsyncAndForget
       case ref: Cancelable =>
         try ref.cancel()
@@ -115,27 +119,26 @@ private[bio] object UnsafeCancelUtils {
   }
 
   // Optimization for `cancelAll`
-  private final class CancelAllFrame[E](cursor: Iterator[AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */ ])
-      extends StackFrame[E, Unit, BIO[E, Unit]] {
+  private final class CancelAllFrame(cursor: Iterator[AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */ ])
+      extends FatalStackFrame[Nothing, Unit, UIO[Unit]] {
 
-    private[this] val errors = ListBuffer.empty[E]
-    private[this] val fatalErrors = ListBuffer.empty[Throwable]
+    private[this] val terminalErrors = ListBuffer.empty[Throwable]
 
-    def loop(): CancelToken[BIO[E, ?]] = {
-      var task: BIO[E, Unit] = null
+    def loop(): CancelToken[UIO] = {
+      var task: UIO[Unit] = null
 
       while ((task eq null) && cursor.hasNext) {
         cursor.next() match {
-          case ref: BIO[E, Unit] @unchecked =>
+          case ref: UIO[Unit] @unchecked =>
             task = ref
-          case ref: CancelableF[BIO[E, ?]] @unchecked =>
+          case ref: CancelableF[UIO] @unchecked =>
             task = ref.cancel
           case ref: Cancelable =>
             try {
               ref.cancel()
             } catch {
               case NonFatal(e) =>
-                fatalErrors += e
+                terminalErrors += e
             }
           case other =>
             // $COVERAGE-OFF$
@@ -147,32 +150,24 @@ private[bio] object UnsafeCancelUtils {
       if (task ne null) {
         task.flatMap(this)
       } else {
-        (fatalErrors.toList, errors.toList) match {
-          case (first :: rest, rest2) =>
-            BIO.raiseFatalError(Platform.composeErrors(first, rest ++ rest2.map(WrappedException.wrap): _*))
-          case (Nil, first :: rest) =>
-            (first, rest) match {
-              case (th: Throwable, restTh: List[Throwable]) =>
-                BIO.raiseError(Platform.composeErrors(th, restTh: _*).asInstanceOf[E])
-              case _ =>
-                BIO.deferAction(s =>
-                  UIO(rest.foreach { e =>
-                    s.reportFailure(WrappedException.wrap(e))
-                  })) >> BIO.raiseError(first)
-            }
-
-          case (Nil, Nil) =>
-            BIO.unit
-
+        terminalErrors.toList match {
+          case Nil =>
+            UIO.unit
+          case first :: rest =>
+            BIO.terminate(Platform.composeErrors(first, rest: _*))
         }
       }
     }
 
-    def apply(a: Unit): BIO[E, Unit] =
+    def apply(a: Unit): UIO[Unit] =
       loop()
 
-    def recover(e: E): BIO[E, Unit] = {
-      errors += e
+    def recover(e: Nothing): UIO[Unit] = {
+      loop()
+    }
+
+    def recoverFatal(e: Throwable): UIO[Unit] = {
+      terminalErrors += e
       loop()
     }
   }

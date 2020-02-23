@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +18,10 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
+import monix.bio.{BIO, UIO}
 import monix.bio.BIO.{Async, Context}
 import monix.bio.compat.internal.toIterator
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{Callback, Scheduler}
 import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.execution.atomic.{Atomic, AtomicAny}
@@ -55,7 +55,8 @@ private[bio] object TaskGatherUnordered {
       ref: AtomicAny[State[A]],
       currentState: State[A],
       mainConn: TaskConnection[E],
-      finalCallback: Callback[E, List[A]])(implicit s: Scheduler): Unit = {
+      finalCallback: Callback[E, List[A]]
+    )(implicit s: Scheduler): Unit = {
 
       currentState match {
         case State.Active(list, 0) =>
@@ -77,27 +78,29 @@ private[bio] object TaskGatherUnordered {
       stateRef: AtomicAny[State[A]],
       mainConn: TaskConnection[E],
       ex: E,
-      finalCallback: Callback[E, List[A]])(implicit s: Scheduler): Unit = {
+      finalCallback: Callback[E, List[A]]
+    )(implicit s: Scheduler): Unit = {
 
       val currentState = stateRef.getAndSet(State.Complete)
       if (currentState != State.Complete) {
         mainConn.pop().runAsyncAndForget
         finalCallback.onError(ex)
       } else {
-        s.reportFailure(WrappedException.wrap(ex))
+        s.reportFailure(UncaughtErrorException.wrap(ex))
       }
     }
 
-    def reportFatalError(
+    def reportTermination(
       stateRef: AtomicAny[State[A]],
       mainConn: TaskConnection[E],
       ex: Throwable,
-      finalCallback: BiCallback[E, List[A]])(implicit s: Scheduler): Unit = {
+      finalCallback: BiCallback[E, List[A]]
+    )(implicit s: Scheduler): Unit = {
 
       val currentState = stateRef.getAndSet(State.Complete)
       if (currentState != State.Complete) {
         mainConn.pop().runAsyncAndForget
-        finalCallback.onFatalError(ex)
+        finalCallback.onTermination(ex)
       } else {
         s.reportFailure(ex)
       }
@@ -108,7 +111,8 @@ private[bio] object TaskGatherUnordered {
         stateRef: AtomicAny[State[A]],
         count: Int,
         conn: TaskConnection[E],
-        finalCallback: Callback[E, List[A]])(implicit s: Scheduler): Unit = {
+        finalCallback: Callback[E, List[A]]
+      )(implicit s: Scheduler): Unit = {
 
         stateRef.get match {
           case current @ State.Initializing(_, _) =>
@@ -136,7 +140,7 @@ private[bio] object TaskGatherUnordered {
         // Collecting all cancelables in a buffer, because adding
         // cancelables one by one in our `CompositeCancelable` is
         // expensive, so we do it at the end
-        val allCancelables = ListBuffer.empty[CancelToken[BIO[E, ?]]]
+        val allCancelables = ListBuffer.empty[CancelToken[UIO]]
         val batchSize = s.executionModel.recommendedBatchSize
         val cursor = toIterator(in)
 
@@ -174,8 +178,8 @@ private[bio] object TaskGatherUnordered {
               def onError(ex: E): Unit =
                 reportError(stateRef, mainConn, ex, finalCallback)
 
-              override def onFatalError(e: Throwable): Unit =
-                reportFatalError(stateRef, mainConn, e, finalCallback)
+              override def onTermination(e: Throwable): Unit =
+                reportTermination(stateRef, mainConn, e, finalCallback)
             }
           )
         }
@@ -188,7 +192,7 @@ private[bio] object TaskGatherUnordered {
         activate(stateRef, count, mainConn, finalCallback)(s)
       } catch {
         case ex if NonFatal(ex) =>
-          reportFatalError(stateRef, context.connection, ex, finalCallback)
+          reportTermination(stateRef, context.connection, ex, finalCallback)
       }
     }
   }

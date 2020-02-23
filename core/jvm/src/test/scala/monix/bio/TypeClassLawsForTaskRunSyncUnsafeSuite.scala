@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,13 +19,12 @@ package monix.bio
 
 import cats.effect.IO
 import cats.effect.laws.discipline._
-import cats.laws.discipline.{CoflatMapTests, BifunctorTests, ParallelTests, ApplicativeTests}
-import cats.{Eq, Applicative}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
+import cats.kernel.laws.discipline.MonoidTests
+import cats.{Applicative, Eq}
 import monix.bio.instances.CatsParallelForTask
-import monix.execution.schedulers.TestScheduler
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
 import scala.concurrent.ExecutionContext.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -110,7 +109,7 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int])
 
-//  checkAll("Monoid[Task[Int]]", MonoidTests[Task[Int]].monoid)
+  checkAll("Monoid[BIO[Throwable, Int]]", MonoidTests[BIO[Throwable, Int]].monoid)
 
   checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
     BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,10 +22,10 @@ import monix.execution.schedulers.TestScheduler
 import scala.util.Success
 
 object TaskAsyncBoundarySuite extends BaseTestSuite {
-  test("Task.asyncBoundary should work") { implicit s =>
+  test("BIO.asyncBoundary should work") { implicit s =>
     val io = TestScheduler()
     var effect = 0
-    val f = Task.eval { effect += 1; effect }
+    val f = UIO.eval { effect += 1; effect }
       .executeOn(io)
       .asyncBoundary
       .map(_ + 1)
@@ -43,12 +43,12 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(2))))
   }
 
-  test("Task.asyncBoundary(other) should work") { implicit s1 =>
+  test("BIO.asyncBoundary(other) should work") { implicit s1 =>
     val io = TestScheduler()
     val s2 = TestScheduler()
 
     var effect = 0
-    val f = Task.eval { effect += 1; effect }
+    val f = UIO.eval { effect += 1; effect }
       .executeOn(io)
       .asyncBoundary(s2)
       .map(_ + 1)
@@ -68,57 +68,56 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(2))))
   }
 
-  // TODO: uncomment when TaskLocal is implemented
-//  testAsync("Task.asyncBoundary should preserve locals") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).asyncBoundary
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
-//
-//  testAsync("Task.asyncBoundary(scheduler) should preserve locals") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- l.write(100).asyncBoundary(global)
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("BIO.asyncBoundary should preserve locals") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
-  test("Task.asyncBoundary is stack safe in flatMap loops, test 1") { implicit sc =>
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.asyncBoundary.flatMap { _ =>
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).asyncBoundary
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
+
+  testAsync("BIO.asyncBoundary(scheduler) should preserve locals") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- l.write(100).asyncBoundary(global)
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
+
+  test("BIO.asyncBoundary is stack safe in flatMap loops, test 1") { implicit sc =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.asyncBoundary.flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-  test("Task.asyncBoundary is stack safe in flatMap loops, test 2") { implicit sc =>
-    def loop(n: Int, acc: Long): Task[Long] =
-      Task.unit.flatMap { _ =>
+  test("BIO.asyncBoundary is stack safe in flatMap loops, test 2") { implicit sc =>
+    def loop(n: Int, acc: Long): UIO[Long] =
+      BIO.unit.flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1).asyncBoundary
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture

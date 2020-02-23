@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -961,7 +961,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       .async0[Nothing, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
       .executeOn(s2)
       .redeem(_ => 2, identity)
-      .redeemFatal(_ => 3, identity)
+      .redeemCause(_ => 3, identity)
       .runToFuture(s)
 
     for (result <- f) yield {

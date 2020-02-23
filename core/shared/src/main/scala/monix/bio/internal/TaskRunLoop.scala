@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,21 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO
-import monix.bio.BIO.{Async, Context, ContextSwitch, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
+import monix.bio.BIO.{
+  Async,
+  Context,
+  ContextSwitch,
+  Error,
+  Eval,
+  EvalTotal,
+  FlatMap,
+  Map,
+  Now,
+  Suspend,
+  SuspendTotal,
+  Termination
+}
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
 import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
@@ -31,17 +45,6 @@ private[bio] object TaskRunLoop {
   type Current = BIO[Any, Any]
   type Bind = Any => BIO[Any, Any]
   type CallStack = ChunkedArrayStack[Bind]
-
-  // Wrapper to report any error type to Scheduler
-  final case class WrappedException[E](e: E) extends Exception(e.toString, null, true, false)
-
-  object WrappedException {
-
-    def wrap[E](e: E): Throwable = e match {
-      case th: Throwable => th
-      case _ => new WrappedException(e)
-    }
-  }
 
   /** Starts or resumes evaluation of the run-loop from where it left
     * off. This is the complete run-loop.
@@ -56,7 +59,8 @@ private[bio] object TaskRunLoop {
     rcb: TaskRestartCallback,
     bFirst: Bind,
     bRest: CallStack,
-    frameIndex: FrameIndex): Unit = {
+    frameIndex: FrameIndex
+  ): Unit = {
 
     val cba = cb.asInstanceOf[BiCallback[Any, Any]]
     var current: Current = source
@@ -97,6 +101,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = Termination(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirstRef ne null) {
               if (bRestRef eq null) bRestRef = ChunkedArrayStack()
@@ -114,6 +128,14 @@ private[bio] object TaskRunLoop {
               case ex if NonFatal(ex) => current = Error(ex)
             }
 
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = Termination(ex)
+            }
+
           case Error(error) =>
             findErrorHandler[Any](bFirstRef, bRestRef) match {
               case null =>
@@ -123,21 +145,21 @@ private[bio] object TaskRunLoop {
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 currentIndex = em.nextFrameIndex(currentIndex)
                 bFirstRef = null
             }
 
-          case FatalError(error) =>
-            findFatalErrorHandler[Any](bFirstRef, bRestRef) match {
+          case Termination(error) =>
+            findTerminationHandler[Any](bFirstRef, bRestRef) match {
               case null =>
-                if (!cba.tryOnFatalError(error)) context.scheduler.reportFailure(error)
+                if (!cba.tryOnTermination(error)) context.scheduler.reportFailure(error)
                 return
               case bind =>
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recoverFatal(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 currentIndex = em.nextFrameIndex(currentIndex)
                 bFirstRef = null
             }
@@ -181,7 +203,7 @@ private[bio] object TaskRunLoop {
               }
             } catch {
               case e if NonFatal(e) && catchError =>
-                current = FatalError(e)
+                current = Termination(e)
             }
         }
 
@@ -195,7 +217,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = FatalError(ex)
+                case ex if NonFatal(ex) => current = Termination(ex)
               }
               currentIndex = em.nextFrameIndex(currentIndex)
               hasUnboxed = false
@@ -220,7 +242,8 @@ private[bio] object TaskRunLoop {
     cb: BiCallback[E, A],
     rcb: TaskRestartCallback,
     bindCurrent: Bind,
-    bindRest: CallStack): Unit = {
+    bindRest: CallStack
+  ): Unit = {
 
     val savedLocals =
       if (context.options.localContextPropagation) Local.getContext()
@@ -266,7 +289,8 @@ private[bio] object TaskRunLoop {
     opts: BIO.Options,
     // TODO: should it be [E, A]?
     cb: BiCallback[Any, A],
-    isCancelable: Boolean = true): CancelToken[BIO[E, ?]] = {
+    isCancelable: Boolean = true
+  ): CancelToken[BIO[E, ?]] = {
 
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
@@ -304,6 +328,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = Termination(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -322,6 +356,14 @@ private[bio] object TaskRunLoop {
                 current = Error(ex)
             }
 
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = Termination(ex)
+            }
+
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
@@ -331,21 +373,21 @@ private[bio] object TaskRunLoop {
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
 
-          case FatalError(error) =>
-            findFatalErrorHandler[Any](bFirst, bRest) match {
+          case Termination(error) =>
+            findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
-                if (!cb.tryOnFatalError(error)) scheduler.reportFailure(error)
+                if (!cb.tryOnTermination(error)) scheduler.reportFailure(error)
                 return BIO.unit
               case bind =>
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
                   current = bind.recoverFatal(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -360,7 +402,8 @@ private[bio] object TaskRunLoop {
               bRest,
               frameIndex,
               forceFork = false,
-              isCancelable = isCancelable)
+              isCancelable = isCancelable
+            )
         }
 
         if (hasUnboxed) {
@@ -373,7 +416,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = FatalError(ex)
+                case ex if NonFatal(ex) => current = Termination(ex)
               }
               frameIndex = em.nextFrameIndex(frameIndex)
               hasUnboxed = false
@@ -392,7 +435,8 @@ private[bio] object TaskRunLoop {
           bRest,
           frameIndex,
           forceFork = true,
-          isCancelable = true)
+          isCancelable = true
+        )
       }
     } while (true)
     // $COVERAGE-OFF$
@@ -441,6 +485,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = Termination(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -458,26 +512,34 @@ private[bio] object TaskRunLoop {
               case ex if NonFatal(ex) => current = Error(ex)
             }
 
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = Termination(ex)
+            }
+
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
-              case null => throw WrappedException.wrap(error)
+              case null => throw UncaughtErrorException.wrap(error)
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
 
-          case FatalError(error) =>
-            findFatalErrorHandler[Any](bFirst, bRest) match {
+          case Termination(error) =>
+            findTerminationHandler[Any](bFirst, bRest) match {
               case null => throw error
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
                   current = bind.recoverFatal(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -495,7 +557,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = FatalError(ex)
+                case ex if NonFatal(ex) => current = Termination(ex)
               }
               frameIndex = em.nextFrameIndex(frameIndex)
               hasUnboxed = false
@@ -557,6 +619,16 @@ private[bio] object TaskRunLoop {
                 current = Error(e)
             }
 
+          case EvalTotal(thunk) =>
+            try {
+              unboxed = thunk().asInstanceOf[AnyRef]
+              hasUnboxed = true
+              current = null
+            } catch {
+              case e if NonFatal(e) =>
+                current = Termination(e)
+            }
+
           case bindNext @ Map(fa, _, _) =>
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -574,6 +646,14 @@ private[bio] object TaskRunLoop {
               case ex if NonFatal(ex) => current = Error(ex)
             }
 
+          case SuspendTotal(thunk) =>
+            // Try/catch described as statement to prevent ObjectRef ;-)
+            try {
+              current = thunk()
+            } catch {
+              case ex if NonFatal(ex) => current = Termination(ex)
+            }
+
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
@@ -582,20 +662,20 @@ private[bio] object TaskRunLoop {
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
                   current = bind.recover(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
 
-          case FatalError(error) =>
-            findFatalErrorHandler[Any](bFirst, bRest) match {
+          case Termination(error) =>
+            findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
                 return CancelableFuture.failed(error)
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
                   current = bind.recoverFatal(error)
-                } catch { case e if NonFatal(e) => current = FatalError(e) }
+                } catch { case e if NonFatal(e) => current = Termination(e) }
                 frameIndex = em.nextFrameIndex(frameIndex)
                 bFirst = null
             }
@@ -621,7 +701,7 @@ private[bio] object TaskRunLoop {
               try {
                 current = bind(unboxed)
               } catch {
-                case ex if NonFatal(ex) => current = FatalError(ex)
+                case ex if NonFatal(ex) => current = Termination(ex)
               }
               frameIndex = em.nextFrameIndex(frameIndex)
               hasUnboxed = false
@@ -646,7 +726,8 @@ private[bio] object TaskRunLoop {
     rcb: TaskRestartCallback,
     bFirst: Bind,
     bRest: CallStack,
-    nextFrame: FrameIndex): Unit = {
+    nextFrame: FrameIndex
+  ): Unit = {
 
     // We are going to resume the frame index from where we left,
     // but only if no real asynchronous execution happened. So in order
@@ -676,20 +757,23 @@ private[bio] object TaskRunLoop {
     bRest: CallStack,
     nextFrame: FrameIndex,
     isCancelable: Boolean,
-    forceFork: Boolean): CancelToken[BIO[E, ?]] = {
+    forceFork: Boolean
+  ): CancelToken[BIO[E, ?]] = {
 
     val context = Context(
       scheduler,
       opts,
       if (isCancelable) TaskConnection[E]()
-      else TaskConnection.uncancelable[E])
+      else TaskConnection.uncancelable[E]
+    )
 
     if (!forceFork) source match {
       case async: Async[Any, Any] =>
         executeAsyncTask(async, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, nextFrame)
-    } else {
+    }
+    else {
       restartAsync(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest)
     }
     context.connection.cancel
@@ -703,7 +787,8 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean): CancelableFuture[Either[E, A]] = {
+    forceFork: Boolean
+  ): CancelableFuture[Either[E, A]] = {
 
     val p = Promise[Either[E, A]]()
     val cb = BiCallback.fromPromise(p).asInstanceOf[BiCallback[Any, Any]]
@@ -715,7 +800,8 @@ private[bio] object TaskRunLoop {
         executeAsyncTask(async, context, cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context, cb, null, bFirst, bRest, nextFrame)
-    } else {
+    }
+    else {
       restartAsync(current, context, cb, null, bFirst, bRest)
     }
 
@@ -730,7 +816,8 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean): Either[BIO[E, A], A] = {
+    forceFork: Boolean
+  ): Either[BIO[E, A], A] = {
 
     val ctx = Context[Any](scheduler, opts)
     val start: Start[Any, Any] =
@@ -746,7 +833,8 @@ private[bio] object TaskRunLoop {
         start.asInstanceOf[Start[E, A]],
         trampolineBefore = false,
         trampolineAfter = false
-      ))
+      )
+    )
   }
 
   private[internal] def findErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, BIO[E, Any]] = {
@@ -770,9 +858,10 @@ private[bio] object TaskRunLoop {
     }
   }
 
-  private[internal] def findFatalErrorHandler[E](
+  private[internal] def findTerminationHandler[E](
     bFirst: Bind,
-    bRest: CallStack): StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] = {
+    bRest: CallStack
+  ): StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] = {
     bFirst match {
       case ref: StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] @unchecked => ref
       case _ =>

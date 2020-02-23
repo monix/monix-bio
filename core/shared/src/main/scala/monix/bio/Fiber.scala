@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +18,8 @@
 package monix.bio
 
 import cats.effect.CancelToken
-import monix.bio.internal.TaskConnection
-import monix.execution.schedulers.TrampolineExecutionContext
 
-import scala.concurrent.Promise
-import scala.util.{Failure, Success}
-
-/** `Fiber` represents the (pure) result of a [[Task]] being started concurrently
+/** `Fiber` represents the (pure) result of a [[BIO]] being started concurrently
   * and that can be either joined or cancelled.
   *
   * You can think of fibers as being lightweight threads, a fiber being a
@@ -33,9 +28,9 @@ import scala.util.{Failure, Success}
   * For example a `Fiber` value is the result of evaluating [[BIO.start]]:
   *
   * {{{
-  *   val task = Task.evalAsync(println("Hello!"))
+  *   val task = UIO.evalAsync(println("Hello!"))
   *
-  *   val forked: Task[Fiber[Unit]] = task.start
+  *   val forked: UIO[Fiber[Unit]] = task.start
   * }}}
   *
   * Usage example:
@@ -69,7 +64,7 @@ trait Fiber[E, A] extends cats.effect.Fiber[BIO[E, ?], A] {
     * of the underlying fiber is already complete, then there's nothing
     * to cancel.
     */
-  def cancel: CancelToken[BIO[E, ?]] // TODO: figure out a way to return CancelToken[UIO]
+  def cancel: CancelToken[UIO]
 
   /** Returns a new task that will await for the completion of the
     * underlying fiber, (asynchronously) blocking the current run-loop
@@ -83,34 +78,8 @@ object Fiber {
   /**
     * Builds a [[Fiber]] value out of a `task` and its cancelation token.
     */
-  def apply[E, A](task: BIO[E, A], cancel: CancelToken[BIO[E, ?]]): Fiber[E, A] =
+  def apply[E, A](task: BIO[E, A], cancel: CancelToken[UIO]): Fiber[E, A] =
     new Tuple(task, cancel)
 
-  // TODO: test, completely new function, perhaps we can use CancelablePromise?
-  // TODO: should we use trampolined scheduler?
-  def fromPromise[E, A](p: Promise[Either[E, A]], conn: TaskConnection[E]): Fiber[E, A] = {
-    val join = BIO.Async[E, A] { (ctx, cb) =>
-      // Short-circuit for already completed `Future`
-      p.future.value match {
-        case Some(Success(value)) =>
-          cb(value)
-        case Some(Failure(ex)) =>
-          cb.onFatalError(ex)
-        case None =>
-          // Cancellation needs to be linked to the active task
-          ctx.connection.push(conn.cancel)(ctx.scheduler)
-          p.future.onComplete {
-            case Success(value) =>
-              ctx.connection.pop()
-              cb(value)
-            case Failure(ex) =>
-              ctx.connection.pop()
-              cb.onFatalError(ex)
-          }(TrampolineExecutionContext.immediate)
-      }
-    }
-    new Tuple(join, conn.cancel)
-  }
-
-  private final case class Tuple[E, A](join: BIO[E, A], cancel: CancelToken[BIO[E, ?]]) extends Fiber[E, A]
+  private final case class Tuple[E, A](join: BIO[E, A], cancel: CancelToken[UIO]) extends Fiber[E, A]
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@ import cats.laws._
 import cats.laws.discipline._
 import monix.bio.internal.BiCallback
 import monix.execution.atomic.{Atomic, AtomicInt}
-import monix.execution.exceptions.DummyException
+import monix.execution.exceptions.{DummyException, UncaughtErrorException}
 import monix.execution.internal.Platform
 
 import scala.util.{Failure, Success, Try}
@@ -31,7 +31,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
     implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
     val maxCount = Platform.recommendedBatchSize * 4
 
-    def loop(count: AtomicInt): Task[Unit] =
+    def loop(count: AtomicInt): UIO[Unit] =
       if (count.incrementAndGet() >= maxCount) BIO.unit
       else
         BIO.unit.flatMap(_ => loop(count))
@@ -48,7 +48,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val maxCount = Platform.recommendedBatchSize * 4
     val expected = Platform.recommendedBatchSize
 
-    def loop(count: AtomicInt): Task[Unit] =
+    def loop(count: AtomicInt): UIO[Unit] =
       if (count.getAndIncrement() >= maxCount) BIO.unit
       else
         BIO.unit.flatMap(_ => loop(count))
@@ -72,7 +72,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val maxCount = Platform.recommendedBatchSize * 4
     val expected = Platform.recommendedBatchSize
 
-    def loop(count: AtomicInt): Task[Unit] =
+    def loop(count: AtomicInt): BIO[Int, Unit] =
       if (count.getAndIncrement() >= maxCount) BIO.unit
       else
         BIO.unit.flatMap(_ => loop(count))
@@ -83,15 +83,15 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val c = loop(atomic)
       .executeWithOptions(_.enableAutoCancelableRunLoops)
       .runAsync(
-        new BiCallback[Cause[Throwable], Unit] {
-          override def onFatalError(e: Throwable): Unit =
+        new BiCallback[Cause[Int], Unit] {
+          override def onTermination(e: Throwable): Unit =
             result = Some(Failure(e))
 
           override def onSuccess(value: Unit): Unit =
             result = Some(Success(value))
 
-          override def onError(e: Cause[Throwable]): Unit =
-            result = Some(Failure(e.flatten))
+          override def onError(e: Cause[Int]): Unit =
+            result = Some(Failure(e.fold(identity, UncaughtErrorException.wrap)))
         }
       )
 
@@ -104,38 +104,38 @@ object TaskFlatMapSuite extends BaseTestSuite {
   }
 
   test("redeemWith derives flatMap") { implicit s =>
-    check2 { (fa: Task[Int], f: Int => Task[Int]) =>
+    check2 { (fa: BIO[String, Int], f: Int => BIO[String, Int]) =>
       fa.redeemWith(BIO.raiseError, f) <-> fa.flatMap(f)
     }
   }
 
   test("redeemWith derives onErrorHandleWith") { implicit s =>
-    check2 { (fa: Task[Int], f: Throwable => Task[Int]) =>
+    check2 { (fa: BIO[String, Int], f: String => BIO[String, Int]) =>
       fa.redeemWith(f, BIO.pure) <-> fa.onErrorHandleWith(f)
     }
   }
 
   test("redeem derives map . onErrorHandle") { implicit s =>
-    check2 { (fa: Task[Int], f: Int => Int) =>
-      fa.redeem(e => throw e, f) <-> fa.map(f).onErrorHandle(e => throw e)
+    check2 { (fa: BIO[String, Int], f: Int => Int) =>
+      fa.redeem(e => throw DummyException(e), f) <-> fa.map(f).onErrorHandle(e => throw DummyException(e))
     }
   }
 
   test("redeem derives onErrorHandle") { implicit s =>
-    check2 { (fa: Task[Int], f: Throwable => Int) =>
+    check2 { (fa: BIO[String, Int], f: String => Int) =>
       fa.redeem(f, x => x) <-> fa.onErrorHandle(f)
     }
   }
 
   test("redeemWith can recover") { implicit s =>
-    val dummy = new DummyException("dummy")
+    val dummy = "dummy"
     val task = BIO.raiseError(dummy).redeemWith(_ => BIO.now(1), BIO.now)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("redeem can recover") { implicit s =>
-    val dummy = DummyException("dummy")
+    val dummy = "dummy"
     val task: UIO[Int] = BIO.raiseError(dummy).redeem(_ => 1, identity)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
@@ -143,7 +143,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
   test(">> is stack safe for infinite loops") { implicit s =>
     var wasCancelled = false
-    def looped: Task[Unit] = BIO.cancelBoundary >> looped
+    def looped: UIO[Unit] = BIO.cancelBoundary >> looped
     val future = looped.doOnCancel(UIO { wasCancelled = true }).runToFuture
     future.cancel()
     s.tick()

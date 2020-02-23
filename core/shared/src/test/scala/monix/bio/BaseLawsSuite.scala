@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,12 +48,13 @@ trait BaseLawsSuite extends monix.execution.BaseLawsSuite with ArbitraryInstance
 
 trait ArbitraryInstances extends ArbitraryInstancesBase {
 
-  implicit def equalityWRYYY[E, A](
+  implicit def equalityBIO[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],
     sc: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[BIO[E, A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[BIO[E, A]] = {
 
     new Eq[BIO[E, A]] {
       def eqv(lh: BIO[E, A], rh: BIO[E, A]): Boolean =
@@ -65,7 +66,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[UIO[A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[UIO[A]] = {
 
     new Eq[UIO[A]] {
       def eqv(lh: UIO[A], rh: UIO[A]): Boolean =
@@ -81,7 +83,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[BIO.Par[E, A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[BIO.Par[E, A]] = {
     new Eq[BIO.Par[E, A]] {
       import BIO.Par.unwrap
       def eqv(lh: BIO.Par[E, A], rh: BIO.Par[E, A]): Boolean =
@@ -104,16 +107,19 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       getArbitrary[A].map(BIO.pure)
 
     def genEvalAsync: Gen[BIO[E, A]] =
-      getArbitrary[A].map(BIO.evalAsync(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)))
+      getArbitrary[A].map(UIO.evalAsync(_))
 
     def genEval: Gen[BIO[E, A]] =
       Gen.frequency(
-        1 -> getArbitrary[A].map(BIO.eval(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex))),
-        1 -> getArbitrary[A].map(BIO(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)))
+        1 -> getArbitrary[A].map(BIO.evalTotal(_)),
+        1 -> getArbitrary[A].map(UIO(_))
       )
 
-    def genFail: Gen[BIO[E, A]] =
+    def genError: Gen[BIO[E, A]] =
       getArbitrary[E].map(BIO.raiseError)
+
+    def genTerminate: Gen[BIO[E, A]] =
+      getArbitrary[Throwable].map(BIO.terminate)
 
     def genAsync: Gen[BIO[E, A]] =
       getArbitrary[(Either[E, A] => Unit) => Unit].map(TaskCreate.async)
@@ -133,13 +139,14 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         .map(k => TaskCreate.async(k).flatMap(x => x))
 
     def genBindSuspend: Gen[BIO[E, A]] =
-      getArbitrary[A].map(BIO.evalAsync(_).onErrorHandleWith(ex => BIO.raiseFatalError(ex)).flatMap(BIO.pure))
+      getArbitrary[A].map(UIO.evalAsync(_).flatMap(BIO.pure))
 
     def genSimpleTask = Gen.frequency(
       1 -> genPure,
       1 -> genEval,
       1 -> genEvalAsync,
-      1 -> genFail,
+      1 -> genError,
+      1 -> genTerminate,
       1 -> genAsync,
       1 -> genNestedAsync,
       1 -> genBindSuspend
@@ -153,20 +160,20 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
     def genFlatMap: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f <- getArbitrary[A => BIO[E, A]]
+        f   <- getArbitrary[A => BIO[E, A]]
       } yield ioa.flatMap(f)
 
     def getMapOne: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f <- getArbitrary[A => A]
+        f   <- getArbitrary[A => A]
       } yield ioa.map(f)
 
     def getMapTwo: Gen[BIO[E, A]] =
       for {
         ioa <- genSimpleTask
-        f1 <- getArbitrary[A => A]
-        f2 <- getArbitrary[A => A]
+        f1  <- getArbitrary[A => A]
+        f2  <- getArbitrary[A => A]
       } yield ioa.map(f1).map(f2)
 
     Arbitrary(
@@ -174,7 +181,8 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         1 -> genPure,
         1 -> genEvalAsync,
         1 -> genEval,
-        1 -> genFail,
+        1 -> genError,
+        1 -> genTerminate,
         1 -> genContextSwitch,
         1 -> genCancelable,
         1 -> genBindSuspend,
@@ -183,7 +191,8 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
         1 -> getMapOne,
         1 -> getMapTwo,
         2 -> genFlatMap
-      ))
+      )
+    )
   }
 
   implicit def arbitraryUIO[A: Arbitrary: Cogen]: Arbitrary[UIO[A]] = {

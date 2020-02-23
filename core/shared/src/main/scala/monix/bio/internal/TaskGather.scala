@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,9 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
+import monix.bio.{BIO, UIO}
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{Callback, Scheduler}
 
 import scala.collection.mutable
@@ -34,7 +34,8 @@ private[bio] object TaskGather {
     */
   def apply[E, A, M[X] <: Iterable[X]](
     in: Iterable[BIO[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
+    makeBuilder: () => mutable.Builder[A, M[A]]
+  ): BIO[E, M[A]] = {
     Async(
       new Register(in, makeBuilder),
       trampolineBefore = true,
@@ -50,8 +51,8 @@ private[bio] object TaskGather {
   // a full async boundary!
   private final class Register[E, A, M[X] <: Iterable[X]](
     in: Iterable[BIO[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]])
-      extends ForkedRegister[E, M[A]] {
+    makeBuilder: () => mutable.Builder[A, M[A]]
+  ) extends ForkedRegister[E, M[A]] {
 
     def apply(context: Context[E], finalCallback: BiCallback[E, M[A]]): Unit = {
       // We need a monitor to synchronize on, per evaluation!
@@ -70,7 +71,8 @@ private[bio] object TaskGather {
       // MUST BE synchronized by `lock`!
       // MUST NOT BE called if isActive == false!
       def maybeSignalFinal(mainConn: TaskConnection[E], finalCallback: Callback[E, M[A]])(
-        implicit s: Scheduler): Unit = {
+        implicit s: Scheduler
+      ): Unit = {
 
         completed += 1
         if (completed >= tasksCount) {
@@ -101,12 +103,12 @@ private[bio] object TaskGather {
           results = null // GC relief
           finalCallback.onError(ex)
         } else {
-          s.reportFailure(WrappedException.wrap(ex))
+          s.reportFailure(UncaughtErrorException.wrap(ex))
         }
       }
 
       // MUST BE synchronized by `lock`!
-      def reportFatalError(mainConn: TaskConnection[E], ex: Throwable)(implicit s: Scheduler): Unit = {
+      def reportTermination(mainConn: TaskConnection[E], ex: Throwable)(implicit s: Scheduler): Unit = {
 
         if (isActive) {
           isActive = false
@@ -114,7 +116,7 @@ private[bio] object TaskGather {
           mainConn.pop().runAsyncAndForget
           tasks = null // GC relief
           results = null // GC relief
-          finalCallback.onFatalError(ex)
+          finalCallback.onTermination(ex)
         } else {
           s.reportFailure(ex)
         }
@@ -140,7 +142,7 @@ private[bio] object TaskGather {
           // Collecting all cancelables in a buffer, because adding
           // cancelables one by one in our `CompositeCancelable` is
           // expensive, so we do it at the end
-          val allCancelables = ListBuffer.empty[CancelToken[BIO[E, ?]]]
+          val allCancelables = ListBuffer.empty[CancelToken[UIO]]
 
           // We need a composite because we are potentially starting tasks
           // in parallel and thus we need to cancel everything
@@ -170,8 +172,8 @@ private[bio] object TaskGather {
                 def onError(ex: E): Unit =
                   lock.synchronized(reportError(mainConn, ex))
 
-                override def onFatalError(e: Throwable): Unit =
-                  lock.synchronized(reportFatalError(mainConn, e))
+                override def onTermination(e: Throwable): Unit =
+                  lock.synchronized(reportTermination(mainConn, e))
               }
             )
 
@@ -187,7 +189,7 @@ private[bio] object TaskGather {
         case ex if NonFatal(ex) =>
           // We are still under the lock.synchronize block
           // so this call is safe
-          reportFatalError(context.connection, ex)(context.scheduler)
+          reportTermination(context.connection, ex)(context.scheduler)
       }
     }
   }

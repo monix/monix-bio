@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,26 +19,20 @@ package monix.bio
 
 /** Represent a complete cause of the failed Task
   * exposing both typed and untyped error channel.
-  *
-  * Left means a fatal (untyped) error.
-  * Right means a typed error.
-  *
-  * WARNING: This one will change for sure. Currently I'm considering different options
-  * on how to report errors when there is a need to handle both cases or when
-  * there was more than one error at once.
   */
-final case class Cause[+E](value: Either[Throwable, E]) extends AnyVal {
+sealed abstract class Cause[+E] extends Product with Serializable {
+  def fold[B](fa: Throwable => B, fb: E => B): B =
+    this match {
+      case Cause.Error(value) => fb(value)
+      case Cause.Termination(value) => fa(value)
+    }
 
-  def flatten(implicit E: E <:< Throwable): Throwable =
-    value.fold(identity, e => E(e))
-
-  def fold[C](fa: Throwable => C, fb: E => C): C =
-    value.fold(fa, fb)
+  def toThrowable(implicit E: E <:< Throwable): Throwable =
+    fold(identity, e => E(e))
 }
 
 object Cause {
-  def fatal(t: Throwable): Cause[Nothing] = Cause(Left(t))
+  final case class Error[+E](value: E) extends Cause[E]
 
-  def typed[E](e: E): Cause[E] =
-    Cause(Right(e))
+  final case class Termination(value: Throwable) extends Cause[Nothing]
 }

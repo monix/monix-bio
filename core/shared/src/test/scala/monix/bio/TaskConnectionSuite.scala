@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ import monix.execution.internal.Platform
 object TaskConnectionSuite extends BaseTestSuite {
   test("initial push") { implicit s =>
     var effect = 0
-    val initial = BIO { effect += 1 }
+    val initial = UIO { effect += 1 }
 
     val c = TaskConnection[Throwable]()
     c push initial
@@ -41,7 +41,7 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("cancels Task after being canceled") { implicit s =>
     var effect = 0
-    val initial = BIO { effect += 1 }
+    val initial = UIO { effect += 1 }
 
     val c = TaskConnection[Throwable]()
     c.cancel.runAsyncAndForget; s.tick()
@@ -81,8 +81,8 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("push two, pop one") { implicit s =>
     var effect = 0
-    val initial1 = BIO { effect += 1 }
-    val initial2 = BIO { effect += 2 }
+    val initial1 = UIO { effect += 1 }
+    val initial2 = UIO { effect += 2 }
 
     val c = TaskConnection[Throwable]()
     c.push(initial1)
@@ -99,7 +99,7 @@ object TaskConnectionSuite extends BaseTestSuite {
   test("cancel the second time is a no-op") { implicit s =>
     var effect = 0
     val c = TaskConnection[Throwable]()
-    c.push(BIO { effect += 1 })
+    c.push(UIO { effect += 1 })
 
     c.cancel.runAsyncAndForget
     assertEquals(effect, 1)
@@ -109,8 +109,8 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("push two, pop two") { implicit s =>
     var effect = 0
-    val initial1 = BIO { effect += 1 }
-    val initial2 = BIO { effect += 2 }
+    val initial1 = UIO { effect += 1 }
+    val initial2 = UIO { effect += 2 }
 
     val c = TaskConnection[Throwable]()
     c.push(initial1)
@@ -204,7 +204,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     val cancelables = (0 until count).map(_ => BooleanCancelable())
     val connections1 = (0 until count).map(_ => TaskConnection[Throwable]())
     val connections2 = (0 until count).map(_ => TaskConnection[Throwable]())
-    val tasks = (0 until count).map(_ => BIO { effect += 1 })
+    val tasks = (0 until count).map(_ => UIO { effect += 1 })
 
     val sc = TaskConnection[Throwable]()
     sc.pushConnections(connections1: _*)
@@ -219,7 +219,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     assertEquals(effect, 0)
 
     sc.cancel.runAsyncAndForget; s.tick()
-    for (c <- cancelables) assert(c.isCanceled, "r.isCanceled")
+    for (c   <- cancelables) assert(c.isCanceled, "r.isCanceled")
     for (cn1 <- connections1) assert(cn1.isCanceled, "cn1.isCanceled")
     for (cn2 <- connections2) assert(cn2.isCanceled, "cn2.isCanceled")
     assertEquals(effect, 100)
@@ -231,7 +231,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     val cancelables = (0 until count).map(_ => BooleanCancelable())
     val connections1 = (0 until count).map(_ => TaskConnection[Throwable]())
     val connections2 = (0 until count).map(_ => TaskConnection[Throwable]())
-    val tasks = (0 until count).map(_ => BIO { effect += 1 })
+    val tasks = (0 until count).map(_ => UIO { effect += 1 })
 
     val sc = TaskConnection[Throwable]()
     sc.cancel.runAsyncAndForget; s.tick()
@@ -247,7 +247,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     for (cn <- connections2) sc.push(cn)
     s.tick()
 
-    for (c <- cancelables) assert(c.isCanceled, "r.isCanceled")
+    for (c   <- cancelables) assert(c.isCanceled, "r.isCanceled")
     for (cn1 <- connections1) assert(cn1.isCanceled, "cn1.isCanceled")
     for (cn2 <- connections2) assert(cn2.isCanceled, "cn2.isCanceled")
     assertEquals(effect, 100)
@@ -299,7 +299,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     assert(!t.isCanceled, "!t.isCanceled")
 
     var effect = 0
-    val tk = BIO { effect += 1 }
+    val tk = UIO { effect += 1 }
     val bc = BooleanCancelable()
     val c2 = TaskConnection[Throwable]()
     val c3 = TaskConnection[Throwable]()
@@ -330,7 +330,7 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("throwing error in Task on cancel all") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.raiseError(dummy)
+    val task = BIO.terminate(dummy)
 
     val c = TaskConnection[Throwable]()
     c.push(task)
@@ -341,9 +341,9 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("throwing multiple errors in Tasks on cancel all") { implicit s =>
     val dummy1 = DummyException("dummy1")
-    val task1 = BIO.raiseError(dummy1)
+    val task1 = BIO.terminate(dummy1)
     val dummy2 = DummyException("dummy2")
-    val task2 = BIO.raiseError(dummy2)
+    val task2 = BIO.terminate(dummy2)
 
     val c = TaskConnection[Throwable]()
     c.push(task1)
@@ -368,7 +368,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     c.cancel.runAsyncAndForget; s.tick()
 
     val dummy = DummyException("dummy")
-    val task = BIO.raiseError(dummy)
+    val task = BIO.terminate(dummy)
     c.push(task); s.tick()
 
     assertEquals(s.state.lastReportedError, dummy)

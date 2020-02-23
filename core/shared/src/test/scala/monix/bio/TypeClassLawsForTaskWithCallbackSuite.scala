@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,14 @@
 
 package monix.bio
 
+import cats.Eq
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{CoflatMapTests, ParallelTests, ApplicativeTests, BifunctorTests}
-import cats.{Eq, Applicative}
+import cats.kernel.laws.discipline.MonoidTests
+import cats.laws.discipline.{BifunctorTests, CoflatMapTests, CommutativeApplicativeTests, ParallelTests}
 import monix.bio.BIO.Options
-import monix.bio.instances.CatsParallelForTask
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.schedulers.TestScheduler
+
 import scala.concurrent.{Future, Promise}
 import scala.util.Either
 
@@ -45,19 +46,17 @@ object TypeClassLawsForTaskAutoCancelableWithCallbackSuite
     )
 
 class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
-
-  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
-
-  override implicit def equalityWRYYY[E, A](
+  override implicit def equalityBIO[E, A](
     implicit
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: Options): Eq[BIO[E, A]] = {
+    opts: Options
+  ): Eq[BIO[E, A]] = {
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       task.runAsyncOpt {
-        case Left(e) => p.failure(WrappedException.wrap(e)) // todo: should it be failure or left
+        case Left(e) => p.failure(UncaughtErrorException.wrap(e)) // todo: should it be failure or left
         case Right(a) => p.success(Right(a))
       }
       p.future
@@ -68,11 +67,12 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: BIO.Options = BIO.defaultOptions): Eq[UIO[A]] = {
+    opts: BIO.Options = BIO.defaultOptions
+  ): Eq[UIO[A]] = {
     Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
       task.runAsyncOpt {
-        case Left(e) => p.failure(WrappedException.wrap(e))
+        case Left(e) => p.failure(UncaughtErrorException.wrap(e))
         case Right(a) => p.success(a)
       }
       p.future
@@ -84,13 +84,14 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
-    opts: Options): Eq[BIO.Par[E, A]] = {
+    opts: Options
+  ): Eq[BIO.Par[E, A]] = {
 
     import BIO.Par.unwrap
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       unwrap(task).runAsyncOpt {
-        case Left(e) => p.failure(WrappedException.wrap(e))
+        case Left(e) => p.failure(UncaughtErrorException.wrap(e))
         case Right(a) => p.success(Right(a))
       }
       p.future
@@ -109,17 +110,17 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     ConcurrentEffectTests[Task].effect[Int, Int, Int]
   }
 
-  checkAllAsync("Applicative[Task.Par]") { implicit ec =>
-    ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int]
+  checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
+    CommutativeApplicativeTests[BIO.Par[String, ?]].commutativeApplicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
     ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
   }
 
-//  checkAllAsync("Monoid[Task[Int]]") { implicit ec =>
-//    MonoidTests[Task[Int]].monoid
-//  }
+  checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>
+    MonoidTests[BIO[Throwable, Int]].monoid
+  }
 
   checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
     BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]

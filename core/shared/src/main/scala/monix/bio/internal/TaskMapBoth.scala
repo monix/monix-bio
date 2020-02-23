@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import monix.bio.BIO
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.Ack.Stop
 import monix.execution.Scheduler
 import monix.execution.atomic.PaddingStrategy.LeftRight128
@@ -59,20 +59,21 @@ private[bio] object TaskMapBoth {
           // Both tasks completed by this point, so we don't need
           // to worry about the `state` being a `Stop`
           mainConn.pop()
-          cb.onFatalError(ex)
+          cb.onTermination(ex)
       }
     }
 
     /* For signaling an error. */
     @tailrec def sendError(mainConn: TaskConnection[E], state: AtomicAny[AnyRef], cb: BiCallback[E, R], ex: E)(
-      implicit s: Scheduler): Unit = {
+      implicit s: Scheduler
+    ): Unit = {
 
       // Guarding the contract of the callback, as we cannot send an error
       // if an error has already happened because of the other task
       state.get match {
         case Stop =>
           // We've got nowhere to send the error, so report it
-          s.reportFailure(WrappedException.wrap(ex))
+          s.reportFailure(UncaughtErrorException.wrap(ex))
         case other =>
           if (!state.compareAndSet(other, Stop))
             sendError(mainConn, state, cb, ex)(s) // retry
@@ -83,12 +84,13 @@ private[bio] object TaskMapBoth {
       }
     }
 
-    /* For signaling a fatal error. */
-    @tailrec def sendFatalError(
+    /* For signaling a terminal error. */
+    @tailrec def sendTermination(
       mainConn: TaskConnection[E],
       state: AtomicAny[AnyRef],
       cb: BiCallback[E, R],
-      ex: Throwable)(implicit s: Scheduler): Unit = {
+      ex: Throwable
+    )(implicit s: Scheduler): Unit = {
 
       // Guarding the contract of the callback, as we cannot send an error
       // if an error has already happened because of the other task
@@ -98,10 +100,10 @@ private[bio] object TaskMapBoth {
           s.reportFailure(ex)
         case other =>
           if (!state.compareAndSet(other, Stop))
-            sendFatalError(mainConn, state, cb, ex)(s) // retry
+            sendTermination(mainConn, state, cb, ex)(s) // retry
           else {
             mainConn.pop().runAsyncAndForget
-            cb.onFatalError(ex)
+            cb.onTermination(ex)
           }
       }
     }
@@ -135,15 +137,15 @@ private[bio] object TaskMapBoth {
               case s @ Left(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                onFatalError(new IllegalStateException(s.toString))
+                onTermination(new IllegalStateException(s.toString))
             }
 
           def onError(ex: E): Unit = {
             sendError(mainConn, state, cb, ex)(s)
           }
 
-          override def onFatalError(e: Throwable): Unit =
-            sendFatalError(mainConn, state, cb, e)
+          override def onTermination(e: Throwable): Unit =
+            sendTermination(mainConn, state, cb, e)
         }
       )
 
@@ -163,15 +165,15 @@ private[bio] object TaskMapBoth {
               case s @ Right(_) =>
                 // This task has triggered multiple onSuccess calls
                 // violating the protocol. Should never happen.
-                onFatalError(new IllegalStateException(s.toString))
+                onTermination(new IllegalStateException(s.toString))
             }
 
           def onError(ex: E): Unit = {
             sendError(mainConn, state, cb, ex)(s)
           }
 
-          override def onFatalError(e: Throwable): Unit =
-            sendFatalError(mainConn, state, cb, e)
+          override def onTermination(e: Throwable): Unit =
+            sendTermination(mainConn, state, cb, e)
         }
       )
     }

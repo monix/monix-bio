@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,14 +37,19 @@ object TaskToStringSuite extends SimpleTestSuite {
     assertContains(ref, "BIO.Error")
   }
 
-  test("BIO.FatalError") {
-    val ref = BIO.raiseFatalError(DummyException("dummy"))
-    assertContains(ref, "BIO.FatalError")
+  test("BIO.Termination") {
+    val ref = BIO.terminate(DummyException("dummy"))
+    assertContains(ref, "BIO.Termination")
   }
 
   test("BIO.Eval") {
     val ref = BIO.eval("hello")
     assertContains(ref, "BIO.Eval")
+  }
+
+  test("BIO.EvalTotal") {
+    val ref = BIO.evalTotal("hello")
+    assertContains(ref, "BIO.EvalTotal")
   }
 
   test("BIO.Async") {
@@ -60,6 +65,11 @@ object TaskToStringSuite extends SimpleTestSuite {
   test("BIO.Suspend") {
     val ref = Task.defer(BIO.now(1))
     assertContains(ref, "BIO.Suspend")
+  }
+
+  test("BIO.SuspendTotal") {
+    val ref = BIO.suspendTotal(BIO.now(1))
+    assertContains(ref, "BIO.SuspendTotal")
   }
 
   test("BIO.Map") {

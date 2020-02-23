@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,18 +29,32 @@ object TaskBracketSuite extends BaseTestSuite {
     check2 { (task: BIO[String, Int], f: String => UIO[Unit]) =>
       val expected = task.onErrorHandleWith(e => f(e) >> BIO.raiseError(e))
       val received = task.bracketE(BIO.now) {
-        case (_, Left(Some(e))) => e.fold(BIO.raiseFatalError, f)
+        case (_, Left(Some(e))) => e.fold(BIO.terminate, f)
         case (_, _) => UIO.unit
       }
       received <-> expected
     }
   }
 
-  test("equivalence with flatMap + transformWith") { implicit sc =>
+  test("equivalence with flatMap + redeemWith") { implicit sc =>
     check3 { (acquire: BIO[Int, Int], f: Int => BIO[Int, Int], release: Int => UIO[Unit]) =>
       val expected = acquire.flatMap { a =>
         f(a).redeemWith(
           e => release(a) >> BIO.raiseError(e),
+          s => release(a) >> BIO.pure(s)
+        )
+      }
+
+      val received = acquire.bracket(f)(release)
+      received <-> expected
+    }
+  }
+
+  test("equivalence with flatMap + redeemCauseWith") { implicit sc =>
+    check3 { (acquire: BIO[Int, Int], f: Int => BIO[Int, Int], release: Int => UIO[Unit]) =>
+      val expected = acquire.flatMap { a =>
+        f(a).redeemCauseWith(
+          e => release(a) >> e.fold(BIO.terminate, BIO.raiseError),
           s => release(a) >> BIO.pure(s)
         )
       }
@@ -61,7 +75,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(Cause.fatal(dummy))))))
+    assertEquals(input, Some((1, Left(Some(Cause.Termination(dummy))))))
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
@@ -89,22 +103,22 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(Cause.typed(-99))))))
+    assertEquals(input, Some((1, Left(Some(Cause.Error(-99))))))
     assertEquals(f.value, Some(Success(Left(-99))))
   }
 
-  test("release is evaluated on fatal error") { implicit sc =>
+  test("release is evaluated on terminal error") { implicit sc =>
     val dummy = new DummyException("dummy")
     var input = Option.empty[(Int, Either[Option[Cause[Int]], Int])]
 
-    val task: BIO[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => BIO.raiseFatalError(dummy)) { (a, i) =>
+    val task: BIO[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => BIO.terminate(dummy)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
     val f = task.runToFuture
     sc.tick()
 
-    assertEquals(input, Some((1, Left(Some(Cause.fatal(dummy))))))
+    assertEquals(input, Some((1, Left(Some(Cause.Termination(dummy))))))
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
@@ -137,7 +151,7 @@ object TaskBracketSuite extends BaseTestSuite {
       .bracket { _ =>
         Task.raiseError[Int](useError)
       } { _ =>
-        BIO.raiseFatalError(releaseError)
+        BIO.terminate(releaseError)
       }
 
     val f = task.runToFuture

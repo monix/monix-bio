@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,8 +65,9 @@ class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options) extends CatsBa
   override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
     F.bracket(acquire)(use)(release)
 
-  override def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(
-    release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
+  override def bracketCase[A, B](
+    acquire: Task[A]
+  )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
     F.bracketCase(acquire)(use)(release)
 }
 
@@ -108,7 +109,8 @@ class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: BIO.Options)
 
   override def racePair[A, B](
     fa: Task[A],
-    fb: Task[B]): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
+    fb: Task[B]
+  ): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
     F.racePair(fa, fb)
 
   override def race[A, B](fa: Task[A], fb: Task[B]): Task[Either[A, B]] =

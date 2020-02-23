@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,5 +50,6 @@ object TaskRejectedExecutionSuite extends SimpleTestSuite {
     testRejected(Task.shift(limited))
     testRejected(Task.pure(0).asyncBoundary(limited))
     testRejected(Task.pure(0).executeOn(limited))
+    testRejected(Task.async0[Unit]((_, cb) => global.executeAsync(() => cb.onSuccess(()))))
   }
 }

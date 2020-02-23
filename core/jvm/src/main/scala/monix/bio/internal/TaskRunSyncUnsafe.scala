@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +21,10 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
 import monix.bio.BIO
-import monix.bio.BIO.{Async, Context, Error, Eval, FatalError, FlatMap, Map, Now, Suspend}
+import monix.bio.BIO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 
 import scala.concurrent.blocking
@@ -64,7 +65,16 @@ private[bio] object TaskRunSyncUnsafe {
             hasUnboxed = true
           } catch {
             case e if NonFatal(e) =>
-              current = FatalError(e)
+              current = Error(e)
+          }
+
+        case EvalTotal(thunk) =>
+          try {
+            unboxed = thunk().asInstanceOf[AnyRef]
+            hasUnboxed = true
+          } catch {
+            case e if NonFatal(e) =>
+              current = Termination(e)
           }
 
         case bindNext @ Map(fa, _, _) =>
@@ -80,28 +90,36 @@ private[bio] object TaskRunSyncUnsafe {
           try {
             current = thunk()
           } catch {
-            case ex if NonFatal(ex) => current = FatalError(ex)
+            case ex if NonFatal(ex) => current = Error(ex)
+          }
+
+        case SuspendTotal(thunk) =>
+          // Try/catch described as statement to prevent ObjectRef ;-)
+          try {
+            current = thunk()
+          } catch {
+            case ex if NonFatal(ex) => current = Termination(ex)
           }
 
         case Error(error) =>
           findErrorHandler[Any](bFirst, bRest) match {
-            case null => throw WrappedException.wrap(error)
+            case null => throw UncaughtErrorException.wrap(error)
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
                 current = bind.recover(error)
-              } catch { case e if NonFatal(e) => current = FatalError(e) }
+              } catch { case e if NonFatal(e) => current = Termination(e) }
               bFirst = null
           }
 
-        case FatalError(error) =>
-          findFatalErrorHandler[Any](bFirst, bRest) match {
+        case Termination(error) =>
+          findTerminationHandler[Any](bFirst, bRest) match {
             case null => throw error
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
                 current = bind.recover(error)
-              } catch { case e if NonFatal(e) => current = FatalError(e) }
+              } catch { case e if NonFatal(e) => current = Termination(e) }
               bFirst = null
           }
 
@@ -118,7 +136,7 @@ private[bio] object TaskRunSyncUnsafe {
             try {
               current = bind(unboxed)
             } catch {
-              case ex if NonFatal(ex) => current = FatalError(ex)
+              case ex if NonFatal(ex) => current = Termination(ex)
             }
             hasUnboxed = false
             unboxed = null
@@ -137,7 +155,8 @@ private[bio] object TaskRunSyncUnsafe {
     scheduler: Scheduler,
     opts: BIO.Options,
     bFirst: Bind,
-    bRest: CallStack): A = {
+    bRest: CallStack
+  ): A = {
 
     val latch = new OneShotLatch
     val cb = new BlockingCallback[Any, Any](latch)
@@ -174,15 +193,14 @@ private[bio] object TaskRunSyncUnsafe {
 
     private[this] var success: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     def value: A = {
-      if (fatalError ne null) throw fatalError
+      if (terminalError ne null) throw terminalError
       else
         error match {
           case null => success
-          case th: Throwable => throw th
-          case e => throw new WrappedException(e)
+          case e => throw UncaughtErrorException.wrap(e)
         }
     }
 
@@ -196,8 +214,8 @@ private[bio] object TaskRunSyncUnsafe {
       latch.releaseShared(1)
     }
 
-    override def onFatalError(ex: Throwable): Unit = {
-      fatalError = ex
+    override def onTermination(ex: Throwable): Unit = {
+      terminalError = ex
       latch.releaseShared(1)
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,8 +42,9 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
     unsafeSet(conn.cancel)
 
   @tailrec
-  private def unsafeSet(ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ )(
-    implicit s: Scheduler): Unit = {
+  private def unsafeSet(
+    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
+  )(implicit s: Scheduler): Unit = {
 
     if (!state.compareAndSet(Empty, IsActive(ref))) {
       state.get() match {
@@ -66,8 +67,8 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
     }
   }
 
-  val cancel: CancelToken[BIO[E, ?]] = {
-    @tailrec def loop(): CancelToken[BIO[E, ?]] =
+  val cancel: CancelToken[UIO] = {
+    @tailrec def loop(): CancelToken[UIO] =
       state.get() match {
         case IsCanceled | IsEmptyCanceled =>
           BIO.unit
@@ -83,13 +84,14 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, ?]] {
             // $COVERAGE-ON$
           }
       }
-    BIO.suspend(loop())
+    BIO.suspendTotal(loop())
   }
 
   private def raiseError(): Nothing = {
     throw new IllegalStateException(
       "Cannot assign to SingleAssignmentCancelable, " +
-        "as it was already assigned once")
+        "as it was already assigned once"
+    )
   }
 
   private[this] val state = Atomic(Empty: State)

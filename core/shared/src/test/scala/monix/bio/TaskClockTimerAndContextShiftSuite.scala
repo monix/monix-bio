@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -143,7 +143,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("BIO.contextShift.evalOn(s2) fatal failure") { implicit s =>
     val s2 = TestScheduler()
     val dummy = DummyException("dummy")
-    val f = BIO.contextShift.evalOn(s2)(BIO.raiseFatalError(dummy)).runToFuture
+    val f = BIO.contextShift.evalOn(s2)(BIO.terminate(dummy)).runToFuture
 
     assertEquals(f.value, None)
     s.tick()
@@ -224,7 +224,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("BIO.contextShift(s).evalOn(s2) fatal failure") { implicit s =>
     val s2 = TestScheduler()
     val dummy = DummyException("dummy")
-    val f = BIO.contextShift(s).evalOn(s2)(BIO.raiseFatalError(dummy)).runToFuture
+    val f = BIO.contextShift(s).evalOn(s2)(BIO.terminate(dummy)).runToFuture
 
     assertEquals(f.value, None)
     s.tick()

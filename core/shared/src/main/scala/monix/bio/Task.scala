@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,14 @@
 
 package monix.bio
 
-import cats.effect.CancelToken
+import cats.effect.{CancelToken, ConcurrentEffect, Effect}
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.compat.BuildFrom
 import monix.execution.{Callback, CancelablePromise, Scheduler}
+import monix.catnap.FutureLift
+import monix.execution.{Callback, CancelablePromise, Scheduler}
+import org.reactivestreams.Publisher
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,10 +57,10 @@ object Task {
     BIO.raiseError(ex)
 
   /**
-   * @see See [[monix.bio.BIO.raiseFatalError]]
-   */
-  def raiseFatalError[A](ex: Throwable): Task[A] =
-    BIO.raiseFatalError(ex)
+    * @see See [[monix.bio.BIO.terminate]]
+    */
+  def terminate[A](ex: Throwable): Task[A] =
+    BIO.terminate(ex)
 
   /**
    * @see See [[monix.bio.BIO.defer]]
@@ -114,8 +117,32 @@ object Task {
     BIO.never
 
   /**
-   * @see See [[monix.bio.BIO.fromTry]]
-   */
+    * @see See [[monix.bio.BIO.from]]
+    */
+  def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): Task[A] =
+    BIO.from(fa)
+
+  /**
+    * @see See [[monix.bio.BIO.fromReactivePublisher]]
+    */
+  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
+    BIO.fromReactivePublisher(source)
+
+  /**
+    * @see See [[monix.bio.BIO.fromConcurrentEffect]]
+    */
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+    BIO.fromConcurrentEffect(fa)
+
+  /**
+    * @see See [[monix.bio.BIO.fromEffect]]
+    */
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+    BIO.fromEffect(fa)
+
+  /**
+    * @see See [[monix.bio.BIO.fromTry]]
+    */
   def fromTry[A](a: Try[A]): Task[A] =
     BIO.fromTry(a)
 
@@ -183,7 +210,19 @@ object Task {
    * @see See [[monix.bio.BIO.fromFuture]]
    */
   def fromFuture[A](f: Future[A]): Task[A] =
-    TaskFromFuture.strict(f)
+    BIO.fromFuture(f)
+
+  /**
+    * @see See [[monix.bio.BIO.fromCancelablePromise]]
+    */
+  def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
+    BIO.fromCancelablePromise(p)
+
+  /**
+    * @see See [[monix.bio.BIO.fromFutureLike]]
+    */
+  def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
+    BIO.fromFutureLike(tfa)
 
   /**
    * @see See [[monix.bio.BIO.fromCancelablePromise]]

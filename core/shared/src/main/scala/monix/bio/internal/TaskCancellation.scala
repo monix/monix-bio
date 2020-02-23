@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@ package internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO.{Async, Context}
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.atomic.{Atomic, AtomicBoolean}
 import monix.execution.schedulers.TrampolinedRunnable
 import monix.execution.{Callback, Scheduler}
@@ -65,10 +65,10 @@ private[bio] object TaskCancellation {
 
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     def run(): Unit = {
-      if (fatalError ne null) cb.onFatalError(fatalError)
+      if (terminalError ne null) cb.onTermination(terminalError)
       else if (error != null) cb.onError(error)
       else cb.onSuccess(value)
     }
@@ -86,13 +86,13 @@ private[bio] object TaskCancellation {
         this.error = e
         s.execute(this)
       } else {
-        s.reportFailure(WrappedException.wrap(e))
+        s.reportFailure(UncaughtErrorException.wrap(e))
       }
 
-    override def onFatalError(e: Throwable): Unit =
+    override def onTermination(e: Throwable): Unit =
       if (waitsForResult.getAndSet(false)) {
         conn.pop()
-        this.fatalError = e
+        this.terminalError = e
         s.execute(this)
       } else {
         s.reportFailure(e)
@@ -104,9 +104,10 @@ private[bio] object TaskCancellation {
     conn: TaskConnection[E],
     conn2: TaskConnection[E],
     cb: Callback[E, A],
-    e: E): CancelToken[BIO[E, ?]] = {
+    e: E
+  ): CancelToken[UIO] = {
 
-    BIO.suspend {
+    BIO.suspendTotal {
       if (waitsForResult.getAndSet(false))
         conn2.cancel.map { _ =>
           conn.tryReactivate()

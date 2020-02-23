@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package monix.bio.instances
 
 import cats.{Bifunctor, CoflatMap, Eval, MonadError, SemigroupK}
 import monix.bio.{BIO, UIO}
+
 import scala.util.Try
 
 /** Cats type class instances for [[monix.bio.Task Task]]

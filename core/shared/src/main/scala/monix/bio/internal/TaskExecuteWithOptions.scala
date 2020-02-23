@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ private[bio] object TaskExecuteWithOptions {
     * Implementation for `Task.executeWithOptions`
     */
   def apply[E, A](self: BIO[E, A], f: Options => Options): BIO[E, A] =
-    ContextSwitch[E, A](self, enable(f), disable)
+    ContextSwitch[E, A](self, enable(f), disable.asInstanceOf[(A, E, Context[E], Context[E]) => Context[E]])
 
   private[this] def enable[E](f: Options => Options): Context[E] => Context[E] =
     ctx => {
@@ -35,7 +35,6 @@ private[bio] object TaskExecuteWithOptions {
       else ctx
     }
 
-  // TODO: check if can be val again
-  private[this] def disable[E]: (Any, E, Context[E], Context[E]) => Context[E] =
+  private[this] val disable: (Any, Any, Context[Any], Context[Any]) => Context[Any] =
     (_, _, old, current) => current.withOptions(old.options)
 }
