@@ -254,6 +254,6 @@ object Task {
   /**
    * @see See [[monix.bio.BIO.mapBoth]]
    */
-  def mapBoth[E, A1, A2, R](fa1: Task[A1], fa2: Task[A2])(f: (A1, A2) => R): Task[R] =
+  def mapBoth[A1, A2, R](fa1: Task[A1], fa2: Task[A2])(f: (A1, A2) => R): Task[R] =
     BIO.mapBoth(fa1, fa2)(f)
 }
