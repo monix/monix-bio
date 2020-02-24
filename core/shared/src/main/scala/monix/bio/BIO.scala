@@ -1978,6 +1978,73 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def onErrorRestartIf(p: E => Boolean): BIO[E, A] =
     this.onErrorHandleWith(ex => if (p(ex)) this.onErrorRestartIf(p) else raiseError(ex))
 
+  /** On error restarts the source with a customizable restart loop.
+    *
+    * This operation keeps an internal `state`, with a start value, an internal
+    * state that gets evolved and based on which the next step gets decided,
+    * e.g. should it restart, maybe with a delay, or should it give up and
+    * re-throw the current error.
+    *
+    * Example that implements a simple retry policy that retries for a maximum
+    * of 10 times before giving up; also introduce a 1 second delay before
+    * each retry is executed:
+    *
+    * {{{
+    *   import scala.util.Random
+    *   import scala.concurrent.duration._
+    *
+    *   val task = Task {
+    *     if (Random.nextInt(20) > 10)
+    *       throw new RuntimeException("boo")
+    *     else 78
+    *   }
+    *
+    *   task.onErrorRestartLoop(10) { (err, maxRetries, retry) =>
+    *     if (maxRetries > 0)
+    *       // Next retry please; but do a 1 second delay
+    *       retry(maxRetries - 1).delayExecution(1.second)
+    *     else
+    *       // No retries left, rethrow the error
+    *       Task.raiseError(err)
+    *   }
+    * }}}
+    *
+    * A more complex exponential back-off sample:
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   // Keeps the current state, indicating the restart delay and the
+    *   // maximum number of retries left
+    *   final case class Backoff(maxRetries: Int, delay: FiniteDuration)
+    *
+    *   // Restarts for a maximum of 10 times, with an initial delay of 1 second,
+    *   // a delay that keeps being multiplied by 2
+    *   task.onErrorRestartLoop(Backoff(10, 1.second)) { (err, state, retry) =>
+    *     val Backoff(maxRetries, delay) = state
+    *     if (maxRetries > 0)
+    *       retry(Backoff(maxRetries - 1, delay * 2)).delayExecution(delay)
+    *     else
+    *       // No retries left, rethrow the error
+    *       Task.raiseError(err)
+    *   }
+    * }}}
+    *
+    * The given function injects the following parameters:
+    *
+    *  1. `error` reference that was thrown
+    *  2. the current `state`, based on which a decision for the retry is made
+    *  3. `retry: S => BIO[E, B]` function that schedules the next retry
+    *
+    * @param initial is the initial state used to determine the next on error
+    *        retry cycle
+    * @param f is a function that injects the current error, state, a
+    *        function that can signal a retry is to be made and returns
+    *        the next task
+    */
+  final def onErrorRestartLoop[S, E1 >: E, B >: A](initial: S)(f: (E1, S, S => BIO[E1, B]) => BIO[E1, B]): BIO[E1, B] =
+    onErrorHandleWith(err => f(err, initial, state => (this: BIO[E1, B]).onErrorRestartLoop(state)(f)))
+
   /** Returns a new `BIO` that applies the mapping function `fa` to the
     * success channel and `fe` to the error channel.
     */
