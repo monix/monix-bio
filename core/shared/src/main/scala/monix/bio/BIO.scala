@@ -3718,7 +3718,7 @@ object BIO extends TaskInstancesLevel0 {
    *   }
    *
    *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map2(fa1, BIO.raiseError(new RuntimeException("boo"))) { (a, b) =>
+   *   BIO.map2(fa1, BIO.raiseError(new RuntimeException("boo"))) { (a, b: Int) =>
    *     a + b
    *   }
    * }}}
@@ -3750,7 +3750,7 @@ object BIO extends TaskInstancesLevel0 {
    *   }
    *
    *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map3(fa1, BIO.raiseError(new RuntimeException("boo")), fa3) { (a, b, c) =>
+   *   BIO.map3(fa1, BIO.raiseError(new RuntimeException("boo")), fa3) { (a, b: Int, c) =>
    *     a + b + c
    *   }
    * }}}
@@ -3784,7 +3784,7 @@ object BIO extends TaskInstancesLevel0 {
    *
    *   // Yields Failure(e), because the second arg is a failure
    *   BIO.map4(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4) {
-   *     (a, b, c, d) => a + b + c + d
+   *     (a, b: Int, c, d) => a + b + c + d
    *   }
    * }}}
    *
@@ -3819,7 +3819,7 @@ object BIO extends TaskInstancesLevel0 {
    *
    *   // Yields Failure(e), because the second arg is a failure
    *   BIO.map5(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5) {
-   *     (a, b, c, d, e) => a + b + c + d + e
+   *     (a, b: Int, c, d, e) => a + b + c + d + e
    *   }
    * }}}
    *
@@ -3855,7 +3855,7 @@ object BIO extends TaskInstancesLevel0 {
    *
    *   // Yields Failure(e), because the second arg is a failure
    *   BIO.map6(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5, fa6) {
-   *     (a, b, c, d, e, f) => a + b + c + d + e + f
+   *     (a, b: Int, c, d, e, f) => a + b + c + d + e + f
    *   }
    * }}}
    *
