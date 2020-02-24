@@ -3698,6 +3698,179 @@ object BIO extends TaskInstancesLevel0 {
   def mapBoth[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
     TaskMapBoth(fa1, fa2)(f)
 
+  /** Pairs 2 `BIO` values, applying the given mapping function.
+   *
+   * Returns a new `BIO` reference that completes with the result
+   * of mapping that function to their successful results, or in
+   * failure in case either of them fails.
+   *
+   * This is a specialized [[BIO.sequence]] operation and as such
+   * the tasks are evaluated in order, one after another, the
+   * operation being described in terms of [[BIO.flatMap .flatMap]].
+   *
+   * {{{
+   *   val fa1 = BIO(1)
+   *   val fa2 = BIO(2)
+   *
+   *   // Yields Success(3)
+   *   BIO.map2(fa1, fa2) { (a, b) =>
+   *     a + b
+   *   }
+   *
+   *   // Yields Failure(e), because the second arg is a failure
+   *   BIO.map2(fa1, BIO.raiseError(new RuntimeException("boo"))) { (a, b) =>
+   *     a + b
+   *   }
+   * }}}
+   *
+   * See [[BIO.parMap2]] for parallel processing.
+   */
+  def map2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
+    for (a1 <- fa1; a2 <- fa2)
+      yield f(a1, a2)
+
+  /** Pairs 3 `BIO` values, applying the given mapping function.
+   *
+   * Returns a new `BIO` reference that completes with the result
+   * of mapping that function to their successful results, or in
+   * failure in case either of them fails.
+   *
+   * This is a specialized [[BIO.sequence]] operation and as such
+   * the tasks are evaluated in order, one after another, the
+   * operation being described in terms of [[BIO.flatMap .flatMap]].
+   *
+   * {{{
+   *   val fa1 = BIO(1)
+   *   val fa2 = BIO(2)
+   *   val fa3 = BIO(3)
+   *
+   *   // Yields Success(6)
+   *   BIO.map3(fa1, fa2, fa3) { (a, b, c) =>
+   *     a + b + c
+   *   }
+   *
+   *   // Yields Failure(e), because the second arg is a failure
+   *   BIO.map3(fa1, BIO.raiseError(new RuntimeException("boo")), fa3) { (a, b, c) =>
+   *     a + b + c
+   *   }
+   * }}}
+   *
+   * See [[Task.parMap3]] for parallel processing.
+   */
+  def map3[E, A1, A2, A3, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3])(f: (A1, A2, A3) => R): BIO[E, R] =
+    for (a1 <- fa1; a2 <- fa2; a3 <- fa3)
+      yield f(a1, a2, a3)
+
+  /** Pairs 4 `BIO` values, applying the given mapping function.
+   *
+   * Returns a new `BIO` reference that completes with the result
+   * of mapping that function to their successful results, or in
+   * failure in case either of them fails.
+   *
+   * This is a specialized [[BIO.sequence]] operation and as such
+   * the tasks are evaluated in order, one after another, the
+   * operation being described in terms of [[BIO.flatMap .flatMap]].
+   *
+   * {{{
+   *   val fa1 = BIO(1)
+   *   val fa2 = BIO(2)
+   *   val fa3 = BIO(3)
+   *   val fa4 = BIO(4)
+   *
+   *   // Yields Success(10)
+   *   BIO.map4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
+   *     a + b + c + d
+   *   }
+   *
+   *   // Yields Failure(e), because the second arg is a failure
+   *   BIO.map4(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4) {
+   *     (a, b, c, d) => a + b + c + d
+   *   }
+   * }}}
+   *
+   * See [[Task.parMap4]] for parallel processing.
+   */
+  def map4[E, A1, A2, A3, A4, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4])(
+    f: (A1, A2, A3, A4) => R): BIO[E, R] =
+    for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4)
+      yield f(a1, a2, a3, a4)
+
+  /** Pairs 5 `BIO` values, applying the given mapping function.
+   *
+   * Returns a new `BIO` reference that completes with the result
+   * of mapping that function to their successful results, or in
+   * failure in case either of them fails.
+   *
+   * This is a specialized [[BIO.sequence]] operation and as such
+   * the tasks are evaluated in order, one after another, the
+   * operation being described in terms of [[BIO.flatMap .flatMap]].
+   *
+   * {{{
+   *   val fa1 = BIO(1)
+   *   val fa2 = BIO(2)
+   *   val fa3 = BIO(3)
+   *   val fa4 = BIO(4)
+   *   val fa5 = BIO(5)
+   *
+   *   // Yields Success(15)
+   *   BIO.map5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
+   *     a + b + c + d + e
+   *   }
+   *
+   *   // Yields Failure(e), because the second arg is a failure
+   *   BIO.map5(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5) {
+   *     (a, b, c, d, e) => a + b + c + d + e
+   *   }
+   * }}}
+   *
+   * See [[Task.parMap5]] for parallel processing.
+   */
+  def map5[E, A1, A2, A3, A4, A5, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4], fa5: BIO[E, A5])(
+    f: (A1, A2, A3, A4, A5) => R): BIO[E, R] =
+    for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5)
+      yield f(a1, a2, a3, a4, a5)
+
+  /** Pairs 6 `BIO` values, applying the given mapping function.
+   *
+   * Returns a new `BIO` reference that completes with the result
+   * of mapping that function to their successful results, or in
+   * failure in case either of them fails.
+   *
+   * This is a specialized [[BIO.sequence]] operation and as such
+   * the tasks are evaluated in order, one after another, the
+   * operation being described in terms of [[BIO.flatMap .flatMap]].
+   *
+   * {{{
+   *   val fa1 = BIO(1)
+   *   val fa2 = BIO(2)
+   *   val fa3 = BIO(3)
+   *   val fa4 = BIO(4)
+   *   val fa5 = BIO(5)
+   *   val fa6 = BIO(6)
+   *
+   *   // Yields Success(21)
+   *   BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
+   *     a + b + c + d + e + f
+   *   }
+   *
+   *   // Yields Failure(e), because the second arg is a failure
+   *   BIO.map6(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5, fa6) {
+   *     (a, b, c, d, e, f) => a + b + c + d + e + f
+   *   }
+   * }}}
+   *
+   * See [[Task.parMap6]] for parallel processing.
+   */
+  def map6[E, A1, A2, A3, A4, A5, A6, R](
+      fa1: BIO[E, A1],
+      fa2: BIO[E, A2],
+      fa3: BIO[E, A3],
+      fa4: BIO[E, A4],
+      fa5: BIO[E, A5],
+      fa6: BIO[E, A6])(f: (A1, A2, A3, A4, A5, A6) => R): BIO[E, R] =
+    for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5; a6 <- fa6)
+      yield f(a1, a2, a3, a4, a5, a6)
+
   /** Returns the current [[BIO.Options]] configuration, which determine the
     * task's run-loop behavior.
     *
