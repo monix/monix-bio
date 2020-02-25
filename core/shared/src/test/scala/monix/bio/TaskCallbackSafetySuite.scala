@@ -17,7 +17,6 @@
 
 package monix.bio
 
-import monix.bio.internal.BiCallback
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TestScheduler
 

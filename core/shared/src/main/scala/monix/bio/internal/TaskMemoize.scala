@@ -19,9 +19,10 @@ package monix.bio.internal
 
 import monix.bio.BIO.{Context, Error, Now, Termination}
 import monix.bio.internal.TaskRunLoop.startFull
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
+
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.{Failure, Success, Try}

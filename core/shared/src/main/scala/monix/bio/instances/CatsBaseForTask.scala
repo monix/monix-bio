@@ -32,7 +32,7 @@ import scala.util.Try
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
 class CatsBaseForTask[E]
-    extends MonadError[BIO[E, ?], E] with CoflatMap[BIO[E, ?]] with SemigroupK[BIO[E, ?]] with Bifunctor[BIO] {
+    extends MonadError[BIO[E, *], E] with CoflatMap[BIO[E, *]] with SemigroupK[BIO[E, *]] with Bifunctor[BIO] {
 
   override def pure[A](a: A): UIO[A] =
     BIO.pure(a)

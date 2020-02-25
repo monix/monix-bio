@@ -22,7 +22,7 @@ import cats.effect.ExitCase.{Canceled, Completed, Error}
 import monix.bio.BIO.{Context, ContextSwitch}
 import monix.bio.internal.StackFrame.FatalStackFrame
 import monix.execution.exceptions.UncaughtErrorException
-import monix.bio.{BIO, Cause, UIO}
+import monix.bio.{BIO, BiCallback, Cause, UIO}
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
 

@@ -52,7 +52,7 @@ import cats.effect.CancelToken
   *   }
   * }}}
   */
-trait Fiber[E, A] extends cats.effect.Fiber[BIO[E, ?], A] {
+trait Fiber[E, A] extends cats.effect.Fiber[BIO[E, *], A] {
 
   /**
     * Triggers the cancellation of the fiber.

@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO.{Async, Context}
-import monix.bio.UIO
+import monix.bio.{BiCallback, UIO}
 
 import scala.concurrent.duration.Duration
 

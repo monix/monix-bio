@@ -44,7 +44,7 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
   }
 
   checkAllAsync("Concurrent[Task]") { implicit ec =>
-    ConcurrentTests[BIO[Throwable, ?]].concurrent[Int, Int, Int]
+    ConcurrentTests[BIO[Throwable, *]].concurrent[Int, Int, Int]
   }
 
   checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
@@ -52,11 +52,11 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
   }
 
   checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
-    CommutativeApplicativeTests[BIO.Par[Throwable, ?]].commutativeApplicative[Int, Int, Int]
+    CommutativeApplicativeTests[BIO.Par[Throwable, *]].commutativeApplicative[Int, Int, Int]
   }
 
   checkAllAsync("Parallel[BIO, BIO.Par]") { implicit ec =>
-    ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
+    ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int]
   }
 
   checkAllAsync("Monoid[BIO[String, Int]]") { implicit ec =>

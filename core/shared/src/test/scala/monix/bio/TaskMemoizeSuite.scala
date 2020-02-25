@@ -17,9 +17,9 @@
 
 package monix.bio
 
-import monix.bio.internal.BiCallback
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
+
 import scala.concurrent.Promise
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._

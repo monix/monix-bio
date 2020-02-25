@@ -22,7 +22,7 @@ import java.util.concurrent.RejectedExecutionException
 import cats.effect.{CancelToken, IO}
 import monix.bio.BIO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
-import monix.bio.{BIO, Task}
+import monix.bio.{BIO, BiCallback, Task}
 import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.internal.Platform
@@ -40,9 +40,9 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.cancelable`
     */
-  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, ?]]): BIO[E, A] = {
-    val start = new Cancelable0Start[E, A, CancelToken[BIO[E, ?]]](fn) {
-      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]): BIO[E, A] = {
+    val start = new Cancelable0Start[E, A, CancelToken[BIO[E, *]]](fn) {
+      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[BIO[E, *]])(implicit s: Scheduler): Unit =
         ref := token
     }
     Async[E, A](
@@ -90,7 +90,6 @@ private[bio] object TaskCreate {
     */
   def async[E, A](k: BiCallback[E, A] => Unit): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
-      implicit val s = ctx.scheduler
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
       k(cbProtected)
     }

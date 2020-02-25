@@ -17,7 +17,6 @@
 
 package monix.bio
 
-import monix.bio.internal.BiCallback
 import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 

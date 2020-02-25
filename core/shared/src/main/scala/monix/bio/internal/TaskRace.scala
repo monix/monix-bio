@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.atomic.Atomic
 

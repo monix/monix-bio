@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, Task}
+import monix.bio.{BIO, BiCallback, Task}
 import monix.execution.rstreams.Subscription
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
 import org.reactivestreams.{Publisher, Subscriber}

@@ -18,21 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
-import monix.bio.BIO.{
-  Async,
-  Context,
-  ContextSwitch,
-  Error,
-  Eval,
-  EvalTotal,
-  FlatMap,
-  Map,
-  Now,
-  Suspend,
-  SuspendTotal,
-  Termination
-}
+import monix.bio.{BIO, BiCallback}
+import monix.bio.BIO.{Async, Context, ContextSwitch, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
@@ -290,7 +277,7 @@ private[bio] object TaskRunLoop {
     // TODO: should it be [E, A]?
     cb: BiCallback[Any, A],
     isCancelable: Boolean = true
-  ): CancelToken[BIO[E, ?]] = {
+  ): CancelToken[BIO[E, *]] = {
 
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
@@ -758,7 +745,7 @@ private[bio] object TaskRunLoop {
     nextFrame: FrameIndex,
     isCancelable: Boolean,
     forceFork: Boolean
-  ): CancelToken[BIO[E, ?]] = {
+  ): CancelToken[BIO[E, *]] = {
 
     val context = Context(
       scheduler,

@@ -19,7 +19,6 @@ package monix.bio
 
 import cats.laws._
 import cats.laws.discipline._
-import monix.bio.internal.BiCallback
 import monix.execution.atomic.{Atomic, AtomicInt}
 import monix.execution.exceptions.{DummyException, UncaughtErrorException}
 import monix.execution.internal.Platform
