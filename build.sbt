@@ -50,6 +50,7 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .dependsOn(coreJVM)
   .enablePlugins(JmhPlugin)
   .settings(doNotPublishArtifact)
+  .settings(crossSettings)
   .settings(
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "1.0.0-RC17",
