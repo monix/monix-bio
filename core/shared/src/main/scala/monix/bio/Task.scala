@@ -229,13 +229,13 @@ object Task {
     BIO.racePair(fa, fb)
 
   /**
-    * @see See [[monix.bio.BIO.shift]]
+    * @see See doctodo monix.bio.BIO.shift
     */
   val shift: Task[Unit] =
     BIO.shift
 
   /**
-    * @see See [[monix.bio.BIO.shift]]
+    * @see See doctodo monix.bio.BIO.shift
     */
   def shift(ec: ExecutionContext): Task[Unit] =
     BIO.shift(ec)

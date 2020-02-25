@@ -18,7 +18,6 @@
 package monix.bio
 
 import cats.syntax.either._
-import monix.bio.internal.BiCallback
 import monix.execution.exceptions.DummyException
 import org.reactivestreams.{Subscriber, Subscription}
 

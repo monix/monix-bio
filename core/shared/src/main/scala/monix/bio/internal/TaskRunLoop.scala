@@ -18,21 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
-import monix.bio.BIO.{
-  Async,
-  Context,
-  ContextSwitch,
-  Error,
-  Eval,
-  EvalTotal,
-  FlatMap,
-  Map,
-  Now,
-  Suspend,
-  SuspendTotal,
-  Termination
-}
+import monix.bio.{BIO, BiCallback}
+import monix.bio.BIO.{Async, Context, ContextSwitch, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local

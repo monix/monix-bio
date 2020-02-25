@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.bio.BIO.Context
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.schedulers.TrampolinedRunnable

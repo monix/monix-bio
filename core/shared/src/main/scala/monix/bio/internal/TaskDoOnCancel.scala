@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO.{Async, Context}
-import monix.bio.{BIO, UIO}
+import monix.bio.{BIO, BiCallback, UIO}
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TrampolinedRunnable
 
@@ -33,7 +33,6 @@ private[bio] object TaskDoOnCancel {
     } else {
       val start = (context: Context[E], onFinish: BiCallback[E, A]) => {
         implicit val s = context.scheduler
-        implicit val o = context.options
 
         context.connection.push(callback)
         BIO.unsafeStartNow(self, context, new CallbackThatPops(context, onFinish))

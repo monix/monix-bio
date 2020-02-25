@@ -157,19 +157,19 @@ object UIO {
     TaskRace(fa, fb)
 
   /**
-    * @see See [[monix.bio.BIO.racePair]]
+    * @see See doctodo monix.bio.BIO.racePair
     */
   def racePair[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
     TaskRacePair(fa, fb)
 
   /**
-    * @see See [[monix.bio.BIO.shift]]
+    * @see See doctodo monix.bio.BIO.shift
     */
   val shift: UIO[Unit] =
     BIO.shift
 
   /**
-    * @see See [[monix.bio.BIO.shift]]
+    * @see See doctodo monix.bio.BIO.shift
     */
   def shift(ec: ExecutionContext): UIO[Unit] =
     BIO.shift(ec)

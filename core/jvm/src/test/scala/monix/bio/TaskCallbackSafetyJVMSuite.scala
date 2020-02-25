@@ -20,7 +20,6 @@ package monix.bio
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import minitest.SimpleTestSuite
-import monix.bio.internal.BiCallback
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, DummyException}
 import monix.execution.schedulers.SchedulerService
 import monix.execution.Scheduler

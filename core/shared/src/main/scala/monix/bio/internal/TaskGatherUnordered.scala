@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, UIO}
+import monix.bio.{BIO, BiCallback, UIO}
 import monix.bio.BIO.{Async, Context}
 import monix.bio.compat.internal.toIterator
 import monix.execution.exceptions.UncaughtErrorException

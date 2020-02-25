@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, UIO}
+import monix.bio.{BIO, BiCallback, UIO}
 import monix.bio.BIO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{Callback, Scheduler}
@@ -70,9 +70,7 @@ private[bio] object TaskGather {
 
       // MUST BE synchronized by `lock`!
       // MUST NOT BE called if isActive == false!
-      def maybeSignalFinal(mainConn: TaskConnection[E], finalCallback: Callback[E, M[A]])(
-        implicit s: Scheduler
-      ): Unit = {
+      def maybeSignalFinal(mainConn: TaskConnection[E], finalCallback: Callback[E, M[A]]): Unit = {
 
         completed += 1
         if (completed >= tasksCount) {

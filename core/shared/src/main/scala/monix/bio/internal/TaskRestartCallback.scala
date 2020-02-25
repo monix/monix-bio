@@ -17,9 +17,9 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.bio.BIO.{Context, Error, Now, Termination}
-import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack}
+import monix.bio.internal.TaskRunLoop.{Bind, CallStack, startFull}
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.misc.Local
 import monix.execution.schedulers.TrampolinedRunnable

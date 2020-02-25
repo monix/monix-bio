@@ -190,7 +190,7 @@ private[bio] abstract class TaskLikeImplicits1 extends TaskLikeImplicits2 {
 private[bio] abstract class TaskLikeImplicits2 {
 
   /**
-    * Converts any Future-like datatype into a `Task`, via [[monix.catnap.FutureLift]].
+    * Converts any Future-like datatype into a `Task`, via doctodo monix.catnap.FutureLift.
     */
   implicit def fromFutureLift[F[_]](implicit F: FutureLift[Task, F]): TaskLike[F] =
     new TaskLike[F] {

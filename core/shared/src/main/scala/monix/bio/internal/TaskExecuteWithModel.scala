@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.bio.BIO.{Async, Context}
 import monix.execution.ExecutionModel
 import monix.execution.ExecutionModel.{AlwaysAsyncExecution, BatchedExecution, SynchronousExecution}

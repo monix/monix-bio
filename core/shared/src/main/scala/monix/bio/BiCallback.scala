@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package monix.bio.internal
+package monix.bio
 
-import monix.bio.Cause
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.schedulers.{TrampolineExecutionContext, TrampolinedRunnable}
 import monix.execution.{Callback, UncaughtExceptionReporter}
@@ -40,11 +39,11 @@ import scala.util.{Failure, Success, Try}
   * @define tryMethodDescription In case the underlying callback
   *         implementation protects against protocol violations, then
   *         this method should return `false` in case the final result
-  *         was already signaled once via [[Callback.onSuccess]],
-  *         [[Callback.onError]] or [[onTermination]].
+  *         was already signaled once via doctodo Callback.onSuccess,
+  *         doctodo Callback.onError or [[onTermination]].
   *
   *         The default implementation relies on catching
-  *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]]
+  *         doctodo monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException
   *         in case of violations, which is what thread-safe implementations
   *         of `onSuccess` or `onError` are usually throwing.
   *
@@ -91,7 +90,7 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   }
 
   /**
-    * Attempts to call [[BiCallback.tryApply(result:Try[Either* BiCallback.apply]].
+    * Attempts to call doctodo BiCallback.tryApply(result:Try[Either* BiCallback.apply.
     *
     * $tryMethodDescription
     */
@@ -109,12 +108,12 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   *         In case `onSuccess` and `onError` get called multiple times,
   *         from multiple threads even, the implementation protects against
   *         access violations and throws a
-  *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]].
+  *         doctodo monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException.
   */
 object BiCallback {
 
   /**
-    * For building [[Callback]] objects using the
+    * For building doctodo Callback objects using the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type]]
     * technique.
     *
@@ -124,7 +123,7 @@ object BiCallback {
     */
   def apply[E]: Builders[E] = new Builders[E]
 
-  /** Wraps any [[Callback]] into a safer implementation that
+  /** Wraps any doctodo Callback into a safer implementation that
     * protects against protocol violations (e.g. `onSuccess` or `onError`
     * must be called at most once).
     *
@@ -136,14 +135,14 @@ object BiCallback {
       case _ => new Safe[E, A](cb)
     }
 
-  /** Creates an empty [[Callback]], a callback that doesn't do
+  /** Creates an empty doctodo Callback, a callback that doesn't do
     * anything in `onNext` and that logs errors in `onError` with
-    * the provided [[monix.execution.UncaughtExceptionReporter]].
+    * the provided doctodo monix.execution.UncaughtExceptionReporter.
     */
   def empty[E, A](implicit r: UncaughtExceptionReporter): BiCallback[E, A] =
     new Empty(r)
 
-  /** Returns a [[Callback]] instance that will complete the given
+  /** Returns a doctodo Callback instance that will complete the given
     * promise.
     *
     * THREAD-SAFETY: the provided instance is thread-safe by virtue
@@ -183,29 +182,29 @@ object BiCallback {
         p.tryFailure(e)
     }
 
-  /** Given a [[Callback]] wraps it into an implementation that
+  /** Given a doctodo Callback wraps it into an implementation that
     * calls `onSuccess` and `onError` asynchronously, using the
     * given [[scala.concurrent.ExecutionContext]].
     *
     * The async boundary created is "light", in the sense that a
-    * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
+    * doctodo monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable
     * is used and supporting schedulers can execute these using an internal
     * trampoline, thus execution being faster and immediate, but still avoiding
     * growing the call-stack and thus avoiding stack overflows.
     *
     * $isThreadSafe
     *
-    * @see [[Callback.trampolined]]
+    * @see [[BiCallback.trampolined]]
     */
   def forked[E, A](cb: BiCallback[E, A])(implicit ec: ExecutionContext): BiCallback[E, A] =
     new AsyncFork(cb)
 
-  /** Given a [[Callback]] wraps it into an implementation that
+  /** Given a [[BiCallback]] wraps it into an implementation that
     * calls `onSuccess` and `onError` asynchronously, using the
     * given [[scala.concurrent.ExecutionContext]].
     *
     * The async boundary created is "light", in the sense that a
-    * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
+    * doctodo monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable
     * is used and supporting schedulers can execute these using an internal
     * trampoline, thus execution being faster and immediate, but still avoiding
     * growing the call-stack and thus avoiding stack overflows.
@@ -515,14 +514,5 @@ object BiCallback {
         throw new CallbackCalledMultipleTimesException("onTermination", ex)
       }
     }
-  }
-
-  private final class Contramap[-E, -A, -B](underlying: Callback[E, A], f: B => A) extends Callback[E, B] {
-
-    def onSuccess(value: B): Unit =
-      underlying.onSuccess(f(value))
-
-    def onError(error: E): Unit =
-      underlying.onError(error)
   }
 }

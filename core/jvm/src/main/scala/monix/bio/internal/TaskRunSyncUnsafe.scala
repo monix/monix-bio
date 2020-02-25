@@ -20,7 +20,7 @@ package monix.bio.internal
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.bio.BIO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
