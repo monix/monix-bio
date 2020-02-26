@@ -342,7 +342,8 @@ lazy val microsite = project
       micrositeGithubToken := sys.env.get("GITHUB_TOKEN"),
       micrositeExtraMdFiles := Map(
         file("CODE_OF_CONDUCT.md") -> ExtraMdFileConfig("CODE_OF_CONDUCT.md", "page", Map("title" -> "Code of Conduct",   "section" -> "code of conduct", "position" -> "100")),
-        file("LICENSE.md") -> ExtraMdFileConfig("LICENSE.md", "page", Map("title" -> "License",   "section" -> "license",   "position" -> "101"))
+        file("LICENSE.md") -> ExtraMdFileConfig("LICENSE.md", "page", Map("title" -> "License",   "section" -> "license",   "position" -> "101")),
+        file("README.md") -> ExtraMdFileConfig("index.md", "home", Map("permalink" -> "/", "title" -> "Home", "section" -> "home", "position" -> "0"))
       ),
       docsMappingsAPIDir := s"api",
       addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc) in `monix-bio`, docsMappingsAPIDir),
