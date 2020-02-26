@@ -289,4 +289,41 @@ object Task {
    */
   def mapBoth[A1, A2, R](fa1: Task[A1], fa2: Task[A2])(f: (A1, A2) => R): Task[R] =
     BIO.mapBoth(fa1, fa2)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map2]]
+   */
+  def map2[A1, A2, R](fa1: Task[A1], fa2: Task[A2])(f: (A1, A2) => R): Task[R] =
+    BIO.map2(fa1, fa2)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map3]]
+   */
+  def map3[E, A1, A2, A3, R](fa1: Task[A1], fa2: Task[A2], fa3: Task[A3])(f: (A1, A2, A3) => R): Task[R] =
+    BIO.map3(fa1, fa2, fa3)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map4]]
+   */
+  def map4[E, A1, A2, A3, A4, R](fa1: Task[A1], fa2: Task[A2], fa3: Task[A3], fa4: Task[A4])(f: (A1, A2, A3, A4) => R): Task[R] =
+    BIO.map4(fa1, fa2, fa3, fa4)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map5]]
+   */
+  def map5[E, A1, A2, A3, A4, A5, R](fa1: Task[A1], fa2: Task[A2], fa3: Task[A3], fa4: Task[A4], fa5: Task[A5])(
+    f: (A1, A2, A3, A4, A5) => R): Task[R] =
+    BIO.map5(fa1, fa2, fa3, fa4, fa5)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map6]]
+   */
+  def map6[E, A1, A2, A3, A4, A5, A6, R](
+      fa1: Task[A1],
+      fa2: Task[A2],
+      fa3: Task[A3],
+      fa4: Task[A4],
+      fa5: Task[A5],
+      fa6: Task[A6])(f: (A1, A2, A3, A4, A5, A6) => R): Task[R] =
+    BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6)(f)
 }
