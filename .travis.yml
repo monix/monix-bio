@@ -34,7 +34,7 @@ script:
     fi
 
 after_success:
-  sbt microsite/publishMicrosite
+  - sbt microsite/publishMicrosite
 
 cache:
   directories:
