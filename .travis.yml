@@ -33,6 +33,9 @@ script:
       sbt ++$TRAVIS_SCALA_VERSION microsite/makeMicrosite
     fi
 
+after_success:
+  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ]; then sbt microsite/publishMicrosite; fi
+
 cache:
   directories:
     - $HOME/.ivy2/cache
