@@ -1,6 +1,6 @@
 ---
 layout: docs
-title:  "Example Document"
+title:  "Getting Started"
 position: 2
 ---
 

@@ -314,7 +314,7 @@ lazy val microsite = project
     import microsites._
     Seq(
       micrositeName := "Monix BIO",
-      micrositeDescription := "Monix Bifunctor IO implementation",
+      micrositeDescription := "Asynchronous Programming for Scala and Scala.js",
       micrositeAuthor := "Monix Developers",
       micrositeTwitterCreator := "@Avasil",
       micrositeGithubOwner := "monix",
