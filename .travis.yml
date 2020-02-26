@@ -34,7 +34,7 @@ script:
     fi
 
 after_success:
-  - sbt microsite/publishMicrosite
+  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ]; then sbt microsite/publishMicrosite; fi
 
 cache:
   directories:
