@@ -19,11 +19,11 @@ package monix.bio
 
 import monix.bio.compat.internal.newBuilder
 import monix.bio.internal._
-import monix.execution.{CancelablePromise, Scheduler}
 import monix.execution.compat.BuildFrom
+import monix.execution.{CancelablePromise, Scheduler}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
 object UIO {
 
@@ -215,4 +215,41 @@ object UIO {
    */
   def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
     TaskMapBoth(fa1, fa2)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map2]]
+   */
+  def map2[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
+    BIO.map2(fa1, fa2)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map3]]
+   */
+  def map3[E, A1, A2, A3, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3])(f: (A1, A2, A3) => R): UIO[R] =
+    BIO.map3(fa1, fa2, fa3)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map4]]
+   */
+  def map4[E, A1, A2, A3, A4, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4])(f: (A1, A2, A3, A4) => R): UIO[R] =
+    BIO.map4(fa1, fa2, fa3, fa4)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map5]]
+   */
+  def map5[E, A1, A2, A3, A4, A5, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4], fa5: UIO[A5])(
+    f: (A1, A2, A3, A4, A5) => R): UIO[R] =
+    BIO.map5(fa1, fa2, fa3, fa4, fa5)(f)
+
+  /**
+   * @see See [[monix.bio.BIO.map6]]
+   */
+  def map6[E, A1, A2, A3, A4, A5, A6, R](
+      fa1: UIO[A1],
+      fa2: UIO[A2],
+      fa3: UIO[A3],
+      fa4: UIO[A4],
+      fa5: UIO[A5],
+      fa6: UIO[A6])(f: (A1, A2, A3, A4, A5, A6) => R): UIO[R] =
+    BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6)(f)
 }

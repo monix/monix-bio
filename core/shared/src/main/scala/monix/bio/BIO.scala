@@ -3722,8 +3722,6 @@ object BIO extends TaskInstancesLevel0 {
    *     a + b
    *   }
    * }}}
-   *
-   * See [[BIO.parMap2]] for parallel processing.
    */
   def map2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2)
@@ -3754,8 +3752,6 @@ object BIO extends TaskInstancesLevel0 {
    *     a + b + c
    *   }
    * }}}
-   *
-   * See [[Task.parMap3]] for parallel processing.
    */
   def map3[E, A1, A2, A3, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3])(f: (A1, A2, A3) => R): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3)
@@ -3787,8 +3783,6 @@ object BIO extends TaskInstancesLevel0 {
    *     (a, b: Int, c, d) => a + b + c + d
    *   }
    * }}}
-   *
-   * See [[Task.parMap4]] for parallel processing.
    */
   def map4[E, A1, A2, A3, A4, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4])(
     f: (A1, A2, A3, A4) => R): BIO[E, R] =
@@ -3822,8 +3816,6 @@ object BIO extends TaskInstancesLevel0 {
    *     (a, b: Int, c, d, e) => a + b + c + d + e
    *   }
    * }}}
-   *
-   * See [[Task.parMap5]] for parallel processing.
    */
   def map5[E, A1, A2, A3, A4, A5, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4], fa5: BIO[E, A5])(
     f: (A1, A2, A3, A4, A5) => R): BIO[E, R] =
@@ -3858,8 +3850,6 @@ object BIO extends TaskInstancesLevel0 {
    *     (a, b: Int, c, d, e, f) => a + b + c + d + e + f
    *   }
    * }}}
-   *
-   * See [[Task.parMap6]] for parallel processing.
    */
   def map6[E, A1, A2, A3, A4, A5, A6, R](
       fa1: BIO[E, A1],

@@ -63,20 +63,16 @@ object BIOMapNSuite extends BaseTestSuite {
   }
 
   test("BIO#map2 should run effects in strict sequence") { implicit s =>
-    var effect1 = 0
-    var effect2 = 0
-    val bio1 = BIO.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
-    val bio2 = BIO.evalAsync { effect2 += 2 }.delayExecution(1.millisecond)
+    var effect = 0
+    val bio1 = BIO.evalAsync { effect += 1 }.delayExecution(1.millisecond)
+    val bio2 = BIO.evalAsync { effect += 10 }.delayExecution(1.millisecond)
     BIO.map2(bio1, bio2)((_, _) => ()).runToFuture
     s.tick()
-    assertEquals(effect1, 0)
-    assertEquals(effect2, 0)
+    assertEquals(effect, 0)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 0)
+    assertEquals(effect, 1)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
+    assertEquals(effect, 11)
   }
 
   test("BIO#map3 should yield value successfully") { implicit s =>
@@ -121,30 +117,20 @@ object BIOMapNSuite extends BaseTestSuite {
   }
 
   test("BIO#map3 should run effects in strict sequence") { implicit s =>
-    var effect1 = 0
-    var effect2 = 0
-    var effect3 = 0
-    val bio1 = BIO.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
-    val bio2 = BIO.evalAsync { effect2 += 2 }.delayExecution(1.millisecond)
-    val bio3 = BIO.evalAsync { effect3 += 3 }.delayExecution(1.millisecond)
+    var effect = 0
+    val bio1 = BIO.evalAsync { effect += 1 }.delayExecution(1.millisecond)
+    val bio2 = BIO.evalAsync { effect += 10 }.delayExecution(1.millisecond)
+    val bio3 = BIO.evalAsync { effect += 100 }.delayExecution(1.millisecond)
     BIO.map3(bio1, bio2, bio3)((_, _, _) => ()).runToFuture
 
     s.tick()
-    assertEquals(effect1, 0)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
+    assertEquals(effect, 0)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
+    assertEquals(effect, 1)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 0)
+    assertEquals(effect, 11)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
+    assertEquals(effect, 111)
   }
 
   test("BIO#map4 should yield value successfully") { implicit s =>
@@ -192,42 +178,24 @@ object BIOMapNSuite extends BaseTestSuite {
   }
 
   test("BIO#map4 should run effects in strict sequence") { implicit s =>
-    var effect1 = 0
-    var effect2 = 0
-    var effect3 = 0
-    var effect4 = 0
-    val bio1 = BIO.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
-    val bio2 = BIO.evalAsync { effect2 += 2 }.delayExecution(1.millisecond)
-    val bio3 = BIO.evalAsync { effect3 += 3 }.delayExecution(1.millisecond)
-    val bio4 = BIO.evalAsync { effect4 += 4 }.delayExecution(1.millisecond)
+    var effect = 0
+    val bio1 = BIO.evalAsync { effect += 1 }.delayExecution(1.millisecond)
+    val bio2 = BIO.evalAsync { effect += 10 }.delayExecution(1.millisecond)
+    val bio3 = BIO.evalAsync { effect += 100 }.delayExecution(1.millisecond)
+    val bio4 = BIO.evalAsync { effect += 1000 }.delayExecution(1.millisecond)
 
     BIO.map4(bio1, bio2, bio3, bio4)((_, _, _, _) => ()).runToFuture
 
     s.tick()
-    assertEquals(effect1, 0)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
+    assertEquals(effect, 0)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
+    assertEquals(effect, 1)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
+    assertEquals(effect, 11)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 0)
+    assertEquals(effect, 111)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 4)
+    assertEquals(effect, 1111)
   }
 
   test("BIO#map5 should yield value successfully") { implicit s =>
@@ -278,55 +246,27 @@ object BIOMapNSuite extends BaseTestSuite {
   }
 
   test("BIO#map5 should run effects in strict sequence") { implicit s =>
-    var effect1 = 0
-    var effect2 = 0
-    var effect3 = 0
-    var effect4 = 0
-    var effect5 = 0
-    val bio1 = BIO.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
-    val bio2 = BIO.evalAsync { effect2 += 2 }.delayExecution(1.millisecond)
-    val bio3 = BIO.evalAsync { effect3 += 3 }.delayExecution(1.millisecond)
-    val bio4 = BIO.evalAsync { effect4 += 4 }.delayExecution(1.millisecond)
-    val bio5 = BIO.evalAsync { effect5 += 5 }.delayExecution(1.millisecond)
+    var effect = 0
+    val bio1 = BIO.evalAsync { effect += 1 }.delayExecution(1.millisecond)
+    val bio2 = BIO.evalAsync { effect += 10 }.delayExecution(1.millisecond)
+    val bio3 = BIO.evalAsync { effect += 100 }.delayExecution(1.millisecond)
+    val bio4 = BIO.evalAsync { effect += 1000 }.delayExecution(1.millisecond)
+    val bio5 = BIO.evalAsync { effect += 10000 }.delayExecution(1.millisecond)
 
     BIO.map5(bio1, bio2, bio3, bio4, bio5)((_, _, _, _, _) => ()).runToFuture
 
     s.tick()
-    assertEquals(effect1, 0)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
+    assertEquals(effect, 0)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
+    assertEquals(effect, 1)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
+    assertEquals(effect, 11)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
+    assertEquals(effect, 111)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 4)
-    assertEquals(effect5, 0)
+    assertEquals(effect, 1111)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 4)
-    assertEquals(effect5, 5)
+    assertEquals(effect, 11111)
   }
 
   test("BIO#map6 should yield value successfully") { implicit s =>
@@ -382,69 +322,29 @@ object BIOMapNSuite extends BaseTestSuite {
   }
 
   test("BIO#map6 should run effects in strict sequence") { implicit s =>
-    var effect1 = 0
-    var effect2 = 0
-    var effect3 = 0
-    var effect4 = 0
-    var effect5 = 0
-    var effect6 = 0
-    val bio1 = BIO.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
-    val bio2 = BIO.evalAsync { effect2 += 2 }.delayExecution(1.millisecond)
-    val bio3 = BIO.evalAsync { effect3 += 3 }.delayExecution(1.millisecond)
-    val bio4 = BIO.evalAsync { effect4 += 4 }.delayExecution(1.millisecond)
-    val bio5 = BIO.evalAsync { effect5 += 5 }.delayExecution(1.millisecond)
-    val bio6 = BIO.evalAsync { effect6 += 6 }.delayExecution(1.millisecond)
+    var effect = 0
+    val bio1 = BIO.evalAsync { effect += 1 }.delayExecution(1.millisecond)
+    val bio2 = BIO.evalAsync { effect += 10 }.delayExecution(1.millisecond)
+    val bio3 = BIO.evalAsync { effect += 100 }.delayExecution(1.millisecond)
+    val bio4 = BIO.evalAsync { effect += 1000 }.delayExecution(1.millisecond)
+    val bio5 = BIO.evalAsync { effect += 10000 }.delayExecution(1.millisecond)
+    val bio6 = BIO.evalAsync { effect += 100000 }.delayExecution(1.millisecond)
 
     BIO.map6(bio1, bio2, bio3, bio4, bio5, bio6)((_, _, _, _, _, _) => ()).runToFuture
 
     s.tick()
-    assertEquals(effect1, 0)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
-    assertEquals(effect6, 0)
+    assertEquals(effect, 0)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 0)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
-    assertEquals(effect6, 0)
+    assertEquals(effect, 1)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 0)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
-    assertEquals(effect6, 0)
+    assertEquals(effect, 11)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 0)
-    assertEquals(effect5, 0)
-    assertEquals(effect6, 0)
+    assertEquals(effect, 111)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 4)
-    assertEquals(effect5, 0)
-    assertEquals(effect6, 0)
+    assertEquals(effect, 1111)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 4)
-    assertEquals(effect5, 5)
-    assertEquals(effect6, 0)
+    assertEquals(effect, 11111)
     s.tick(1.millisecond)
-    assertEquals(effect1, 1)
-    assertEquals(effect2, 2)
-    assertEquals(effect3, 3)
-    assertEquals(effect4, 4)
-    assertEquals(effect5, 5)
-    assertEquals(effect6, 6)
+    assertEquals(effect, 111111)
   }
 }
