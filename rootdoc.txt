@@ -1,1 +1,1 @@
-Monix BIO
+This is the API documentation for the [Monix BIO](https://github.com/monix/monix-bio) library.

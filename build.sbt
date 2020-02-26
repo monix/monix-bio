@@ -22,27 +22,11 @@ lazy val coreJVM = project.in(file("core/jvm"))
   .settings(crossSettings ++ crossVersionSharedSources)
   .settings(name := "monix-bio")
   .enablePlugins(AutomateHeaderPlugin)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.monix" %% "monix-catnap" % monixVersion,
-      "io.monix" %% "minitest" % minitestVersion % Test,
-      "io.monix" %% "minitest-laws" % minitestVersion % Test,
-      "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % Test
-    ),
-  )
 
 lazy val coreJS = project.in(file("core/js"))
   .settings(crossSettings ++ crossVersionSharedSources)
   .enablePlugins(AutomateHeaderPlugin)
   .enablePlugins(ScalaJSPlugin)
-  .settings(
-    libraryDependencies ++= Seq(
-      "io.monix" %%% "monix-catnap" % monixVersion,
-      "io.monix" %%% "minitest" % minitestVersion % Test,
-      "io.monix" %%% "minitest-laws" % minitestVersion % Test,
-      "org.typelevel" %%% "cats-effect-laws" % catsEffectVersion % Test
-    ),
-  )
   .settings(scalaJSSettings)
   .settings(name := "monix-bio")
 
@@ -165,8 +149,34 @@ lazy val sharedSettings = Seq(
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
   addCompilerPlugin("com.github.ghik" % "silencer-plugin" % "1.6.0" cross CrossVersion.full),
 
+  libraryDependencies ++= Seq(
+    "io.monix" %%% "monix-catnap" % monixVersion,
+    "io.monix" %%% "minitest" % minitestVersion % Test,
+    "io.monix" %%% "minitest-laws" % minitestVersion % Test,
+    "org.typelevel" %%% "cats-effect-laws" % catsEffectVersion % Test
+  ),
+
   // ScalaDoc settings
   autoAPIMappings := true,
+  apiURL := Some(url("https://monix.github.io/monix-bio/api/")),
+  apiMappings ++= {
+    val cp: Seq[Attributed[File]] = (fullClasspath in Compile).value
+    def findManagedDependency(organization: String, name: String): File = {
+      ( for {
+        entry <- cp
+        module <- entry.get(moduleID.key)
+        if module.organization == organization
+        if module.name.startsWith(name)
+      } yield entry.data
+        ).head
+    }
+    Map(
+      findManagedDependency("io.monix","monix-execution") -> url("https://monix.io/api/3.1/"),
+      findManagedDependency("io.monix","monix-catnap") -> url("https://monix.io/api/3.1/"),
+      findManagedDependency("org.typelevel","cats-effect") -> url("https://typelevel.org/cats-effect/api/")
+    )
+  },
+
   scalacOptions in ThisBuild ++= Seq(
     // Note, this is used by the doc-source-url feature to determine the
     // relative path of a given source file. If it's not a prefix of a the

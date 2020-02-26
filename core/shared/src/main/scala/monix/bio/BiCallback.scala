@@ -39,11 +39,11 @@ import scala.util.{Failure, Success, Try}
   * @define tryMethodDescription In case the underlying callback
   *         implementation protects against protocol violations, then
   *         this method should return `false` in case the final result
-  *         was already signaled once via doctodo Callback.onSuccess,
-  *         doctodo Callback.onError or [[onTermination]].
+  *         was already signaled once via [[monix.execution.Callback.onSuccess]],
+  *         [[monix.execution.Callback.onError]] or [[onTermination]].
   *
   *         The default implementation relies on catching
-  *         doctodo monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException
+  *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]]
   *         in case of violations, which is what thread-safe implementations
   *         of `onSuccess` or `onError` are usually throwing.
   *
@@ -78,7 +78,7 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
     }
 
   /**
-    * Signals a value via Scala's `Try` of `Either` (`Left` is typed error, `Right` is
+    * Signals a value via Scala's `Try` of `Either` (`Left` is a typed error, `Right` is
     * the successful value and `Failure` is a terminal error (a defect)).
     *
     * $safetyIssues
@@ -90,7 +90,7 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   }
 
   /**
-    * Attempts to call doctodo BiCallback.tryApply(result:Try[Either* BiCallback.apply.
+    * Attempts to call [[BiCallback.apply BiCallback.apply]].
     *
     * $tryMethodDescription
     */
@@ -108,18 +108,18 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   *         In case `onSuccess` and `onError` get called multiple times,
   *         from multiple threads even, the implementation protects against
   *         access violations and throws a
-  *         doctodo monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException.
+  *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]].
   */
 object BiCallback {
 
   /**
-    * For building doctodo Callback objects using the
+    * For building [[BiCallback]] objects using the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type]]
     * technique.
     *
     * For example these are Equivalent:
     *
-    * `Callback[Throwable, Throwable].empty[String] <-> Callback.empty[Throwable, String]`
+    * `BiCallback[Throwable].empty[String] <-> BiCallback.empty[Throwable, String]`
     */
   def apply[E]: Builders[E] = new Builders[E]
 

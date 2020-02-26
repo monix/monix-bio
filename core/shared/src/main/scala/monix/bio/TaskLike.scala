@@ -49,7 +49,7 @@ import scala.util.Try
   *   val task2 = TaskLike[IO].apply(source2)
   * }}}
   *
-  * This is an alternative to the usage of `cats.effect.Effect`,
+  * This is an alternative to the usage of [[cats.effect.Effect]],
   * where the internals are specialized to `Task` anyway, like for
   * example the implementation of `monix.reactive.Observable`.
   */
@@ -112,7 +112,7 @@ object TaskLike extends TaskLikeImplicits0 {
     }
 
   /**
-    * Converts `cats.effect.SyncIO` into a `Task`.
+    * Converts [[cats.effect.SyncIO]] into a `Task`.
     */
   implicit val fromSyncIO: TaskLike[SyncIO] =
     new TaskLike[SyncIO] {
@@ -121,7 +121,7 @@ object TaskLike extends TaskLikeImplicits0 {
     }
 
   /**
-    * Converts `scala.util.Try` into a `Task`.
+    * Converts [[scala.util.Try]] into a `Task`.
     */
   implicit val fromTry: TaskLike[Try] =
     new TaskLike[Try] {
@@ -130,7 +130,7 @@ object TaskLike extends TaskLikeImplicits0 {
     }
 
   /**
-    * Converts `monix.execution.CancelablePromise` into a `Task`.
+    * Converts [[monix.execution.CancelablePromise]] into a `Task`.
     */
   implicit val fromCancelablePromise: TaskLike[CancelablePromise] =
     new TaskLike[CancelablePromise] {
@@ -149,7 +149,7 @@ object TaskLike extends TaskLikeImplicits0 {
     }
 
   /**
-    * Converts `scala.util.Either` into a `Task`.
+    * Converts [[scala.util.Either]] into a `Task`.
     */
   implicit def fromEither[E <: Throwable]: TaskLike[Either[E, *]] =
     new TaskLike[Either[E, *]] {
@@ -190,7 +190,7 @@ private[bio] abstract class TaskLikeImplicits1 extends TaskLikeImplicits2 {
 private[bio] abstract class TaskLikeImplicits2 {
 
   /**
-    * Converts any Future-like datatype into a `Task`, via doctodo monix.catnap.FutureLift.
+    * Converts any Future-like datatype into a `Task`, via [[monix.catnap.FutureLift]].
     */
   implicit def fromFutureLift[F[_]](implicit F: FutureLift[Task, F]): TaskLike[F] =
     new TaskLike[F] {

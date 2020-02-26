@@ -108,7 +108,7 @@ import scala.util.{Failure, Success, Try}
   * }}}
   *
   * The returned type is a
-  * doctodo `monix.execution.CancelableFuture CancelableFuture` which
+  * [[monix.execution.CancelableFuture CancelableFuture]] which
   * inherits from Scala's standard [[scala.concurrent.Future Future]],
   * a value that can be completed already or might be completed at
   * some point in the future, once the running asynchronous process
@@ -215,7 +215,7 @@ import scala.util.{Failure, Success, Try}
   * The logic described by an `Task` task could be cancelable,
   * depending on how the `Task` gets built.
   *
-  * doctodo monix.execution.CancelableFuture CancelableFuture references
+  * [[monix.execution.CancelableFuture CancelableFuture]] references
   * can also be canceled, in case the described computation can be
   * canceled. When describing `Task` tasks with `Task.eval` nothing
   * can be cancelled, since there's nothing about a plain function
@@ -248,12 +248,12 @@ import scala.util.{Failure, Success, Try}
   * This action can be cancelled, because it specifies cancellation
   * logic. In case we have no cancelable logic to express, then it's
   * OK if we returned a
-  * doctodo monix.execution.Cancelable.empty Cancelable.empty reference,
+  * [[monix.execution.Cancelable.empty Cancelable.empty]] reference,
   * in which case the resulting `Task` would not be cancelable.
   *
   * But the `Task` we just described is cancelable, for one at the
-  * edge, due to `runAsync` returning doctodo monix.execution.Cancelable Cancelable
-  * and doctodo monix.execution.CancelableFuture CancelableFuture references:
+  * edge, due to `runAsync` returning [[monix.execution.Cancelable Cancelable]]
+  * and [[monix.execution.CancelableFuture CancelableFuture]] references:
   *
   * {{{
   *   // Triggering execution
@@ -315,19 +315,19 @@ import scala.util.{Failure, Success, Try}
   * execution after executing `runAsync`.
   *
   * Currently the default
-  * doctodo monix.execution.ExecutionModel ExecutionModel specifies
+  * [[monix.execution.ExecutionModel ExecutionModel]] specifies
   * batched execution by default and `Task` in its evaluation respects
   * the injected `ExecutionModel`. If you want a different behavior,
   * you need to execute the `Task` reference with a different scheduler.
   *
   * @define schedulerDesc is an injected
-  *         doctodo monix.execution.Scheduler Scheduler that gets used
+  *         [[monix.execution.Scheduler Scheduler]] that gets used
   *         whenever asynchronous boundaries are needed when
   *         evaluating the task; a `Scheduler` is in general needed
   *         when the `Task` needs to be evaluated via `runAsync`
   *
   * @define schedulerEvalDesc is the
-  *         doctodo monix.execution.Scheduler Scheduler needed in order
+  *         [[monix.execution.Scheduler Scheduler]] needed in order
   *         to evaluate the source, being required in Task's
   *         [[runAsync]], [[runAsyncF]] or [[runToFuture]].
   *
@@ -358,10 +358,10 @@ import scala.util.{Failure, Success, Try}
   *
   * @define callbackParamDesc is a callback that will be invoked upon
   *         completion, either with a successful result, or with an error;
-  *         note that you can use doctodo monix.execution.Callback for extra
-  *         performance (avoids the boxing in [[scala.Either]])
+  *         note that you can use [[monix.execution.Callback]] or [[monix.bio.BiCallback]]
+  *         for extra performance (avoids the boxing in [[scala.Either]])
   *
-  * @define cancelableDesc a doctodo monix.execution.Cancelable Cancelable
+  * @define cancelableDesc a [[monix.execution.Cancelable Cancelable]]
   *         that can be used to cancel a running task
   *
   * @define cancelTokenDesc a `Task[Unit]`, aliased via Cats-Effect
@@ -402,7 +402,7 @@ import scala.util.{Failure, Success, Try}
   *         was hit and further async execution is needed
   *
   * @define runAsyncToFutureReturn a
-  *         doctodo monix.execution.CancelableFuture CancelableFuture
+  *         [[monix.execution.CancelableFuture CancelableFuture]]
   *         that can be used to extract the result or to cancel
   *         a running task.
   *
@@ -410,10 +410,8 @@ import scala.util.{Failure, Success, Try}
   *         difference versus `try {} finally {}` is that, in case
   *         both the `release` function and the `use` function throws,
   *         the error raised by `use` gets signaled and the error
-  *         raised by `release` gets reported with `System.err` for
-  *         doctodo Coeval or with
-  *         doctodo monix.execution.Scheduler.reportFailure Scheduler.reportFailure
-  *         for [[Task]].
+  *         raised by `release` gets reported with
+  *         [[monix.execution.Scheduler.reportFailure Scheduler.reportFailure]].
   *
   *         For example:
   *
@@ -486,7 +484,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   import cats.effect.Async
 
   /** Triggers the asynchronous execution, returning a cancelable
-    * doctodo monix.execution.CancelableFuture CancelableFuture that can
+    * [[monix.execution.CancelableFuture CancelableFuture]] that can
     * be awaited for the final result or canceled.
     *
     * Note that without invoking `runAsync` on a `Task`, nothing
@@ -1053,8 +1051,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *    operation is dangerous and that setting a `timeout` is good
     *    practice
     *  - the loop starts in an execution mode that ignores
-    *    doctodo monix.execution.ExecutionModel.BatchedExecution BatchedExecution or
-    *    doctodo monix.execution.ExecutionModel.AlwaysAsyncExecution AlwaysAsyncExecution,
+    *    [[monix.execution.ExecutionModel.BatchedExecution BatchedExecution]] or
+    *    [[monix.execution.ExecutionModel.AlwaysAsyncExecution AlwaysAsyncExecution]],
     *    until the first asynchronous boundary. This is because we want to block
     *    the underlying thread for the result, in which case preserving
     *    fairness by forcing (batched) async boundaries doesn't do us any good,
@@ -1244,7 +1242,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Introduces an asynchronous boundary at the current stage in the
     * asynchronous processing pipeline, making processing to jump on
-    * the given doctodo monix.execution.Scheduler Scheduler (until the
+    * the given [[monix.execution.Scheduler Scheduler]] (until the
     * next async boundary).
     *
     * Consider the following example:
@@ -1329,7 +1327,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * above that ugly Java loop might end up reading from a `BufferedReader`
     * that is already closed due to the task being cancelled, thus triggering
     * an error in the background with nowhere to go but in
-    * doctodo monix.execution.Scheduler.reportFailure Scheduler.reportFailure.
+    * [[monix.execution.Scheduler.reportFailure Scheduler.reportFailure]].
     *
     * In this particular example, given that we are just reading from a file,
     * it doesn't matter. But in other cases it might matter, as concurrency
@@ -1545,7 +1543,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def delayResult(timespan: FiniteDuration): BIO[E, A] =
     flatMap(a => BIO.sleep(timespan).map(_ => a))
 
-  /** Overrides the default doctodo monix.execution.Scheduler Scheduler,
+  /** Overrides the default [[monix.execution.Scheduler Scheduler]],
     * possibly forcing an asynchronous boundary before execution
     * (if `forceAsync` is set to `true`, the default).
     *
@@ -1613,7 +1611,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * The evaluation of this task will probably happen immediately
     * (depending on the configured
-    * doctodo monix.execution.ExecutionModel ExecutionModel) and the
+    * [[monix.execution.ExecutionModel ExecutionModel]]) and the
     * given scheduler will probably not be used at all.
     *
     * However in case we would use [[BIO.apply]], which ensures
@@ -1666,7 +1664,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     sayHello2(io22)
     * }}}
     *
-    * @param s is the doctodo monix.execution.Scheduler Scheduler to use
+    * @param s is the [[monix.execution.Scheduler Scheduler]] to use
     *        for overriding the default scheduler and for forcing
     *        an asynchronous boundary if `forceAsync` is `true`
     * @param forceAsync indicates whether an asynchronous boundary
@@ -1683,7 +1681,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   /** Mirrors the given source `Task`, but upon execution ensure
     * that evaluation forks into a separate (logical) thread.
     *
-    * The doctodo monix.execution.Scheduler Scheduler used will be
+    * The [[monix.execution.Scheduler Scheduler]] used will be
     * the one that is used to start the run-loop in
     * [[BIO.runAsync]] or [[BIO.runToFuture]].
     *
@@ -1699,7 +1697,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   Task.shift *> Task(1 + 1)
     * }}}
     *
-    * The doctodo monix.execution.Scheduler Scheduler used for scheduling
+    * The [[monix.execution.Scheduler Scheduler]] used for scheduling
     * the async boundary will be the default, meaning the one used to
     * start the run-loop in `runAsync`.
     */
@@ -1707,7 +1705,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     BIO.shift.flatMap(_ => this)
 
   /** Returns a new task that will execute the source with a different
-    * doctodo monix.execution.ExecutionModel ExecutionModel.
+    * [[monix.execution.ExecutionModel ExecutionModel]].
     *
     * This allows fine-tuning the options injected by the scheduler
     * locally. Example:
@@ -1718,7 +1716,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * }}}
     *
     * @param em is the
-    *        doctodo monix.execution.ExecutionModel ExecutionModel
+    *        [[monix.execution.ExecutionModel ExecutionModel]]
     *        with which the source will get evaluated on `runAsync`
     */
   final def executeWithModel(em: ExecutionModel): BIO[E, A] =
@@ -1810,7 +1808,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * execute the given `callback` if the task gets canceled before
     * completion.
     *
-    * This only works for premature cancellation. See doctodo doOnFinish
+    * This only works for premature cancellation. See [[doOnFinish]]
     * for triggering callbacks when the source finishes.
     *
     * @param callback is the callback to execute if the task gets
