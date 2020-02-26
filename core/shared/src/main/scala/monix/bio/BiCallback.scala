@@ -123,7 +123,7 @@ object BiCallback {
     */
   def apply[E]: Builders[E] = new Builders[E]
 
-  /** Wraps any doctodo Callback into a safer implementation that
+  /** Wraps any [[BiCallback]] into a safer implementation that
     * protects against protocol violations (e.g. `onSuccess` or `onError`
     * must be called at most once).
     *
@@ -135,14 +135,14 @@ object BiCallback {
       case _ => new Safe[E, A](cb)
     }
 
-  /** Creates an empty doctodo Callback, a callback that doesn't do
+  /** Creates an empty [[BiCallback]], a callback that doesn't do
     * anything in `onNext` and that logs errors in `onError` with
-    * the provided doctodo monix.execution.UncaughtExceptionReporter.
+    * the provided [[monix.execution.UncaughtExceptionReporter]].
     */
   def empty[E, A](implicit r: UncaughtExceptionReporter): BiCallback[E, A] =
     new Empty(r)
 
-  /** Returns a doctodo Callback instance that will complete the given
+  /** Returns a [[BiCallback]] instance that will complete the given
     * promise.
     *
     * THREAD-SAFETY: the provided instance is thread-safe by virtue
@@ -182,12 +182,12 @@ object BiCallback {
         p.tryFailure(e)
     }
 
-  /** Given a doctodo Callback wraps it into an implementation that
+  /** Given a [[BiCallback]] wraps it into an implementation that
     * calls `onSuccess` and `onError` asynchronously, using the
     * given [[scala.concurrent.ExecutionContext]].
     *
     * The async boundary created is "light", in the sense that a
-    * doctodo monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable
+    * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
     * is used and supporting schedulers can execute these using an internal
     * trampoline, thus execution being faster and immediate, but still avoiding
     * growing the call-stack and thus avoiding stack overflows.
@@ -204,7 +204,7 @@ object BiCallback {
     * given [[scala.concurrent.ExecutionContext]].
     *
     * The async boundary created is "light", in the sense that a
-    * doctodo monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable
+    * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
     * is used and supporting schedulers can execute these using an internal
     * trampoline, thus execution being faster and immediate, but still avoiding
     * growing the call-stack and thus avoiding stack overflows.

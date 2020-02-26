@@ -28,7 +28,7 @@ import monix.execution.Scheduler
   * `MonadError`, `Sync`, etc).
   *
   * Note this is a separate class from [[CatsAsyncForTask]], because we
-  * need an implicit doctodo monix.execution.Scheduler Scheduler in scope
+  * need an implicit [[monix.execution.Scheduler Scheduler]] in scope
   * in order to trigger the execution of a `Task`. However we cannot
   * inherit directly from `CatsAsyncForTask`, because it would create
   * conflicts due to that one having a higher priority but being a
@@ -75,7 +75,7 @@ class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options) extends CatsBa
   * `cats.effect.ConcurrentEffect`.
   *
   * Note this is a separate class from [[CatsConcurrentForTask]], because
-  * we need an implicit doctodo monix.execution.Scheduler Scheduler in scope
+  * we need an implicit [[monix.execution.Scheduler Scheduler]] in scope
   * in order to trigger the execution of a `Task`. However we cannot
   * inherit directly from `CatsConcurrentForTask`, because it would create
   * conflicts due to that one having a higher priority but being a
