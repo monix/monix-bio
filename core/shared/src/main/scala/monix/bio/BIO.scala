@@ -1806,6 +1806,28 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def loopForever: BIO[E, Nothing] =
     flatMap(_ => this.loopForever)
 
+  /** Returns a new `BIO` in which `f` is scheduled to be run on
+   * completion. This would typically be used to release any
+   * resources acquired by this `BIO`.
+   *
+   * The returned `BIO` completes when both the source and the task
+   * returned by `f` complete.
+   *
+   * NOTE: The given function is only called when the task is
+   * complete.  However the function does not get called if the task
+   * gets canceled.  Cancellation is a process that's concurrent with
+   * the execution of a task and hence needs special handling.
+   *
+   * See [[doOnCancel]] for specifying a callback to call on
+   * canceling a task.
+   */
+  final def doOnFinish(f: Option[Cause[E]] => UIO[Unit]): BIO[E, A] =
+    this.guaranteeCase {
+      case ExitCase.Completed => f(None)
+      case ExitCase.Canceled => BIO.unit
+      case ExitCase.Error(e) => f(Some(e))
+    }
+
   /** Returns a new `Task` that will mirror the source, but that will
     * execute the given `callback` if the task gets canceled before
     * completion.
