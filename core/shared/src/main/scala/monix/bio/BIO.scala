@@ -1826,6 +1826,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def loopForever: BIO[E, Nothing] =
     flatMap(_ => this.loopForever)
 
+  /** Start asynchronous execution of the source suspended in the `BIO` context,
+   * running it in the background and discarding the result.
+   *
+   * Similar to [[start]] after mapping result to Unit. Below law holds:
+   *
+   * `bio.startAndForget <-> bio.start.map(_ => ())`
+   *
+   */
+  final def startAndForget: BIO[E, Unit] =
+    BIOStartAndForget(this)
+
   /** Returns a new `BIO` in which `f` is scheduled to be run on
    * completion. This would typically be used to release any
    * resources acquired by this `BIO`.
