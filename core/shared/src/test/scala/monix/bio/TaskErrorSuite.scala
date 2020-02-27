@@ -42,6 +42,18 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(r, Right(Right(10)))
   }
 
+  test("BIO.rethrow should turn Left to typed error") { implicit s =>
+    val dummy = "dummy"
+    val f = BIO.now(Left(dummy)).rethrow.runToFuture
+    assertEquals(f.value, Some(Success(Left(dummy))))
+  }
+
+  test("BIO.rethrow should turn Right to success value") { implicit s =>
+    val dummy = "dummy"
+    val r = BIO.now(Right(dummy)).rethrow.runSyncStep
+    assertEquals(r, Right(dummy))
+  }
+
   test("BIO.failed should expose typed error") { implicit s =>
     val dummy = "dummy"
     val r = BIO.raiseError(dummy).failed.runSyncStep
