@@ -1922,16 +1922,22 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def onErrorFallbackTo[E1, B >: A](that: BIO[E1, B]): BIO[E1, B] =
     onErrorHandleWith(_ => that)
 
+  /** Given a predicate function, keep retrying the
+   * BIO until the function returns true.
+   */
+  final def restartUntil(p: A => Boolean): BIO[E, A] =
+    this.flatMap(a => if (p(a)) now(a) else this.restartUntil(p))
+
   /** Returns a new `Task` that applies the mapping function to
-    * the element emitted by the source.
-    *
-    * Can be used for specifying a (lazy) transformation to the result
-    * of the source.
-    *
-    * This equivalence with [[flatMap]] always holds:
-    *
-    * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
-    */
+   * the element emitted by the source.
+   *
+   * Can be used for specifying a (lazy) transformation to the result
+   * of the source.
+   *
+   * This equivalence with [[flatMap]] always holds:
+   *
+   * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
+   */
   final def map[B](f: A => B): BIO[E, B] =
     this match {
       case Map(source, g, index) =>
