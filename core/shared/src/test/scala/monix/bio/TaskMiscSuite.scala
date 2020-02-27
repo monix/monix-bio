@@ -92,12 +92,12 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(result.value.get.get, Right(10))
   }
 
-//  test("Task.restartUntil") { implicit s =>
-//    var effect = 0
-//    val r = Task.evalAsync { effect += 1; effect }.restartUntil(_ >= 10).runToFuture
-//    s.tick()
-//    assertEquals(r.value.get.get, 10)
-//  }
+  test("BIO.restartUntil should keep retrying BIO until predicate succeeds") { implicit s =>
+    var effect = 0
+    val r = BIO.evalAsync { effect += 1; effect }.restartUntil(_ >= 10).runToFuture
+    s.tick()
+    assertEquals(r.value, Some(Success(Right(10))))
+  }
 
   test("BIO.toReactivePublisher should convert tasks with no errors") { implicit s =>
     val publisher = BIO.fromTry(Success(123)).toReactivePublisher
