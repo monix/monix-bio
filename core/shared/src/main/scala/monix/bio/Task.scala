@@ -237,6 +237,12 @@ object Task {
     BIO.racePair(fa, fb)
 
   /**
+    * @see See [[monix.bio.BIO.rethrow]]
+    */
+  def rethrow[A](fa: Task[Either[Throwable, A]]): Task[A] =
+    fa.rethrow
+
+  /**
     * @see See doctodo monix.bio.BIO.shift
     */
   val shift: Task[Unit] =

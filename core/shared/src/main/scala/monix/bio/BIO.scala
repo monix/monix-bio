@@ -1197,6 +1197,26 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def attempt: UIO[Either[E, A]] =
     FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
 
+  /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
+    *
+    * Example:
+    * {{{
+    *   @ BIO.now(Right(42))
+    *   res7: UIO[Right[Nothing, Int]] = Now(Right(42))
+    *
+    *   @ res7.rethrow
+    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42))
+    *
+    *   @ BIO.now(Left("error"))
+    *   res9: UIO[Left[String, Nothing]] = Now(Left("error"))
+    *
+    *   @ res9.rethrow
+    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error"))
+    * }}}
+    */
+  final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): BIO[E1, B] =
+    this.flatMap(fromEither(_))
+
   /** Runs this task first and then, when successful, the given task.
     * Returns the result of the given task.
     *
@@ -3513,6 +3533,12 @@ object BIO extends TaskInstancesLevel0 {
     */
   def racePair[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
     TaskRacePair(fa, fb)
+
+  /**
+    * @see See [[monix.bio.BIO.rethrow]]
+    */
+  final def rethrow[E, E1 >: E, A](fa: BIO[E, Either[E1, A]]): BIO[E1, A] =
+    fa.rethrow
 
   /** Asynchronous boundary described as an effectful `Task` that
     * can be used in `flatMap` chains to "shift" the continuation
