@@ -239,7 +239,7 @@ object Task {
   /**
     * @see See [[monix.bio.BIO.rethrow]]
     */
-  final def rethrow[A, B](fa: Task[A])(implicit ev: A <:< Either[Throwable, B]): Task[B] =
+  def rethrow[A](fa: Task[Either[Throwable, A]]): Task[A] =
     fa.rethrow
 
   /**

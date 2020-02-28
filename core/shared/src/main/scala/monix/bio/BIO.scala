@@ -3506,6 +3506,12 @@ object BIO extends TaskInstancesLevel0 {
   def racePair[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
     TaskRacePair(fa, fb)
 
+  /**
+    * @see See [[monix.bio.BIO.rethrow]]
+    */
+  final def rethrow[E, E1 >: E, A](fa: BIO[E, Either[E1, A]]): BIO[E1, A] =
+    fa.rethrow
+
   /** Asynchronous boundary described as an effectful `Task` that
     * can be used in `flatMap` chains to "shift" the continuation
     * of the run-loop to another thread or call stack, managed by

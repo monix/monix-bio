@@ -165,7 +165,7 @@ object UIO {
   /**
     * @see See [[monix.bio.BIO.rethrow]]
     */
-  final def rethrow[A, B](fa: UIO[A])(implicit ev: A <:< Either[Nothing, B]): UIO[B] =
+  final def rethrow[A](fa: UIO[Either[Nothing, A]]): UIO[A] =
     fa.rethrow
 
   /**
