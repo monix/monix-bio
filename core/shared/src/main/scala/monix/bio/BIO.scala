@@ -61,21 +61,22 @@ import scala.util.{Failure, Success, Try}
   *
   * =Getting Started=
   *
-  * To build a `Task` from a by-name parameters (thunks), we can use
+  * To build a `BIO` from a by-name parameters (thunks), we can use
   * [[monix.bio.BIO.apply BIO.apply]] (
-  * alias [[monix.bio.BIO.eval BIO.eval]]) or
+  * alias [[monix.bio.BIO.eval BIO.eval]]),
+  * [[monix.bio.BIO.evalTotal]] if the thunk is guaranteed to not throw any exceptions, or
   * [[monix.bio.BIO.evalAsync BIO.evalAsync]]:
   *
   * {{{
-  *   val hello = Task("Hello ")
-  *   val world = Task.evalAsync("World!")
+  *   val hello = BIO("Hello ")
+  *   val world = BIO.evalAsync("World!")
   * }}}
   *
-  * Nothing gets executed yet, as `Task` is lazy, nothing executes
+  * Nothing gets executed yet, as `BIO` is lazy, nothing executes
   * until you trigger its evaluation via [[BIO!.runAsync runAsync]] or
   * [[BIO!.runToFuture runToFuture]].
   *
-  * To combine `Task` values we can use [[BIO!.map .map]] and
+  * To combine `BIO` values we can use [[BIO!.map .map]] and
   * [[BIO!.flatMap .flatMap]], which describe sequencing and this time
   * it's in a very real sense because of the laziness involved:
   *
@@ -85,14 +86,14 @@ import scala.util.{Failure, Success, Try}
   *     .map(println)
   * }}}
   *
-  * This `Task` reference will trigger a side effect on evaluation, but
+  * This `BIO` reference will trigger a side effect on evaluation, but
   * not yet. To make the above print its message:
   *
   * {{{
   *   import monix.execution.CancelableFuture
   *   import monix.execution.Scheduler.Implicits.global
   *
-  *   val f: CancelableFuture[Unit] = sayHello.runToFuture
+  *   val f = sayHello.runToFuture
   *   // => Hello World!
   * }}}
   *
@@ -246,7 +247,7 @@ import scala.util.{Failure, Success, Try}
   *
   * {{{
   *   // Triggering execution
-  *   val cf: CancelableFuture[Unit] = delayedHello.runToFuture
+  *   val cf = delayedHello.runToFuture
   *
   *   // If we change our mind before the timespan has passed:
   *   cf.cancel()
@@ -283,7 +284,7 @@ import scala.util.{Failure, Success, Try}
   * {{{
   *   val task = Task.eval(println("Hello!")).executeAsync
   *
-  *   task doOnCancel Task.eval {
+  *   task doOnCancel BIO.evalTotal {
   *     println("A cancellation attempt was made!")
   *   }
   * }}}
@@ -405,12 +406,12 @@ import scala.util.{Failure, Success, Try}
   *         For example:
   *
   *         {{{
-  *           Task.evalAsync("resource").bracket { _ =>
+  *           BIO.evalAsync("resource").bracket { _ =>
   *             // use
-  *             Task.raiseError(new RuntimeException("Foo"))
+  *             BIO.raiseError(new RuntimeException("Foo"))
   *           } { _ =>
   *             // release
-  *             Task.raiseError(new RuntimeException("Bar"))
+  *             BIO.terminate(new RuntimeException("Bar"))
   *           }
   *         }}}
   *
@@ -507,30 +508,30 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.concurrent.Await
     *
     *   // ANTI-PATTERN 1: Unnecessary side effects
-    *   def increment1(sample: Task[Int]): CancelableFuture[Int] = {
+    *   def increment1(sample: BIO[String, Int]): CancelableFuture[Either[String, Int]] = {
     *     // No reason to trigger `runAsync` for this operation
-    *     sample.runToFuture.map(_ + 1)
+    *     sample.runToFuture.map(_.map(_ + 1))
     *   }
     *
     *   // ANTI-PATTERN 2: blocking threads makes it worse than (1)
-    *   def increment2(sample: Task[Int]): Int = {
+    *   def increment2(sample: BIO[String, Int]): Either[String, Int] = {
     *     // Blocking threads is totally unnecessary
     *     val x = Await.result(sample.runToFuture, 5.seconds)
-    *     x + 1
+    *     x.map(_ + 1)
     *   }
     *
     *   // ANTI-PATTERN 3: this is even WORSE than (2)!
-    *   def increment3(sample: Task[Int]): Task[Int] = {
+    *   def increment3(sample: BIO[String, Int]): BIO[String, Int] = {
     *     // Triggering side-effects, but misleading users/readers
     *     // into thinking this function is pure via the return type
-    *     Task.fromFuture(sample.runToFuture.map(_ + 1))
+    *     BIO.fromFutureEither(sample.runToFuture.map(_.map(_ + 1)))
     *   }
     * }}}
     *
-    * Instead prefer the pure versions. `Task` has its own [[map]],
+    * Instead prefer the pure versions. `BIO` has its own [[map]],
     * [[flatMap]], [[onErrorHandleWith]] or [[bracketCase]], which
     * are really powerful and can allow you to operate on a task
-    * in however way you like without escaping Task's context and
+    * in however way you like without escaping BIO's context and
     * triggering unwanted side-effects.
     *
     * @param s $schedulerDesc
@@ -559,14 +560,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     for {
     *       local <- TaskLocal(0)
     *       _     <- local.write(100)
-    *       _     <- Task.shift
+    *       _     <- BIO.shift
     *       value <- local.read
     *     } yield value
     *
     *   // We need to activate support of TaskLocal via:
-    *   implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
     *   // Actual execution that depends on these custom options:
-    *   task.runToFutureOpt
+    *   // task.runToFutureOpt
     * }}}
     *
     * $unsafeRun
@@ -590,19 +591,20 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * that's going to be called at some point in the future with
     * the final result.
     *
-    * Note that without invoking `runAsync` on a `Task`, nothing
-    * gets evaluated, as a `Task` has lazy behavior.
+    * Note that without invoking `runAsync` on a `BIO`, nothing
+    * gets evaluated, as a `BIO` has lazy behavior.
     *
     * {{{
     *   import scala.concurrent.duration._
+    *   import monix.bio.Cause
     *   // A Scheduler is needed for executing tasks via `runAsync`
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   // Nothing executes yet
-    *   val task: Task[String] =
+    *   val task: BIO[String, String] =
     *     for {
-    *       _ <- Task.sleep(3.seconds)
-    *       r <- Task { println("Executing..."); "Hello!" }
+    *       _ <- BIO.sleep(3.seconds)
+    *       r <- BIO.evalTotal { println("Executing..."); "Hello!" }
     *     } yield r
     *
     *
@@ -610,8 +612,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   val f = task.runAsync {
     *     case Right(str: String) =>
     *       println(s"Received: $$str")
-    *     case Left(e) =>
+    *     case Left(Cause.Termination(e)) =>
     *       global.reportFailure(e)
+    *     case Left(Cause.Error(str: String)) =>
+    *       println(s"Received expected error: $$str")
     *   }
     *
     *   // Or in case we change our mind
@@ -621,14 +625,16 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * $callbackDesc
     *
     * Example, equivalent to the above:
-    *
+    * doctodo
     * {{{
     *   import monix.execution.Callback
     *
-    *   task.runAsync(new Callback[Throwable, String] {
+    *   task.runAsync(new BiCallback[Cause[String], String] {
     *     def onSuccess(str: String) =
     *       println(s"Received: $$str")
-    *     def onError(e: Throwable) =
+    *     def onError(e: Cause[String]) =
+    *       println(s"Received expected error: $$e")
+    *     def onTermination(e: Throwable) =
     *       global.reportFailure(e)
     *   })
     * }}}
@@ -636,7 +642,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Example equivalent with [[runAsyncAndForget]]:
     *
     * {{{
-    *   task.runAsync(Callback.empty)
+    *   task.runAsync(BiCallback.empty)
     * }}}
     *
     * Completing a [[scala.concurrent.Promise]]:
@@ -644,8 +650,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.Promise
     *
-    *   val p = Promise[String]()
-    *   task.runAsync(Callback.fromPromise(p))
+    *   val p = Promise[Either[Cause[String], String]]()
+    *   task.runAsync(BiCallback.fromPromise(p))
     * }}}
     *
     * $unsafeRun
@@ -669,25 +675,28 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Example:
     * {{{
+    *   import monix.bio.Cause
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   val task =
     *     for {
     *       local <- TaskLocal(0)
     *       _     <- local.write(100)
-    *       _     <- Task.shift
+    *       _     <- BIO.shift
     *       value <- local.read
     *     } yield value
     *
     *   // We need to activate support of TaskLocal via:
-    *   implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
     *
     *   // Actual execution that depends on these custom options:
     *   task.runAsyncOpt {
     *     case Right(value) =>
     *       println(s"Received: $$value")
-    *     case Left(e) =>
+    *     case Left(Cause.Termination(e)) =>
     *       global.reportFailure(e)
+    *     case Left(Cause.Error(str)) =>
+    *       println(s"Received typed error: $$str")
     *   }
     * }}}
     *
@@ -728,7 +737,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     Task(println(str))
     *   } { (_, exitCode) =>
     *     // Finalization
-    *     Task(println(s"Finished via exit code: $$exitCode"))
+    *     UIO(println(s"Finished via exit code: $$exitCode"))
     *       .delayExecution(3.seconds)
     *   }
     * }}}
@@ -878,12 +887,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * {{{
     *   import scala.concurrent.duration._
+    *   import monix.bio.Cause
     *   import monix.execution.Scheduler.Implicits.global
     *
-    *   val task: Task[String] =
+    *   val task: BIO[String, String] =
     *     for {
-    *       _ <- Task.sleep(3.seconds)
-    *       r <- Task { println("Executing..."); "Hello!" }
+    *       _ <- BIO.sleep(3.seconds)
+    *       r <- UIO { println("Executing..."); "Hello!" }
     *     } yield r
     *
     *   // Triggering the task's execution, without receiving any
@@ -891,8 +901,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   task.runAsyncUncancelable {
     *     case Right(str) =>
     *       println(s"Received: $$str")
-    *     case Left(e) =>
+    *     case Left(Cause.Termination(e)) =>
     *       global.reportFailure(e)
+    *     case Left(Cause.Error(str)) =>
+    *       println(s"Received typed error: $$str")
     *   }
     * }}}
     *
@@ -1027,7 +1039,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.Await
     *
-    *   Await.result[Int](Task(42).runToFuture, 3.seconds)
+    *   Await.result[Either[Throwable, Int]](Task(42).runToFuture, 3.seconds)
     * }}}
     *
     * Some implementation details:
@@ -1305,7 +1317,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *       }
     *     } { in =>
     *       // The release part
-    *       Task.eval(in.close())
+    *       UIO(in.close())
     *     }
     *   }
     * }}}
@@ -1851,28 +1863,29 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
+    *   import java.util.concurrent.TimeoutException
     *
-    *   val tenSecs = Task.sleep(10.seconds)
+    *   val tenSecs = BIO.sleep(10.seconds)
     *   val task1 = tenSecs.start.flatMap { fa =>
     *     // Triggering pure cancellation, then trying to get its result
     *     fa.cancel.flatMap(_ => tenSecs)
     *   }
     *
-    *   task1.timeout(10.seconds).runToFuture
-    *   //=> throws TimeoutException
+    *   task1.timeoutWith(10.seconds, new TimeoutException())
+    *   //=> TimeoutException
     * }}}
     *
     * In general you can expect cancelable tasks to become non-terminating on
     * cancellation.
     *
     * This `onCancelRaiseError` operator transforms a task that would yield
-    * [[Task.never]] on cancellation into one that yields [[Task.raiseError]].
+    * [[BIO.never]] on cancellation into one that yields [[BIO.raiseError]].
     *
     * Example:
     * {{{
     *   import java.util.concurrent.CancellationException
     *
-    *   val anotherTenSecs = Task.sleep(10.seconds)
+    *   val anotherTenSecs = BIO.sleep(10.seconds)
     *     .onCancelRaiseError(new CancellationException)
     *
     *   val task2 = anotherTenSecs.start.flatMap { fa =>
@@ -1880,7 +1893,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     fa.cancel.flatMap(_ => anotherTenSecs)
     *   }
     *
-    *   task2.runToFuture
+    *   task2
     *   // => CancellationException
     * }}}
     */
@@ -1932,24 +1945,21 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     }
 
   /** Creates a new task that will run a provided effect in case of a typed error
-    *  and raise the original error in case provided function is successful.
+    * and raise the original error in case the provided function is successful.
     *
-    *  Example:
+    * Example:
     *  {{{
     *    import monix.bio.{BIO, UIO}
-    *    val raise: BIO[String, Nothing]   = BIO.raiseError("Error1")
-    *    val handle: String => UIO[Unit]   = err => BIO.evalTotal(println(err))
-    *    // will result in Left("Error"), printing error to console
-    *    val result: BIO[String, Nothing]  = raise.tapError(handle)
+    *
+    *    // will result in Left("Error") and print the error to console
+    *    BIO.raiseError("Error1").tapError(err => BIO.evalTotal(println(err)))
     *  }}}
     *
-    *  Passing a function that raises error will result in failed task with that raised error `E1`.
-    *  Example:
+    * If provided function returns an error then the resulting task will raise that error as well.
+    * Example:
     *  {{{
-    *    val raise: BIO[String, Nothing]             = BIO.raiseError("Error1")
-    *    val handle: String => BIO[String, Nothing]  = err => BIO.raiseError("Error2")
     *    // will result in Left("Error2")
-    *    val result: BIO[String, Nothing]            = raise.tapError(handle)
+    *    BIO.raiseError("Error1").tapError(err => BIO.raiseError("Error2"))
     *  }}}
     *  */
   final def tapError[E1 >: E, B](f: E => BIO[E1, B]): BIO[E1, A] =
@@ -2155,6 +2165,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import cats.effect.IO
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
+    *
+    *   implicit val cs = IO.contextShift(global)
     *
     *   BIO.eval(println("Hello!"))
     *     .delayExecution(5.seconds)
@@ -2401,6 +2413,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
+    *   import java.util.concurrent.TimeoutException
     *
     *   val deadline = 10.seconds.fromNow
     *
@@ -2848,6 +2861,7 @@ object BIO extends TaskInstancesLevel0 {
     *   import scala.concurrent.duration._
     *
     *   implicit val timer = IO.timer(global)
+    *   implicit val cs = IO.contextShift(global)
     *
     *   val io = IO.sleep(5.seconds) *> IO(println("Hello!"))
     *
@@ -2883,7 +2897,7 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   import cats.effect._
     *
-    *   val io: IO[Unit] = IO(println("Hello!")
+    *   val io: IO[Unit] = IO(println("Hello!"))
     *   val task: Task[Unit] = BIO.fromEffect(io)
     * }}}
     *
@@ -3882,7 +3896,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * {{{
     *   import cats.effect._
-    *   import monix.eval._
+    *   import monix.bio._
     *   import java.io._
     *
     *   // Needed for converting from Task to something else, because we need
@@ -3946,7 +3960,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * {{{
     *   import cats.effect._
-    *   import monix.eval._
+    *   import monix.bio._
     *   import java.io._
     *
     *   def open(file: File) =

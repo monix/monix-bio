@@ -22,6 +22,7 @@ lazy val coreJVM = project.in(file("core/jvm"))
   .settings(crossSettings ++ crossVersionSharedSources)
   .settings(name := "monix-bio")
   .enablePlugins(AutomateHeaderPlugin)
+  .settings(doctestTestSettings)
 
 lazy val coreJS = project.in(file("core/js"))
   .settings(crossSettings ++ crossVersionSharedSources)
@@ -367,6 +368,12 @@ lazy val microsite = project
       ),
     )
   }
+
+lazy val doctestTestSettings = Seq(
+  doctestTestFramework := DoctestTestFramework.Minitest,
+  doctestIgnoreRegex := Some(s".*BIOApp.scala"),
+  doctestOnlyCodeBlocksMode := true
+)
 
 lazy val skipOnPublishSettings = Seq(
   skip in publish := true,

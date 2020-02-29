@@ -91,7 +91,7 @@ import monix.execution.misc.Local
   *
   *   // Needs enabling the "localContextPropagation" option
   *   // just before execution
-  *   implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+  *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
   *
   *   // Triggering actual execution
   *   val result = task.runToFutureOpt
@@ -157,7 +157,7 @@ final class TaskLocal[A] private (ref: Local[A]) {
     *   val task: UIO[Int] =
     *     for {
     *       local <- TaskLocal(0)
-    *       value <- local.bindL(Task.eval(100))(local.read.map(_ * 2))
+    *       value <- local.bindL(UIO.eval(100))(local.read.map(_ * 2))
     *     } yield value
     * }}}
     *
