@@ -19,21 +19,22 @@ package monix.bio
 package internal
 
 import monix.bio.BIO.Context
+import monix.execution.Callback
 
 private[bio] object BIOStartAndForget {
 
   /**
    *  Implementation for `BIO.startAndForget`
    */
-  def apply[E, A](fa: BIO[E, A]): BIO[E, Unit] = {
-    val start = (ctx: Context[E], cb: BiCallback[E, Unit]) => {
+  def apply[E, A](fa: BIO[E, A]): UIO[Unit] = {
+    val start = (ctx: Context[Nothing], cb: Callback[Nothing, Unit]) => {
       implicit val sc = ctx.scheduler
       // It needs its own context, its own cancelable
       val ctx2 = BIO.Context[E](sc, ctx.options)
       // Starting actual execution of our newly created task forcing new async boundary
-      BIO.unsafeStartEnsureAsync(fa, ctx2, BiCallback.empty[E, A])
+      BIO.unsafeStartEnsureAsync(fa, ctx2, BiCallback.empty)
       cb.onSuccess(())
     }
-    BIO.Async[E, Unit](start, trampolineBefore = false, trampolineAfter = true)
+    BIO.Async[Nothing, Unit](start, trampolineBefore = false, trampolineAfter = true)
   }
 }

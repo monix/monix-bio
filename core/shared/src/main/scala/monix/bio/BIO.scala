@@ -1834,7 +1834,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
    * `bio.startAndForget <-> bio.start.map(_ => ())`
    *
    */
-  final def startAndForget: BIO[E, Unit] =
+  final def startAndForget: UIO[Unit] =
     BIOStartAndForget(this)
 
   /** Returns a new `BIO` in which `f` is scheduled to be run on

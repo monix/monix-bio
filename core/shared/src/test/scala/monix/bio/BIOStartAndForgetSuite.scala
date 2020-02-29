@@ -59,7 +59,7 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
   test("BIO#startAndForget triggers fatal errors in background thread") { implicit sc =>
     val fatalError = new DummyException()
     val successfulBIO = BIO.now(20)
-    val fatalBIO = BIO.delay[Int] { throw fatalError}
+    val fatalBIO = BIO.terminate(fatalError)
 
     val result = for {
       _     <- fatalBIO.startAndForget
