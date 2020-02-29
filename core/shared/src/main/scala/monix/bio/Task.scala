@@ -22,7 +22,6 @@ import cats.~>
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.compat.BuildFrom
-import monix.execution.{Callback, CancelablePromise, Scheduler}
 import monix.catnap.FutureLift
 import monix.execution.{Callback, CancelablePromise, Scheduler}
 import org.reactivestreams.Publisher
@@ -236,6 +235,12 @@ object Task {
    */
   def racePair[A, B](fa: Task[A], fb: Task[B]): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
     BIO.racePair(fa, fb)
+
+  /**
+    * @see See [[monix.bio.BIO.rethrow]]
+    */
+  def rethrow[A](fa: Task[Either[Throwable, A]]): Task[A] =
+    fa.rethrow
 
   /**
     * @see See [[[monix.bio.BIO$.shift:monix\.bio\.UIO*]]]

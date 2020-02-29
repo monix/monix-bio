@@ -1196,6 +1196,26 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def attempt: UIO[Either[E, A]] =
     FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
 
+  /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
+    *
+    * Example:
+    * {{{
+    *   @ BIO.now(Right(42))
+    *   res7: UIO[Right[Nothing, Int]] = Now(Right(42))
+    *
+    *   @ res7.rethrow
+    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42))
+    *
+    *   @ BIO.now(Left("error"))
+    *   res9: UIO[Left[String, Nothing]] = Now(Left("error"))
+    *
+    *   @ res9.rethrow
+    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error"))
+    * }}}
+    */
+  final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): BIO[E1, B] =
+    this.flatMap(fromEither(_))
+
   /** Runs this task first and then, when successful, the given task.
     * Returns the result of the given task.
     *
@@ -1805,6 +1825,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def loopForever: BIO[E, Nothing] =
     flatMap(_ => this.loopForever)
 
+  /** Start asynchronous execution of the source suspended in the `BIO` context,
+   * running it in the background and discarding the result.
+   *
+   * Similar to [[start]] after mapping result to Unit. Below law holds:
+   *
+   * `bio.startAndForget <-> bio.start.map(_ => ())`
+   *
+   */
+  final def startAndForget: UIO[Unit] =
+    BIOStartAndForget(this)
+
   /** Returns a new `BIO` in which `f` is scheduled to be run on
    * completion. This would typically be used to release any
    * resources acquired by this `BIO`.
@@ -1922,16 +1953,22 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def onErrorFallbackTo[E1, B >: A](that: BIO[E1, B]): BIO[E1, B] =
     onErrorHandleWith(_ => that)
 
+  /** Given a predicate function, keep retrying the
+   * BIO until the function returns true.
+   */
+  final def restartUntil(p: A => Boolean): BIO[E, A] =
+    this.flatMap(a => if (p(a)) now(a) else this.restartUntil(p))
+
   /** Returns a new `Task` that applies the mapping function to
-    * the element emitted by the source.
-    *
-    * Can be used for specifying a (lazy) transformation to the result
-    * of the source.
-    *
-    * This equivalence with [[flatMap]] always holds:
-    *
-    * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
-    */
+   * the element emitted by the source.
+   *
+   * Can be used for specifying a (lazy) transformation to the result
+   * of the source.
+   *
+   * This equivalence with [[flatMap]] always holds:
+   *
+   * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
+   */
   final def map[B](f: A => B): BIO[E, B] =
     this match {
       case Map(source, g, index) =>
@@ -3512,6 +3549,12 @@ object BIO extends TaskInstancesLevel0 {
     */
   def racePair[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
     TaskRacePair(fa, fb)
+
+  /**
+    * @see See [[monix.bio.BIO.rethrow]]
+    */
+  final def rethrow[E, E1 >: E, A](fa: BIO[E, Either[E1, A]]): BIO[E1, A] =
+    fa.rethrow
 
   /** Asynchronous boundary described as an effectful `Task` that
     * can be used in `flatMap` chains to "shift" the continuation

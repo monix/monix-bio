@@ -163,6 +163,12 @@ object UIO {
     TaskRacePair(fa, fb)
 
   /**
+    * @see See [[monix.bio.BIO.rethrow]]
+    */
+  final def rethrow[A](fa: UIO[Either[Nothing, A]]): UIO[A] =
+    fa.rethrow
+
+  /**
     * @see See [[[monix.bio.BIO$.shift:monix\.bio\.UIO*]]]
     */
   val shift: UIO[Unit] =
