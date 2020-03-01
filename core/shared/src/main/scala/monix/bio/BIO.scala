@@ -776,7 +776,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $cancelTokenDesc
     */
   @UnsafeBecauseImpure
-  final def runAsyncF[E1 >: E](cb: Either[Cause[E1], A] => Unit)(implicit s: Scheduler): CancelToken[BIO[E1, *]] =
+  final def runAsyncF[E1 >: E](cb: Either[Cause[E1], A] => Unit)(implicit s: Scheduler): CancelToken[UIO] =
     runAsyncOptF(cb)(s, BIO.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
@@ -816,7 +816,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   @UnsafeBecauseImpure
   def runAsyncOptF[E1 >: E](
     cb: Either[Cause[E], A] => Unit
-  )(implicit s: Scheduler, opts: Options): CancelToken[BIO[E1, *]] = {
+  )(implicit s: Scheduler, opts: Options): CancelToken[UIO] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -1198,19 +1198,18 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
     *
-    * Example:
-    * {{{
-    *   @ BIO.now(Right(42))
+    * @example {{{
+    *   scala> BIO.now(Right(42))
     *   res7: UIO[Right[Nothing, Int]] = Now(Right(42))
     *
-    *   @ res7.rethrow
-    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42))
+    *   scala> res7.rethrow
+    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42)))
     *
-    *   @ BIO.now(Left("error"))
+    *   scala> BIO.now(Left("error"))
     *   res9: UIO[Left[String, Nothing]] = Now(Left("error"))
     *
-    *   @ res9.rethrow
-    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error"))
+    *   scala> res9.rethrow
+    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error")))
     * }}}
     */
   final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): BIO[E1, B] =
@@ -3550,10 +3549,23 @@ object BIO extends TaskInstancesLevel0 {
   def racePair[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
     TaskRacePair(fa, fb)
 
-  /**
-    * @see See [[monix.bio.BIO.rethrow]]
+  /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
+    *
+    * @example {{{
+    *   scala> BIO.now(Right(42))
+    *   res7: UIO[Right[Nothing, Int]] = Now(Right(42))
+    *
+    *   scala> BIO.rethrow(res7)
+    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42)))
+    *
+    *   scala> BIO.now(Left("error"))
+    *   res9: UIO[Left[String, Nothing]] = Now(Left("error"))
+    *
+    *   scala> BIO.rethrow(res9)
+    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error")))
+    * }}}
     */
-  final def rethrow[E, E1 >: E, A](fa: BIO[E, Either[E1, A]]): BIO[E1, A] =
+  def rethrow[E, A](fa: BIO[E, Either[E, A]]): BIO[E, A] =
     fa.rethrow
 
   /** Asynchronous boundary described as an effectful `Task` that
@@ -4302,7 +4314,7 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E](
       cb: Either[Cause[Nothing], A] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E, *]] = {
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[UIO] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
         BIO.unit
@@ -4350,7 +4362,7 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: E](
       cb: Either[Cause[E], Nothing] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, *]] = {
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[UIO] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
         BIO.unit
@@ -4405,7 +4417,7 @@ object BIO extends TaskInstancesLevel0 {
     // Optimization to avoid the run-loop
     override def runAsyncOptF[E1 >: Nothing](
       cb: Either[Cause[Nothing], Nothing] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[BIO[E1, *]] = {
+    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[UIO] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callTermination(cb, e)
         BIO.unit
