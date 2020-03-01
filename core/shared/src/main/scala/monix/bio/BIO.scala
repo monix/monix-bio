@@ -1991,7 +1991,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *    BIO.raiseError("Error1").tapError(err => BIO.evalTotal(println(err)))
     *  }}}
     *
-    * If provided function returns an error then the resulting task will raise that error as well.
+    * If provided function returns an error then the resulting task will raise that error instead.
+    *
     * Example:
     *  {{{
     *    // will result in Left("Error2")
@@ -2106,13 +2107,22 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def bimap[E1, B](fe: E => E1, fa: A => B): BIO[E1, B] =
     BIO.FlatMap(this, BIO.Bimap(fe, fa))
 
-  /** Creates a new task that will handle any matching throwable that
-    * this task might emit by executing another task.
+  /** Creates a new task that will will transform errors
+    * using supplied function `f`.
     *
-    * See [[onErrorHandleWith]] for the version that takes another task.
+    * Example:
+    * {{{
+    *   import java.time.Instant
+    *
+    *   case class ErrorA(i: Int)
+    *   case class ErrorB(errA: ErrorA, createdAt: Instant)
+    *
+    *   val task1: BIO[ErrorA, String] = BIO.raiseError(ErrorA(10))
+    *   val task2: BIO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
+    * }}}
     */
   final def mapError[E1](f: E => E1): BIO[E1, A] =
-    onErrorHandleWith(e => BIO.raiseError(f(e)))
+    BIO.FlatMap(this, BIO.MapError[E, E1, A](f))
 
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
@@ -2181,7 +2191,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Note that this method is only applicable when the typed error `E`
     * is also a `Throwable`, or when the source task is an unexceptional
     * one (i.e. it is a `UIO`). If you need a conversion from `E` into
-    * a `Throwable`, take a look at doctodo mapError or [[onErrorHandleWith]].
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
     * If you need a conversion into a `UIO`, take a look at [[attempt]],
     * [[materialize]] or [[onErrorHandle]].
     *
@@ -2225,7 +2235,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Note that this method is only applicable when the typed error `E`
     * is also a `Throwable`, or when the source task is an unexceptional
     * one (i.e. it is a `UIO`). If you need a conversion from `E` into
-    * a `Throwable`, take a look at doctodo mapError or [[onErrorHandleWith]].
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
     * If you need a conversion into a `UIO`, take a look at [[attempt]],
     * [[materialize]] or [[onErrorHandle]].
     *
@@ -2272,7 +2282,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Note that this method is only applicable when the typed error `E`
     * is also a `Throwable`, or when the source task is an unexceptional
     * one (i.e. it is a `UIO`). If you need a conversion from `E` into
-    * a `Throwable`, take a look at doctodo mapError or [[onErrorHandleWith]].
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
     * If you need a conversion into a `UIO`, take a look at [[attempt]],
     * [[materialize]] or [[onErrorHandle]].
     *
@@ -2307,7 +2317,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Note that this method is only applicable when the typed error `E`
     * is also a `Throwable`, or when the source task is an unexceptional
     * one (i.e. it is a `UIO`). If you need a conversion from `E` into
-    * a `Throwable`, take a look at doctodo mapError or [[onErrorHandleWith]].
+    * a `Throwable`, take a look at [[mapError]] or [[onErrorHandleWith]].
     * If you need a conversion into a `UIO`, take a look at [[attempt]],
     * [[materialize]] or [[onErrorHandle]].
     *
@@ -4590,6 +4600,12 @@ object BIO extends TaskInstancesLevel0 {
   /** Used as optimization by [[BIO.bimap]]. */
   private final case class Bimap[E, E1, A, B](fe: E => E1, fa: A => B) extends StackFrame[E, A, BIO[E1, B]] {
     def apply(a: A) = Now(fa(a))
+    def recover(e: E) = Error(fe(e))
+  }
+
+  /** Used as optimization by [[BIO.mapError]]. */
+  private final case class MapError[E, E1, A](fe: E => E1) extends StackFrame[E, A, BIO[E1, A]] {
+    def apply(a: A) = Now(a)
     def recover(e: E) = Error(fe(e))
   }
 
