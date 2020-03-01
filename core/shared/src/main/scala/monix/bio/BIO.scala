@@ -1198,19 +1198,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
     *
-    * @example {{{
-    *   scala> BIO.now(Right(42))
-    *   res7: UIO[Right[Nothing, Int]] = Now(Right(42))
+    * `BIO.now(Right(42)).rethrow <-> BIO.now(42)`
     *
-    *   scala> res7.rethrow
-    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42)))
-    *
-    *   scala> BIO.now(Left("error"))
-    *   res9: UIO[Left[String, Nothing]] = Now(Left("error"))
-    *
-    *   scala> res9.rethrow
-    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error")))
-    * }}}
+    * `BIO.now(Left("error")).rethrow <-> BIO.raiseError("error")`
     */
   final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): BIO[E1, B] =
     this.flatMap(fromEither(_))
@@ -3569,19 +3559,9 @@ object BIO extends TaskInstancesLevel0 {
 
   /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
     *
-    * @example {{{
-    *   scala> BIO.now(Right(42))
-    *   res7: UIO[Right[Nothing, Int]] = Now(Right(42))
+    * `BIO.rethrow(BIO.now(Right(42))) <-> BIO.now(42)`
     *
-    *   scala> BIO.rethrow(res7)
-    *   res8: BIO[Nothing, Int] = FlatMap(Now(Right(42)))
-    *
-    *   scala> BIO.now(Left("error"))
-    *   res9: UIO[Left[String, Nothing]] = Now(Left("error"))
-    *
-    *   scala> BIO.rethrow(res9)
-    *   res10: BIO[String, Nothing] = FlatMap(Now(Left("error")))
-    * }}}
+    * `BIO.rethrow(BIO.now(Left("error"))) <-> BIO.raiseError("error")`
     */
   def rethrow[E, A](fa: BIO[E, Either[E, A]]): BIO[E, A] =
     fa.rethrow
