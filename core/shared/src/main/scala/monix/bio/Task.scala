@@ -18,10 +18,10 @@
 package monix.bio
 
 import cats.effect.{CancelToken, ConcurrentEffect, Effect}
+import cats.~>
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.compat.BuildFrom
-import monix.execution.{Callback, CancelablePromise, Scheduler}
 import monix.catnap.FutureLift
 import monix.execution.{Callback, CancelablePromise, Scheduler}
 import org.reactivestreams.Publisher
@@ -243,13 +243,13 @@ object Task {
     fa.rethrow
 
   /**
-    * @see See doctodo monix.bio.BIO.shift
+    * @see See [[[monix.bio.BIO$.shift:monix\.bio\.UIO*]]]
     */
   val shift: Task[Unit] =
     BIO.shift
 
   /**
-    * @see See doctodo monix.bio.BIO.shift
+    * @see See [[[monix.bio.BIO$.shift(ec:scala\.concurrent\.ExecutionContext*]]]
     */
   def shift(ec: ExecutionContext): Task[Unit] =
     BIO.shift(ec)
@@ -332,4 +332,42 @@ object Task {
       fa5: Task[A5],
       fa6: Task[A6])(f: (A1, A2, A3, A4, A5, A6) => R): Task[R] =
     BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6)(f)
+
+  /**
+    * @see See [[monix.bio.BIO.liftTo]]
+    */
+  def liftTo[F[_]](implicit F: TaskLift[F]): (Task ~> F) =
+    BIO.liftTo[F]
+
+  /**
+    * @see See [[monix.bio.BIO.liftToAsync]]
+    */
+  def liftToAsync[F[_]](implicit F: cats.effect.Async[F], eff: cats.effect.Effect[Task]): (Task ~> F) =
+    BIO.liftToAsync[F]
+
+  /**
+    * @see See [[monix.bio.BIO.liftToConcurrent]]
+    */
+  def liftToConcurrent[F[_]](
+                              implicit F: cats.effect.Concurrent[F],
+                              eff: cats.effect.ConcurrentEffect[Task]): (Task ~> F) =
+    BIO.liftToConcurrent[F]
+
+  /**
+    * @see See [[monix.bio.BIO.liftFrom]]
+    */
+  def liftFrom[F[_]](implicit F: TaskLike[F]): (F ~> Task) =
+    BIO.liftFrom[F]
+
+  /**
+    * @see See [[monix.bio.BIO.liftFromConcurrentEffect]]
+    */
+  def liftFromConcurrentEffect[F[_]](implicit F: ConcurrentEffect[F]): (F ~> Task) =
+    BIO.liftFromConcurrentEffect[F]
+
+  /**
+    * @see See [[monix.bio.BIO.liftFromEffect]]
+    */
+  def liftFromEffect[F[_]](implicit F: Effect[F]): (F ~> Task) =
+    BIO.liftFromEffect[F]
 }

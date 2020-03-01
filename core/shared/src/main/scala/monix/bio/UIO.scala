@@ -165,17 +165,17 @@ object UIO {
   /**
     * @see See [[monix.bio.BIO.rethrow]]
     */
-  final def rethrow[A](fa: UIO[Either[Nothing, A]]): UIO[A] =
+  def rethrow[A](fa: UIO[Either[Nothing, A]]): UIO[A] =
     fa.rethrow
 
   /**
-    * @see See doctodo monix.bio.BIO.shift
+    * @see See [[[monix.bio.BIO$.shift:monix\.bio\.UIO*]]]
     */
   val shift: UIO[Unit] =
     BIO.shift
 
   /**
-    * @see See doctodo monix.bio.BIO.shift
+    * @see See [[[monix.bio.BIO$.shift(ec:scala\.concurrent\.ExecutionContext*]]]
     */
   def shift(ec: ExecutionContext): UIO[Unit] =
     BIO.shift(ec)

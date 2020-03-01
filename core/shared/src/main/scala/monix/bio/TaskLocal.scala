@@ -21,11 +21,11 @@ import monix.execution.exceptions.APIContractViolationException
 import monix.execution.misc.Local
 
 /** A `TaskLocal` is like a
-  * doctodo `monix.execution.misc.ThreadLocal ThradLocal``
+  * [[monix.execution.misc.ThreadLocal ThreadLocal]]
   * that is pure and with a flexible scope, being processed in the
   * context of the [[Task]] data type.
   *
-  * This data type wraps doctodo `monix.execution.misc.Local`.
+  * This data type wraps [[monix.execution.misc.Local]].
   *
   * Just like a `ThreadLocal`, usage of a `TaskLocal` is safe,
   * the state of all current locals being transported over
@@ -91,7 +91,7 @@ import monix.execution.misc.Local
   *
   *   // Needs enabling the "localContextPropagation" option
   *   // just before execution
-  *   implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+  *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
   *
   *   // Triggering actual execution
   *   val result = task.runToFutureOpt
@@ -100,7 +100,7 @@ import monix.execution.misc.Local
 final class TaskLocal[A] private (ref: Local[A]) {
   import TaskLocal.checkPropagation
 
-  /** Returns doctodo monix.execution.misc.Local instance used in this [[TaskLocal]].
+  /** Returns [[monix.execution.misc.Local]] instance used in this [[TaskLocal]].
     *
     * Note that `TaskLocal.bind` will restore the original local value
     * on the thread where the `Task's` run-loop ends up so it might lead
@@ -157,7 +157,7 @@ final class TaskLocal[A] private (ref: Local[A]) {
     *   val task: UIO[Int] =
     *     for {
     *       local <- TaskLocal(0)
-    *       value <- local.bindL(Task.eval(100))(local.read.map(_ * 2))
+    *       value <- local.bindL(UIO.eval(100))(local.read.map(_ * 2))
     *     } yield value
     * }}}
     *
@@ -238,7 +238,7 @@ object TaskLocal {
   def apply[A](default: A): UIO[TaskLocal[A]] =
     checkPropagation(UIO.eval(new TaskLocal(Local(default))))
 
-  /** Wraps a doctodo monix.execution.misc.Local Local reference
+  /** Wraps a [[monix.execution.misc.Local Local]] reference
     * (given in the `Task` context) in a [[TaskLocal]] value.
     *
     * $refTransparent
