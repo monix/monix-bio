@@ -1,8 +1,12 @@
 # Monix-BIO
 
+[![Join the chat at https://gitter.im/monix/monix-bio](https://badges.gitter.im/monix/monix-bio.svg)](https://gitter.im/monix/monix-bio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Experimental alternative to [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Task.html) from [Monix](https://github.com/monix/monix) which uses a second type parameter to represent recoverable errors.
 
 WORK IN PROGRESS.
+
+[Documentation Website](https://monix.github.io/monix-bio/)
 
 ## Getting Started
 
@@ -11,18 +15,18 @@ There is a SNAPSHOT version (compatible with Monix 3.x and Cats and Cats-Effect 
 ```scala
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies += "io.monix" %% "monix-bio" % "0.0.1-SNAPSHOT"
+libraryDependencies += "io.monix" %% "monix-bio" % "0.0.2-SNAPSHOT"
 ```
 
 I will really appreciate feedback, bugs and complaints about API if you play with it. Just please do not use it in production yet!
 
 If you'd like to join and help then look for issues tagged with [good first issue](https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
-I'm happy to guide anyone interested in contributing. Just let me know on specific issue or write to me on gitter.
+I'm happy to guide anyone interested in contributing. Just let me know on specific issue or write to me on [gitter](https://gitter.im/monix/monix-bio).
 
 ## Short introduction
 
 `BIO[E, A]` represents a specification for a possibly lazy or asynchronous computation, which when executed will produce
-a successful value `A`, an error `E`, never terminate or complete with a fatal error.
+a successful value `A`, an error `E`, never terminate or complete with a terminal (untyped) error.
 
 It composes very well and can handle many use cases such as cancellation, resource safety, context propagation, error handling or parallelism.
 

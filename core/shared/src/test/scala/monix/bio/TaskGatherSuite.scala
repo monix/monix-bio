@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,18 +17,20 @@
 
 package monix.bio
 
-import monix.execution.exceptions.DummyException
+import cats.effect.ExitCase
+import monix.execution.exceptions.{DummyException, UncaughtErrorException}
 import monix.execution.internal.Platform
 
 import scala.concurrent.duration._
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TaskGatherSuite extends BaseTestSuite {
-  test("Task.gather should execute in parallel for async tasks") { implicit s =>
+  test("BIO.gather should execute in parallel for async tasks") { implicit s =>
     val seq = Seq(
-      Task.evalAsync(1).delayExecution(2.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds))
+      BIO.evalAsync(1).delayExecution(2.seconds),
+      BIO.evalAsync(2).delayExecution(1.second),
+      BIO.evalAsync(3).delayExecution(3.seconds)
+    )
     val f = BIO.gather(seq).runToFuture
 
     s.tick()
@@ -39,13 +41,13 @@ object TaskGatherSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(Seq(1, 2, 3)))))
   }
 
-  test("Task.gather should onError if one of the tasks terminates in error") { implicit s =>
-    val ex = DummyException("dummy")
+  test("BIO.gather should onError if one of the tasks terminates in error") { implicit s =>
+    val ex = "dummy"
     val seq = Seq(
-      Task.evalAsync(3).delayExecution(3.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(throw ex).delayExecution(2.seconds),
-      Task.evalAsync(3).delayExecution(1.seconds)
+      UIO.evalAsync(3).delayExecution(3.seconds),
+      UIO.evalAsync(2).delayExecution(1.second),
+      BIO.raiseError(ex).delayExecution(2.seconds),
+      UIO.evalAsync(3).delayExecution(1.seconds)
     )
 
     val f = BIO.gather(seq).runToFuture
@@ -56,11 +58,29 @@ object TaskGatherSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("Task.gather should be canceled") { implicit s =>
-    val seq = Seq(
-      Task.evalAsync(1).delayExecution(2.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds))
+  test("BIO.gather should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
+    val ex = DummyException("dummy")
+    val seq: Seq[BIO[String, Int]] = Seq(
+      UIO.evalAsync(3).delayExecution(3.seconds),
+      UIO.evalAsync(2).delayExecution(1.second),
+      UIO.evalAsync(throw ex).delayExecution(2.seconds),
+      UIO.evalAsync(3).delayExecution(1.seconds)
+    )
+
+    val f = BIO.gather(seq).runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(2.seconds)
+    assertEquals(f.value, Some(Failure(ex)))
+  }
+
+  test("BIO.gather should be canceled") { implicit s =>
+    val seq: Seq[BIO[Int, Int]] = Seq(
+      UIO.evalAsync(1).delayExecution(2.seconds),
+      UIO.evalAsync(2).delayExecution(1.second),
+      UIO.evalAsync(3).delayExecution(3.seconds)
+    )
     val f = BIO.gather(seq).runToFuture
 
     s.tick()
@@ -73,7 +93,7 @@ object TaskGatherSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("Task.gather should be stack safe for synchronous tasks") { implicit s =>
+  test("BIO.gather should be stack safe for synchronous tasks") { implicit s =>
     val count = if (Platform.isJVM) 200000 else 5000
     val tasks = for (_ <- 0 until count) yield Task.now(1)
     val composite = BIO.gather(tasks).map(_.sum)
@@ -82,21 +102,90 @@ object TaskGatherSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(Right(count))))
   }
 
-  // TODO: uncomment once memoize is added
-//  test("Task.gather runAsync multiple times") { implicit s =>
-//    var effect = 0
-//    val task1 = Task.evalAsync { effect += 1; 3 }.memoize
-//    val task2 = task1 map { x =>
-//      effect += 1; x + 1
-//    }
-//    val task3 = Task.gather(List(task2, task2, task2))
-//
-//    val result1 = task3.runToFuture; s.tick()
-//    assertEquals(result1.value, Some(Success(List(4, 4, 4))))
-//    assertEquals(effect, 1 + 3)
-//
-//    val result2 = task3.runToFuture; s.tick()
-//    assertEquals(result2.value, Some(Success(List(4, 4, 4))))
-//    assertEquals(effect, 1 + 3 + 3)
-//  }
+  test("BIO.gather runAsync multiple times") { implicit s =>
+    var effect = 0
+    val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
+    val task2 = task1 map { x =>
+      effect += 1; x + 1
+    }
+    val task3 = UIO.gather(List(task2, task2, task2))
+
+    val result1 = task3.runToFuture; s.tick()
+    assertEquals(result1.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(effect, 1 + 3)
+
+    val result2 = task3.runToFuture; s.tick()
+    assertEquals(result2.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(effect, 1 + 3 + 3)
+  }
+
+  test("BIO.gather should log errors if multiple errors happen") { implicit s =>
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
+
+    val ex = "dummy1"
+    var errorsThrow = 0
+
+    val task1: BIO[String, Int] = BIO
+      .raiseError(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val task2: BIO[String, Int] = BIO
+      .raiseError(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val gather = BIO.gather(Seq(task1, task2))
+    val result = gather.runToFutureOpt
+    s.tick()
+
+    assertEquals(result.value, Some(Success(Left(ex))))
+    assertEquals(s.state.lastReportedError.toString, UncaughtErrorException.wrap(ex).toString)
+    assertEquals(errorsThrow, 2)
+  }
+
+  test("BIO.gather should log terminal errors if multiple errors happen") { implicit s =>
+    implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
+
+    val ex = DummyException("dummy1")
+    var errorsThrow = 0
+
+    val task1: BIO[String, Int] = BIO
+      .terminate(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val task2: BIO[String, Int] = BIO
+      .terminate(ex)
+      .executeAsync
+      .guaranteeCase {
+        case ExitCase.Completed => BIO.unit
+        case ExitCase.Error(_) => UIO(errorsThrow += 1)
+        case ExitCase.Canceled => BIO.unit
+      }
+      .uncancelable
+
+    val gather = BIO.gather(Seq(task1, task2))
+    val result = gather.runToFutureOpt
+    s.tick()
+
+    assertEquals(result.value, Some(Failure(ex)))
+    assertEquals(s.state.lastReportedError, ex)
+    assertEquals(errorsThrow, 2)
+  }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,8 +21,8 @@ import cats.effect.ExitCase
 import cats.effect.ExitCase.{Canceled, Completed, Error}
 import monix.bio.BIO.{Context, ContextSwitch}
 import monix.bio.internal.StackFrame.FatalStackFrame
-import monix.bio.internal.TaskRunLoop.WrappedException
-import monix.bio.{BIO, Cause, UIO}
+import monix.execution.exceptions.UncaughtErrorException
+import monix.bio.{BIO, BiCallback, Cause, UIO}
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
 
@@ -88,7 +88,8 @@ private[monix] object TaskBracket {
   def either[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]): BIO[E, B] = {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
+  ): BIO[E, B] = {
 
     BIO.Async(
       new StartE(acquire, use, release),
@@ -101,8 +102,8 @@ private[monix] object TaskBracket {
   private final class StartE[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit])
-      extends BaseStart(acquire, use) {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
+  ) extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameE(ctx, value, release)
@@ -111,8 +112,8 @@ private[monix] object TaskBracket {
   private final class ReleaseFrameE[E, A, B](
     ctx: Context[E],
     a: A,
-    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit])
-      extends BaseReleaseFrame[E, A, B](ctx, a) {
+    release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
+  ) extends BaseReleaseFrame[E, A, B](ctx, a) {
 
     def releaseOnSuccess(a: A, b: B): UIO[Unit] =
       release(a, Right(b))
@@ -134,7 +135,8 @@ private[monix] object TaskBracket {
   def exitCase[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, ExitCase[Cause[E]]) => UIO[Unit]): BIO[E, B] =
+    release: (A, ExitCase[Cause[E]]) => UIO[Unit]
+  ): BIO[E, B] =
     BIO.Async(
       new StartCase(acquire, use, release),
       trampolineBefore = true,
@@ -145,8 +147,8 @@ private[monix] object TaskBracket {
   private final class StartCase[E, A, B](
     acquire: BIO[E, A],
     use: A => BIO[E, B],
-    release: (A, ExitCase[Cause[E]]) => UIO[Unit])
-      extends BaseStart(acquire, use) {
+    release: (A, ExitCase[Cause[E]]) => UIO[Unit]
+  ) extends BaseStart(acquire, use) {
 
     def makeReleaseFrame(ctx: Context[E], value: A) =
       new ReleaseFrameCase(ctx, value, release)
@@ -192,7 +194,7 @@ private[monix] object TaskBracket {
               val onNext = {
                 val fb =
                   try use(value)
-                  catch { case NonFatal(e) => BIO.raiseFatalError(e) }
+                  catch { case NonFatal(e) => BIO.terminate(e) }
                 fb.flatMap(releaseFrame)
               }
 
@@ -203,8 +205,8 @@ private[monix] object TaskBracket {
           def onError(ex: E): Unit =
             cb.onError(ex)
 
-          override def onFatalError(e: Throwable): Unit = {
-            cb.onFatalError(e)
+          override def onTermination(e: Throwable): Unit = {
+            cb.onTermination(e)
           }
         }
       )
@@ -223,7 +225,7 @@ private[monix] object TaskBracket {
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          BIO.suspend(unsafeApply(b))
+          BIO.suspendTotal(unsafeApply(b))
         else
           unsafeApply(b)
 
@@ -236,7 +238,7 @@ private[monix] object TaskBracket {
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          BIO.suspend(unsafeRecover(e))
+          BIO.suspendTotal(unsafeRecover(e))
         else
           unsafeRecover(e)
 
@@ -249,7 +251,7 @@ private[monix] object TaskBracket {
       // the connection is actually made uncancelable
       val task =
         if (ctx.options.autoCancelableRunLoops)
-          BIO.suspend(unsafeRecoverFatal(e))
+          BIO.suspendTotal(unsafeRecoverFatal(e))
         else
           unsafeRecoverFatal(e)
 
@@ -276,8 +278,8 @@ private[monix] object TaskBracket {
     private final def unsafeRecover(e: E): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        val re = Right(e)
-        releaseOnError(a, Cause(re)).flatMap[E, B](new ReleaseRecover(re))
+        val cause = Cause.Error(e)
+        releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
       } else {
         BIO.never
       }
@@ -286,8 +288,8 @@ private[monix] object TaskBracket {
     private final def unsafeRecoverFatal(e: Throwable): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
         ctx.connection.pop()
-        val le = Left(e)
-        releaseOnError(a, Cause(le)).flatMap[E, B](new ReleaseRecover(le))
+        val cause = Cause.Termination(e)
+        releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
       } else {
         BIO.never
       }
@@ -302,19 +304,18 @@ private[monix] object TaskBracket {
     }
   }
 
-  private final class ReleaseRecover[E](e: Either[Throwable, E])
-      extends FatalStackFrame[Throwable, Unit, BIO[E, Nothing]] {
+  private final class ReleaseRecover[E](e: Cause[E]) extends FatalStackFrame[Nothing, Unit, BIO[E, Nothing]] {
 
     def apply(a: Unit): BIO[E, Nothing] = {
-      e.fold(BIO.raiseFatalError, BIO.raiseError)
+      e.fold(BIO.terminate, BIO.raiseError)
     }
 
-    def recover(e2: Throwable): BIO[E, Nothing] = {
-      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, WrappedException.wrap), e2))
+    def recover(e2: Nothing): BIO[E, Nothing] = {
+      e.fold(BIO.terminate, BIO.raiseError)
     }
 
-    override def recoverFatal(e2: Throwable): BIO[E, Nothing] = {
-      BIO.raiseFatalError(Platform.composeErrors(e.fold(identity, WrappedException.wrap), e2))
+    override def recoverFatal(e2: Throwable): BIO[Nothing, Nothing] = {
+      BIO.terminate(Platform.composeErrors(e.fold(identity, UncaughtErrorException.wrap), e2))
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ import scala.util.{Failure, Success}
 
 object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("BIO.clock is implicit") { _ =>
-    assertEquals(BIO.clock[Any], implicitly[Clock[BIO[Any, ?]]])
+    assertEquals(BIO.clock[Any], implicitly[Clock[BIO[Any, *]]])
   }
 
   test("BIO.clock.monotonic") { implicit s =>
@@ -70,8 +70,8 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   }
 
   test("BIO.timer is implicit") { implicit s =>
-    assertEquals(BIO.timer[Any], implicitly[Timer[BIO[Any, ?]]])
-    assertEquals(BIO.timer[Any].clock, implicitly[Clock[BIO[Any, ?]]])
+    assertEquals(BIO.timer[Any], implicitly[Timer[BIO[Any, *]]])
+    assertEquals(BIO.timer[Any].clock, implicitly[Clock[BIO[Any, *]]])
   }
 
   test("BIO.timer") { implicit s =>
@@ -105,7 +105,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   }
 
   test("BIO.contextShift is implicit") { implicit s =>
-    assertEquals(BIO.contextShift[Any], implicitly[ContextShift[BIO[Any, ?]]])
+    assertEquals(BIO.contextShift[Any], implicitly[ContextShift[BIO[Any, *]]])
   }
 
   test("BIO.contextShift.shift") { implicit s =>
@@ -143,7 +143,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("BIO.contextShift.evalOn(s2) fatal failure") { implicit s =>
     val s2 = TestScheduler()
     val dummy = DummyException("dummy")
-    val f = BIO.contextShift.evalOn(s2)(BIO.raiseFatalError(dummy)).runToFuture
+    val f = BIO.contextShift.evalOn(s2)(BIO.terminate(dummy)).runToFuture
 
     assertEquals(f.value, None)
     s.tick()
@@ -224,7 +224,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
   test("BIO.contextShift(s).evalOn(s2) fatal failure") { implicit s =>
     val s2 = TestScheduler()
     val dummy = DummyException("dummy")
-    val f = BIO.contextShift(s).evalOn(s2)(BIO.raiseFatalError(dummy)).runToFuture
+    val f = BIO.contextShift(s).evalOn(s2)(BIO.terminate(dummy)).runToFuture
 
     assertEquals(f.value, None)
     s.tick()

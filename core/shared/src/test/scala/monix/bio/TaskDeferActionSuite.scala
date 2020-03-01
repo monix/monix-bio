@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,14 +23,14 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskDeferActionSuite extends BaseTestSuite {
-  test("Task.deferAction works") { implicit s =>
-    def measureLatency[A](source: Task[A]): Task[(A, Long)] =
-      Task.deferAction { implicit s =>
+  test("BIO.deferAction works") { implicit s =>
+    def measureLatency[E, A](source: BIO[E, A]): BIO[E, (A, Long)] =
+      BIO.deferAction { implicit s =>
         val start = s.clockMonotonic(MILLISECONDS)
         source.map(a => (a, s.clockMonotonic(MILLISECONDS) - start))
       }
 
-    val task = measureLatency(Task.now("hello").delayExecution(1.second))
+    val task = measureLatency(BIO.now("hello").delayExecution(1.second))
     val f = task.runToFuture
 
     s.tick()
@@ -40,27 +40,36 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(("hello", 1000)))))
   }
 
-  test("Task.deferAction works for failed tasks") { implicit s =>
-    val dummy = DummyException("dummy")
-    val task = Task.deferAction(_ => Task.raiseError(dummy))
+  test("BIO.deferAction works for failed tasks") { implicit s =>
+    val dummy = "dummy"
+    val task = BIO.deferAction(_ => BIO.raiseError(dummy))
     val f = task.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("Task.deferAction protects against user error") { implicit s =>
+  test("BIO.deferAction protects against user error") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = Task.deferAction(_ => throw dummy)
+    val task = BIO.deferAction(_ => throw dummy)
     val f = task.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.deferAction is stack safe") { implicit sc =>
+  test("BIO.deferAction should properly cast errors") { implicit s =>
+    val dummy = DummyException("dummy")
+    val task = BIO.deferAction[Int, Int](_ => throw dummy)
+    val f = task.onErrorHandle(identity).runToFuture
+
+    s.tick()
+    assertEquals(f.value, Some(Failure(dummy)))
+  }
+
+  test("BIO.deferAction is stack safe") { implicit sc =>
     def loop(n: Int, acc: Int): Task[Int] =
-      Task.deferAction { _ =>
+      BIO.deferAction { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
@@ -71,19 +80,19 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-//  testAsync("deferAction(local.write) works") { _ =>
-//    import monix.execution.Scheduler.Implicits.global
-//    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
-//
-//    val task = for {
-//      l <- TaskLocal(10)
-//      _ <- Task.deferAction(_ => l.write(100))
-//      _ <- Task.shift
-//      v <- l.read
-//    } yield v
-//
-//    for (v <- task.runToFutureOpt) yield {
-//      assertEquals(v, 100)
-//    }
-//  }
+  testAsync("BIO.deferAction(local.write) works") { _ =>
+    import monix.execution.Scheduler.Implicits.global
+    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+
+    val task = for {
+      l <- TaskLocal(10)
+      _ <- BIO.deferAction(_ => l.write(100))
+      _ <- BIO.shift
+      v <- l.read
+    } yield v
+
+    for (v <- task.runToFutureOpt) yield {
+      assertEquals(v, Right(100))
+    }
+  }
 }

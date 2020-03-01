@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
-import monix.bio.internal.TaskRunLoop.WrappedException
+import monix.bio.{BIO, BiCallback}
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.atomic.Atomic
 
 private[bio] object TaskRace {
@@ -70,14 +70,14 @@ private[bio] object TaskRace {
               connB.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              sc.reportFailure(WrappedException.wrap(ex))
+              sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connB.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               sc.reportFailure(e)
             }
@@ -102,14 +102,14 @@ private[bio] object TaskRace {
               connA.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              sc.reportFailure(WrappedException.wrap(ex))
+              sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connA.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               sc.reportFailure(e)
             }

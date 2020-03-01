@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,20 +43,21 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
     TaskCreate.async(k)
 
   override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
-    acquire.bracket(use)(release.andThen(_.onErrorHandleWith(BIO.raiseFatalError)))
+    acquire.bracket(use)(release.andThen(_.onErrorHandleWith(BIO.terminate)))
 
-  override def bracketCase[A, B](acquire: Task[A])(use: A => Task[B])(
-    release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
-    acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(BIO.raiseFatalError))
+  override def bracketCase[A, B](
+    acquire: Task[A]
+  )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
+    acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
 
   override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
     TaskCreate.asyncF(k)
 
   override def guarantee[A](acquire: Task[A])(finalizer: Task[Unit]): Task[A] =
-    acquire.guarantee(finalizer.onErrorHandleWith(BIO.raiseFatalError))
+    acquire.guarantee(finalizer.onErrorHandleWith(BIO.terminate))
 
   override def guaranteeCase[A](acquire: Task[A])(finalizer: ExitCase[Throwable] => Task[Unit]): Task[A] =
-    acquire.guaranteeCase(exit => finalizer(exitCaseFromCause(exit)).onErrorHandleWith(BIO.raiseFatalError))
+    acquire.guaranteeCase(exit => finalizer(exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
 }
 
 /** Cats type class instance of [[monix.bio.BIO BIO]]
@@ -80,7 +81,8 @@ class CatsConcurrentForTask extends CatsAsyncForTask with Concurrent[Task] {
 
   override def racePair[A, B](
     fa: Task[A],
-    fb: Task[B]): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
+    fb: Task[B]
+  ): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
     Task.racePair(fa, fb)
 
   override def race[A, B](fa: Task[A], fb: Task[B]): Task[Either[A, B]] =

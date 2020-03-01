@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.BIO
+import monix.bio.{BIO, UIO}
 import monix.bio.internal.TaskConnectionComposite.{Active, Cancelled, State}
 import monix.catnap.CancelableF
 import monix.execution.atomic.PaddingStrategy.LeftRight128
@@ -29,8 +29,8 @@ import scala.annotation.tailrec
 
 private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny[State]) {
 
-  val cancel: CancelToken[BIO[E, ?]] =
-    BIO.suspend {
+  val cancel: CancelToken[UIO] =
+    BIO.suspendTotal {
       stateRef.getAndSet(Cancelled) match {
         case Cancelled => BIO.unit
         case Active(set) =>
@@ -42,11 +42,11 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * this connection hasn't been cancelled yet, otherwise it
     * cancels the given token.
     */
-  def add(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def add(token: CancelToken[UIO])(implicit s: Scheduler): Unit =
     addAny(token)
 
   /** Alias for [[add(token* add]]. */
-  def `+=`(token: CancelToken[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def `+=`(token: CancelToken[UIO])(implicit s: Scheduler): Unit =
     add(token)
 
   /** Adds a [[monix.execution.Cancelable]] to the underlying
@@ -64,16 +64,17 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * collection, if this connection hasn't been cancelled yet,
     * otherwise it cancels the given cancelable.
     */
-  def add(conn: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def add(conn: CancelableF[UIO])(implicit s: Scheduler): Unit =
     addAny(conn)
 
   /** Alias for [[add(conn* add]]. */
-  def `+=`(conn: CancelableF[BIO[E, ?]])(implicit s: Scheduler): Unit =
+  def `+=`(conn: CancelableF[UIO])(implicit s: Scheduler): Unit =
     add(conn)
 
   @tailrec
-  private def addAny(ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ )(
-    implicit s: Scheduler): Unit = {
+  private def addAny(
+    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
+  )(implicit s: Scheduler): Unit = {
 
     stateRef.get() match {
       case Cancelled =>
@@ -92,9 +93,9 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * connection is still active, or cancels the whole collection
     * otherwise.
     */
-  def addAll(that: Iterable[CancelToken[BIO[E, ?]]])(implicit s: Scheduler): Unit = {
+  def addAll(that: Iterable[CancelToken[UIO]])(implicit s: Scheduler): Unit = {
 
-    @tailrec def loop(that: Iterable[CancelToken[BIO[E, ?]]]): Unit =
+    @tailrec def loop(that: Iterable[CancelToken[UIO]]): Unit =
       stateRef.get() match {
         case Cancelled =>
           UnsafeCancelUtils.cancelAllUnsafe(that).runAsyncAndForget
@@ -112,7 +113,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
   /**
     * Removes the given token reference from the underlying collection.
     */
-  def remove(token: CancelToken[BIO[E, ?]]): Unit =
+  def remove(token: CancelToken[UIO]): Unit =
     removeAny(token)
 
   /**
@@ -126,7 +127,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     * Removes a specific [[monix.catnap.CancelableF]] reference
     * from the underlying collection.
     */
-  def remove(conn: CancelableF[BIO[E, ?]]): Unit =
+  def remove(conn: CancelableF[UIO]): Unit =
     removeAny(conn)
 
   @tailrec
@@ -147,12 +148,12 @@ private[bio] object TaskConnectionComposite {
   /**
     * Builder for [[TaskConnectionComposite]].
     */
-  def apply[E](initial: CancelToken[BIO[E, ?]]*): TaskConnectionComposite[E] =
+  def apply[E](initial: CancelToken[UIO]*): TaskConnectionComposite[E] =
     new TaskConnectionComposite(Atomic.withPadding(Active(Set(initial: _*)): State, LeftRight128))
 
   private sealed abstract class State
 
-  private final case class Active(set: Set[AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ ])
+  private final case class Active(set: Set[AnyRef /* CancelToken[UIO] | CancelableF[UIO] | Cancelable */ ])
       extends State
   private case object Cancelled extends State
 }

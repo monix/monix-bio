@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,8 @@
  * limitations under the License.
  */
 
-package monix.bio.internal
+package monix.bio
 
-import monix.bio.Cause
-import monix.bio.internal.TaskRunLoop.WrappedException
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.schedulers.{TrampolineExecutionContext, TrampolinedRunnable}
 import monix.execution.{Callback, UncaughtExceptionReporter}
@@ -29,17 +27,78 @@ import scala.util.{Failure, Success, Try}
 
 /**
   * Callback type which supports two channels of errors.
+  *
+  * @define safetyIssues Can be called at most once by contract.
+  *         Not necessarily thread-safe, depends on implementation.
+  *
+  *         @throws CallbackCalledMultipleTimesException depending on
+  *                 implementation, when signaling via this callback is
+  *                 attempted multiple times and the protocol violation
+  *                 is detected.
+  *
+  * @define tryMethodDescription In case the underlying callback
+  *         implementation protects against protocol violations, then
+  *         this method should return `false` in case the final result
+  *         was already signaled once via doctodo Callback.onSuccess,
+  *         doctodo Callback.onError or [[onTermination]].
+  *
+  *         The default implementation relies on catching
+  *         doctodo monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException
+  *         in case of violations, which is what thread-safe implementations
+  *         of `onSuccess` or `onError` are usually throwing.
+  *
+  *         WARNING: this method is only provided as a
+  *         convenience. The presence of this method does not
+  *         guarantee that the underlying callback is thread-safe or
+  *         that it protects against protocol violations.
+  *
+  *         @return `true` if the invocation completes normally or
+  *                 `false` in case another concurrent call succeeded
+  *                 first in signaling a result
   */
 abstract class BiCallback[-E, -A] extends Callback[E, A] {
-  def onFatalError(e: Throwable): Unit
+  /**
+    * Signals a a terminal error which will not be reflected in the type signature.
+    *
+    * $safetyIssues
+    */
+  def onTermination(e: Throwable): Unit
 
-  def tryOnFatalError(e: Throwable): Boolean =
+  /**
+    * Attempts to call [[BiCallback.onTermination]].
+    *
+    * $tryMethodDescription
+    */
+  def tryOnTermination(e: Throwable): Boolean =
     try {
-      onFatalError(e)
+      onTermination(e)
       true
     } catch {
       case _: CallbackCalledMultipleTimesException => false
     }
+
+  /**
+    * Signals a value via Scala's `Try` of `Either` (`Left` is typed error, `Right` is
+    * the successful value and `Failure` is a terminal error (a defect)).
+    *
+    * $safetyIssues
+    */
+  def apply(result: Try[Either[E, A]]): Unit = result match {
+    case Success(Right(a)) => onSuccess(a)
+    case Success(Left(e)) => onError(e)
+    case Failure(t) => onTermination(t)
+  }
+
+  /**
+    * Attempts to call doctodo BiCallback.tryApply(result:Try[Either* BiCallback.apply.
+    *
+    * $tryMethodDescription
+    */
+  def tryApply(result: Try[Either[E, A]]): Boolean = result match {
+    case Success(Right(a)) => tryOnSuccess(a)
+    case Success(Left(e)) => tryOnError(e)
+    case Failure(t) => tryOnTermination(t)
+  }
 }
 
 /**
@@ -49,12 +108,12 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   *         In case `onSuccess` and `onError` get called multiple times,
   *         from multiple threads even, the implementation protects against
   *         access violations and throws a
-  *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]].
+  *         doctodo monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException.
   */
 object BiCallback {
 
   /**
-    * For building [[Callback]] objects using the
+    * For building doctodo Callback objects using the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type]]
     * technique.
     *
@@ -64,7 +123,7 @@ object BiCallback {
     */
   def apply[E]: Builders[E] = new Builders[E]
 
-  /** Wraps any [[Callback]] into a safer implementation that
+  /** Wraps any doctodo Callback into a safer implementation that
     * protects against protocol violations (e.g. `onSuccess` or `onError`
     * must be called at most once).
     *
@@ -76,14 +135,14 @@ object BiCallback {
       case _ => new Safe[E, A](cb)
     }
 
-  /** Creates an empty [[Callback]], a callback that doesn't do
+  /** Creates an empty doctodo Callback, a callback that doesn't do
     * anything in `onNext` and that logs errors in `onError` with
-    * the provided [[monix.execution.UncaughtExceptionReporter]].
+    * the provided doctodo monix.execution.UncaughtExceptionReporter.
     */
   def empty[E, A](implicit r: UncaughtExceptionReporter): BiCallback[E, A] =
     new Empty(r)
 
-  /** Returns a [[Callback]] instance that will complete the given
+  /** Returns a doctodo Callback instance that will complete the given
     * promise.
     *
     * THREAD-SAFETY: the provided instance is thread-safe by virtue
@@ -109,43 +168,43 @@ object BiCallback {
 
       override def onError(e: E): Unit = {
         if (!tryOnError(e)) {
-          throw new CallbackCalledMultipleTimesException("onError", WrappedException.wrap(e))
+          throw new CallbackCalledMultipleTimesException("onError", UncaughtErrorException.wrap(e))
         }
       }
 
       override def apply(result: Try[A])(implicit ev: Throwable <:< E): Unit =
         if (!tryApply(result)) throw CallbackCalledMultipleTimesException.forResult(result)
 
-      override def onFatalError(e: Throwable): Unit =
-        if (!tryOnFatalError(e)) throw new CallbackCalledMultipleTimesException("onFatalError")
+      override def onTermination(e: Throwable): Unit =
+        if (!tryOnTermination(e)) throw new CallbackCalledMultipleTimesException("onTermination")
 
-      override def tryOnFatalError(e: Throwable): Boolean =
+      override def tryOnTermination(e: Throwable): Boolean =
         p.tryFailure(e)
     }
 
-  /** Given a [[Callback]] wraps it into an implementation that
+  /** Given a doctodo Callback wraps it into an implementation that
     * calls `onSuccess` and `onError` asynchronously, using the
     * given [[scala.concurrent.ExecutionContext]].
     *
     * The async boundary created is "light", in the sense that a
-    * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
+    * doctodo monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable
     * is used and supporting schedulers can execute these using an internal
     * trampoline, thus execution being faster and immediate, but still avoiding
     * growing the call-stack and thus avoiding stack overflows.
     *
     * $isThreadSafe
     *
-    * @see [[Callback.trampolined]]
+    * @see [[BiCallback.trampolined]]
     */
   def forked[E, A](cb: BiCallback[E, A])(implicit ec: ExecutionContext): BiCallback[E, A] =
     new AsyncFork(cb)
 
-  /** Given a [[Callback]] wraps it into an implementation that
+  /** Given a [[BiCallback]] wraps it into an implementation that
     * calls `onSuccess` and `onError` asynchronously, using the
     * given [[scala.concurrent.ExecutionContext]].
     *
     * The async boundary created is "light", in the sense that a
-    * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
+    * doctodo monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable
     * is used and supporting schedulers can execute these using an internal
     * trampoline, thus execution being faster and immediate, but still avoiding
     * growing the call-stack and thus avoiding stack overflows.
@@ -185,21 +244,21 @@ object BiCallback {
           override def tryApply(result: Either[E, A]): Boolean =
             if (isActive) {
               isActive = false
-              cb(result.left.map(Cause.typed))
+              cb(result.left.map(Cause.Error(_)))
               true
             } else {
               false
             }
 
-          override def onFatalError(e: Throwable): Unit =
-            if (!tryOnFatalError(e)) {
-              throw new CallbackCalledMultipleTimesException("onFatalError", e)
+          override def onTermination(e: Throwable): Unit =
+            if (!tryOnTermination(e)) {
+              throw new CallbackCalledMultipleTimesException("onTermination", e)
             }
 
-          override def tryOnFatalError(e: Throwable): Boolean = {
+          override def tryOnTermination(e: Throwable): Boolean = {
             if (isActive) {
               isActive = false
-              cb.apply(Left(Cause.fatal(e)))
+              cb.apply(Left(Cause.Termination(e)))
               true
             } else {
               false
@@ -220,7 +279,7 @@ object BiCallback {
       private[this] var isActive = true
       override def onSuccess(value: A): Unit = apply(Success(value))
       override def onError(e: Throwable): Unit = apply(Failure(e))
-      override def onFatalError(e: Throwable): Unit = apply(Failure(e))
+      override def onTermination(e: Throwable): Unit = apply(Failure(e))
 
       override def apply(result: Try[A])(implicit ev: Throwable <:< Throwable): Unit =
         if (!tryApply(result)) {
@@ -247,14 +306,14 @@ object BiCallback {
 
   private[monix] def callError[E, A](cb: Either[Cause[E], A] => Unit, value: E): Unit =
     cb match {
-      case ref: BiCallback[Cause[E], A] @unchecked => ref.onError(Cause.typed(value))
-      case _ => cb(Left(Cause.typed(value)))
+      case ref: BiCallback[Cause[E], A] @unchecked => ref.onError(Cause.Error(value))
+      case _ => cb(Left(Cause.Error(value)))
     }
 
-  private[monix] def callFatalError[E, A](cb: Either[Cause[E], A] => Unit, value: Throwable): Unit =
+  private[monix] def callTermination[E, A](cb: Either[Cause[E], A] => Unit, value: Throwable): Unit =
     cb match {
-      case ref: BiCallback[Cause[E], A] @unchecked => ref.onFatalError(value)
-      case _ => cb(Left(Cause.fatal(value)))
+      case ref: BiCallback[Cause[E], A] @unchecked => ref.onTermination(value)
+      case _ => cb(Left(Cause.Termination(value)))
     }
 
   private[monix] def signalErrorTrampolined[E, A](cb: BiCallback[E, A], e: E): Unit =
@@ -264,11 +323,11 @@ object BiCallback {
         cb.onError(e)
     })
 
-  private[monix] def signalFatalErrorTrampolined[E, A](cb: BiCallback[E, A], e: Throwable): Unit =
+  private[monix] def signalTerminationTrampolined[E, A](cb: BiCallback[E, A], e: Throwable): Unit =
     TrampolineExecutionContext.immediate.execute(new Runnable {
 
       override def run(): Unit =
-        cb.onFatalError(e)
+        cb.onTermination(e)
     })
 
   /** Functions exposed via [[apply]]. */
@@ -313,7 +372,7 @@ object BiCallback {
     private[this] val state = monix.execution.atomic.AtomicInt(0)
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     override final def onSuccess(value: A): Unit =
       if (!tryOnSuccess(value)) {
@@ -348,17 +407,17 @@ object BiCallback {
       }
     }
 
-    override final def onFatalError(e: Throwable): Unit =
-      if (!tryOnFatalError(e)) {
+    override final def onTermination(e: Throwable): Unit =
+      if (!tryOnTermination(e)) {
         throw new CallbackCalledMultipleTimesException(
-          "Callback.onError",
+          "Callback.onTermination",
           e
         )
       }
 
-    override final def tryOnFatalError(e: Throwable): Boolean = {
+    override final def tryOnTermination(e: Throwable): Boolean = {
       if (state.compareAndSet(0, 3)) {
-        this.fatalError = e
+        this.terminalError = e
         ec.execute(this)
         true
       } else {
@@ -377,9 +436,9 @@ object BiCallback {
           error = null.asInstanceOf[E]
           cb.onError(e)
         case 3 =>
-          val e = fatalError
-          fatalError = null
-          cb.onFatalError(e)
+          val e = terminalError
+          terminalError = null
+          cb.onTermination(e)
       }
     }
   }
@@ -393,7 +452,7 @@ object BiCallback {
     def onError(error: Any): Unit =
       r.reportFailure(UncaughtErrorException.wrap(error))
 
-    override def onFatalError(e: Throwable): Unit = {
+    override def onTermination(e: Throwable): Unit = {
       r.reportFailure(e)
     }
   }
@@ -416,7 +475,8 @@ object BiCallback {
             throw e
           case e if NonFatal(e) =>
             r.reportFailure(e)
-        } else {
+        }
+      else {
         throw new CallbackCalledMultipleTimesException("onSuccess")
       }
     }
@@ -438,10 +498,10 @@ object BiCallback {
       }
     }
 
-    override def onFatalError(e: Throwable): Unit = {
+    override def onTermination(e: Throwable): Unit = {
       if (isActive.compareAndSet(true, false)) {
         try {
-          underlying.onFatalError(e)
+          underlying.onTermination(e)
         } catch {
           case e: CallbackCalledMultipleTimesException =>
             throw e
@@ -451,17 +511,8 @@ object BiCallback {
         }
       } else {
         val ex = UncaughtErrorException.wrap(e)
-        throw new CallbackCalledMultipleTimesException("onFatalError", ex)
+        throw new CallbackCalledMultipleTimesException("onTermination", ex)
       }
     }
-  }
-
-  private final class Contramap[-E, -A, -B](underlying: Callback[E, A], f: B => A) extends Callback[E, B] {
-
-    def onSuccess(value: B): Unit =
-      underlying.onSuccess(f(value))
-
-    def onError(error: E): Unit =
-      underlying.onError(error)
   }
 }

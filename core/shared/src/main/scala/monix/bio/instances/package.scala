@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,7 @@ package object instances {
 
   @inline private[instances] final def exitCaseFromCause(exit: ExitCase[Cause[Throwable]]): ExitCase[Throwable] =
     exit match {
-      case ExitCase.Error(e) => ExitCase.Error(e.flatten)
+      case ExitCase.Error(e) => ExitCase.Error(e.toThrowable)
       case ExitCase.Completed => ExitCase.Completed
       case ExitCase.Canceled => ExitCase.Canceled
     }

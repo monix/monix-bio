@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,22 +17,24 @@
 
 package monix.bio
 
-import cats.Applicative
-import cats.laws.discipline.ApplicativeTests
-import monix.bio.instances.CatsParallelForTask
-import monix.catnap.internal.ParallelApplicative
+import scala.util.Success
 
-object TypeClassLawsForParallelApplicativeSuite extends BaseLawsSuite {
+object TaskBimapSuite extends BaseTestSuite {
+  test("BIO.bimap should map the success channel") { implicit s =>
+    val f = BIO
+      .now(1)
+      .bimap(_ => "Error", _ => "Success")
+      .runToFuture
 
-  implicit val ap: Applicative[Task] =
-    ParallelApplicative(new CatsParallelForTask[Throwable])
-
-  test("instance is valid") {
-    val ev = implicitly[Applicative[Task]]
-    assertEquals(ev, ap)
+    assertEquals(f.value, Some(Success(Right("Success"))))
   }
 
-  checkAllAsync("ParallelApplicative[Task]") { implicit ec =>
-    ApplicativeTests[Task].applicative[Int, Int, Int]
+  test("BIO.bimap should map the error channel") { implicit s =>
+    val f = BIO
+      .raiseError(1)
+      .bimap(_ => "Error", _ => "Success")
+      .runToFuture
+
+    assertEquals(f.value, Some(Success(Left("Error"))))
   }
 }

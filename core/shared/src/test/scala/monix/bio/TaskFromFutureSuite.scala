@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,12 +37,6 @@ object TaskFromFutureSuite extends BaseTestSuite {
     val t = Task.fromFuture(Future.failed(dummy))
     val f = t.runToFuture
     assertEquals(f.value, Some(Success(Left(dummy))))
-  }
-
-  test("Task.fromFuture should be faster for completed futures, success") { implicit s =>
-    val t = Task.fromFuture(Future.successful(10))
-    val f = t.runToFuture
-    assertEquals(f.value, Some(Success(Right(10))))
   }
 
   test("Task.fromFuture should work onSuccess") { implicit s =>

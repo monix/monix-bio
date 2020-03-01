@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,10 @@
 
 package monix.bio.internal
 
-import java.util.concurrent.RejectedExecutionException
-
-import monix.bio.BIO
-import monix.bio.BIO.{Context, Error, FatalError, Now}
-import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack, WrappedException}
-import monix.execution.exceptions.CallbackCalledMultipleTimesException
+import monix.bio.{BIO, BiCallback}
+import monix.bio.BIO.{Context, Error, Now, Termination}
+import monix.bio.internal.TaskRunLoop.{Bind, CallStack, startFull}
+import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.misc.Local
 import monix.execution.schedulers.TrampolinedRunnable
 
@@ -61,9 +59,10 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     } else {
       try task.register(context, this)
       catch {
+        // Due to C-E law: ConcurrentEffect[Task].concurrentEffect.repeated callback ignored
+        // but we don't want to lose any errors
         case cbError: CallbackCalledMultipleTimesException => context.scheduler.reportFailure(cbError)
-        case r: RejectedExecutionException => onFatalError(r)
-        case NonFatal(e) => onFatalError(e)
+        case NonFatal(e) => onTermination(e)
       }
     }
   }
@@ -72,7 +71,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     val fn = this.register
     this.register = null
     try fn(context, this)
-    catch { case NonFatal(e) => onFatalError(e) }
+    catch { case NonFatal(e) => onTermination(e) }
   }
 
   final def onSuccess(value: Any): Unit =
@@ -95,21 +94,21 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
       }
     } else {
       // $COVERAGE-OFF$
-      context.scheduler.reportFailure(WrappedException(error))
+      context.scheduler.reportFailure(UncaughtErrorException.wrap(error))
       // $COVERAGE-ON$
     }
 
-  final override def onFatalError(error: Throwable): Unit = {
+  final override def onTermination(error: Throwable): Unit = {
     if (!context.shouldCancel) {
       if (trampolineAfter) {
         this.error = error
-        context.scheduler.execute(onFatalErrorRun)
+        context.scheduler.execute(onTerminationRun)
       } else {
-        syncOnFatalError(error)
+        syncOnTermination(error)
       }
     } else {
       // $COVERAGE-OFF$
-      context.scheduler.reportFailure(WrappedException.wrap(error))
+      context.scheduler.reportFailure(error)
       // $COVERAGE-ON$
     }
   }
@@ -134,19 +133,20 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     startFull(Error(error), context, this.wrappedCallback, this, bFirst, bRest, this.context.frameRef())
   }
 
-  protected def syncOnFatalError(error: Any): Unit = {
+  protected def syncOnTermination(error: Any): Unit = {
     val bFirst = this.bFirst
     val bRest = this.bRest
     this.bFirst = null
     this.bRest = null
     startFull(
-      FatalError(WrappedException.wrap(error)),
+      Termination(UncaughtErrorException.wrap(error)),
       context,
       this.wrappedCallback,
       this,
       bFirst,
       bRest,
-      this.context.frameRef())
+      this.context.frameRef()
+    )
   }
 
   /** Reusable Runnable reference, to go lighter on memory allocations. */
@@ -172,13 +172,13 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     }
 
   /** Reusable Runnable reference, to go lighter on memory allocations. */
-  private[this] val onFatalErrorRun: TrampolinedRunnable =
+  private[this] val onTerminationRun: TrampolinedRunnable =
     new TrampolinedRunnable {
 
       def run(): Unit = {
         val e = error
         error = null
-        syncOnFatalError(e)
+        syncOnTermination(e)
       }
     }
 }
@@ -225,10 +225,10 @@ private[internal] object TaskRestartCallback {
           callback.onError(ex)
         }
 
-        override def onFatalError(e: Throwable): Unit = {
+        override def onTermination(e: Throwable): Unit = {
           val locals = previousLocals
           if (locals ne null) Local.setContext(locals)
-          callback.onFatalError(e)
+          callback.onTermination(e)
         }
       }
 
@@ -242,9 +242,9 @@ private[internal] object TaskRestartCallback {
       super.syncOnError(error)
     }
 
-    override protected def syncOnFatalError(error: Any): Unit = {
+    override protected def syncOnTermination(error: Any): Unit = {
       setPreparedLocals()
-      super.syncOnFatalError(error)
+      super.syncOnTermination(error)
     }
 
     def setPreparedLocals(): Unit = {

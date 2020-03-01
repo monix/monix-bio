@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,7 @@ private[bio] object TaskSequence {
       }
     }
 
-    BIO.defer {
+    BIO.suspendTotal {
       val cursor: Iterator[BIO[E, A]] = toIterator(in)
       loop(cursor, newBuilder(bf, in))
     }
@@ -47,7 +47,8 @@ private[bio] object TaskSequence {
 
   /** Implementation for `Task.traverse`. */
   def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A], f: A => BIO[E, B])(
-    implicit bf: BuildFrom[M[A], B, M[B]]): BIO[E, M[B]] = {
+    implicit bf: BuildFrom[M[A], B, M[B]]
+  ): BIO[E, M[B]] = {
 
     def loop(cursor: Iterator[A], acc: mutable.Builder[B, M[B]]): BIO[E, M[B]] = {
       if (cursor.hasNext) {
@@ -60,7 +61,7 @@ private[bio] object TaskSequence {
       }
     }
 
-    BIO.defer {
+    BIO.suspendTotal {
       loop(toIterator(in), newBuilder(bf, in))
     }
   }

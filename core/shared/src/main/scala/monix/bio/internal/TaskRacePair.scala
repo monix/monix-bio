@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +66,7 @@ private[bio] object TaskRacePair {
         new BiCallback[E, A] {
           override def onSuccess(valueA: A): Unit =
             if (isActive.getAndSet(false)) {
-              val fiberB = Fiber.fromPromise(pb, connB)
+              val fiberB = Fiber(TaskFromFutureEither.strict(pb.future), connB.cancel)
               conn.pop()
               cb.onSuccess(Left((valueA, fiberB)))
             } else {
@@ -82,11 +82,11 @@ private[bio] object TaskRacePair {
               pa.success(Left(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connB.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               pa.failure(e)
             }
@@ -100,7 +100,7 @@ private[bio] object TaskRacePair {
         new BiCallback[E, B] {
           override def onSuccess(valueB: B): Unit =
             if (isActive.getAndSet(false)) {
-              val fiberA = Fiber.fromPromise(pa, connA)
+              val fiberA = Fiber(TaskFromFutureEither.strict(pa.future), connA.cancel)
               conn.pop()
               cb.onSuccess(Right((fiberA, valueB)))
             } else {
@@ -113,15 +113,14 @@ private[bio] object TaskRacePair {
               connA.cancel.runAsyncAndForget
               cb.onError(ex)
             } else {
-              // TODO: should it be trySuccess?
               pb.success(Left(ex))
             }
 
-          override def onFatalError(e: Throwable): Unit =
+          override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
               conn.pop()
               connA.cancel.runAsyncAndForget
-              cb.onFatalError(e)
+              cb.onTermination(e)
             } else {
               pb.failure(e)
             }

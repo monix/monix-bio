@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO.{Async, Context}
-import monix.bio.{BIO, UIO}
+import monix.bio.{BIO, BiCallback, UIO}
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.schedulers.TrampolinedRunnable
 
@@ -33,7 +33,6 @@ private[bio] object TaskDoOnCancel {
     } else {
       val start = (context: Context[E], onFinish: BiCallback[E, A]) => {
         implicit val s = context.scheduler
-        implicit val o = context.options
 
         context.connection.push(callback)
         BIO.unsafeStartNow(self, context, new CallbackThatPops(context, onFinish))
@@ -48,7 +47,7 @@ private[bio] object TaskDoOnCancel {
     private[this] var isActive = true
     private[this] var value: A = _
     private[this] var error: E = _
-    private[this] var fatalError: Throwable = _
+    private[this] var terminalError: Throwable = _
 
     override def onSuccess(value: A): Unit =
       if (!tryOnSuccess(value)) {
@@ -60,9 +59,9 @@ private[bio] object TaskDoOnCancel {
         throw new CallbackCalledMultipleTimesException("onError")
       }
 
-    override def onFatalError(e: Throwable): Unit =
-      if (!tryOnFatalError(e)) {
-        throw new CallbackCalledMultipleTimesException("onError")
+    override def onTermination(e: Throwable): Unit =
+      if (!tryOnTermination(e)) {
+        throw new CallbackCalledMultipleTimesException("onTermination")
       }
 
     override def tryOnSuccess(value: A): Boolean = {
@@ -89,11 +88,11 @@ private[bio] object TaskDoOnCancel {
       }
     }
 
-    override def tryOnFatalError(e: Throwable): Boolean = {
+    override def tryOnTermination(e: Throwable): Boolean = {
       if (isActive) {
         isActive = false
         ctx.connection.pop()
-        this.fatalError = e
+        this.terminalError = e
         ctx.scheduler.execute(this)
         true
       } else {
@@ -102,10 +101,10 @@ private[bio] object TaskDoOnCancel {
     }
 
     override def run(): Unit = {
-      if (fatalError != null) {
-        val e = fatalError
-        fatalError = null
-        cb.onFatalError(e)
+      if (terminalError != null) {
+        val e = terminalError
+        terminalError = null
+        cb.onTermination(e)
       } else if (error != null) {
         val e = error
         error = null.asInstanceOf[E]

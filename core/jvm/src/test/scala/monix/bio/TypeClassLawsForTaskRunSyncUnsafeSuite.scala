@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +19,11 @@ package monix.bio
 
 import cats.effect.IO
 import cats.effect.laws.discipline._
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests}
+import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
+import cats.kernel.laws.discipline.MonoidTests
 import cats.{Applicative, Eq}
 import monix.bio.instances.CatsParallelForTask
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
-
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 import scala.util.Try
@@ -52,7 +52,7 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
   implicit val cs = IO.contextShift(sc)
-  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[BIO.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
 
   val timeout = {
     if (System.getenv("TRAVIS") == "true" || System.getenv("CI") == "true")
@@ -68,6 +68,14 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
     allowNonTerminationLaws = false,
     stackSafeIterationsCount = 10000
   )
+
+  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E]): Eq[BIO[E, A]] =
+    Eq.instance { (a, b) =>
+      val ta = Try(a.attempt.runSyncUnsafeOpt(timeout))
+      val tb = Try(b.attempt.runSyncUnsafeOpt(timeout))
+
+      equalityTry[Either[E, A]].eqv(ta, tb)
+    }
 
   implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task[A]] =
     Eq.instance { (a, b) =>
@@ -97,9 +105,13 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   checkAll("ConcurrentEffect[Task]", ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int])
 
-  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int])
+  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, *]].applicative[Int, Int, Int])
 
-  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int])
+  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int])
 
-//  checkAll("Monoid[Task[Int]]", MonoidTests[Task[Int]].monoid)
+  checkAll("Monoid[BIO[Throwable, Int]]", MonoidTests[BIO[Throwable, Int]].monoid)
+
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
+  }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.{BIO, BiCallback}
 import monix.bio.BIO.{Async, Context, ContextSwitch, FlatMap, Map}
 
 import scala.annotation.tailrec
@@ -50,7 +50,8 @@ private[bio] object ForkedRegister {
       case Map(other, _, _) => detect(other, limit - 1)
       case ContextSwitch(other, _, _) => detect(other, limit - 1)
       case _ => false
-    } else {
+    }
+    else {
       false
     }
   }

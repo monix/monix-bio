@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +17,15 @@
 
 package monix.bio
 
-import cats.Applicative
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
-import cats.laws.discipline.{ApplicativeTests, CoflatMapTests, ParallelTests, SemigroupKTests}
-import monix.bio.instances.CatsParallelForTask
+import cats.kernel.laws.discipline.MonoidTests
+import cats.laws.discipline.{
+  BifunctorTests,
+  CoflatMapTests,
+  CommutativeApplicativeTests,
+  ParallelTests,
+  SemigroupKTests
+}
 
 object TypeClassLawsForTaskSuite
     extends BaseTypeClassLawsForTaskSuite()(
@@ -34,33 +39,35 @@ object TypeClassLawsForTaskAutoCancelableSuite
 
 class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
 
-  implicit val ap: Applicative[BIO.Par[Throwable, ?]] = new CatsParallelForTask[Throwable].applicative
-
   checkAllAsync("CoflatMap[Task]") { implicit ec =>
     CoflatMapTests[Task].coflatMap[Int, Int, Int]
   }
 
   checkAllAsync("Concurrent[Task]") { implicit ec =>
-    ConcurrentTests[BIO[Throwable, ?]].concurrent[Int, Int, Int]
+    ConcurrentTests[BIO[Throwable, *]].concurrent[Int, Int, Int]
   }
 
   checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
     ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int]
   }
 
-  checkAllAsync("Applicative[Task.Par]") { implicit ec =>
-    ApplicativeTests[BIO.Par[Throwable, ?]].applicative[Int, Int, Int]
+  checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
+    CommutativeApplicativeTests[BIO.Par[Throwable, *]].commutativeApplicative[Int, Int, Int]
   }
 
-  checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
-    ParallelTests[Task, BIO.Par[Throwable, ?]].parallel[Int, Int]
+  checkAllAsync("Parallel[BIO, BIO.Par]") { implicit ec =>
+    ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int]
   }
 
-//  checkAllAsync("Monoid[Task[Int]]") { implicit ec =>
-//    MonoidTests[Task[Int]].monoid
-//  }
+  checkAllAsync("Monoid[BIO[String, Int]]") { implicit ec =>
+    MonoidTests[BIO[String, Int]].monoid
+  }
 
   checkAllAsync("SemigroupK[Task[Int]]") { implicit ec =>
     SemigroupKTests[Task].semigroupK[Int]
+  }
+
+  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
+    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
   }
 }

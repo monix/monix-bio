@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 by The Monix Project Developers.
+ * Copyright (c) 2019-2020 by The Monix Project Developers.
  * See the project homepage at: https://monix.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 package monix.bio.instances
 
-import cats.{~>, Applicative, Monad, Parallel}
+import cats.{~>, CommutativeApplicative, Monad, Parallel}
 import monix.bio.BIO
 
 /** `cats.Parallel` type class instance for [[monix.bio.BIO BIO]].
@@ -31,22 +31,22 @@ import monix.bio.BIO
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsParallelForTask[E] extends Parallel[BIO[E, ?]] {
+class CatsParallelForTask[E] extends Parallel[BIO[E, *]] {
   override type F[A] = BIO.Par[E, A]
 
-  override val applicative: Applicative[BIO.Par[E, ?]] = new NondetApplicative[E]
-  override val monad: Monad[BIO[E, ?]] = new CatsBaseForTask[E]
+  override val applicative: CommutativeApplicative[BIO.Par[E, *]] = new NondetApplicative[E]
+  override val monad: Monad[BIO[E, *]] = new CatsBaseForTask[E]
 
-  override val sequential: BIO.Par[E, ?] ~> BIO[E, ?] = new (BIO.Par[E, ?] ~> BIO[E, ?]) {
+  override val sequential: BIO.Par[E, *] ~> BIO[E, *] = new (BIO.Par[E, *] ~> BIO[E, *]) {
     def apply[A](fa: BIO.Par[E, A]): BIO[E, A] = BIO.Par.unwrap(fa)
   }
 
-  override val parallel: BIO[E, ?] ~> BIO.Par[E, ?] = new (BIO[E, ?] ~> BIO.Par[E, ?]) {
+  override val parallel: BIO[E, *] ~> BIO.Par[E, *] = new (BIO[E, *] ~> BIO.Par[E, *]) {
     def apply[A](fa: BIO[E, A]): BIO.Par[E, A] = BIO.Par.apply(fa)
   }
 }
 
-private class NondetApplicative[E] extends Applicative[BIO.Par[E, ?]] {
+private class NondetApplicative[E] extends CommutativeApplicative[BIO.Par[E, *]] {
 
   import BIO.Par.{unwrap, apply => par}
 
