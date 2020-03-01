@@ -149,7 +149,7 @@ object TaskLike extends TaskLikeImplicits0 {
     }
 
   /**
-    * Converts [[scala.util.Either]] into a `Task`.
+    * Converts `scala.util.Either` into a `Task`.
     */
   implicit def fromEither[E <: Throwable]: TaskLike[Either[E, *]] =
     new TaskLike[Either[E, *]] {

@@ -4051,7 +4051,7 @@ object BIO extends TaskInstancesLevel0 {
 
   /**
     * Returns a `F ~> Task` (`FunctionK`) for transforming any
-    * supported data-type, that implements [[ConcurrentEffect]],
+    * supported data-type, that implements [[cats.effect.ConcurrentEffect]],
     * into [[Task]].
     *
     * Useful for `mapK` transformations, for example when working
