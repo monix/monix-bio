@@ -2107,6 +2107,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     BIO.FlatMap(this, BIO.Bimap(fe, fa))
 
   /** Creates a new task that will handle any matching throwable that
+    * this task might emit by executing another task.
+    *
+    * See [[onErrorHandleWith]] for the version that takes another task.
+    */
+  final def mapError[E1](f: E => E1): BIO[E1, A] =
+    onErrorHandleWith(e => BIO.raiseError(f(e)))
+
+  /** Creates a new task that will handle any matching throwable that
     * this task might emit.
     *
     * See [[onErrorRecover]] for the version that takes a partial function.
