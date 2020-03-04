@@ -39,8 +39,9 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
   override def suspend[A](fa: => Task[A]): Task[A] =
     Task.defer(fa)
 
-  override def async[A](k: ((Either[Throwable, A]) => Unit) => Unit): Task[A] =
-    TaskCreate.async(k)
+  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): Task[A] = {
+    TaskCreate.async(cb => k(BiCallback.toEither(cb)))
+  }
 
   override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
     acquire.bracket(use)(release.andThen(_.onErrorHandleWith(BIO.terminate)))
@@ -51,7 +52,7 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
     acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
 
   override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
-    TaskCreate.asyncF(k)
+    TaskCreate.asyncF(cb => k(BiCallback.toEither(cb)))
 
   override def guarantee[A](acquire: Task[A])(finalizer: Task[Unit]): Task[A] =
     acquire.guarantee(finalizer.onErrorHandleWith(BIO.terminate))

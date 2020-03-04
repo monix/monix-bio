@@ -19,10 +19,10 @@ package monix.bio.internal
 
 import cats.effect.{Async, Concurrent, ConcurrentEffect, Effect, IO}
 import monix.bio.BIO.Context
-import monix.bio.{BIO, Task}
+import monix.bio.{BIO, BiCallback, Task}
+import monix.execution.Scheduler
 import monix.execution.rstreams.SingleAssignSubscription
 import monix.execution.schedulers.TrampolinedRunnable
-import monix.execution.{Callback, Scheduler}
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 
 import scala.util.control.NonFatal
@@ -86,7 +86,7 @@ private[bio] object TaskConversions {
     }
 
   private def fromEffect0[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] = {
-    def start(ctx: Context[Throwable], cb: Callback[Throwable, A]): Unit = {
+    def start(ctx: Context[Throwable], cb: BiCallback[Throwable, A]): Unit = {
       try {
         implicit val sc: Scheduler = ctx.scheduler
         val io = F.runAsync(fa)(new CreateCallback(null, cb))
@@ -155,7 +155,7 @@ private[bio] object TaskConversions {
     }
 
   private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] = {
-    def start(ctx: Context[Throwable], cb: Callback[Throwable, A]): Unit = {
+    def start(ctx: Context[Throwable], cb: BiCallback[Throwable, A]): Unit = {
       try {
         implicit val sc: Scheduler = ctx.scheduler
 
@@ -175,7 +175,7 @@ private[bio] object TaskConversions {
 
   private final class CreateCallback[A](
     conn: TaskConnection[Throwable],
-    cb: Callback[Throwable, A]
+    cb: BiCallback[Throwable, A]
   )(implicit s: Scheduler)
       extends (Either[Throwable, A] => IO[Unit]) with TrampolinedRunnable {
 

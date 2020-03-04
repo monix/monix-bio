@@ -202,7 +202,7 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
     )
     run(1)(cb =>
       try {
-        cb(Right(1)); true
+        cb(Right[Cause[Int], Int](1)); true
       } catch { case _: CallbackCalledMultipleTimesException => false }
     )
     run(1)(cb =>
@@ -214,7 +214,7 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
     run(10)(_.tryOnTermination(WrappedEx(10)))
     run(10)(_.tryOnError(10))
     run(10)(_.tryApply(Failure(WrappedEx(10))))
-    run(10)(_.tryApply(Left(10)))
+    run(10)(_.tryApply(Left(Cause.Error(10))))
 
     run(10)(cb =>
       try {
@@ -228,12 +228,12 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
     )
     run(10)(cb =>
       try {
-        cb(Left(10)); true
+        cb(Left(Cause.Error(10))); true
       } catch { case _: CallbackCalledMultipleTimesException => false }
     )
     run(10)(cb =>
       try {
-        cb(Failure(WrappedEx(10))); true
+        cb(Failure[Either[Int, Int]](WrappedEx(10))); true
       } catch { case _: CallbackCalledMultipleTimesException => false }
     )
   }

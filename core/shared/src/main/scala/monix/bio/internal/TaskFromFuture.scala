@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO.Context
-import monix.bio.{BIO, Task}
+import monix.bio.{BIO, BiCallback, Task}
 import monix.execution._
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.schedulers.TrampolinedRunnable
@@ -96,7 +96,7 @@ private[bio] object TaskFromFuture {
     )
   }
 
-  private def rawAsync[A](start: (Context[Throwable], Callback[Throwable, A]) => Unit): Task[A] =
+  private def rawAsync[A](start: (Context[Throwable], BiCallback[Throwable, A]) => Unit): Task[A] =
     BIO.Async(
       start,
       trampolineBefore = true,
@@ -104,7 +104,7 @@ private[bio] object TaskFromFuture {
       restoreLocals = true
     )
 
-  private def startSimple[A](ctx: BIO.Context[Throwable], cb: Callback[Throwable, A], f: Future[A]) = {
+  private def startSimple[A](ctx: BIO.Context[Throwable], cb: BiCallback[Throwable, A], f: Future[A]) = {
 
     f.value match {
       case Some(value) =>
@@ -118,7 +118,7 @@ private[bio] object TaskFromFuture {
 
   private def startCancelable[A](
     ctx: BIO.Context[Throwable],
-    cb: Callback[Throwable, A],
+    cb: BiCallback[Throwable, A],
     f: Future[A],
     c: Cancelable
   ): Unit = {
@@ -138,7 +138,7 @@ private[bio] object TaskFromFuture {
     }
   }
 
-  private def trampolinedCB[A](cb: Callback[Throwable, A], conn: TaskConnection[Throwable])(
+  private def trampolinedCB[A](cb: BiCallback[Throwable, A], conn: TaskConnection[Throwable])(
     implicit ec: ExecutionContext
   ): Try[A] => Unit = {
 

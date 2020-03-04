@@ -19,7 +19,6 @@ package monix.bio
 package internal
 
 import monix.bio.BIO.Context
-import monix.execution.Callback
 
 private[bio] object BIOStartAndForget {
 
@@ -27,7 +26,7 @@ private[bio] object BIOStartAndForget {
    *  Implementation for `BIO.startAndForget`
    */
   def apply[E, A](fa: BIO[E, A]): UIO[Unit] = {
-    val start = (ctx: Context[Nothing], cb: Callback[Nothing, Unit]) => {
+    val start = (ctx: Context[Nothing], cb: BiCallback[Nothing, Unit]) => {
       implicit val sc = ctx.scheduler
       // It needs its own context, its own cancelable
       val ctx2 = BIO.Context[E](sc, ctx.options)

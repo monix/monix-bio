@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import monix.bio.BIO.{Async, Context}
 import monix.bio.{BIO, BiCallback, Fiber, UIO}
-import monix.execution.{Callback, CancelablePromise}
+import monix.execution.CancelablePromise
 
 private[bio] object TaskStart {
 
@@ -40,9 +40,9 @@ private[bio] object TaskStart {
         )
     }
 
-  private class StartForked[E, A](fa: BIO[E, A]) extends ((Context[Nothing], Callback[Nothing, Fiber[E, A]]) => Unit) {
+  private class StartForked[E, A](fa: BIO[E, A]) extends ((Context[Nothing], BiCallback[Nothing, Fiber[E, A]]) => Unit) {
 
-    final def apply(ctx: Context[Nothing], cb: Callback[Nothing, Fiber[E, A]]): Unit = {
+    final def apply(ctx: Context[Nothing], cb: BiCallback[Nothing, Fiber[E, A]]): Unit = {
       // Cancelable Promise gets used for storing or waiting
       // for the final result
       val p = CancelablePromise[Either[E, A]]()

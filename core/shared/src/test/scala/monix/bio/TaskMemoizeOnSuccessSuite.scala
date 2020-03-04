@@ -405,15 +405,15 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     var effect = 0
     val task = BIO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
-    val first = Promise[Either[Cause[Throwable], Int]]()
+    val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
 
     s.tick()
     assertEquals(first.future.value, None)
 
-    val second = Promise[Either[Cause[Throwable], Int]]()
+    val second = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(second))
-    val third = Promise[Either[Cause[Throwable], Int]]()
+    val third = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(third))
 
     s.tick()
@@ -430,7 +430,7 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     var effect = 0
     val task = BIO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
-    val first = Promise[Either[Cause[Throwable], Int]]()
+    val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
 
     s.tick()
@@ -439,9 +439,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     s.tick(1.second)
     assertEquals(first.future.value, Some(Success(Right(2))))
 
-    val second = Promise[Either[Cause[Throwable], Int]]()
+    val second = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(second))
-    val third = Promise[Either[Cause[Throwable], Int]]()
+    val third = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(third))
     assertEquals(second.future.value, Some(Success(Right(2))))
     assertEquals(third.future.value, Some(Success(Right(2))))
@@ -477,15 +477,15 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     var effect = 0
     val task = BIO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
-    val first = Promise[Either[Cause[Throwable], Int]]()
+    val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
 
     s.tick()
     assertEquals(first.future.value, None)
 
-    val second = Promise[Either[Cause[Throwable], Int]]()
+    val second = Promise[Either[Throwable, Int]]()
     val c2 = task.runAsync(BiCallback.fromPromise(second))
-    val third = Promise[Either[Cause[Throwable], Int]]()
+    val third = Promise[Either[Throwable, Int]]()
     val c3 = task.runAsync(BiCallback.fromPromise(third))
 
     s.tick()
@@ -507,15 +507,15 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     var effect = 0
     val task = BIO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess.map(x => x)
 
-    val first = Promise[Either[Cause[Throwable], Int]]()
+    val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
 
     s.tick()
     assertEquals(first.future.value, None)
 
-    val second = Promise[Either[Cause[Throwable], Int]]()
+    val second = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(second))
-    val third = Promise[Either[Cause[Throwable], Int]]()
+    val third = Promise[Either[Throwable, Int]]()
     val c3 = task.runAsync(BiCallback.fromPromise(third))
 
     s.tick()

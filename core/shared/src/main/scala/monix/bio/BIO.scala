@@ -627,12 +627,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Example, equivalent to the above:
     * doctodo
     * {{{
-    *   import monix.execution.Callback
+    *   import monix.bio.BiCallback
     *
-    *   task.runAsync(new BiCallback[Cause[String], String] {
+    *   task.runAsync(new BiCallback[String, String] {
     *     def onSuccess(str: String) =
     *       println(s"Received: $$str")
-    *     def onError(e: Cause[String]) =
+    *     def onError(e: String) =
     *       println(s"Received expected error: $$e")
     *     def onTermination(e: Throwable) =
     *       global.reportFailure(e)
@@ -650,7 +650,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.Promise
     *
-    *   val p = Promise[Either[Cause[String], String]]()
+    *   val p = Promise[Either[String, String]]()
     *   task.runAsync(BiCallback.fromPromise(p))
     * }}}
     *
@@ -820,7 +820,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
-        .startLight(this, s, opts2, BiCallback.fromAttempt(cb).asInstanceOf[BiCallback[Any, A]]) // TODO: should it be E,A?
+        .startLight(this, s, opts2, BiCallback.fromAttempt(cb).asInstanceOf[BiCallback[Any, A]])
     }
   }
 
