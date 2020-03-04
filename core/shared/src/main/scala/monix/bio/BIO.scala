@@ -2816,11 +2816,17 @@ object BIO extends TaskInstancesLevel0 {
   def suspendTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
     SuspendTotal(fa _)
 
-  /** Promote a non-strict value, a thunk, to a `Task`, catching exceptions
+  /** Promote a non-strict value to a `BIO` that is memoized on the first
+    * evaluation, the result being then available on subsequent evaluations.
+    */
+  def evalOnce[A](a: => A): Task[A] =
+    eval(a).memoize
+
+  /** Promote a non-strict value, a thunk, to a `BIO`, catching exceptions
     * in the process.
     *
-    * Note that since `Task` is not memoized or strict, this will recompute the
-    * value each time the `Task` is executed, behaving like a function.
+    * Note that since `BIO` is not memoized or strict, this will recompute the
+    * value each time the `BIO` is executed, behaving like a function.
     *
     * @param a is the thunk to process on evaluation
     *

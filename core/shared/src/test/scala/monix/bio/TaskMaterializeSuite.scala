@@ -37,23 +37,23 @@ object TaskMaterializeSuite extends BaseTestSuite {
     assertEquals(BIO.terminate(dummy).materialize.runToFuture.value, Some(Success(Right(Failure(dummy)))))
   }
 
-  //  test("Task.evalOnce.materialize") { implicit s =>
-  //    assertEquals(Task.evalOnce(10).materialize.runSyncStep, Right(Success(10)))
-  //  }
-  //
-  //  test("Task.evalOnce.materialize should be stack safe") { implicit s =>
-  //    def loop(n: Int): Task[Int] =
-  //      if (n <= 0) Task.evalOnce(n)
-  //      else
-  //        Task.evalOnce(n).materialize.flatMap {
-  //          case Success(_) => loop(n - 1)
-  //          case Failure(ex) => Task.raiseError(ex)
-  //        }
-  //
-  //    val count = if (Platform.isJVM) 50000 else 5000
-  //    val result = loop(count).runToFuture; s.tick()
-  //    assertEquals(result.value, Some(Success(0)))
-  //  }
+//  test("BIO.evalOnce.materialize") { implicit s =>
+//    assertEquals(BIO.evalOnce(10).materialize.runSyncStep, Right(Success(Right(10))))
+//  }
+
+  test("BIO.evalOnce.materialize should be stack safe") { implicit s =>
+    def loop(n: Int): Task[Int] =
+      if (n <= 0) BIO.evalOnce(n)
+      else
+        BIO.evalOnce(n).materialize.flatMap {
+          case Success(_) => loop(n - 1)
+          case Failure(ex) => BIO.raiseError(ex)
+        }
+
+    val count = if (Platform.isJVM) 50000 else 5000
+    val result = loop(count).runToFuture; s.tick()
+    assertEquals(result.value, Some(Success(Right(0))))
+  }
 
   test("BIO.eval.materialize") { implicit s =>
     assertEquals(BIO.eval(10).materialize.runSyncStep, Right(Success(Right(10))))

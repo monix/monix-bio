@@ -192,7 +192,7 @@ object TaskMemoizeSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("BIO.defer(eval).memoize") { implicit s =>
+  test("BIO.defer(evalAlways).memoize") { implicit s =>
     var effect = 0
     val task = BIO.defer(BIO.eval { effect += 1; effect }).memoize
 
@@ -204,6 +204,58 @@ object TaskMemoizeSuite extends BaseTestSuite {
     assertEquals(r1.value, Some(Success(Right(1))))
     assertEquals(r2.value, Some(Success(Right(1))))
     assertEquals(r3.value, Some(Success(Right(1))))
+  }
+
+  test("BIO.evalOnce.memoize should work for first subscriber") { implicit s =>
+    var effect = 0
+    val task = BIO.evalOnce { effect += 1; effect }.memoize
+
+    val f = task.runToFuture; s.tick()
+    assertEquals(f.value, Some(Success(Right(1))))
+  }
+
+  test("BIO.evalOnce.memoize should work synchronously for next subscribers") { implicit s =>
+    var effect = 0
+    val task = BIO.evalOnce { effect += 1; effect }.memoize
+    task.runToFuture
+    s.tick()
+
+    val f1 = task.runToFuture
+    assertEquals(f1.value, Some(Success(Right(1))))
+    val f2 = task.runToFuture
+    assertEquals(f2.value, Some(Success(Right(1))))
+  }
+
+  test("BIO.evalOnce(error).memoize should work") { implicit s =>
+    var effect = 0
+    val dummy = DummyException("dummy")
+    val task = BIO.evalOnce[Int] { effect += 1; throw dummy }.memoize
+
+    val f1 = task.runToFuture; s.tick()
+    assertEquals(f1.value, Some(Success(Left(dummy))))
+    val f2 = task.runToFuture
+    assertEquals(f2.value, Some(Success(Left(dummy))))
+    assertEquals(effect, 1)
+  }
+
+  test("BIO.evalOnce.memoize should be stack safe") { implicit s =>
+    val count = if (Platform.isJVM) 50000 else 5000
+    var task = BIO.eval(1)
+    for (_ <- 0 until count) task = task.memoize
+
+    val f = task.runToFuture; s.tick()
+    assertEquals(f.value, Some(Success(Right(1))))
+  }
+
+  test("BIO.evalOnce.flatMap.memoize should be stack safe") { implicit s =>
+    val count = if (Platform.isJVM) 50000 else 5000
+    var task = BIO.eval(1)
+    for (_ <- 0 until count) task = task.memoize.flatMap(x => BIO.evalOnce(x))
+
+    val f = task.runToFuture
+    assertEquals(f.value, None)
+    s.tick()
+    assertEquals(f.value, Some(Success(Right(1))))
   }
 
   test("BIO.now.memoize should work synchronously for first subscriber") { implicit s =>
@@ -582,6 +634,11 @@ object TaskMemoizeSuite extends BaseTestSuite {
     task.runAsync(BiCallback.fromPromise(p2))
     assertEquals(p2.future.value, Some(Success(Left(dummy))))
     assertEquals(effect, 1)
+  }
+
+  test("BIO.evalOnce eq BIO.evalOnce.memoize") { implicit s =>
+    val task = BIO.evalOnce(1)
+    assertEquals(task, task.memoize)
   }
 
   test("BIO.eval.memoize eq BIO.eval.memoize.memoize") { implicit s =>
