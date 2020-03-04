@@ -3953,7 +3953,7 @@ object BIO extends TaskInstancesLevel0 {
     *   import java.io._
     *
     *   // Needed for converting from Task to something else, because we need
-    *   // ConcurrentEffect[Task] capabilities, also provided by TaskApp
+    *   // ConcurrentEffect[Task] capabilities, also provided by [[BIOApp]]
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   def open(file: File) =
