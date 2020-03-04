@@ -164,7 +164,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
   }
 
   /**
-    * Attempts to call [[BiCallback.apply(result:Either* BiCallback.apply]].
+    * Attempts to call [[BiCallback.apply(result:Either[monix\.bio\.Cause[E],A])* BiCallback.apply]].
     *
     * $tryMethodDescription
     */

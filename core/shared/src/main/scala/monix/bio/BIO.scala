@@ -321,26 +321,24 @@ import scala.util.{Failure, Success, Try}
   *         to evaluate the source, being required in Task's
   *         [[runAsync]], [[runAsyncF]] or [[runToFuture]].
   *
-  * @define callbackDesc ==Callback==
+  * @define callbackDesc ==BiCallback==
   *
   *         When executing the task via this method, the user is
   *         required to supply a side effecting callback with the
-  *         signature: `Try[Either[E, A]] => Unit`.
+  *         signature: `Either[Cause[E], A] => Unit`.
   *
   *         This will be used by the implementation to signal completion,
   *         signaling either a `Right(value)` or a `Left(error)`.
   *
-  *         `Task` however uses [[monix.bio.BiCallback BiCallback]]
-  *         internally, so you can supply a `Callback` instance instead
+  *         `BIO` however uses [[monix.bio.BiCallback BiCallback]]
+  *         internally, so you can supply a `BiCallback` instance instead
   *         and it will be used to avoid unnecessary boxing. It also has
   *         handy utilities.
   *
   *         Note that with `Callback` you can:
   *
-  *          - convert from a plain function using `Either[Throwable, A]` as input via
+  *          - convert from a plain function using `Either[Cause[E], A]` as input via
   *            [[monix.bio.BiCallback.fromAttempt BiCallback.fromAttempt]]
-  *          - convert from a plain function using `Try[A]` as input via
-  *            [[monix.bio.BiCallback.fromTry BiCallback.fromTry]]
   *          - wrap a standard Scala `Promise` via
   *            [[monix.bio.BiCallback.fromPromise BiCallback.fromPromise]]
   *          - pass an empty callback that just reports errors via
@@ -348,7 +346,7 @@ import scala.util.{Failure, Success, Try}
   *
   * @define callbackParamDesc is a callback that will be invoked upon
   *         completion, either with a successful result, or with an error;
-  *         note that you can use [[monix.execution.Callback]] or [[monix.bio.BiCallback]]
+  *         note that you can use [[monix.bio.BiCallback]]
   *         for extra performance (avoids the boxing in [[scala.Either]])
   *
   * @define cancelableDesc a [[monix.execution.Cancelable Cancelable]]
