@@ -93,6 +93,12 @@ object Task {
     BIO.suspend(fa)
 
   /**
+    * @see See [[monix.bio.BIO.evalOnce]]
+    */
+  def evalOnce[A](a: => A): Task[A] =
+    BIO.evalOnce(a)
+
+  /**
    * @see See [[monix.bio.BIO.eval]]
    */
   def eval[A](a: => A): Task[A] =

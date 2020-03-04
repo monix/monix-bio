@@ -44,21 +44,21 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, null)
   }
 
-//  test("Task.eval is equivalent with Task.evalOnce on first run") { implicit s =>
-//    check1 { a: Int =>
-//      val t1 = {
-//        var effect = 100
-//        Task.eval { effect += 100; effect + a }
-//      }
-//
-//      val t2 = {
-//        var effect = 100
-//        Task.evalOnce { effect += 100; effect + a }
-//      }
-//
-//      t1 <-> t2
-//    }
-//  }
+  test("BIO.eval is equivalent with BIO.evalOnce on first run") { implicit s =>
+    check1 { a: Int =>
+      val t1 = {
+        var effect = 100
+        BIO.eval { effect += 100; effect + a }
+      }
+
+      val t2 = {
+        var effect = 100
+        BIO.evalOnce { effect += 100; effect + a }
+      }
+
+      t1 <-> t2
+    }
+  }
 
   test("BIO.eval.flatMap should be equivalent with BIO.eval") { implicit s =>
     val ex = DummyException("dummy")

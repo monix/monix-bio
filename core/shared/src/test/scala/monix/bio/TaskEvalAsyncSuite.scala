@@ -74,21 +74,21 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
     }
   }
 
-//  test("Task.evalAsync is equivalent with Task.evalOnce on first run") { implicit s =>
-//    check1 { a: Int =>
-//      val t1 = {
-//        var effect = 100
-//        Task.evalAsync { effect += 100; effect + a }
-//      }
-//
-//      val t2 = {
-//        var effect = 100
-//        Task.evalOnce { effect += 100; effect + a }
-//      }
-//
-//      t1 <-> t2
-//    }
-//  }
+  test("BIO.evalAsync is equivalent with BIO.evalOnce on first run") { implicit s =>
+    check1 { a: Int =>
+      val t1 = {
+        var effect = 100
+        BIO.evalAsync { effect += 100; effect + a }
+      }
+
+      val t2 = {
+        var effect = 100
+        BIO.evalOnce { effect += 100; effect + a }
+      }
+
+      t1 <-> t2
+    }
+  }
 
   test("BIO.evalAsync.flatMap should protect against user code") { implicit s =>
     val ex = DummyException("dummy")
