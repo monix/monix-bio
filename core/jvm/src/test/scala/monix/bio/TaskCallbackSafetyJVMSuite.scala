@@ -102,7 +102,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
-      try cb(Right(1))
+      try cb(Right[Cause[String], Int](1))
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
@@ -115,7 +115,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
 
     run(_.tryOnError(dummyMsg))
     run(_.tryOnTermination(dummy))
-    run(_.tryApply(Left(dummyMsg)))
+    run(_.tryApply(Left(Cause.Error(dummyMsg))))
     run(_.tryApply(Success(Left(dummyMsg))))
     run(_.tryApply(Failure(dummy)))
 
@@ -128,7 +128,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
-      try cb(Left(dummyMsg))
+      try cb(Left(Cause.Error(dummyMsg)))
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
@@ -136,7 +136,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
     run { cb =>
-      try cb(Failure(dummy))
+      try cb(Failure[Either[String, Int]](dummy))
       catch { case _: CallbackCalledMultipleTimesException => () }
     }
   }

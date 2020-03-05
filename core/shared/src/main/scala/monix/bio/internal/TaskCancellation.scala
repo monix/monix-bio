@@ -21,10 +21,10 @@ package internal
 
 import cats.effect.CancelToken
 import monix.bio.BIO.{Async, Context}
-import monix.execution.exceptions.UncaughtErrorException
+import monix.execution.Scheduler
 import monix.execution.atomic.{Atomic, AtomicBoolean}
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.schedulers.TrampolinedRunnable
-import monix.execution.{Callback, Scheduler}
 
 private[bio] object TaskCancellation {
 
@@ -103,7 +103,7 @@ private[bio] object TaskCancellation {
     waitsForResult: AtomicBoolean,
     conn: TaskConnection[E],
     conn2: TaskConnection[E],
-    cb: Callback[E, A],
+    cb: BiCallback[E, A],
     e: E
   ): CancelToken[UIO] = {
 

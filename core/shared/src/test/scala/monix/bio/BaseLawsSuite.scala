@@ -122,7 +122,7 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       getArbitrary[Throwable].map(BIO.terminate)
 
     def genAsync: Gen[BIO[E, A]] =
-      getArbitrary[(Either[E, A] => Unit) => Unit].map(TaskCreate.async)
+      getArbitrary[(Either[Cause[E], A] => Unit) => Unit].map(TaskCreate.async)
 
     def genCancelable: Gen[BIO[E, A]] =
       for (a <- getArbitrary[A]) yield TaskCreate.cancelable0[E, A] { (sc, cb) =>
@@ -135,7 +135,7 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       }
 
     def genNestedAsync: Gen[BIO[E, A]] =
-      getArbitrary[(Either[E, BIO[E, A]] => Unit) => Unit]
+      getArbitrary[(Either[Cause[E], BIO[E, A]] => Unit) => Unit]
         .map(k => TaskCreate.async(k).flatMap(x => x))
 
     def genBindSuspend: Gen[BIO[E, A]] =
@@ -197,6 +197,15 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
 
   implicit def arbitraryUIO[A: Arbitrary: Cogen]: Arbitrary[UIO[A]] = {
     Arbitrary(getArbitrary[A].map(UIO(_)))
+  }
+
+  implicit def arbitraryCause[E: Arbitrary]: Arbitrary[Cause[E]] = {
+    Arbitrary {
+      implicitly[Arbitrary[Either[Throwable, E]]].arbitrary.map {
+        case Left(value) => Cause.Termination(value)
+        case Right(value) => Cause.Error(value)
+      }
+    }
   }
 
   implicit def arbitraryUIOf[A: Arbitrary: Cogen, B: Arbitrary: Cogen]: Arbitrary[A => UIO[B]] = {

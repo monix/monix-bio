@@ -23,7 +23,7 @@ import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
 import monix.execution.compat.BuildFrom
 import monix.catnap.FutureLift
-import monix.execution.{Callback, CancelablePromise, Scheduler}
+import monix.execution.{CancelablePromise, Scheduler}
 import org.reactivestreams.Publisher
 
 import scala.concurrent.duration.FiniteDuration
@@ -173,31 +173,31 @@ object Task {
   /**
    * @see See [[monix.bio.BIO.async]]
    */
-  def async[A](register: Callback[Throwable, A] => Unit): Task[A] =
+  def async[A](register: BiCallback[Throwable, A] => Unit): Task[A] =
     TaskCreate.async(register)
 
   /**
    * @see See [[monix.bio.BIO.async0]]
    */
-  def async0[A](register: (Scheduler, Callback[Throwable, A]) => Unit): Task[A] =
+  def async0[A](register: (Scheduler, BiCallback[Throwable, A]) => Unit): Task[A] =
     TaskCreate.async0(register)
 
   /**
    * @see See [[monix.bio.BIO.asyncF]]
    */
-  def asyncF[A](register: Callback[Throwable, A] => Task[Unit]): Task[A] =
+  def asyncF[A](register: BiCallback[Throwable, A] => Task[Unit]): Task[A] =
     TaskCreate.asyncF(register)
 
   /**
    * @see See [[monix.bio.BIO.cancelable]]
    */
-  def cancelable[A](register: Callback[Throwable, A] => CancelToken[Task]): Task[A] =
+  def cancelable[A](register: BiCallback[Throwable, A] => CancelToken[Task]): Task[A] =
     cancelable0((_, cb) => register(cb))
 
   /**
    * @see See [[monix.bio.BIO.cancelable0]]
    */
-  def cancelable0[A](register: (Scheduler, Callback[Throwable, A]) => CancelToken[Task]): Task[A] =
+  def cancelable0[A](register: (Scheduler, BiCallback[Throwable, A]) => CancelToken[Task]): Task[A] =
     TaskCreate.cancelable0(register)
 
   /**

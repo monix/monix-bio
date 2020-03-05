@@ -19,7 +19,7 @@ package monix.bio
 
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.schedulers.{TrampolineExecutionContext, TrampolinedRunnable}
-import monix.execution.{Callback, UncaughtExceptionReporter}
+import monix.execution.UncaughtExceptionReporter
 
 import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.control.NonFatal
@@ -39,8 +39,8 @@ import scala.util.{Failure, Success, Try}
   * @define tryMethodDescription In case the underlying callback
   *         implementation protects against protocol violations, then
   *         this method should return `false` in case the final result
-  *         was already signaled once via [[monix.execution.Callback.onSuccess]],
-  *         [[monix.execution.Callback.onError]] or [[onTermination]].
+  *         was already signaled once via [[onSuccess]],
+  *         [[onError]] or [[onTermination]].
   *
   *         The default implementation relies on catching
   *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]]
@@ -56,13 +56,88 @@ import scala.util.{Failure, Success, Try}
   *                 `false` in case another concurrent call succeeded
   *                 first in signaling a result
   */
-abstract class BiCallback[-E, -A] extends Callback[E, A] {
+abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
+  /**
+    * Signals a successful value.
+    *
+    * $safetyIssues
+    */
+  def onSuccess(value: A): Unit
+
+  /**
+    * Signals an error.
+    *
+    * $safetyIssues
+    */
+  def onError(e: E): Unit
+
   /**
     * Signals a a terminal error which will not be reflected in the type signature.
     *
     * $safetyIssues
     */
   def onTermination(e: Throwable): Unit
+
+  /**
+    * Signals a value via Scala's `Either` where
+    * - `Left`is a typed error
+    * - `Right` is a successful value
+    *
+    * $safetyIssues
+    */
+  def apply(result: Either[Cause[E], A]): Unit =
+    result match {
+      case Right(a) => onSuccess(a)
+      case Left(Cause.Error(e)) => onError(e)
+      case Left(Cause.Termination(e)) => onTermination(e)
+    }
+
+  /**
+    * Signals a value via Scala's `Try` of `Either` where
+    * - `Left` is a typed error
+    * - `Right` is a successful value
+    * - `Failure` is a terminal error (a defect))
+    *
+    * $safetyIssues
+    */
+  def apply(result: Try[Either[E, A]]): Unit =
+    result match {
+      case Success(Right(a)) => onSuccess(a)
+      case Success(Left(e)) => onError(e)
+      case Failure(t) => onTermination(t)
+    }
+
+  /** Return a new callback that will apply the supplied function
+    * before passing the result into this callback.
+    */
+  def contramap[B](f: B => A): BiCallback[E, B] =
+    new BiCallback.Contramap(this, f)
+
+  /**
+    * Attempts to call [[BiCallback.onSuccess]].
+    *
+    * $tryMethodDescription
+    */
+  def tryOnSuccess(value: A): Boolean =
+    try {
+      onSuccess(value)
+      true
+    } catch {
+      case _: CallbackCalledMultipleTimesException => false
+    }
+
+  /**
+    * Attempts to call [[BiCallback.onError]].
+    *
+    * $tryMethodDescription
+    */
+  def tryOnError(e: E): Boolean =
+    try {
+      onError(e)
+      true
+    } catch {
+      case _: CallbackCalledMultipleTimesException => false
+    }
 
   /**
     * Attempts to call [[BiCallback.onTermination]].
@@ -78,18 +153,6 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
     }
 
   /**
-    * Signals a value via Scala's `Try` of `Either` (`Left` is a typed error, `Right` is
-    * the successful value and `Failure` is a terminal error (a defect)).
-    *
-    * $safetyIssues
-    */
-  def apply(result: Try[Either[E, A]]): Unit = result match {
-    case Success(Right(a)) => onSuccess(a)
-    case Success(Left(e)) => onError(e)
-    case Failure(t) => onTermination(t)
-  }
-
-  /**
     * Attempts to call [[BiCallback.apply BiCallback.apply]].
     *
     * $tryMethodDescription
@@ -99,6 +162,40 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
     case Success(Left(e)) => tryOnError(e)
     case Failure(t) => tryOnTermination(t)
   }
+
+  /**
+    * Attempts to call [[BiCallback.apply(result:Either[monix\.bio\.Cause[E],A])* BiCallback.apply]].
+    *
+    * $tryMethodDescription
+    */
+  def tryApply(result: Either[Cause[E], A]): Boolean =
+    result match {
+      case Right(a) => tryOnSuccess(a)
+      case Left(Cause.Error(e)) => tryOnError(e)
+      case Left(Cause.Termination(t)) => tryOnTermination(t)
+    }
+
+  /**
+    * Signals a value via Scala's `Either`.
+    *
+    * $safetyIssues
+    */
+  def apply(result: Either[E, A])(implicit ev: Throwable <:< E): Unit =
+    result match {
+      case Right(a) => onSuccess(a)
+      case Left(e) => onError(e)
+    }
+
+  /**
+    * Signals a value via Scala's `Try`.
+    *
+    * $safetyIssues
+    */
+  def apply(result: Try[A])(implicit ev: Throwable <:< E): Unit =
+    result match {
+      case Success(a) => onSuccess(a)
+      case Failure(e) => onError(e)
+    }
 }
 
 /**
@@ -111,7 +208,6 @@ abstract class BiCallback[-E, -A] extends Callback[E, A] {
   *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]].
   */
 object BiCallback {
-
   /**
     * For building [[BiCallback]] objects using the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type]]
@@ -151,11 +247,16 @@ object BiCallback {
   def fromPromise[E, A](p: Promise[Either[E, A]]): BiCallback[E, A] =
     new BiCallback[E, A] {
 
-      override def tryApply(result: Try[A])(implicit ev: Throwable <:< E): Boolean =
-        p.tryComplete(result.transform(a => Success(Right(a)), th => Success(Left(th))))
+      override def tryApply(result: Try[Either[E, A]]): Boolean =
+        p.tryComplete(result)
 
-      override def tryApply(result: Either[E, A]): Boolean =
-        p.trySuccess(result)
+      override def tryApply(result: Either[Cause[E], A]): Boolean = {
+        result match {
+          case Left(Cause.Error(value)) => p.trySuccess(Left(value))
+          case Right(value) => p.trySuccess(Right(value))
+          case Left(Cause.Termination(e)) => p.tryFailure(e)
+        }
+      }
 
       override def tryOnSuccess(value: A): Boolean =
         p.trySuccess(Right(value))
@@ -172,7 +273,7 @@ object BiCallback {
         }
       }
 
-      override def apply(result: Try[A])(implicit ev: Throwable <:< E): Unit =
+      override def apply(result: Try[Either[E, A]]): Unit =
         if (!tryApply(result)) throw CallbackCalledMultipleTimesException.forResult(result)
 
       override def onTermination(e: Throwable): Unit =
@@ -233,18 +334,18 @@ object BiCallback {
           override def onSuccess(value: A): Unit = apply(Right(value))
 
           override def onError(e: E): Unit = {
-            apply(Left(e))
+            apply(Left(Cause.Error(e)))
           }
 
-          override def apply(result: Either[E, A]): Unit =
+          override def apply(result: Either[Cause[E], A]): Unit =
             if (!tryApply(result)) {
               throw CallbackCalledMultipleTimesException.forResult(result)
             }
 
-          override def tryApply(result: Either[E, A]): Boolean =
+          override def tryApply(result: Either[Cause[E], A]): Boolean =
             if (isActive) {
               isActive = false
-              cb(result.left.map(Cause.Error(_)))
+              cb(result)
               true
             } else {
               false
@@ -267,40 +368,9 @@ object BiCallback {
         }
     }
 
-  /** Turns `Try[A] => Unit` callbacks into Monix callbacks.
-    *
-    * These are common within Scala's standard library implementation,
-    * due to usage with Scala's `Future`.
-    *
-    * WARNING: the returned callback is NOT thread-safe!
-    */
-  def fromTry[A](cb: Try[A] => Unit): BiCallback[Throwable, A] =
-    new BiCallback[Throwable, A] {
-      private[this] var isActive = true
-      override def onSuccess(value: A): Unit = apply(Success(value))
-      override def onError(e: Throwable): Unit = apply(Failure(e))
-      override def onTermination(e: Throwable): Unit = apply(Failure(e))
-
-      override def apply(result: Try[A])(implicit ev: Throwable <:< Throwable): Unit =
-        if (!tryApply(result)) {
-          throw CallbackCalledMultipleTimesException.forResult(result)
-        }
-
-      override def tryApply(result: Try[A])(implicit ev: Throwable <:< Throwable): Boolean = {
-        if (isActive) {
-          isActive = false
-          cb(result)
-          true
-        } else {
-          false
-        }
-      }
-
-    }
-
   private[monix] def callSuccess[E, A](cb: Either[E, A] => Unit, value: A): Unit =
     cb match {
-      case ref: Callback[E, A] @unchecked => ref.onSuccess(value)
+      case ref: BiCallback[E, A] @unchecked => ref.onSuccess(value)
       case _ => cb(Right(value))
     }
 
@@ -356,10 +426,6 @@ object BiCallback {
     /** See [[BiCallback.fromAttempt]]. */
     def fromAttempt[A](cb: Either[Cause[E], A] => Unit): BiCallback[E, A] =
       BiCallback.fromAttempt(cb)
-
-    /** See [[BiCallback.fromTry]]. */
-    def fromTry[A](cb: Try[A] => Unit)(implicit ev: Throwable <:< E): BiCallback[Throwable, A] =
-      BiCallback.fromTry(cb)
   }
 
   private final class AsyncFork[E, A](cb: BiCallback[E, A])(implicit ec: ExecutionContext) extends Base[E, A](cb)(ec)
@@ -515,4 +581,16 @@ object BiCallback {
       }
     }
   }
+
+  private final class Contramap[-E, -A, -B](underlying: BiCallback[E, A], f: B => A) extends BiCallback[E, B] {
+    def onSuccess(value: B): Unit =
+      underlying.onSuccess(f(value))
+    def onError(error: E): Unit =
+      underlying.onError(error)
+    def onTermination(e: Throwable): Unit =
+      underlying.onTermination(e)
+  }
+
+  private[bio] def toEither[A](bcb: BiCallback[Throwable, A]): (Either[Throwable, A]) => Unit =
+    (result: Either[Throwable, A]) => bcb.apply(result)
 }

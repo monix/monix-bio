@@ -18,13 +18,13 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, BiCallback, UIO}
 import monix.bio.BIO.{Async, Context}
 import monix.bio.compat.internal.toIterator
-import monix.execution.exceptions.UncaughtErrorException
-import monix.execution.{Callback, Scheduler}
+import monix.bio.{BIO, BiCallback, UIO}
+import monix.execution.Scheduler
 import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.execution.atomic.{Atomic, AtomicAny}
+import monix.execution.exceptions.UncaughtErrorException
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -55,7 +55,7 @@ private[bio] object TaskGatherUnordered {
       ref: AtomicAny[State[A]],
       currentState: State[A],
       mainConn: TaskConnection[E],
-      finalCallback: Callback[E, List[A]]
+      finalCallback: BiCallback[E, List[A]]
     )(implicit s: Scheduler): Unit = {
 
       currentState match {
@@ -78,7 +78,7 @@ private[bio] object TaskGatherUnordered {
       stateRef: AtomicAny[State[A]],
       mainConn: TaskConnection[E],
       ex: E,
-      finalCallback: Callback[E, List[A]]
+      finalCallback: BiCallback[E, List[A]]
     )(implicit s: Scheduler): Unit = {
 
       val currentState = stateRef.getAndSet(State.Complete)
@@ -111,7 +111,7 @@ private[bio] object TaskGatherUnordered {
         stateRef: AtomicAny[State[A]],
         count: Int,
         conn: TaskConnection[E],
-        finalCallback: Callback[E, List[A]]
+        finalCallback: BiCallback[E, List[A]]
       )(implicit s: Scheduler): Unit = {
 
         stateRef.get match {
