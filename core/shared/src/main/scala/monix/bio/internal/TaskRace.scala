@@ -59,25 +59,28 @@ private[bio] object TaskRace {
         new BiCallback[E, A] {
           def onSuccess(valueA: A): Unit =
             if (isActive.getAndSet(false)) {
-              connB.cancel.runAsyncAndForget
-              conn.pop()
-              cb.onSuccess(Left(valueA))
+              connB.cancel.map { _ =>
+                conn.pop()
+                cb.onSuccess(Left(valueA))
+              }.runAsyncAndForget
             }
 
           def onError(ex: E): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connB.cancel.runAsyncAndForget
-              cb.onError(ex)
+              connB.cancel.map { _ =>
+                conn.pop()
+                cb.onError(ex)
+              }.runAsyncAndForget
             } else {
               sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
           override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connB.cancel.runAsyncAndForget
-              cb.onTermination(e)
+              connB.cancel.map { _ =>
+                conn.pop()
+                cb.onTermination(e)
+              }.runAsyncAndForget
             } else {
               sc.reportFailure(e)
             }
@@ -91,25 +94,28 @@ private[bio] object TaskRace {
         new BiCallback[E, B] {
           def onSuccess(valueB: B): Unit =
             if (isActive.getAndSet(false)) {
-              connA.cancel.runAsyncAndForget
-              conn.pop()
-              cb.onSuccess(Right(valueB))
+              connA.cancel.map { _ =>
+                conn.pop()
+                cb.onSuccess(Right(valueB))
+              }.runAsyncAndForget
             }
 
           def onError(ex: E): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connA.cancel.runAsyncAndForget
-              cb.onError(ex)
+              connA.cancel.map { _ =>
+                conn.pop()
+                cb.onError(ex)
+              }.runAsyncAndForget
             } else {
               sc.reportFailure(UncaughtErrorException.wrap(ex))
             }
 
           override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connA.cancel.runAsyncAndForget
-              cb.onTermination(e)
+              connA.cancel.map { _ =>
+                conn.pop()
+                cb.onTermination(e)
+              }.runAsyncAndForget
             } else {
               sc.reportFailure(e)
             }

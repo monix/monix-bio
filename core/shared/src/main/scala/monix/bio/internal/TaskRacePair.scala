@@ -75,18 +75,21 @@ private[bio] object TaskRacePair {
 
           override def onError(ex: E): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connB.cancel.runAsyncAndForget
-              cb.onError(ex)
+              connB.cancel.map { _ =>
+                conn.pop()
+                cb.onError(ex)
+              }.runAsyncAndForget
+
             } else {
               pa.success(Left(ex))
             }
 
           override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connB.cancel.runAsyncAndForget
-              cb.onTermination(e)
+              connB.cancel.map { _ =>
+                conn.pop()
+                cb.onTermination(e)
+              }.runAsyncAndForget
             } else {
               pa.failure(e)
             }
@@ -109,18 +112,20 @@ private[bio] object TaskRacePair {
 
           override def onError(ex: E): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connA.cancel.runAsyncAndForget
-              cb.onError(ex)
+              connA.cancel.map { _ =>
+                conn.pop()
+                cb.onError(ex)
+              }.runAsyncAndForget
             } else {
               pb.success(Left(ex))
             }
 
           override def onTermination(e: Throwable): Unit =
             if (isActive.getAndSet(false)) {
-              conn.pop()
-              connA.cancel.runAsyncAndForget
-              cb.onTermination(e)
+              connA.cancel.map { _ =>
+                conn.pop()
+                cb.onTermination(e)
+              }.runAsyncAndForget
             } else {
               pb.failure(e)
             }

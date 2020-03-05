@@ -25,7 +25,7 @@ import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.{BIO, BiCallback, Cause, UIO}
 import monix.execution.atomic.Atomic
 import monix.execution.internal.Platform
-
+import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 private[monix] object TaskBracket {
@@ -177,6 +177,9 @@ private[monix] object TaskBracket {
     protected def makeReleaseFrame(ctx: Context[E], value: A): BaseReleaseFrame[E, A, B]
 
     final def apply(ctx: Context[E], cb: BiCallback[E, B]): Unit = {
+      // Placeholder for the future finalizer
+      val deferredRelease = ForwardCancelable()
+      ctx.connection.push(deferredRelease.cancel)(ctx.scheduler)
       // Async boundary needed, but it is guaranteed via Task.Async below;
       BIO.unsafeStartNow(
         acquire,
@@ -187,7 +190,7 @@ private[monix] object TaskBracket {
             val conn = ctx.connection
 
             val releaseFrame = makeReleaseFrame(ctx, value)
-            conn.push(releaseFrame.cancel)
+            deferredRelease.complete(releaseFrame.cancel)
 
             // Check if Task wasn't already cancelled in acquire
             if (!conn.isCanceled) {
@@ -215,6 +218,7 @@ private[monix] object TaskBracket {
 
   private abstract class BaseReleaseFrame[E, A, B](ctx: Context[E], a: A) extends FatalStackFrame[E, B, BIO[E, B]] {
     private[this] val waitsForResult = Atomic(true)
+    private[this] val p: Promise[Unit] = Promise()
     protected def releaseOnSuccess(a: A, b: B): UIO[Unit]
     protected def releaseOnError(a: A, e: Cause[E]): UIO[Unit]
     protected def releaseOnCancel(a: A): UIO[Unit]
@@ -261,15 +265,21 @@ private[monix] object TaskBracket {
     final def cancel: UIO[Unit] =
       UIO.suspend {
         if (waitsForResult.compareAndSet(expect = true, update = false))
-          releaseOnCancel(a)
-        else
-          BIO.unit
+          releaseOnCancel(a).redeemCauseWith(
+            c => UIO.suspend { p.success(()); c.fold(BIO.terminate, _ => BIO.unit) },
+            _ => UIO(p.success(()))
+          )
+        else {
+          TaskFromFuture.strict(p.future).hideErrors
+        }
       }
 
     private final def unsafeApply(b: B): UIO[B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
-        ctx.connection.pop()
-        releaseOnSuccess(a, b).map(_ => b)
+        releaseOnSuccess(a, b).redeemCauseWith(
+          c => UIO.suspend { p.success(()); c.fold(BIO.terminate, _ => BIO.now(b)) },
+          _ => UIO { p.success(()); b }
+        )
       } else {
         UIO.never
       }
@@ -277,9 +287,15 @@ private[monix] object TaskBracket {
 
     private final def unsafeRecover(e: E): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
-        ctx.connection.pop()
         val cause = Cause.Error(e)
-        releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
+
+        releaseOnError(a, cause)
+          .redeemCauseWith(
+            ex => UIO.suspend { p.success(()); ex.fold(BIO.terminate, _ => BIO.unit) },
+            _ => UIO { p.success(()); () }
+          )
+          .flatMap(new ReleaseRecover(cause))
+
       } else {
         BIO.never
       }
@@ -287,9 +303,14 @@ private[monix] object TaskBracket {
 
     private final def unsafeRecoverFatal(e: Throwable): BIO[E, B] = {
       if (waitsForResult.compareAndSet(expect = true, update = false)) {
-        ctx.connection.pop()
         val cause = Cause.Termination(e)
-        releaseOnError(a, cause).flatMap[E, B](new ReleaseRecover(cause))
+
+        releaseOnError(a, cause)
+          .redeemCauseWith(
+            ex => UIO.suspend { p.success(()); ex.fold(BIO.terminate, _ => BIO.unit) },
+            _ => UIO { p.success(()); () }
+          )
+          .flatMap(new ReleaseRecover(cause))
       } else {
         BIO.never
       }

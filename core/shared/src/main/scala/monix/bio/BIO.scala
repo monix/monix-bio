@@ -17,8 +17,19 @@
 
 package monix.bio
 
-import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, IO, Timer, Fiber => _}
-import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup, ~>}
+import cats.effect.{
+  CancelToken,
+  Clock,
+  Concurrent,
+  ConcurrentEffect,
+  ContextShift,
+  Effect,
+  ExitCase,
+  IO,
+  Timer,
+  Fiber => _
+}
+import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.execution.exceptions.UncaughtErrorException
@@ -1219,31 +1230,48 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   /** Introduces an asynchronous boundary at the current stage in the
     * asynchronous processing pipeline.
     *
+    * The `BIO` will be returned to the default `Scheduler` to
+    * reschedule the rest of its execution.
+    *
     * Consider the following example:
     *
     * {{{
+    *   import monix.execution.ExecutionModel.SynchronousExecution
     *   import monix.execution.Scheduler
-    *   val io = Scheduler.io()
     *
-    *   val source = Task(1).executeOn(io).map(_ + 1)
+    *   val s = Scheduler.singleThread("example-scheduler").withExecutionModel(SynchronousExecution)
+    *
+    *   val source1 = BIO(println("task 1")).loopForever
+    *   val source2 = BIO(println("task 2")).loopForever
+    *
+    *   // Will keep printing only "task 1" or "task 2"
+    *   // depending on which one was scheduled first
+    *   // doctodo BIO.parZip2(source1, source2)
     * }}}
     *
-    * That task is being forced to execute on the `io` scheduler,
-    * including the `map` transformation that follows after
-    * `executeOn`. But what if we want to jump with the execution
-    * run-loop on the default scheduler for the following
-    * transformations?
+    * We might expect that both `source1` and `source2` would execute
+    * concurrently but since we are using only 1 thread with
+    * [[monix.execution.ExecutionModel.SynchronousExecution SynchronousExecution]]
+    * execution model, one of them will be scheduled first and then run forever.
     *
-    * Then we can do:
+    * To prevent this behavior we could introduce asynchronous boundary
+    * after each iteration, i.e.:
     *
     * {{{
-    *   source.asyncBoundary.map(_ + 2)
+    *   val source3 = BIO(println("task 1")).asyncBoundary.loopForever
+    *   val source4 = BIO(println("task 2")).asyncBoundary.loopForever
+    *
+    *   // Will keep printing "task 1" and "task 2" alternately.
+    *   // doctodo BIO.parZip2(source3, source4)
     * }}}
     *
-    * In this sample, whatever gets evaluated by the `source` will
-    * happen on the `io` scheduler, however the `asyncBoundary` call
-    * will make all subsequent operations to happen on the default
-    * scheduler.
+    * A lot of asynchronous boundaries can lead to unnecessary overhead so in the
+    * majority of cases it is enough to use the default `ExecutionModel` which
+    * introduces asynchronous boundaries between `flatMap` periodically on its own.
+    *
+    * Likelihood that different tasks are able to advance is called `fairness`.
+    *
+    * @see [[BIO.executeOn]] for a way to override the default `Scheduler`
     */
   final def asyncBoundary: BIO[E, A] =
     flatMap(a => BIO.shift.map(_ => a))
@@ -1254,29 +1282,25 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * next async boundary).
     *
     * Consider the following example:
+    *
     * {{{
     *   import monix.execution.Scheduler
+    *
+    *   implicit val s = Scheduler.global
     *   val io = Scheduler.io()
     *
-    *   val source = Task(1).executeOn(io).map(_ + 1)
+    *   val source = BIO(1) // s
+    *     .asyncBoundary(io)
+    *     .flatMap(_ => BIO(2)) // io
+    *     .flatMap(_ => BIO(3)) // io
+    *     .asyncBoundary
+    *     .flatMap(_ => BIO(4))  // s
     * }}}
     *
-    * That task is being forced to execute on the `io` scheduler,
-    * including the `map` transformation that follows after
-    * `executeOn`. But what if we want to jump with the execution
-    * run-loop on another scheduler for the following transformations?
-    *
-    * Then we can do:
-    * {{{
-    *   import monix.execution.Scheduler.global
-    *
-    *   source.asyncBoundary(global).map(_ + 2)
-    * }}}
-    *
-    * In this sample, whatever gets evaluated by the `source` will
-    * happen on the `io` scheduler, however the `asyncBoundary` call
-    * will make all subsequent operations to happen on the specified
-    * `global` scheduler.
+    * If `Scheduler s` is passed implicitly when running the `BIO`, `BIO(1)`
+    * will be executed there. Then it will switch to `io` for `BIO(2)` and `BIO(3)`.
+    * `asyncBoundary` without any arguments returns to the default `Scheduler` so `BIO(4)`
+    * will be executed there.
     *
     * @param s is the scheduler triggering the asynchronous boundary
     */
@@ -1622,13 +1646,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * [[monix.execution.ExecutionModel ExecutionModel]]) and the
     * given scheduler will probably not be used at all.
     *
-    * However in case we would use [[BIO.apply]], which ensures
+    * However in case we would use [[BIO.evalAsync]], which ensures
     * that execution of the provided thunk will be async, then
     * by using `executeOn` we'll indeed get a logical fork on
     * the `io` scheduler:
     *
     * {{{
-    *   Task("Hello, " + "World!").executeOn(io, forceAsync = false)
+    *   BIO.evalAsync("Hello, " + "World!").executeOn(io, forceAsync = false)
     * }}}
     *
     * Also note that overriding the "default" scheduler can only
@@ -1813,31 +1837,31 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     flatMap(_ => this.loopForever)
 
   /** Start asynchronous execution of the source suspended in the `BIO` context,
-   * running it in the background and discarding the result.
-   *
-   * Similar to [[start]] after mapping result to Unit. Below law holds:
-   *
-   * `bio.startAndForget <-> bio.start.map(_ => ())`
-   *
-   */
+    * running it in the background and discarding the result.
+    *
+    * Similar to [[start]] after mapping result to Unit. Below law holds:
+    *
+    * `bio.startAndForget <-> bio.start.map(_ => ())`
+    *
+    */
   final def startAndForget: UIO[Unit] =
     BIOStartAndForget(this)
 
   /** Returns a new `BIO` in which `f` is scheduled to be run on
-   * completion. This would typically be used to release any
-   * resources acquired by this `BIO`.
-   *
-   * The returned `BIO` completes when both the source and the task
-   * returned by `f` complete.
-   *
-   * NOTE: The given function is only called when the task is
-   * complete.  However the function does not get called if the task
-   * gets canceled.  Cancellation is a process that's concurrent with
-   * the execution of a task and hence needs special handling.
-   *
-   * See [[doOnCancel]] for specifying a callback to call on
-   * canceling a task.
-   */
+    * completion. This would typically be used to release any
+    * resources acquired by this `BIO`.
+    *
+    * The returned `BIO` completes when both the source and the task
+    * returned by `f` complete.
+    *
+    * NOTE: The given function is only called when the task is
+    * complete.  However the function does not get called if the task
+    * gets canceled.  Cancellation is a process that's concurrent with
+    * the execution of a task and hence needs special handling.
+    *
+    * See [[doOnCancel]] for specifying a callback to call on
+    * canceling a task.
+    */
   final def doOnFinish(f: Option[Cause[E]] => UIO[Unit]): BIO[E, A] =
     this.guaranteeCase {
       case ExitCase.Completed => f(None)
@@ -1941,21 +1965,21 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     onErrorHandleWith(_ => that)
 
   /** Given a predicate function, keep retrying the
-   * BIO until the function returns true.
-   */
+    * BIO until the function returns true.
+    */
   final def restartUntil(p: A => Boolean): BIO[E, A] =
     this.flatMap(a => if (p(a)) now(a) else this.restartUntil(p))
 
   /** Returns a new `Task` that applies the mapping function to
-   * the element emitted by the source.
-   *
-   * Can be used for specifying a (lazy) transformation to the result
-   * of the source.
-   *
-   * This equivalence with [[flatMap]] always holds:
-   *
-   * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
-   */
+    * the element emitted by the source.
+    *
+    * Can be used for specifying a (lazy) transformation to the result
+    * of the source.
+    *
+    * This equivalence with [[flatMap]] always holds:
+    *
+    * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
+    */
   final def map[B](f: A => B): BIO[E, B] =
     this match {
       case Map(source, g, index) =>
@@ -3581,6 +3605,8 @@ object BIO extends TaskInstancesLevel0 {
     * responsible for the "shift".
     *
     * $shiftDesc
+    *
+    * @see [[BIO.executeOn]] for a way to override the default `Scheduler`
     */
   val shift: UIO[Unit] =
     shift(null)
@@ -3783,165 +3809,172 @@ object BIO extends TaskInstancesLevel0 {
     TaskMapBoth(fa1, fa2)(f)
 
   /** Pairs 2 `BIO` values, applying the given mapping function.
-   *
-   * Returns a new `BIO` reference that completes with the result
-   * of mapping that function to their successful results, or in
-   * failure in case either of them fails.
-   *
-   * This is a specialized [[BIO.sequence]] operation and as such
-   * the tasks are evaluated in order, one after another, the
-   * operation being described in terms of [[BIO.flatMap .flatMap]].
-   *
-   * {{{
-   *   val fa1 = BIO(1)
-   *   val fa2 = BIO(2)
-   *
-   *   // Yields Success(3)
-   *   BIO.map2(fa1, fa2) { (a, b) =>
-   *     a + b
-   *   }
-   *
-   *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map2(fa1, BIO.raiseError(new RuntimeException("boo"))) { (a, b: Int) =>
-   *     a + b
-   *   }
-   * }}}
-   */
+    *
+    * Returns a new `BIO` reference that completes with the result
+    * of mapping that function to their successful results, or in
+    * failure in case either of them fails.
+    *
+    * This is a specialized [[BIO.sequence]] operation and as such
+    * the tasks are evaluated in order, one after another, the
+    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    *
+    * {{{
+    *   val fa1 = BIO(1)
+    *   val fa2 = BIO(2)
+    *
+    *   // Yields Success(3)
+    *   BIO.map2(fa1, fa2) { (a, b) =>
+    *     a + b
+    *   }
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.map2(fa1, BIO.raiseError(new RuntimeException("boo"))) { (a, b: Int) =>
+    *     a + b
+    *   }
+    * }}}
+    */
   def map2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2)
       yield f(a1, a2)
 
   /** Pairs 3 `BIO` values, applying the given mapping function.
-   *
-   * Returns a new `BIO` reference that completes with the result
-   * of mapping that function to their successful results, or in
-   * failure in case either of them fails.
-   *
-   * This is a specialized [[BIO.sequence]] operation and as such
-   * the tasks are evaluated in order, one after another, the
-   * operation being described in terms of [[BIO.flatMap .flatMap]].
-   *
-   * {{{
-   *   val fa1 = BIO(1)
-   *   val fa2 = BIO(2)
-   *   val fa3 = BIO(3)
-   *
-   *   // Yields Success(6)
-   *   BIO.map3(fa1, fa2, fa3) { (a, b, c) =>
-   *     a + b + c
-   *   }
-   *
-   *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map3(fa1, BIO.raiseError(new RuntimeException("boo")), fa3) { (a, b: Int, c) =>
-   *     a + b + c
-   *   }
-   * }}}
-   */
+    *
+    * Returns a new `BIO` reference that completes with the result
+    * of mapping that function to their successful results, or in
+    * failure in case either of them fails.
+    *
+    * This is a specialized [[BIO.sequence]] operation and as such
+    * the tasks are evaluated in order, one after another, the
+    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    *
+    * {{{
+    *   val fa1 = BIO(1)
+    *   val fa2 = BIO(2)
+    *   val fa3 = BIO(3)
+    *
+    *   // Yields Success(6)
+    *   BIO.map3(fa1, fa2, fa3) { (a, b, c) =>
+    *     a + b + c
+    *   }
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.map3(fa1, BIO.raiseError(new RuntimeException("boo")), fa3) { (a, b: Int, c) =>
+    *     a + b + c
+    *   }
+    * }}}
+    */
   def map3[E, A1, A2, A3, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3])(f: (A1, A2, A3) => R): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3)
       yield f(a1, a2, a3)
 
   /** Pairs 4 `BIO` values, applying the given mapping function.
-   *
-   * Returns a new `BIO` reference that completes with the result
-   * of mapping that function to their successful results, or in
-   * failure in case either of them fails.
-   *
-   * This is a specialized [[BIO.sequence]] operation and as such
-   * the tasks are evaluated in order, one after another, the
-   * operation being described in terms of [[BIO.flatMap .flatMap]].
-   *
-   * {{{
-   *   val fa1 = BIO(1)
-   *   val fa2 = BIO(2)
-   *   val fa3 = BIO(3)
-   *   val fa4 = BIO(4)
-   *
-   *   // Yields Success(10)
-   *   BIO.map4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
-   *     a + b + c + d
-   *   }
-   *
-   *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map4(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4) {
-   *     (a, b: Int, c, d) => a + b + c + d
-   *   }
-   * }}}
-   */
+    *
+    * Returns a new `BIO` reference that completes with the result
+    * of mapping that function to their successful results, or in
+    * failure in case either of them fails.
+    *
+    * This is a specialized [[BIO.sequence]] operation and as such
+    * the tasks are evaluated in order, one after another, the
+    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    *
+    * {{{
+    *   val fa1 = BIO(1)
+    *   val fa2 = BIO(2)
+    *   val fa3 = BIO(3)
+    *   val fa4 = BIO(4)
+    *
+    *   // Yields Success(10)
+    *   BIO.map4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
+    *     a + b + c + d
+    *   }
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.map4(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4) {
+    *     (a, b: Int, c, d) => a + b + c + d
+    *   }
+    * }}}
+    */
   def map4[E, A1, A2, A3, A4, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4])(
-    f: (A1, A2, A3, A4) => R): BIO[E, R] =
+    f: (A1, A2, A3, A4) => R
+  ): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4)
       yield f(a1, a2, a3, a4)
 
   /** Pairs 5 `BIO` values, applying the given mapping function.
-   *
-   * Returns a new `BIO` reference that completes with the result
-   * of mapping that function to their successful results, or in
-   * failure in case either of them fails.
-   *
-   * This is a specialized [[BIO.sequence]] operation and as such
-   * the tasks are evaluated in order, one after another, the
-   * operation being described in terms of [[BIO.flatMap .flatMap]].
-   *
-   * {{{
-   *   val fa1 = BIO(1)
-   *   val fa2 = BIO(2)
-   *   val fa3 = BIO(3)
-   *   val fa4 = BIO(4)
-   *   val fa5 = BIO(5)
-   *
-   *   // Yields Success(15)
-   *   BIO.map5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
-   *     a + b + c + d + e
-   *   }
-   *
-   *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map5(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5) {
-   *     (a, b: Int, c, d, e) => a + b + c + d + e
-   *   }
-   * }}}
-   */
-  def map5[E, A1, A2, A3, A4, A5, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4], fa5: BIO[E, A5])(
-    f: (A1, A2, A3, A4, A5) => R): BIO[E, R] =
+    *
+    * Returns a new `BIO` reference that completes with the result
+    * of mapping that function to their successful results, or in
+    * failure in case either of them fails.
+    *
+    * This is a specialized [[BIO.sequence]] operation and as such
+    * the tasks are evaluated in order, one after another, the
+    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    *
+    * {{{
+    *   val fa1 = BIO(1)
+    *   val fa2 = BIO(2)
+    *   val fa3 = BIO(3)
+    *   val fa4 = BIO(4)
+    *   val fa5 = BIO(5)
+    *
+    *   // Yields Success(15)
+    *   BIO.map5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
+    *     a + b + c + d + e
+    *   }
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.map5(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5) {
+    *     (a, b: Int, c, d, e) => a + b + c + d + e
+    *   }
+    * }}}
+    */
+  def map5[E, A1, A2, A3, A4, A5, R](
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4],
+    fa5: BIO[E, A5]
+  )(f: (A1, A2, A3, A4, A5) => R): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5)
       yield f(a1, a2, a3, a4, a5)
 
   /** Pairs 6 `BIO` values, applying the given mapping function.
-   *
-   * Returns a new `BIO` reference that completes with the result
-   * of mapping that function to their successful results, or in
-   * failure in case either of them fails.
-   *
-   * This is a specialized [[BIO.sequence]] operation and as such
-   * the tasks are evaluated in order, one after another, the
-   * operation being described in terms of [[BIO.flatMap .flatMap]].
-   *
-   * {{{
-   *   val fa1 = BIO(1)
-   *   val fa2 = BIO(2)
-   *   val fa3 = BIO(3)
-   *   val fa4 = BIO(4)
-   *   val fa5 = BIO(5)
-   *   val fa6 = BIO(6)
-   *
-   *   // Yields Success(21)
-   *   BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
-   *     a + b + c + d + e + f
-   *   }
-   *
-   *   // Yields Failure(e), because the second arg is a failure
-   *   BIO.map6(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5, fa6) {
-   *     (a, b: Int, c, d, e, f) => a + b + c + d + e + f
-   *   }
-   * }}}
-   */
+    *
+    * Returns a new `BIO` reference that completes with the result
+    * of mapping that function to their successful results, or in
+    * failure in case either of them fails.
+    *
+    * This is a specialized [[BIO.sequence]] operation and as such
+    * the tasks are evaluated in order, one after another, the
+    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    *
+    * {{{
+    *   val fa1 = BIO(1)
+    *   val fa2 = BIO(2)
+    *   val fa3 = BIO(3)
+    *   val fa4 = BIO(4)
+    *   val fa5 = BIO(5)
+    *   val fa6 = BIO(6)
+    *
+    *   // Yields Success(21)
+    *   BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
+    *     a + b + c + d + e + f
+    *   }
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.map6(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5, fa6) {
+    *     (a, b: Int, c, d, e, f) => a + b + c + d + e + f
+    *   }
+    * }}}
+    */
   def map6[E, A1, A2, A3, A4, A5, A6, R](
-      fa1: BIO[E, A1],
-      fa2: BIO[E, A2],
-      fa3: BIO[E, A3],
-      fa4: BIO[E, A4],
-      fa5: BIO[E, A5],
-      fa6: BIO[E, A6])(f: (A1, A2, A3, A4, A5, A6) => R): BIO[E, R] =
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4],
+    fa5: BIO[E, A5],
+    fa6: BIO[E, A6]
+  )(f: (A1, A2, A3, A4, A5, A6) => R): BIO[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5; a6 <- fa6)
       yield f(a1, a2, a3, a4, a5, a6)
 
@@ -4004,8 +4037,9 @@ object BIO extends TaskInstancesLevel0 {
     * the usage of [[cats.effect.Concurrent]], since [[TaskLift]] is lawless.
     */
   def liftToConcurrent[F[_]](
-                              implicit F: cats.effect.Concurrent[F],
-                              eff: cats.effect.ConcurrentEffect[Task]): (Task ~> F) =
+    implicit F: cats.effect.Concurrent[F],
+    eff: cats.effect.ConcurrentEffect[Task]
+  ): (Task ~> F) =
     TaskLift.toConcurrent[F]
 
   /**
