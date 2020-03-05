@@ -20,12 +20,12 @@ package monix.bio
 package internal
 
 import cats.effect.CancelToken
-import monix.bio.UIO
 import monix.catnap.CancelableF
 import monix.execution.atomic.{Atomic, PaddingStrategy}
 import monix.execution.{Cancelable, Scheduler}
 
 import scala.annotation.tailrec
+import scala.concurrent.Promise
 
 /**
   * INTERNAL API — Represents a composite of functions
@@ -149,21 +149,30 @@ private[bio] object TaskConnection {
 
     private[this] val state =
       Atomic.withPadding(
-        List.empty[AnyRef],
+        (List.empty[AnyRef], Promise[Unit]()),
         PaddingStrategy.LeftRight128
       )
 
     val cancel: UIO[Unit] = UIO.suspendTotal {
-      state.getAndSet(null) match {
-        case null | Nil =>
-          BIO.unit
-        case list =>
-          UnsafeCancelUtils.cancelAllUnsafe(list)
+      state.transformAndExtract {
+        case (Nil, p) =>
+          (UIO[Unit](p.success(())), (null, p))
+        case (null, p) =>
+          (TaskFromFuture.strict(p.future).hideErrors, (null, p))
+        case (list, p) =>
+          val task = UnsafeCancelUtils
+            .cancelAllUnsafe(list)
+            .redeemCauseWith[Nothing, Unit](
+              cause => UIO.suspend { p.success(()); cause.fold(BIO.terminate, _ => BIO.unit) },
+              _ => UIO(p.success(()))
+            )
+
+          (task, (null, p))
       }
     }
 
     def isCanceled: Boolean =
-      state.get eq null
+      state.get._1 eq null
 
     def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit =
       pushAny(token)
@@ -177,11 +186,11 @@ private[bio] object TaskConnection {
     @tailrec
     private def pushAny(cancelable: AnyRef)(implicit s: Scheduler): Unit = {
       state.get() match {
-        case null =>
+        case (null, _) =>
           UnsafeCancelUtils.triggerCancel(cancelable)
-        case list =>
+        case current @ (list, p) =>
           val update = cancelable :: list
-          if (!state.compareAndSet(list, update)) {
+          if (!state.compareAndSet(current, (update, p))) {
             // $COVERAGE-OFF$
             pushAny(cancelable)
             // $COVERAGE-ON$
@@ -194,9 +203,9 @@ private[bio] object TaskConnection {
 
     @tailrec def pop(): CancelToken[UIO] =
       state.get() match {
-        case null | Nil => BIO.unit
-        case current @ (x :: xs) =>
-          if (state.compareAndSet(current, xs))
+        case (null, _) | (Nil, _) => BIO.unit
+        case current @ (x :: xs, p) =>
+          if (state.compareAndSet(current, (xs, p)))
             UnsafeCancelUtils.getToken(x)
           else {
             // $COVERAGE-OFF$
@@ -205,8 +214,14 @@ private[bio] object TaskConnection {
           }
       }
 
-    def tryReactivate(): Boolean =
-      state.compareAndSet(null, Nil)
+    def tryReactivate(): Boolean = {
+      state.transformAndExtract {
+        case (null, _) =>
+          (true, (Nil, Promise[Unit]()))
+        case notCanceled =>
+          (false, notCanceled)
+      }
+    }
 
     def toCancelable(implicit s: Scheduler): Cancelable =
       new Cancelable {
