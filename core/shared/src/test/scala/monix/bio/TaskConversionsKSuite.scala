@@ -57,9 +57,9 @@ object TaskConversionsKSuite extends BaseTestSuite {
     val task = Task.liftFrom[IO].apply(io0)
 
     val f1 = task.runToFuture; s.tick()
-    assertEquals(f1.value, Some(Success(Right(1))))
+    assertEquals(f1.value, Some(Success(1)))
     val f2 = task.runToFuture; s.tick()
-    assertEquals(f2.value, Some(Success(Right(2))))
+    assertEquals(f2.value, Some(Success(2)))
   }
 
   test("Task.liftFromEffect[IO]") { implicit s =>
@@ -68,9 +68,9 @@ object TaskConversionsKSuite extends BaseTestSuite {
     val task = Task.liftFromEffect[IO].apply(io0)
 
     val f1 = task.runToFuture; s.tick()
-    assertEquals(f1.value, Some(Success(Right(1))))
+    assertEquals(f1.value, Some(Success(1)))
     val f2 = task.runToFuture; s.tick()
-    assertEquals(f2.value, Some(Success(Right(2))))
+    assertEquals(f2.value, Some(Success(2)))
   }
 
   test("Task.liftFromConcurrentEffect[IO]") { implicit s =>
@@ -81,8 +81,8 @@ object TaskConversionsKSuite extends BaseTestSuite {
     val task = Task.liftFromConcurrentEffect[IO].apply(io0)
 
     val f1 = task.runToFuture; s.tick()
-    assertEquals(f1.value, Some(Success(Right(1))))
+    assertEquals(f1.value, Some(Success(1)))
     val f2 = task.runToFuture; s.tick()
-    assertEquals(f2.value, Some(Success(Right(2))))
+    assertEquals(f2.value, Some(Success(2)))
   }
 }

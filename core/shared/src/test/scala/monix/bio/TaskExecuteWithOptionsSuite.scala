@@ -31,7 +31,7 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
     val f = task.runToFuture
     s.tick()
 
-    val Some(Success(Right((opt1, opt2)))) = f.value
+    val Some(Success((opt1, opt2))) = f.value
     assert(opt1.localContextPropagation, "opt1.localContextPropagation")
     assert(!opt2.localContextPropagation, "!opt2.localContextPropagation")
   }
@@ -49,7 +49,7 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 
@@ -63,7 +63,7 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
 }

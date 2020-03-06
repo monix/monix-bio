@@ -38,7 +38,7 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .settings(crossSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC17",
+      "dev.zio" %% "zio" % "1.0.0-RC18",
       "io.monix" %% "monix-eval" % "3.1.0"
     ))
 

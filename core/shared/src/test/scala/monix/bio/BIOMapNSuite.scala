@@ -34,19 +34,19 @@ object BIOMapNSuite extends BaseTestSuite {
     s.tick(1.millisecond)
     assertEquals(bioExec.value, None)
     s.tick(2.millisecond)
-    assertEquals(bioExec.value, Some(Success(Right(3))))
+    assertEquals(bioExec.value, Some(Success(3)))
   }
 
   test("BIO#map2 should propagate error when one argument failed") { implicit s =>
     val bio1 = BIO.fromEither[String, Int](Left("1st Step Failure")).delayExecution(1.millisecond)
-    val bio2 = BIO((throw DummyException("2nd Step Failure")) : Int)
+    val bio2 = BIO((throw DummyException("2nd Step Failure")): Int)
     val map2BIO = BIO.map2(bio1, bio2)(_ + _)
 
-    val bioExec = map2BIO.runToFuture
+    val bioExec = map2BIO.attempt.runToFuture
 
     s.tick()
     assertEquals(bioExec.value, None)
-    s.tick(2.millisecond)
+    s.tick(1.millisecond)
     assertEquals(bioExec.value, Some(Success(Left("1st Step Failure"))))
   }
 
@@ -86,16 +86,16 @@ object BIOMapNSuite extends BaseTestSuite {
     s.tick(3.millisecond)
     assertEquals(bioExec.value, None)
     s.tick(3.millisecond)
-    assertEquals(bioExec.value, Some(Success(Right(6))))
+    assertEquals(bioExec.value, Some(Success(6)))
   }
 
   test("BIO#map3 should propagate error when one argument failed") { implicit s =>
     val bio1 = BIO.now(10).delayExecution(1.millisecond)
     val bio2 = BIO.fromEither[String, Int](Left("2nd Step Failure")).delayExecution(1.millisecond)
-    val bio3 = BIO((throw DummyException("3rd Step Failure")) : Int)
+    val bio3 = BIO((throw DummyException("3rd Step Failure")): Int)
     val map3BIO = BIO.map3(bio1, bio2, bio3)(_ + _ + _)
 
-    val bioExec = map3BIO.runToFuture
+    val bioExec = map3BIO.attempt.runToFuture
 
     s.tick()
     assertEquals(bioExec.value, None)
@@ -145,17 +145,17 @@ object BIOMapNSuite extends BaseTestSuite {
     s.tick(4.millisecond)
     assertEquals(bioExec.value, None)
     s.tick(1.millisecond)
-    assertEquals(bioExec.value, Some(Success(Right(10))))
+    assertEquals(bioExec.value, Some(Success(10)))
   }
 
   test("BIO#map4 should propagate error when one argument failed") { implicit s =>
     val bio1 = BIO.now(10).delayExecution(1.millisecond)
     val bio2 = BIO.now(5).delayExecution(1.millisecond)
     val bio3 = BIO.fromEither[String, Int](Left("3rd Step Failure")).delayExecution(1.millisecond)
-    val bio4 = BIO((throw DummyException("4th Step Failure")) : Int)
+    val bio4 = BIO((throw DummyException("4th Step Failure")): Int)
     val map4BIO = BIO.map4(bio1, bio2, bio3, bio4)(_ + _ + _ + _)
 
-    val bioExec = map4BIO.runToFuture
+    val bioExec = map4BIO.attempt.runToFuture
 
     s.tick()
     assertEquals(bioExec.value, None)
@@ -211,18 +211,18 @@ object BIOMapNSuite extends BaseTestSuite {
     s.tick(4.millisecond)
     assertEquals(bioExec.value, None)
     s.tick(1.millisecond)
-    assertEquals(bioExec.value, Some(Success(Right(15))))
+    assertEquals(bioExec.value, Some(Success(15)))
   }
 
   test("BIO#map5 should propagate error when one argument failed") { implicit s =>
     val bio1 = BIO.now(10).delayExecution(1.millisecond)
     val bio2 = BIO.fromEither[String, Int](Left("2nd Step Failure")).delayExecution(1.millisecond)
     val bio3 = BIO.now(5).delayExecution(1.millisecond)
-    val bio4 = BIO((throw DummyException("4th Step Failure")) : Int)
+    val bio4 = BIO((throw DummyException("4th Step Failure")): Int)
     val bio5 = BIO.now(10)
     val map5BIO = BIO.map5(bio1, bio2, bio3, bio4, bio5)(_ + _ + _ + _ + _)
 
-    val bioExec = map5BIO.runToFuture
+    val bioExec = map5BIO.attempt.runToFuture
 
     s.tick()
     assertEquals(bioExec.value, None)
@@ -284,20 +284,20 @@ object BIOMapNSuite extends BaseTestSuite {
     s.tick(5.millisecond)
     assertEquals(bioExec.value, None)
     s.tick(1.millisecond)
-    assertEquals(bioExec.value, Some(Success(Right(21))))
+    assertEquals(bioExec.value, Some(Success(21)))
   }
 
   test("BIO#map6 should propagate error when one argument failed") { implicit s =>
     val bio1 = BIO.now(10).delayExecution(1.millisecond)
     val bio2 = BIO.fromEither[String, Int](Left("2nd Step Failure")).delayExecution(1.millisecond)
     val bio3 = BIO.now(5).delayExecution(1.millisecond)
-    val bio4 = BIO((throw DummyException("4th Step Failure")) : Int)
+    val bio4 = BIO((throw DummyException("4th Step Failure")): Int)
     val bio5 = BIO.now(10)
     val bio6 = BIO.now(20)
 
     val map6BIO = BIO.map6(bio1, bio2, bio3, bio4, bio5, bio6)(_ + _ + _ + _ + _ + _)
 
-    val bioExec = map6BIO.runToFuture
+    val bioExec = map6BIO.attempt.runToFuture
 
     s.tick()
     assertEquals(bioExec.value, None)

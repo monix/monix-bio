@@ -37,7 +37,7 @@ object TaskAsyncSuite extends BaseTestSuite {
       }
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     assertEquals(f.value, None)
     s.tick()
     assertEquals(f.value, Some(Success(Right(1))))
@@ -46,7 +46,7 @@ object TaskAsyncSuite extends BaseTestSuite {
   test("BIO.async should signal errors in register") { implicit s =>
     val ex = DummyException("dummy")
     val task = BIO.async0[String, Int]((_, _) => throw ex)
-    val result = task.runToFuture; s.tick()
+    val result = task.attempt.runToFuture; s.tick()
     assertEquals(result.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
@@ -59,25 +59,25 @@ object TaskAsyncSuite extends BaseTestSuite {
         else BIO.now(acc)
       }
 
-    val f = loop(10000, 0).runToFuture; s.tick()
+    val f = loop(10000, 0).attempt.runToFuture; s.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
   test("BIO.async works for immediate successful value") { implicit sc =>
     val task = BIO.async[String, Int](_.onSuccess(1))
-    assertEquals(task.runToFuture.value, Some(Success(Right(1))))
+    assertEquals(task.attempt.runToFuture.value, Some(Success(Right(1))))
   }
 
   test("BIO.async works for immediate error") { implicit sc =>
     val e = "dummy"
     val task = BIO.async[String, Int](_.onError(e))
-    assertEquals(task.runToFuture.value, Some(Success(Left(e))))
+    assertEquals(task.attempt.runToFuture.value, Some(Success(Left(e))))
   }
 
   test("BIO.async works for immediate terminate error") { implicit sc =>
     val e = DummyException("dummy")
     val task = BIO.async[Int, Int](_.onTermination(e))
-    assertEquals(task.runToFuture.value, Some(Failure(e)))
+    assertEquals(task.attempt.runToFuture.value, Some(Failure(e)))
   }
 
   test("BIO.async is memory safe in flatMap loops") { implicit sc =>
@@ -90,17 +90,18 @@ object TaskAsyncSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   test("BIO.async0 works for immediate successful value") { implicit sc =>
     val task = BIO.async0[String, Int]((_, cb) => cb.onSuccess(1))
-    assertEquals(task.runToFuture.value, Some(Success(Right(1))))
+    assertEquals(task.attempt.runToFuture.value, Some(Success(Right(1))))
   }
 
   test("BIO.async0 works for async successful value") { implicit sc =>
     val f = BIO
       .async0[String, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
+      .attempt
       .runToFuture
 
     sc.tick()
@@ -111,6 +112,7 @@ object TaskAsyncSuite extends BaseTestSuite {
     val e = "dummy"
     val f = BIO
       .async0[String, Int]((s, cb) => s.executeAsync(() => cb.onError(e)))
+      .attempt
       .runToFuture
 
     sc.tick()
@@ -121,6 +123,7 @@ object TaskAsyncSuite extends BaseTestSuite {
     val e = DummyException("dummy")
     val f = BIO
       .async0[Int, Int]((s, cb) => s.executeAsync(() => cb.onTermination(e)))
+      .attempt
       .runToFuture
 
     sc.tick()
@@ -137,7 +140,7 @@ object TaskAsyncSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   test("BIO.async0 is memory safe in async flatMap loops") { implicit sc =>
@@ -150,7 +153,7 @@ object TaskAsyncSuite extends BaseTestSuite {
         else BIO.now(acc)
       }
 
-    val f = loop(10000, 0).runToFuture; sc.tick()
+    val f = loop(10000, 0).attempt.runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 

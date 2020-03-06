@@ -19,7 +19,20 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.{BIO, BiCallback, UIO}
-import monix.bio.BIO.{Async, Context, ContextSwitch, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
+import monix.bio.BIO.{
+  Async,
+  Context,
+  ContextSwitch,
+  Error,
+  Eval,
+  EvalTotal,
+  FlatMap,
+  Map,
+  Now,
+  Suspend,
+  SuspendTotal,
+  Termination
+}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
 import monix.execution.misc.Local
@@ -568,7 +581,7 @@ private[bio] object TaskRunLoop {
     *
     * Function gets invoked by `Task.runAsync(implicit s: Scheduler)`.
     */
-  def startFuture[E, A](source: BIO[E, A], scheduler: Scheduler, opts: BIO.Options): CancelableFuture[Either[E, A]] = {
+  def startFuture[E, A](source: BIO[E, A], scheduler: Scheduler, opts: BIO.Options): CancelableFuture[A] = {
     var current = source.asInstanceOf[BIO[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
@@ -644,7 +657,7 @@ private[bio] object TaskRunLoop {
           case Error(error) =>
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
-                return CancelableFuture.successful(Left(error.asInstanceOf[E]))
+                return CancelableFuture.failed(UncaughtErrorException.wrap(error))
               case bind =>
                 // Try/catch described as statement to prevent ObjectRef ;-)
                 try {
@@ -682,7 +695,7 @@ private[bio] object TaskRunLoop {
         if (hasUnboxed) {
           popNextBind(bFirst, bRest) match {
             case null =>
-              return CancelableFuture.successful(Right(unboxed.asInstanceOf[A]))
+              return CancelableFuture.successful(unboxed.asInstanceOf[A])
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
@@ -775,10 +788,10 @@ private[bio] object TaskRunLoop {
     bRest: CallStack,
     nextFrame: FrameIndex,
     forceFork: Boolean
-  ): CancelableFuture[Either[E, A]] = {
+  ): CancelableFuture[A] = {
 
-    val p = Promise[Either[E, A]]()
-    val cb = BiCallback.fromPromise(p).asInstanceOf[BiCallback[Any, Any]]
+    val p = Promise[A]()
+    val cb = BiCallback.fromTry(p.complete).asInstanceOf[BiCallback[Any, Any]]
     val context = Context[Any](scheduler, opts)
     val current = source.asInstanceOf[BIO[E, A]]
 

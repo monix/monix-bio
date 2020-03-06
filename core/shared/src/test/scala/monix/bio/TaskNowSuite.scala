@@ -32,7 +32,7 @@ object TaskNowSuite extends BaseTestSuite {
     val task = BIO.now(trigger())
     assert(wasTriggered, "wasTriggered")
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO.now.runAsync: CancelableFuture should be synchronous for AlwaysAsyncExecution") { s =>
@@ -45,7 +45,7 @@ object TaskNowSuite extends BaseTestSuite {
     assert(wasTriggered, "wasTriggered")
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO.now.runAsync(callback) should work synchronously") { implicit s =>
@@ -83,7 +83,7 @@ object TaskNowSuite extends BaseTestSuite {
 
     val task = BIO.raiseError(trigger())
     assert(wasTriggered, "wasTriggered")
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
@@ -101,15 +101,15 @@ object TaskNowSuite extends BaseTestSuite {
   test("BIO.raiseError.runAsync: CancelableFuture should be synchronous for AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
-    val dummy = 1204
+    val dummy = DummyException("1204")
     var wasTriggered = false
-    def trigger(): Int = { wasTriggered = true; dummy }
+    def trigger() = { wasTriggered = true; dummy }
 
     val task = BIO.raiseError(trigger())
     assert(wasTriggered, "wasTriggered")
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Left(dummy))))
+    assertEquals(f.value, Some(Failure(dummy)))
   }
 
   test("BIO.raiseError.runAsync(callback) should work synchronously") { implicit s =>
@@ -190,7 +190,7 @@ object TaskNowSuite extends BaseTestSuite {
     s.tickOne()
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(iterations * 2))))
+    assertEquals(f.value, Some(Success(iterations * 2)))
   }
 
   test("BIO.now should not be cancelable") { implicit s =>
@@ -198,13 +198,13 @@ object TaskNowSuite extends BaseTestSuite {
     val f = t.runToFuture
     f.cancel()
     s.tick()
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.raiseError should not be cancelable") { implicit s =>
     val dummy = 1453
     val t = BIO.raiseError(dummy)
-    val f = t.runToFuture
+    val f = t.attempt.runToFuture
     f.cancel()
     s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))

@@ -23,8 +23,8 @@ import monix.bio.BIO.Context
 private[bio] object BIOStartAndForget {
 
   /**
-   *  Implementation for `BIO.startAndForget`
-   */
+    *  Implementation for `BIO.startAndForget`
+    */
   def apply[E, A](fa: BIO[E, A]): UIO[Unit] = {
     val start = (ctx: Context[Nothing], cb: BiCallback[Nothing, Unit]) => {
       implicit val sc = ctx.scheduler

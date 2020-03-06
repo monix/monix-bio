@@ -28,7 +28,7 @@ object TaskTerminationSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO#redeemCause should recover typed error") { implicit s =>
@@ -37,7 +37,7 @@ object TaskTerminationSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(99))))
+    assertEquals(f.value, Some(Success(99)))
   }
 
   test("BIO#redeemCause should recover unexpected error") { implicit s =>
@@ -46,7 +46,7 @@ object TaskTerminationSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(99))))
+    assertEquals(f.value, Some(Success(99)))
   }
 
   test("BIO#redeemCause should protect against user code") { implicit s =>
@@ -70,7 +70,7 @@ object TaskTerminationSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO#redeemCauseWith should recover typed error") { implicit s =>
@@ -79,14 +79,14 @@ object TaskTerminationSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(99))))
+    assertEquals(f.value, Some(Success(99)))
   }
 
   test("BIO#redeemCauseWith should recover unexpected error") { implicit s =>
     val ex = DummyException("dummy")
     val task = BIO.evalTotal[Int](if (1 == 1) throw ex else 1).redeemCauseWith(_ => BIO.now(99), BIO.now)
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(99))))
   }

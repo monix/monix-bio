@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object BIODoOnFinishSuite extends BaseTestSuite {
-  test("BIO#doOnFinish should work on successful task"){ implicit s =>
+  test("BIO#doOnFinish should work on successful task") { implicit s =>
     var effect = 0
     val successfulBIO = UIO(10).delayExecution(1.millisecond)
     val bioWithFinisher = successfulBIO.doOnFinish {
@@ -35,10 +35,10 @@ object BIODoOnFinishSuite extends BaseTestSuite {
 
     s.tick(1.millisecond)
     assertEquals(effect, 2)
-    assertEquals(bioExec.value, Some(Success(Right(10))))
+    assertEquals(bioExec.value, Some(Success(10)))
   }
 
-  test("BIO#doOnFinish should work on task with raised error"){ implicit s =>
+  test("BIO#doOnFinish should work on task with raised error") { implicit s =>
     var effect = 0
     val errorValue = "StringError"
     val errorProneBIO = BIO.raiseError(errorValue)
@@ -47,17 +47,18 @@ object BIODoOnFinishSuite extends BaseTestSuite {
       case _ => UIO.delay { effect += 3 }
     }
 
-    val bioExec = bioWithFinisher.runToFuture
+    val bioExec = bioWithFinisher.attempt.runToFuture
 
     s.tick(1.millisecond)
     assertEquals(effect, 2)
     assertEquals(bioExec.value, Some(Success(Left(errorValue))))
   }
 
-  test("BIO#doOnFinish should work on terminated task"){ implicit s =>
+  test("BIO#doOnFinish should work on terminated task") { implicit s =>
     var effect = 0
     val fatalError = DummyException("Coincidence")
-    val fatalBIO = BIO.now(10)
+    val fatalBIO = BIO
+      .now(10)
       .delayExecution(1.millisecond)
       .map(_ => throw fatalError)
     val bioWithFinisher = fatalBIO.doOnFinish {
@@ -72,9 +73,10 @@ object BIODoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Failure(fatalError)))
   }
 
-  test("BIO#doOnFinish should not trigger any finishing action when BIO is cancelled"){ implicit s =>
+  test("BIO#doOnFinish should not trigger any finishing action when BIO is cancelled") { implicit s =>
     var effect = 0
-    val bioToCancel = BIO.now(10)
+    val bioToCancel = BIO
+      .now(10)
       .delayExecution(10.millisecond)
       .doOnFinish(_ => UIO.delay { effect += 2 })
 

@@ -40,7 +40,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     s.tick(2.seconds)
     assertEquals(f.value, None)
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(List(3, 1, 2)))))
+    assertEquals(f.value, Some(Success(List(3, 1, 2))))
   }
 
   test("BIO.gatherUnordered should onError if one of the tasks terminates in error") { implicit s =>
@@ -57,7 +57,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     s.tick()
     assertEquals(f.value, None)
     s.tick(2.seconds)
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.gatherUnordered should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
@@ -102,7 +102,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     val sum = BIO.gatherUnordered(it).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
-    assertEquals(result.value.get, Success(Right((count + 1) * count / 2)))
+    assertEquals(result.value.get, Success((count + 1) * count / 2))
   }
 
   test("BIO.gatherUnordered should be stack-safe on handling many tasks") { implicit s =>
@@ -111,7 +111,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     val sum = BIO.gatherUnordered(tasks).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
-    assertEquals(result.value.get, Success(Right(count * (count - 1) / 2)))
+    assertEquals(result.value.get, Success(count * (count - 1) / 2))
   }
 
   test("BIO.gatherUnordered should be stack safe on success") { implicit s =>
@@ -177,7 +177,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
       .uncancelable
 
     val gather = BIO.gatherUnordered(Seq(task1, task2))
-    val result = gather.runToFutureOpt
+    val result = gather.attempt.runToFutureOpt
     s.tick()
 
     assertEquals(result.value, Some(Success(Left(ex))))
@@ -212,7 +212,7 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
       .uncancelable
 
     val gather = BIO.gatherUnordered(Seq(task1, task2))
-    val result = gather.runToFutureOpt
+    val result = gather.attempt.runToFutureOpt
     s.tick()
 
     assertEquals(result.value, Some(Failure(ex)))
@@ -229,11 +229,11 @@ object TaskGatherUnorderedSuite extends BaseTestSuite {
     val task3 = BIO.gatherUnordered(List(task2, task2, task2))
 
     val result1 = task3.runToFuture; s.tick()
-    assertEquals(result1.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(result1.value, Some(Success(List(4, 4, 4))))
     assertEquals(effect, 1 + 3)
 
     val result2 = task3.runToFuture; s.tick()
-    assertEquals(result2.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(result2.value, Some(Success(List(4, 4, 4))))
     assertEquals(effect, 1 + 3 + 3)
   }
 }

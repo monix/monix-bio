@@ -99,16 +99,16 @@ object TaskConnectionRefSuite extends BaseTestSuite {
     cr.cancel.runAsyncAndForget; s.tick()
 
     var effect = 0
-    val b = BooleanCancelableF(Task { effect += 1 }).runToFuture.value.get.flatMap(_.toTry).get
+    val b = BooleanCancelableF(Task { effect += 1 }).runToFuture.value.flatMap(_.toOption).get
     cr := b
 
-    assert(b.isCanceled.runToFuture.value.get.flatMap(_.toTry).get)
+    assert(b.isCanceled.runToFuture.value.flatMap(_.toOption).get)
     assertEquals(effect, 1)
 
     cr.cancel.runAsyncAndForget; s.tick()
     assertEquals(effect, 1)
 
-    val b2 = BooleanCancelableF(Task { effect += 1 }).runToFuture.value.get.flatMap(_.toTry).get
+    val b2 = BooleanCancelableF(Task { effect += 1 }).runToFuture.value.flatMap(_.toOption).get
     intercept[IllegalStateException] { cr := b2 }
     assertEquals(effect, 2)
   }

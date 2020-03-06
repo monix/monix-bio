@@ -517,23 +517,23 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.concurrent.Await
     *
     *   // ANTI-PATTERN 1: Unnecessary side effects
-    *   def increment1(sample: BIO[String, Int]): CancelableFuture[Either[String, Int]] = {
+    *   def increment1(sample: UIO[Int]): CancelableFuture[Int] = {
     *     // No reason to trigger `runAsync` for this operation
-    *     sample.runToFuture.map(_.map(_ + 1))
+    *     sample.runToFuture.map(_ + 1)
     *   }
     *
     *   // ANTI-PATTERN 2: blocking threads makes it worse than (1)
-    *   def increment2(sample: BIO[String, Int]): Either[String, Int] = {
+    *   def increment2(sample: UIO[Int]): Int = {
     *     // Blocking threads is totally unnecessary
     *     val x = Await.result(sample.runToFuture, 5.seconds)
-    *     x.map(_ + 1)
+    *     x + 1
     *   }
     *
     *   // ANTI-PATTERN 3: this is even WORSE than (2)!
-    *   def increment3(sample: BIO[String, Int]): BIO[String, Int] = {
+    *   def increment3(sample: Task[Int]): Task[Int] = {
     *     // Triggering side-effects, but misleading users/readers
     *     // into thinking this function is pure via the return type
-    *     BIO.fromFutureEither(sample.runToFuture.map(_.map(_ + 1)))
+    *     BIO.fromFuture(sample.runToFuture.map(_ + 1))
     *   }
     * }}}
     *
@@ -547,8 +547,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $runAsyncToFutureReturn
     */
   @UnsafeBecauseImpure
-  final def runToFuture[E1 >: E](implicit s: Scheduler): CancelableFuture[Either[E1, A]] =
-    runToFutureOpt(s, BIO.defaultOptions)
+  final def runToFuture(implicit s: Scheduler, ev: E <:< Throwable): CancelableFuture[A] =
+    runToFutureOpt(s, BIO.defaultOptions, ev)
 
   /** Triggers the asynchronous execution, much like normal [[runToFuture]],
     * but includes the ability to specify [[monix.bio.BIO.Options Options]]
@@ -588,7 +588,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $runAsyncToFutureReturn
     */
   @UnsafeBecauseImpure
-  def runToFutureOpt[E1 >: E](implicit s: Scheduler, opts: Options): CancelableFuture[Either[E1, A]] = {
+  def runToFutureOpt(implicit s: Scheduler, opts: Options, ev: E <:< Throwable): CancelableFuture[A] = {
     val opts2 = opts.withSchedulerFeatures
     Local
       .bindCurrentIf(opts2.localContextPropagation) {
@@ -1048,7 +1048,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.Await
     *
-    *   Await.result[Either[Throwable, Int]](Task(42).runToFuture, 3.seconds)
+    *   Await.result[Int](Task(42).runToFuture, 3.seconds)
     * }}}
     *
     * Some implementation details:
@@ -1817,7 +1817,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def foreach(f: Either[E, A] => Unit)(implicit s: Scheduler): Unit =
-    runToFuture.foreach(f)
+    attempt.runToFuture.foreach(f)
 
   /** Returns a new `Task` that repeatedly executes the source as long
     * as it continues to succeed. It never produces a terminal value.
@@ -4360,8 +4360,8 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt[E](implicit s: Scheduler, opts: Options): CancelableFuture[Either[E, A]] = {
-      CancelableFuture.successful(Right(value))
+    override def runToFutureOpt(implicit s: Scheduler, opts: Options, ev: Nothing <:< Throwable): CancelableFuture[A] = {
+      CancelableFuture.successful(value)
     }
 
     // Optimization to avoid the run-loop
@@ -4408,11 +4408,12 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt[E1 >: E](
+    override def runToFutureOpt(
       implicit s: Scheduler,
-      opts: Options
-    ): CancelableFuture[Either[E1, Nothing]] = {
-      CancelableFuture.successful(Left(e))
+      opts: Options,
+      ev: E <:< Throwable
+    ): CancelableFuture[Nothing] = {
+      CancelableFuture.failed(ev(e))
     }
 
     // Optimization to avoid the run-loop
@@ -4463,7 +4464,7 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt[E1 >: Nothing](implicit s: Scheduler, opts: Options): CancelableFuture[Nothing] = {
+    override def runToFutureOpt(implicit s: Scheduler, opts: Options, ev: Nothing <:< Throwable): CancelableFuture[Nothing] = {
       CancelableFuture.failed(e)
     }
 
@@ -4840,13 +4841,13 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
   /** Builds a `cats.effect.ContextShift` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def contextShift(s: Scheduler): ContextShift[BIO[Any, *]] =
-    new ContextShift[BIO[Any, *]] {
+  def contextShift[E](s: Scheduler): ContextShift[BIO[E, *]] =
+    new ContextShift[BIO[E, *]] {
 
-      override def shift: BIO[Any, Unit] =
+      override def shift: BIO[E, Unit] =
         BIO.shift(s)
 
-      override def evalOn[A](ec: ExecutionContext)(fa: BIO[Any, A]): BIO[Any, A] =
+      override def evalOn[A](ec: ExecutionContext)(fa: BIO[E, A]): BIO[E, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
           case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
@@ -4879,13 +4880,13 @@ private[bio] abstract class TaskTimers extends TaskClocks {
   /** Builds a `cats.effect.Timer` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def timer(s: Scheduler): Timer[BIO[Any, *]] =
-    new Timer[BIO[Any, *]] {
+  def timer[E](s: Scheduler): Timer[BIO[E, *]] =
+    new Timer[BIO[E, *]] {
 
-      override def sleep(duration: FiniteDuration): BIO[Any, Unit] =
+      override def sleep(duration: FiniteDuration): BIO[E, Unit] =
         BIO.sleep(duration).executeOn(s)
 
-      override def clock: Clock[BIO[Any, *]] =
+      override def clock: Clock[BIO[E, *]] =
         BIO.clock(s)
     }
 }
@@ -4907,7 +4908,7 @@ private[bio] abstract class TaskClocks {
       override def realTime(unit: TimeUnit): BIO[Any, Long] =
         BIO.deferAction(sc => BIO.now(sc.clockRealTime(unit)))
 
-      override def monotonic(unit: TimeUnit): Task[Long] =
+      override def monotonic(unit: TimeUnit): BIO[Any, Long] =
         BIO.deferAction(sc => BIO.now(sc.clockMonotonic(unit)))
     }
 
@@ -4915,13 +4916,13 @@ private[bio] abstract class TaskClocks {
     * Builds a `cats.effect.Clock` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def clock(s: Scheduler): Clock[BIO[Any, *]] =
-    new Clock[BIO[Any, *]] {
+  def clock[E](s: Scheduler): Clock[BIO[E, *]] =
+    new Clock[BIO[E, *]] {
 
-      override def realTime(unit: TimeUnit): BIO[Any, Long] =
-        BIO.eval(s.clockRealTime(unit))
+      override def realTime(unit: TimeUnit): BIO[E, Long] =
+        BIO.evalTotal(s.clockRealTime(unit))
 
-      override def monotonic(unit: TimeUnit): BIO[Any, Long] =
-        BIO.eval(s.clockMonotonic(unit))
+      override def monotonic(unit: TimeUnit): BIO[E, Long] =
+        BIO.evalTotal(s.clockMonotonic(unit))
     }
 }

@@ -31,11 +31,11 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
     assertEquals(sc.executionModel, ExecutionModel.Default)
 
     val f1 = readModel.executeWithModel(SynchronousExecution).runToFuture
-    assertEquals(f1.value, Some(Success(Right(SynchronousExecution))))
+    assertEquals(f1.value, Some(Success(SynchronousExecution)))
 
     val f2 = readModel.executeWithModel(AlwaysAsyncExecution).runToFuture
     sc.tick()
-    assertEquals(f2.value, Some(Success(Right(AlwaysAsyncExecution))))
+    assertEquals(f2.value, Some(Success(AlwaysAsyncExecution)))
   }
 
   testAsync("local.write.executeWithModel(AlwaysAsyncExecution) works") { _ =>
@@ -50,7 +50,7 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 
@@ -66,7 +66,7 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v,100)
     }
   }
 
@@ -80,6 +80,6 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 }

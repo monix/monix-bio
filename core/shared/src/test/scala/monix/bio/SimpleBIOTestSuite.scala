@@ -29,11 +29,18 @@ trait SimpleBIOTestSuite extends AbstractTestSuite with Asserts {
       propertiesSeq = propertiesSeq :+ TestSpec.sync[Unit](name, _ => f)
     }
 
-  def testAsync[E](name: String)(f: => Future[Either[E, Unit]]): Unit =
+  def testAsyncE[E](name: String)(f: => Future[Either[E, Unit]]): Unit =
     synchronized {
       if (isInitialized) throw initError()
       propertiesSeq = propertiesSeq :+ TestSpec
         .async[Unit](name, _ => f.flatMap(_.fold(e => Future.failed(UncaughtErrorException.wrap(e)), _ => Future.unit)))
+    }
+
+  def testAsync(name: String)(f: => Future[Unit]): Unit =
+    synchronized {
+      if (isInitialized) throw initError()
+      propertiesSeq = propertiesSeq :+ TestSpec
+        .async[Unit](name, _ => f)
     }
 
   lazy val properties: Properties[_] =

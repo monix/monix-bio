@@ -29,12 +29,12 @@ object TaskMaterializeSuite extends BaseTestSuite {
 
   test("BIO.error.materialize") { implicit s =>
     val dummy = "dummy"
-    assertEquals(BIO.raiseError(dummy).materialize.runToFuture.value, Some(Success(Right(Success(Left(dummy))))))
+    assertEquals(BIO.raiseError(dummy).materialize.runToFuture.value, Some(Success(Success(Left(dummy)))))
   }
 
   test("BIO.terminate.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    assertEquals(BIO.terminate(dummy).materialize.runToFuture.value, Some(Success(Right(Failure(dummy)))))
+    assertEquals(BIO.terminate(dummy).materialize.runToFuture.value, Some(Success(Failure(dummy))))
   }
 
 //  test("BIO.evalOnce.materialize") { implicit s =>
@@ -52,7 +52,7 @@ object TaskMaterializeSuite extends BaseTestSuite {
 
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture; s.tick()
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO.eval.materialize") { implicit s =>
@@ -74,54 +74,54 @@ object TaskMaterializeSuite extends BaseTestSuite {
   test("BIO.evalAsync.materialize") { implicit s =>
     val f = UIO.evalAsync(10).materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Success(Right(10))))))
+    assertEquals(f.value, Some(Success(Success(Right(10)))))
   }
 
   test("BIO.evalAsync.flatMap.materialize") { implicit s =>
     val f = BIO.evalAsync(10).flatMap(BIO.now).materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Success(Right(10))))))
+    assertEquals(f.value, Some(Success(Success(Right(10)))))
   }
 
   test("BIO.evalAsync(error).flatMap.materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO[Int](throw dummy).flatMap(BIO.now).materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
+    assertEquals(f.value, Some(Success(Success(Left(dummy)))))
   }
 
   test("BIO.now.flatMap(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO.now(10).flatMap(_ => throw dummy).materialize.runToFuture
-    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
+    assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
   test("BIO.defer(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO.defer[Int](throw dummy).materialize.runToFuture
-    assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
+    assertEquals(f.value, Some(Success(Success(Left(dummy)))))
   }
 
   test("BIO.deferTotal(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO.deferTotal(throw dummy).materialize.runToFuture
-    assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
+    assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
   test("BIO.defer(error).flatMap.materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO.defer[Int](throw dummy).flatMap(BIO.now).materialize.runToFuture
-    assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
+    assertEquals(f.value, Some(Success(Success(Left(dummy)))))
   }
 
   test("BIO.now.dematerialize") { implicit s =>
     val result = BIO.now(10).materialize.dematerialize.runToFuture.value
-    assertEquals(result, Some(Success(Right(10))))
+    assertEquals(result, Some(Success(10)))
   }
 
   test("BIO.error.dematerialize") { implicit s =>
     val dummy = "dummy"
-    val result = BIO.raiseError(dummy).materialize.dematerialize.runToFuture.value
+    val result = BIO.raiseError(dummy).materialize.dematerialize.attempt.runToFuture.value
     assertEquals(result, Some(Success(Left(dummy))))
   }
 
@@ -137,14 +137,14 @@ object TaskMaterializeSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO.eval.materialize should work for failure") { implicit s =>
     val dummy = DummyException("dummy")
     val task = Task.eval[Int](throw dummy).materialize
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
+    assertEquals(f.value, Some(Success(Success(Left(dummy)))))
   }
 
   test("BIO.eval.materialize should be stack safe") { implicit s =>
@@ -158,13 +158,13 @@ object TaskMaterializeSuite extends BaseTestSuite {
 
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture; s.tick()
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO.now.materialize should work") { implicit s =>
     val task = BIO.now(1).materialize
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(Success(Right(1))))))
+    assertEquals(f.value, Some(Success(Success(Right(1)))))
   }
 
   test("BIO.materialize on failing flatMap") { implicit s =>
@@ -173,7 +173,7 @@ object TaskMaterializeSuite extends BaseTestSuite {
       (throw ex): Task[Int]
     }
     val materialized = task.materialize.runToFuture
-    assertEquals(materialized.value, Some(Success(Right(Failure(ex)))))
+    assertEquals(materialized.value, Some(Success(Failure(ex))))
   }
 
   test("BIO.now.materialize should be stack safe") { implicit s =>
@@ -187,13 +187,13 @@ object TaskMaterializeSuite extends BaseTestSuite {
         }
 
     val count = if (Platform.isJVM) 50000 else 5000
-    val result = loop(count).runToFuture; s.tick()
+    val result = loop(count).attempt.runToFuture; s.tick()
     assertEquals(result.value, Some(Success(Right(0))))
   }
 
   test("BIO.raiseError.dematerialize") { implicit s =>
     val ex = "dummy"
-    val result = BIO.raiseError(ex).materialize.dematerialize.runToFuture
+    val result = BIO.raiseError(ex).materialize.dematerialize.attempt.runToFuture
     assertEquals(result.value, Some(Success(Left(ex))))
   }
 

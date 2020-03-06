@@ -28,7 +28,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     val fa = BIO.eval(1).executeOn(sc2, forceAsync = false)
     val f = fa.runToFuture
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("executeOn(forceAsync = true)") { implicit sc =>
@@ -42,7 +42,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     sc2.tick()
     assertEquals(f.value, None)
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("executeOn(forceAsync = false) is stack safe in flatMap loops, test 1") { implicit sc =>
@@ -57,7 +57,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   test("executeOn(forceAsync = false) is stack safe in flatMap loops, test 2") { implicit sc =>
@@ -75,7 +75,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     sc.tick()
     sc2.tick()
 
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   testAsync("local.write.executeOn(forceAsync = false) works") { _ =>
@@ -90,7 +90,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 
@@ -106,7 +106,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 }

@@ -40,7 +40,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
     f.cancel(); s.tick()
     assertEquals(atomic.get, maxCount)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("runAsync flatMap loop is cancelable if ExecutionModel permits") { implicit s =>
@@ -130,14 +130,14 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val dummy = "dummy"
     val task = BIO.raiseError(dummy).redeemWith(_ => BIO.now(1), BIO.now)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("redeem can recover") { implicit s =>
     val dummy = "dummy"
     val task: UIO[Int] = BIO.raiseError(dummy).redeem(_ => 1, identity)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test(">> is stack safe for infinite loops") { implicit s =>

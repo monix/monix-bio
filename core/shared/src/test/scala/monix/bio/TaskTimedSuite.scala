@@ -27,7 +27,7 @@ object TaskTimedSuite extends BaseTestSuite {
 
   test("measure tasks with no errors") { implicit s =>
     val bio = BIO.fromEither(123.asRight[String]).delayExecution(2.second).timed
-    val f = bio.runToFuture
+    val f = bio.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -44,7 +44,7 @@ object TaskTimedSuite extends BaseTestSuite {
 
   test("not measure tasks with typed errors") { implicit s =>
     val bio = BIO.fromEither("Error".asLeft[Int]).delayExecution(2.second).timed
-    val f = bio.runToFuture
+    val f = bio.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -87,10 +87,10 @@ object TaskTimedSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(2.second -> Left("Error")))))
+    assertEquals(f.value, Some(Success(2.second -> Left("Error"))))
 
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(2.second -> Left("Error")))))
+    assertEquals(f.value, Some(Success(2.second -> Left("Error"))))
   }
 
   test("not measure tasks with terminal errors followed by `.attempt`") { implicit s =>
@@ -129,7 +129,7 @@ object TaskTimedSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     sc.tick(10001.seconds)
-    assertEquals(f.value, Some(Success(Right(10000.seconds))))
+    assertEquals(f.value, Some(Success(10000.seconds)))
   }
 
 }

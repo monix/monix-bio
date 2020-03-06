@@ -33,14 +33,14 @@ object TaskSuspendSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     assert(wasTriggered, "wasTriggered")
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO.suspend should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
     val f = BIO.suspend[Int](throw ex).runToFuture
 
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
@@ -49,7 +49,7 @@ object TaskSuspendSuite extends BaseTestSuite {
     val f = BIO.suspendTotal[Int, Int](throw ex).redeemCause(_ => 10, identity).runToFuture
     val g = BIO.suspendTotal[Int, Int](throw ex).onErrorHandle(_ => 10).runToFuture
 
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
     assertEquals(g.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }

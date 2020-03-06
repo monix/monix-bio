@@ -35,7 +35,7 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     } yield ()
 
     val f = main.runToFuture
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
     assertEquals(counter, 0)
 
     sc.tick(10.millisecond)
@@ -53,7 +53,7 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
 
     val f = result.runToFuture
     sc.tick(5.millisecond)
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO#startAndForget triggers fatal errors in background thread") { implicit sc =>
@@ -68,7 +68,7 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
 
     val f = result.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(20))))
+    assertEquals(f.value, Some(Success(20)))
     assertEquals(sc.state.lastReportedError, fatalError)
   }
 
@@ -81,7 +81,7 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
 
     val f = bio.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
 }

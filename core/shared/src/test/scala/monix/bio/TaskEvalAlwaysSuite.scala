@@ -33,14 +33,14 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     assert(wasTriggered, "wasTriggered")
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO.eval should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
     val f = BIO.eval[Int](if (1 == 1) throw ex else 1).runToFuture
 
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
@@ -83,7 +83,7 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
     val iterations = s.executionModel.recommendedBatchSize * 20
     val f = loop(iterations, 0).runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(iterations * 2))))
+    assertEquals(f.value, Some(Success(iterations * 2)))
   }
 
   test("BIO.eval should not be cancelable") { implicit s =>
@@ -91,7 +91,7 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
     val f = t.runToFuture
     f.cancel()
     s.tick()
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.eval.coeval") { implicit s =>
@@ -109,13 +109,13 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
     var effect = 0
     val ts = BIO.delay { effect += 1; effect }
 
-    assertEquals(ts.runToFuture.value, Some(Success(Right(1))))
-    assertEquals(ts.runToFuture.value, Some(Success(Right(2))))
-    assertEquals(ts.runToFuture.value, Some(Success(Right(3))))
+    assertEquals(ts.runToFuture.value, Some(Success(1)))
+    assertEquals(ts.runToFuture.value, Some(Success(2)))
+    assertEquals(ts.runToFuture.value, Some(Success(3)))
 
     val dummy = new DummyException("dummy")
     val te = BIO.delay { throw dummy }
-    assertEquals(te.runToFuture.value, Some(Success(Left(dummy))))
+    assertEquals(te.runToFuture.value, Some(Failure(dummy)))
   }
 
   test("BIO.evalTotal should protect against unexpected errors") { implicit s =>
@@ -123,7 +123,7 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
     val f = UIO.eval[Int](throw ex).redeemCause(_ => 10, identity).runToFuture
     val g = UIO.eval[Int](throw ex).onErrorHandle(_ => 10).runToFuture
 
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
     assertEquals(g.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }

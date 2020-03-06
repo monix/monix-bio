@@ -40,7 +40,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
     sc.tick()
 
     assertEquals(input, Some(1))
-    assertEquals(result.value, Some(Success(Right(2))))
+    assertEquals(result.value, Some(Success(2)))
   }
 
   test("finalizer is evaluated on error") { implicit sc =>
@@ -53,7 +53,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
         input = Some(1)
       })
 
-    val result = task.runToFuture
+    val result = task.attempt.runToFuture
     sc.tick()
 
     assertEquals(input, Some(1))
@@ -153,7 +153,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
     val f = loop(cycles).runToFuture
     sc.tick()
 
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("stack-safety (2)") { implicit sc =>
@@ -163,7 +163,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
     }
 
     val f = task.runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("stack-safety (3)") { implicit sc =>
@@ -173,6 +173,6 @@ object TaskGuaranteeSuite extends BaseTestSuite {
     }
 
     val f = task.runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 }

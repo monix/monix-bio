@@ -68,15 +68,17 @@ object BIOAppSuite extends SimpleTestSuite {
     val wasExecuted = Promise[Boolean]()
     val app = new BIOApp {
       def run(args: List[String]): UIO[ExitCode] = {
-        Task.from(
-          Task
-            .async[ExitCode] { cb =>
-              wasExecuted.success(true)
-              cb.onSuccess(ExitCode.Success)
-            }
-            .executeAsync
-            .to[IO]
-        ).hideErrors
+        Task
+          .from(
+            Task
+              .async[ExitCode] { cb =>
+                wasExecuted.success(true)
+                cb.onSuccess(ExitCode.Success)
+              }
+              .executeAsync
+              .to[IO]
+          )
+          .hideErrors
       }
     }
 

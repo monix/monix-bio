@@ -40,7 +40,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     s.tick()
-    assertEquals(f.value, Some(Success(Right(2))))
+    assertEquals(f.value, Some(Success(2)))
   }
 
   test("BIO.asyncBoundary(other) should work") { implicit s1 =>
@@ -65,7 +65,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     s1.tick()
     assertEquals(f.value, None)
     s2.tick()
-    assertEquals(f.value, Some(Success(Right(2))))
+    assertEquals(f.value, Some(Success(2)))
   }
 
   testAsync("BIO.asyncBoundary should preserve locals") { _ =>
@@ -79,7 +79,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 
@@ -94,7 +94,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 
@@ -108,7 +108,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   test("BIO.asyncBoundary is stack safe in flatMap loops, test 2") { implicit sc =>
@@ -122,6 +122,6 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
 
     val f = loop(10000, 0).runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 }

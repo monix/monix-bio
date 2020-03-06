@@ -49,14 +49,14 @@ object TaskGatherNSuite extends BaseTestSuite {
     val res = BIO.gatherN(2)(task).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(Right(List(1, 2, 3, 4, 5, 6, 7, 8, 9)))))
+    assertEquals(res.value, Some(Success(List(1, 2, 3, 4, 5, 6, 7, 8, 9))))
   }
 
   test("BIO.gatherN should return empty list") { implicit s =>
     val res = BIO.gatherN(2)(List.empty).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(Right(List.empty))))
+    assertEquals(res.value, Some(Success(List.empty)))
   }
 
   test("BIO.gatherN should handle single item") { implicit s =>
@@ -64,7 +64,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     val res = BIO.gatherN(2)(task).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(Right(List(1)))))
+    assertEquals(res.value, Some(Success(List(1))))
   }
 
   test("BIO.gatherN should handle parallelism bigger than list") { implicit s =>
@@ -72,7 +72,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     val res = BIO.gatherN(10)(task).runToFuture
 
     s.tick()
-    assertEquals(res.value, Some(Success(Right(List(1, 2, 3, 4)))))
+    assertEquals(res.value, Some(Success(List(1, 2, 3, 4))))
   }
 
   test("BIO.gatherN should onError if one of the tasks terminates in error") { implicit s =>
@@ -84,7 +84,7 @@ object TaskGatherNSuite extends BaseTestSuite {
       BIO.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = BIO.gatherN(2)(seq).runToFuture
+    val f = BIO.gatherN(2)(seq).attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -135,7 +135,7 @@ object TaskGatherNSuite extends BaseTestSuite {
     val composite = BIO.gatherN(count)(tasks).map(_.sum)
     val result = composite.runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(Right(count))))
+    assertEquals(result.value, Some(Success(count)))
   }
 
   test("BIO.gatherN runAsync multiple times") { implicit s =>
@@ -147,11 +147,11 @@ object TaskGatherNSuite extends BaseTestSuite {
     val task3 = BIO.gatherN(2)(List(task2, task2, task2))
 
     val result1 = task3.runToFuture; s.tick()
-    assertEquals(result1.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(result1.value, Some(Success(List(4, 4, 4))))
     assertEquals(effect, 1 + 3)
 
     val result2 = task3.runToFuture; s.tick()
-    assertEquals(result2.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(result2.value, Some(Success(List(4, 4, 4))))
     assertEquals(effect, 1 + 3 + 3)
   }
 
@@ -182,7 +182,7 @@ object TaskGatherNSuite extends BaseTestSuite {
       .uncancelable
 
     val gather = BIO.gatherN(4)(Seq(task1, task2))
-    val result = gather.runToFutureOpt
+    val result = gather.attempt.runToFutureOpt
     s.tick()
 
     assertEquals(result.value, Some(Success(Left(ex))))
@@ -217,7 +217,7 @@ object TaskGatherNSuite extends BaseTestSuite {
       .uncancelable
 
     val gather = BIO.gatherN(4)(Seq(task1, task2))
-    val result = gather.runToFutureOpt
+    val result = gather.attempt.runToFutureOpt
     s.tick()
 
     assertEquals(result.value, Some(Failure(ex)))
