@@ -145,6 +145,12 @@ object UIO {
     TaskRace(fa, fb)
 
   /**
+    * @see See [[monix.bio.BIO.raceMany]]
+    */
+  def raceMany[A](tasks: Iterable[UIO[A]]): UIO[A] =
+    TaskRaceList(tasks)
+
+  /**
     * @see See [[monix.bio.BIO.racePair]]
     */
   def racePair[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =

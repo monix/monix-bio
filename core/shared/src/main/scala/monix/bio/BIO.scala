@@ -3523,6 +3523,27 @@ object BIO extends TaskInstancesLevel0 {
   def race[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[A, B]] =
     TaskRace(fa, fb)
 
+  /** Runs multiple tasks in a concurrent way and returns the fastest
+    * of them, regardless whether it's a success, a typed error or a
+    * terminal error. Every task losing the race gets cancelled.
+    *
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   val tasks: List[UIO[Int]] =
+    *     List(1, 2, 3).map(i => BIO.sleep(i.seconds).map(_ => i))
+    *
+    *   val winner: UIO[Int] = BIO.raceMany(tasks)
+    * }}}
+    *
+    * $parallelismNote
+    *
+    * @see [[race]] or [[racePair]] for racing two tasks, which might
+    *      give you more control over the execution.
+    */
+  def raceMany[E, A](tasks: Iterable[BIO[E, A]]): BIO[E, A] =
+    TaskRaceList(tasks)
+
   /** Run two `Task` actions concurrently, and returns a pair
     * containing both the winner's successful value and the loser
     * represented as a still-unfinished task.

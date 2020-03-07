@@ -17,6 +17,7 @@
 
 package monix.bio
 
+import cats.syntax.either._
 import monix.execution.CancelableFuture
 import monix.execution.atomic.Atomic
 import monix.execution.exceptions.DummyException
@@ -27,100 +28,181 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskRaceSuite extends BaseTestSuite {
-//  test("Task.raceMany should switch to other") { implicit s =>
-//    val task =
-//      Task.raceMany(Seq(Task.evalAsync(1).delayExecution(10.seconds), Task.evalAsync(99).delayExecution(1.second)))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Success(99)))
-//  }
-//
-//  test("Task.raceMany should onError from other") { implicit s =>
-//    val ex = DummyException("dummy")
-//    val task = Task.raceMany(
-//      Seq(Task.evalAsync(1).delayExecution(10.seconds), Task.evalAsync(throw ex).delayExecution(1.second)))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Failure(ex)))
-//  }
-//
-//  test("Task.raceMany should mirror the source") { implicit s =>
-//    val task =
-//      Task.raceMany(Seq(Task.evalAsync(1).delayExecution(1.seconds), Task.evalAsync(99).delayExecution(10.second)))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Success(1)))
-//    assert(s.state.tasks.isEmpty, "other should be canceled")
-//  }
-//
-//  test("Task.raceMany should onError from the source") { implicit s =>
-//    val ex = DummyException("dummy")
-//    val task = Task.raceMany(
-//      Seq(Task.evalAsync(throw ex).delayExecution(1.seconds), Task.evalAsync(99).delayExecution(10.second)))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    s.tick(1.second)
-//    assertEquals(f.value, Some(Failure(ex)))
-//    assert(s.state.tasks.isEmpty, "other should be canceled")
-//  }
-//
-//  test("Task.raceMany should cancel both") { implicit s =>
-//    val task =
-//      Task.raceMany(Seq(Task.evalAsync(1).delayExecution(10.seconds), Task.evalAsync(99).delayExecution(1.second)))
-//    val f = task.runToFuture
-//
-//    s.tick()
-//    assertEquals(f.value, None)
-//    f.cancel()
-//    s.tick()
-//
-//    assertEquals(f.value, None)
-//    assert(s.state.tasks.isEmpty, "both should be canceled")
-//  }
-//
-//  test("Task.raceMany should be stack safe, take 1") { implicit s =>
-//    val count = if (Platform.isJVM) 100000 else 10000
-//    val tasks = (0 until count).map(x => Task.evalAsync(x))
-//    val sum = Task.raceMany(tasks)
-//
-//    sum.runToFuture
-//    s.tick()
-//  }
-//
-//  test("Task.raceMany should be stack safe, take 2") { implicit s =>
-//    val count = if (Platform.isJVM) 100000 else 10000
-//    val tasks = (0 until count).map(x => Task.eval(x))
-//    val sum = Task.raceMany(tasks)
-//
-//    sum.runToFuture
-//    s.tick()
-//  }
-//
-//  test("Task.raceMany has a stack safe cancelable") { implicit sc =>
-//    val count = if (Platform.isJVM) 10000 else 1000
-//    val p = Promise[Int]()
-//
-//    val tasks = (0 until count).map(_ => Task.never[Int])
-//    val all = tasks.foldLeft(Task.never[Int])((acc, t) => Task.raceMany(List(acc, t)))
-//
-//    val f = Task.raceMany(List(Task.fromFuture(p.future), all)).runToFuture
-//    sc.tick()
-//    p.success(1)
-//    sc.tick()
-//
-//    assertEquals(f.value, Some(Success(1)))
-//  }
+
+  test("BIO.raceMany returns fastest success") { implicit s =>
+    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
+    val third = BIO.fromEither(789.asRight[String]).delayExecution(5.second)
+    val race = BIO.raceMany(List(first, second, third))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(456))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns fastest typed error") { implicit s =>
+    val first = BIO.fromEither("first error".asLeft[Int]).delayExecution(10.seconds)
+    val second = BIO.fromEither("second error".asLeft[Int]).delayExecution(1.second)
+    val third = BIO.fromEither("third error".asLeft[Int]).delayExecution(5.second)
+    val race = BIO.raceMany(List(first, second, third))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Left("second error"))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns fastest terminal error") { implicit s =>
+    val first = BIO.terminate(DummyException("first exception")).delayExecution(10.seconds)
+    val second = BIO.terminate(DummyException("second exception")).delayExecution(1.second)
+    val third = BIO.terminate(DummyException("third exception")).delayExecution(5.second)
+    val race = BIO.raceMany(List(first, second, third))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Failure(DummyException("second exception"))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns success that is faster than typed error") { implicit s =>
+    val first = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(10.seconds)
+    val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
+    val race = BIO.raceMany(List(first, second))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(456))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns success that is faster than terminal error") { implicit s =>
+    val first = BIO.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
+    val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
+    val race = BIO.raceMany(List(first, second))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Right(456))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns typed error that is faster than success") { implicit s =>
+    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
+    val race = BIO.raceMany(List(first, second))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Left("dummy error"))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns typed error that is faster than fatal error") { implicit s =>
+    val first = BIO.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
+    val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
+    val race = BIO.raceMany(List(first, second))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Success(Left("dummy error"))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns fatal error that is faster than success") { implicit s =>
+    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = BIO.terminate(DummyException("dummy exception")).delayExecution(1.second)
+    val race = BIO.raceMany(List(first, second))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Failure(DummyException("dummy exception"))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany returns fatal error that is faster than typed error") { implicit s =>
+    val first = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(10.second)
+    val second = BIO.terminate(DummyException("dummy exception")).delayExecution(1.second)
+    val race = BIO.raceMany(List(first, second))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    s.tick(1.second)
+    assertEquals(f.value, Some(Failure(DummyException("dummy exception"))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany should allow cancelling all tasks") { implicit s =>
+    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
+    val third = BIO.terminate(DummyException("dummy exception")).delayExecution(5.second)
+    val race = BIO.raceMany(List(first, second, third))
+    val f = race.runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+    assert(s.state.tasks.nonEmpty, "no tasks should be canceled yet")
+
+    f.cancel()
+    s.tick()
+    assertEquals(f.value, None)
+    assert(s.state.tasks.isEmpty, "every task should be canceled")
+  }
+
+  test("BIO.raceMany should be stack safe for sync values") { implicit s =>
+    val count = if (Platform.isJVM) 100000 else 10000
+    val tasks = (0 until count).map(idx => BIO.fromEither(idx.asRight[String]))
+    val race = BIO.raceMany(tasks)
+    val f = race.runToFuture
+
+    s.tick()
+    assert(f.value.isDefined, "fastest task should win the race")
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany should be stack safe for async values") { implicit s =>
+    val count = if (Platform.isJVM) 100000 else 10000
+    val tasks = (0 until count).map(idx => BIO.fromEither(idx.asRight[String]).executeAsync)
+    val race = BIO.raceMany(tasks)
+    val f = race.runToFuture
+
+    s.tick()
+    assert(f.value.isDefined, "fastest task should win the race")
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
+
+  test("BIO.raceMany has a stack safe cancelable") { implicit s =>
+    val count = if (Platform.isJVM) 10000 else 1000
+    val p = Promise[Int]()
+    val tasks = (0 until count).map(_ => BIO.never[Int])
+    val all = tasks.foldLeft(BIO.never[Int])((acc, bio) => BIO.raceMany(List(acc, bio)))
+    val f = Task.raceMany(List(BIO.fromFuture(p.future), all)).runToFuture
+
+    s.tick()
+    assertEquals(f.value, None)
+
+    p.success(1)
+    s.tick()
+    assertEquals(f.value, Some(Success(Right(1))))
+    assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
+  }
 
   test("BIO#timeout should timeout") { implicit s =>
     val task = BIO.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
@@ -810,4 +892,5 @@ object TaskRaceSuite extends BaseTestSuite {
 
     assertEquals(f.value, Some(Success(1)))
   }
+
 }
