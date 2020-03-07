@@ -34,7 +34,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
     val third = BIO.fromEither(789.asRight[String]).delayExecution(5.second)
     val race = BIO.raceMany(List(first, second, third))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -48,7 +48,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val second = BIO.fromEither("second error".asLeft[Int]).delayExecution(1.second)
     val third = BIO.fromEither("third error".asLeft[Int]).delayExecution(5.second)
     val race = BIO.raceMany(List(first, second, third))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -75,7 +75,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val first = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(10.seconds)
     val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
     val race = BIO.raceMany(List(first, second))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -88,7 +88,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val first = BIO.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
     val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
     val race = BIO.raceMany(List(first, second))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -101,7 +101,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
     val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
     val race = BIO.raceMany(List(first, second))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -114,7 +114,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val first = BIO.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
     val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
     val race = BIO.raceMany(List(first, second))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -127,7 +127,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
     val second = BIO.terminate(DummyException("dummy exception")).delayExecution(1.second)
     val race = BIO.raceMany(List(first, second))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -140,7 +140,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val first = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(10.second)
     val second = BIO.terminate(DummyException("dummy exception")).delayExecution(1.second)
     val race = BIO.raceMany(List(first, second))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -154,7 +154,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
     val third = BIO.terminate(DummyException("dummy exception")).delayExecution(5.second)
     val race = BIO.raceMany(List(first, second, third))
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -170,7 +170,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 100000 else 10000
     val tasks = (0 until count).map(idx => BIO.fromEither(idx.asRight[String]))
     val race = BIO.raceMany(tasks)
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assert(f.value.isDefined, "fastest task should win the race")
@@ -181,7 +181,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 100000 else 10000
     val tasks = (0 until count).map(idx => BIO.fromEither(idx.asRight[String]).executeAsync)
     val race = BIO.raceMany(tasks)
-    val f = race.runToFuture
+    val f = race.attempt.runToFuture
 
     s.tick()
     assert(f.value.isDefined, "fastest task should win the race")
@@ -200,7 +200,7 @@ object TaskRaceSuite extends BaseTestSuite {
 
     p.success(1)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
