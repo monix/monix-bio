@@ -237,6 +237,12 @@ object Task {
     BIO.race(fa, fb)
 
   /**
+   * @see See [[monix.bio.BIO.raceMany]]
+   */
+  def raceMany[A](tasks: Iterable[Task[A]]): Task[A] =
+    BIO.raceMany(tasks)
+
+  /**
    * @see See [[monix.bio.BIO.racePair]]
    */
   def racePair[A, B](fa: Task[A], fb: Task[B]): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
