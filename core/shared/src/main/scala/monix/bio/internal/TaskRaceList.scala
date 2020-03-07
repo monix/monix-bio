@@ -24,8 +24,6 @@ import monix.execution.Scheduler
 import monix.execution.atomic.{Atomic, PaddingStrategy}
 import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
 
-import scala.collection.mutable.ListBuffer
-
 private[bio] object TaskRaceList {
 
   /**
@@ -89,7 +87,7 @@ private[bio] object TaskRaceList {
                 case cancelable if cancelable ne taskCancelable =>
                   cancelable.cancel
               }
-              new BatchCancel(tokens).cancel.runAsyncAndForget
+              batchCancel(tokens).runAsyncAndForget
             }
           }
         )
@@ -97,28 +95,19 @@ private[bio] object TaskRaceList {
     }
   }
 
-  private final class BatchCancel(tokens: Array[CancelToken[UIO]]) {
-
-    private[this] val exceptions = ListBuffer.empty[Throwable]
-
-    def cancel: CancelToken[UIO] = {
-      def loop(idx: Int): CancelToken[UIO] = {
-        if (idx < tokens.length) {
-          tokens(idx).redeemCauseWith({
-            case Cause.Error(_) =>
-              loop(idx + 1)
-            case Cause.Termination(ex) =>
-              exceptions :+ ex
-              loop(idx + 1)
-          }, _ => loop(idx + 1))
-        } else if (exceptions.isEmpty) UIO.unit
-        else if (exceptions.size == 1) UIO.terminate(exceptions.head)
-        else UIO.terminate(CompositeException(exceptions.toList))
-      }
-
-      loop(idx = 0)
+  private def batchCancel(tokens: Array[CancelToken[UIO]]): CancelToken[UIO] = {
+    def loop(idx: Int, exceptions: List[Throwable]): CancelToken[UIO] = {
+      if (idx < tokens.length) {
+        tokens(idx).redeemCauseWith({
+          case Cause.Error(_) => loop(idx + 1, exceptions)
+          case Cause.Termination(ex) => loop(idx + 1, ex :: exceptions)
+        }, _ => loop(idx + 1, exceptions))
+      } else if (exceptions.isEmpty) UIO.unit
+      else if (exceptions.size == 1) UIO.terminate(exceptions.head)
+      else UIO.terminate(CompositeException(exceptions))
     }
 
+    loop(idx = 0, exceptions = List.empty)
   }
 
   private def buildCancelableArray[E](length: Int): Array[TaskConnection[E]] = {
