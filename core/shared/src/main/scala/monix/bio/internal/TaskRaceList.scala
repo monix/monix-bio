@@ -19,13 +19,12 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio
-import monix.bio.{BIO, BiCallback, UIO}
+import monix.bio.{BIO, BiCallback, Cause, UIO}
 import monix.execution.Scheduler
 import monix.execution.atomic.{Atomic, PaddingStrategy}
 import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success}
 
 private[bio] object TaskRaceList {
 
@@ -105,13 +104,13 @@ private[bio] object TaskRaceList {
     def cancel: CancelToken[UIO] = {
       def loop(idx: Int): CancelToken[UIO] = {
         if (idx < tokens.length) {
-          tokens(idx).materialize.flatMap {
-            case Success(_) =>
+          tokens(idx).redeemCauseWith({
+            case Cause.Error(_) =>
               loop(idx + 1)
-            case Failure(ex) =>
+            case Cause.Termination(ex) =>
               exceptions :+ ex
               loop(idx + 1)
-          }
+          }, _ => loop(idx + 1))
         } else if (exceptions.isEmpty) UIO.unit
         else if (exceptions.size == 1) UIO.terminate(exceptions.head)
         else UIO.terminate(CompositeException(exceptions.toList))
