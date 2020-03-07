@@ -152,7 +152,6 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case _: CallbackCalledMultipleTimesException => false
     }
 
-
   /**
     * Attempts to call [[BiCallback.apply(result:Either[monix\.bio\.Cause[E],A])* BiCallback.apply]].
     *
@@ -163,17 +162,6 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case Right(a) => tryOnSuccess(a)
       case Left(Cause.Error(e)) => tryOnError(e)
       case Left(Cause.Termination(t)) => tryOnTermination(t)
-    }
-
-  /**
-    * Signals a value via Scala's `Either`.
-    *
-    * $safetyIssues
-    */
-  def apply(result: Either[E, A])(implicit ev: Throwable <:< E): Unit =
-    result match {
-      case Right(a) => onSuccess(a)
-      case Left(e) => onError(e)
     }
 
   /**
@@ -438,6 +426,10 @@ object BiCallback {
     def fromPromise[A](p: Promise[Either[E, A]]): BiCallback[E, A] =
       BiCallback.fromPromise(p)
 
+    /** See [[BiCallback.fromTry]]. */
+    def fromTry[A](cb: Try[A] => Unit)(implicit ev: Throwable <:< E): BiCallback[Throwable, A] =
+      BiCallback.fromTry(cb)
+
     /** See [[BiCallback.forked]]. */
     def forked[A](cb: BiCallback[E, A])(implicit ec: ExecutionContext): BiCallback[E, A] =
       BiCallback.forked(cb)
@@ -614,6 +606,8 @@ object BiCallback {
       underlying.onTermination(e)
   }
 
-  private[bio] def toEither[A](bcb: BiCallback[Throwable, A]): (Either[Throwable, A]) => Unit =
-    (result: Either[Throwable, A]) => bcb.apply(result)
+  private[bio] def toEither[A](bcb: BiCallback[Throwable, A]): Either[Throwable, A] => Unit = {
+    case Left(value) => bcb.onError(value)
+    case Right(value) => bcb.onSuccess(value)
+  }
 }

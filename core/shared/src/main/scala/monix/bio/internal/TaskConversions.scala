@@ -186,7 +186,10 @@ private[bio] object TaskConversions {
       if (canCall) {
         canCall = false
         if (conn ne null) conn.pop()
-        cb(value)
+        value match {
+          case Left(v) => cb.onError(v)
+          case Right(v) => cb.onSuccess(v)
+        }
         value = null
       }
     }

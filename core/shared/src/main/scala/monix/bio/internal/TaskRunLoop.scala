@@ -579,7 +579,7 @@ private[bio] object TaskRunLoop {
     * synchronously falling back to [[startFull]] and actual
     * asynchronous execution in case of an asynchronous boundary.
     *
-    * Function gets invoked by `Task.runAsync(implicit s: Scheduler)`.
+    * Function gets invoked by `BIO.runToFuture(implicit s: Scheduler)`.
     */
   def startFuture[E, A](source: BIO[E, A], scheduler: Scheduler, opts: BIO.Options): CancelableFuture[A] = {
     var current = source.asInstanceOf[BIO[Any, Any]]

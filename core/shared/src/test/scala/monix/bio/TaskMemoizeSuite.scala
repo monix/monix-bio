@@ -116,14 +116,14 @@ object TaskMemoizeSuite extends BaseTestSuite {
   test("BIO.memoize.materialize") { implicit s =>
     val f = BIO.evalAsync(10).memoize.materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(Right(10)))))
+    assertEquals(f.value, Some(Success(Success(10))))
   }
 
   test("BIO.apply(error).memoize.materialize") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO[Int](throw dummy).memoize.materialize.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(Left(dummy)))))
+    assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
   test("BIO.eval.memoize should work for first subscriber") { implicit s =>

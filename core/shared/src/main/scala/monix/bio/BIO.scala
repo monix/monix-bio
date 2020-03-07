@@ -1027,6 +1027,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * immediately or blocks the underlying thread until the result is
     * ready.
     *
+    * If `BIO` ends with an error that is not `Throwable` then it will
+    * be wrapped into [[monix.execution.exceptions.UncaughtErrorException UncaughtErrorException]]
+    *
     * '''WARNING:''' blocking operations are unsafe and incredibly
     * error prone on top of the JVM. It's a good practice to not block
     * any threads and use the asynchronous `runAsync` methods instead.
@@ -1884,17 +1887,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /** Creates a new [[Task]] that will expose any triggered error from
     * the source.
-    *
-    * Typed errors will be exposed as an `E` in `Either[E, A]`
-    * Unexpected errors from internal channel will be exposed as a `Failure` in `Try`
-    *
     */
-  final def materialize: UIO[Try[Either[E, A]]] =
-    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[Either[E, A]]]])
+  final def materialize(implicit ev: E <:< Throwable): UIO[Try[A]] =
+    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[A]]])
 
   /** Dematerializes the source's result from a `Try`. */
-  final def dematerialize[E1, B](implicit evE: E <:< Nothing, evA: A <:< Try[Either[E1, B]]): BIO[E1, B] =
-    this.asInstanceOf[UIO[Try[Either[E1, B]]]].flatMap(BIO.fromTryEither)
+  final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B] =
+    this.asInstanceOf[UIO[Try[B]]].flatMap(BIO.fromTry)
 
   /** Returns a new task that mirrors the source task for normal termination,
     * but that triggers the given error on cancellation.
@@ -2771,21 +2770,6 @@ object BIO extends TaskInstancesLevel0 {
   def deferFuture[A](fa: => Future[A]): Task[A] =
     defer(fromFuture(fa))
 
-  /** Promote a non-strict Scala `Future` to a `BIO` of the same type.
-    *
-    * The equivalent of doing:
-    * {{{
-    *   import scala.concurrent.Future
-    *   def mkFuture = Future.successful(Right(27))
-    *
-    *   BIO.deferTotal(BIO.fromFutureEither(mkFuture))
-    * }}}
-    *
-    * All errors in the `Future` will be treated as an unexpected errors.
-    */
-  def deferFutureEither[E, A](fa: => Future[Either[E, A]]): BIO[E, A] =
-    deferTotal(fromFutureEither(fa))
-
   /** Wraps calls that generate `Future` results into [[Task]], provided
     * a callback with an injected [[monix.execution.Scheduler Scheduler]]
     * to act as the necessary `ExecutionContext`.
@@ -3491,19 +3475,6 @@ object BIO extends TaskInstancesLevel0 {
     */
   def fromFuture[A](f: Future[A]): Task[A] =
     TaskFromFuture.strict(f)
-
-  /** Converts the given Scala `Future` into a `BIO`.
-    *
-    * All errors in the `Future` will be treated as an unexpected errors.
-    *
-    * There is an async boundary inserted at the end to guarantee
-    * that we stay on the main Scheduler.
-    *
-    * NOTE: if you want to defer the creation of the future, use
-    * in combination with [[defer]].
-    */
-  def fromFutureEither[E, A](f: Future[Either[E, A]]): BIO[E, A] =
-    TaskFromFutureEither.strict(f)
 
   /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
@@ -4360,7 +4331,11 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt(implicit s: Scheduler, opts: Options, ev: Nothing <:< Throwable): CancelableFuture[A] = {
+    override def runToFutureOpt(
+      implicit s: Scheduler,
+      opts: Options,
+      ev: Nothing <:< Throwable
+    ): CancelableFuture[A] = {
       CancelableFuture.successful(value)
     }
 
@@ -4464,7 +4439,11 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt(implicit s: Scheduler, opts: Options, ev: Nothing <:< Throwable): CancelableFuture[Nothing] = {
+    override def runToFutureOpt(
+      implicit s: Scheduler,
+      opts: Options,
+      ev: Nothing <:< Throwable
+    ): CancelableFuture[Nothing] = {
       CancelableFuture.failed(e)
     }
 
@@ -4653,14 +4632,11 @@ object BIO extends TaskInstancesLevel0 {
   }
 
   /** Used as optimization by [[BIO.materialize]]. */
-  private object MaterializeTask extends StackFrame.FatalStackFrame[Any, Any, UIO[Try[Either[Any, Any]]]] {
-    override def apply(a: Any): UIO[Try[Either[Any, Any]]] =
-      new Now(new Success(new Right(a)))
+  private object MaterializeTask extends StackFrame[Throwable, Any, UIO[Try[Any]]] {
+    override def apply(a: Any): UIO[Try[Any]] =
+      new Now(new Success(a))
 
-    override def recover(e: Any): UIO[Try[Either[Any, Any]]] =
-      new Now(new Success(new Left(e)))
-
-    override def recoverFatal(e: Throwable): UIO[Try[Either[Any, Any]]] =
+    override def recover(e: Throwable): UIO[Try[Any]] =
       new Now(new Failure(e))
   }
 }

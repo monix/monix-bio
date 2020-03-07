@@ -105,7 +105,7 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     val task = BIO.evalOnce(1).materialize
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(Right(1)))))
+    assertEquals(f.value, Some(Success(Success(1))))
   }
 
   test("BIO.evalOnce.materialize should work for failure") { implicit s =>
@@ -113,6 +113,6 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     val task = BIO.evalOnce[Int](throw dummy).materialize
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Success(Left(dummy)))))
+    assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 }

@@ -116,7 +116,6 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
     run(_.tryOnError(dummyMsg))
     run(_.tryOnTermination(dummy))
     run(_.tryApply(Left(Cause.Error(dummyMsg))))
-//    run(_.tryApply(Success(Left(dummyMsg))))
 //    run(_.tryApply(Failure(dummy)))
 
     run { cb =>

@@ -192,7 +192,6 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
     }
 
     run(1)(_.tryOnSuccess(1))
-//    run(1)(_.tryApply(Success(Right(1))))
     run(1)(_.tryApply(Right(1)))
 
     run(1)(cb =>
@@ -213,7 +212,6 @@ object TaskCallbackSafetySuite extends BaseTestSuite {
 
     run(10)(_.tryOnTermination(WrappedEx(10)))
     run(10)(_.tryOnError(10))
-//    run(10)(_.tryApply(Failure(WrappedEx(10))))
     run(10)(_.tryApply(Left(Cause.Error(10))))
 
     run(10)(cb =>
