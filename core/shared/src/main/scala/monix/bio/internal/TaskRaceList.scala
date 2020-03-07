@@ -61,33 +61,30 @@ private[bio] object TaskRaceList {
           new BiCallback[E, A] {
             def onSuccess(value: A): Unit =
               if (isActive.getAndSet(false)) {
-                popAndCancelRest()
-                callback.onSuccess(value)
+                popAndCancelRest().map(_ => callback.onSuccess(value)).runAsyncAndForget
               }
 
             override def onError(e: E): Unit =
               if (isActive.getAndSet(false)) {
-                popAndCancelRest()
-                callback.onError(e)
+                popAndCancelRest().map(_ => callback.onError(e)).runAsyncAndForget
               } else {
                 s.reportFailure(UncaughtErrorException.wrap(e))
               }
 
             override def onTermination(ex: Throwable): Unit =
               if (isActive.getAndSet(false)) {
-                popAndCancelRest()
-                callback.onTermination(ex)
+                popAndCancelRest().map(_ => callback.onTermination(ex)).runAsyncAndForget
               } else {
                 s.reportFailure(ex)
               }
 
-            private def popAndCancelRest(): Unit = {
+            private def popAndCancelRest(): CancelToken[UIO] = {
               conn.pop()
               val tokens = cancelableArray.collect {
                 case cancelable if cancelable ne taskCancelable =>
                   cancelable.cancel
               }
-              batchCancel(tokens).runAsyncAndForget
+              batchCancel(tokens)
             }
           }
         )
