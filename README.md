@@ -1,5 +1,6 @@
 # Monix-BIO
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.monix/monix-bio_2.12.svg)](https://search.maven.org/search?q=g:io.monix%20AND%20a:monix-bio_2.12)
 [![Join the chat at https://gitter.im/monix/monix-bio](https://badges.gitter.im/monix/monix-bio.svg)](https://gitter.im/monix/monix-bio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Alternative to [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Task.html) from [Monix](https://github.com/monix/monix) which uses a second type parameter to represent recoverable errors.
@@ -63,15 +64,15 @@ val f: CancelableFuture[Int] = handled.runToFuture
 The project will maintain binary compatibility in `0.1.x` line. 
 It is suitable for general usage but I would not recommend building a lot of libraries on it just yet unless you are fine with upgrade in few months.
 
-WARNING: Not all scaladocs are updated for `BIO` and currently there is no documentation. 
+WARNING: Not all scaladocs are updated for `BIO` and currently there is no other documentation on the website. 
 It will be my priority in April.
 Until then I consider the project as something for more advanced user who are already familiar with idea of IO Monad and error type exposed in the type parameter.
 
 ### Plans for the future
+
 I hope to gather some feedback from production usage and then move towards long term stable version.
 Core of the functionality is shared with `monix.eval.Task` (which is stable) and will remain consistent with it. 
 There might be breaking changes in regards to new error handling combinators, terminology, return types or error reporting.
-
 
 ## Contributing
 
