@@ -1027,8 +1027,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * immediately or blocks the underlying thread until the result is
     * ready.
     *
-    * If `BIO` ends with an error that is not `Throwable` then it will
-    * be wrapped into [[monix.execution.exceptions.UncaughtErrorException UncaughtErrorException]]
+    * The method requires error type to be `Throwable`. Note that it will work for
+    * `Nothing` (`UIO`) as well so if you have a different type then you can use
+    * `task.attempt.runSyncUnsafe` to receive `Either[E, A]` or any other error handling operator.
     *
     * '''WARNING:''' blocking operations are unsafe and incredibly
     * error prone on top of the JVM. It's a good practice to not block
@@ -1086,8 +1087,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   @UnsafeBecauseBlocking
-  final def runSyncUnsafe(timeout: Duration = Duration.Inf)(implicit s: Scheduler, permit: CanBlock): A =
-    runSyncUnsafeOpt(timeout)(s, defaultOptions, permit)
+  final def runSyncUnsafe(timeout: Duration = Duration.Inf)(implicit s: Scheduler, permit: CanBlock, ev: E <:< Throwable): A =
+    runSyncUnsafeOpt(timeout)(s, defaultOptions, permit, ev)
 
   /** Variant of [[runSyncUnsafe]] that takes a [[BIO.Options]]
     * implicitly from the scope in order to tune the evaluation model
@@ -1114,7 +1115,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def runSyncUnsafeOpt(timeout: Duration = Duration.Inf)(
     implicit s: Scheduler,
     opts: Options,
-    permit: CanBlock
+    permit: CanBlock,
+    ev: E <:< Throwable
   ): A = {
     /*_*/
     val opts2 = opts.withSchedulerFeatures

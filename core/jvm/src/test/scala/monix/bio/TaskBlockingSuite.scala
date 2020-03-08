@@ -98,4 +98,22 @@ object TaskBlockingSuite extends SimpleTestSuite {
       Task.never.runSyncUnsafe(100.millis)
     }
   }
+
+  test("BIO.attempt.runSyncUnsafe works") {
+    val dummy = "boom"
+    val dummyEx = DummyException(dummy)
+    val task: BIO[String, Int] = BIO.raiseError(dummy)
+    val task2: BIO[String, Int] = BIO.terminate(dummyEx)
+
+    assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
+
+    intercept[DummyException] {
+      task.hideErrorsWith(DummyException).runSyncUnsafe(Duration.Inf)
+    }
+
+    intercept[DummyException] {
+      task2.attempt.runSyncUnsafe(Duration.Inf)
+    }
+
+  }
 }

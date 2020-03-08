@@ -19,6 +19,7 @@ package monix.benchmarks
 
 import java.util.concurrent.TimeUnit
 
+import monix.execution.exceptions.UncaughtErrorException
 import org.openjdk.jmh.annotations._
 
 import scala.concurrent.Await
@@ -87,7 +88,7 @@ class IOShallowAttemptBenchmark {
       else if (n == depth) monix.bio.UIO(1)
       else throwup(n + 1).redeemWith(_ => BIO.now(0), _ => BIO.raiseError(TypedError("Oh noes!")))
 
-    throwup(0).runSyncUnsafe()
+    throwup(0).mapError(UncaughtErrorException.wrap).runSyncUnsafe()
   }
 
   @Benchmark
