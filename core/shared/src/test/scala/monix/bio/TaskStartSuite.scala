@@ -57,7 +57,7 @@ object TaskStartSuite extends BaseTestSuite {
     implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      local <- TaskLocal(0)
+      local <- BIOLocal(0)
       _     <- local.write(100)
       v1    <- local.read
       f     <- (Task.shift *> local.read <* local.write(200)).start

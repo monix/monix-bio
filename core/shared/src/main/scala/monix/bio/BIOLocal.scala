@@ -20,14 +20,14 @@ package monix.bio
 import monix.execution.exceptions.APIContractViolationException
 import monix.execution.misc.Local
 
-/** A `TaskLocal` is like a
+/** A `BIOLocal` is like a
   * [[monix.execution.misc.ThreadLocal ThreadLocal]]
   * that is pure and with a flexible scope, being processed in the
   * context of the [[Task]] data type.
   *
   * This data type wraps [[monix.execution.misc.Local]].
   *
-  * Just like a `ThreadLocal`, usage of a `TaskLocal` is safe,
+  * Just like a `ThreadLocal`, usage of a `BIOLocal` is safe,
   * the state of all current locals being transported over
   * async boundaries (aka when threads get forked) by the `Task`
   * run-loop implementation, but only when the `Task` reference
@@ -62,11 +62,11 @@ import monix.execution.misc.Local
   * Full example:
   *
   * {{{
-  *   import monix.bio.{UIO, TaskLocal}
+  *   import monix.bio.{UIO, BIOLocal}
   *
   *   val task: UIO[Unit] =
   *     for {
-  *       local <- TaskLocal(0)
+  *       local <- BIOLocal(0)
   *       value1 <- local.read // value1 == 0
   *       _ <- local.write(100)
   *       value2 <- local.read // value2 == 100
@@ -97,12 +97,12 @@ import monix.execution.misc.Local
   *   val result = task.runToFutureOpt
   * }}}
   */
-final class TaskLocal[A] private (ref: Local[A]) {
-  import TaskLocal.checkPropagation
+final class BIOLocal[A] private (ref: Local[A]) {
+  import BIOLocal.checkPropagation
 
-  /** Returns [[monix.execution.misc.Local]] instance used in this [[TaskLocal]].
+  /** Returns [[monix.execution.misc.Local]] instance used in this [[BIOLocal]].
     *
-    * Note that `TaskLocal.bind` will restore the original local value
+    * Note that `BIOLocal.bind` will restore the original local value
     * on the thread where the `Task's` run-loop ends up so it might lead
     * to leaving local modified in other thread.
     */
@@ -129,7 +129,7 @@ final class TaskLocal[A] private (ref: Local[A]) {
     *   // we have in `local` at the time of evaluation
     *   val task: UIO[Int] =
     *     for {
-    *       local <- TaskLocal(0)
+    *       local <- BIOLocal(0)
     *       value <- local.bind(100)(local.read.map(_ * 2))
     *     } yield value
     * }}}
@@ -156,7 +156,7 @@ final class TaskLocal[A] private (ref: Local[A]) {
     *   // we have in `local` at the time of evaluation
     *   val task: UIO[Int] =
     *     for {
-    *       local <- TaskLocal(0)
+    *       local <- BIOLocal(0)
     *       value <- local.bindL(UIO.eval(100))(local.read.map(_ * 2))
     *     } yield value
     * }}}
@@ -188,7 +188,7 @@ final class TaskLocal[A] private (ref: Local[A]) {
     *   // we have in `local` at the time of evaluation
     *   val task: UIO[Int] =
     *     for {
-    *       local <- TaskLocal(0)
+    *       local <- BIOLocal(0)
     *       value <- local.bindClear(local.read.map(_ * 2))
     *     } yield value
     * }}}
@@ -213,40 +213,40 @@ final class TaskLocal[A] private (ref: Local[A]) {
 }
 
 /**
-  * Builders for [[TaskLocal]]
+  * Builders for [[BIOLocal]]
   *
   * @define refTransparent [[BIO]] returned by this operation
-  *         produces a new [[TaskLocal]] each time it is evaluated.
-  *         To share a state between multiple consumers, pass
-  *         [[TaskLocal]] values around as plain parameters,
-  *         instead of keeping shared state.
+  *                        produces a new [[BIOLocal]] each time it is evaluated.
+  *                        To share a state between multiple consumers, pass
+  *                        [[BIOLocal]] values around as plain parameters,
+  *                        instead of keeping shared state.
   *
-  *         Another possibility is to use [[BIO.memoize]], but note
-  *         that this breaks referential transparency and can be
-  *         problematic for example in terms of enabled [[BIO.Options]],
-  *         which don't survive the memoization process.
+  *                        Another possibility is to use [[BIO.memoize]], but note
+  *                        that this breaks referential transparency and can be
+  *                        problematic for example in terms of enabled [[BIO.Options]],
+  *                        which don't survive the memoization process.
   */
-object TaskLocal {
-  /** Builds a [[TaskLocal]] reference with the given default.
+object BIOLocal {
+  /** Builds a [[BIOLocal]] reference with the given default.
     *
     * $refTransparent
     *
     * @param default is a value that gets returned in case the
-    *        local was never updated (with [[TaskLocal.write write]])
-    *        or in case it was cleared (with [[TaskLocal.clear]])
+    *                local was never updated (with [[BIOLocal.write write]])
+    *                or in case it was cleared (with [[BIOLocal.clear]])
     */
-  def apply[A](default: A): UIO[TaskLocal[A]] =
-    checkPropagation(UIO.eval(new TaskLocal(Local(default))))
+  def apply[A](default: A): UIO[BIOLocal[A]] =
+    checkPropagation(UIO.eval(new BIOLocal(Local(default))))
 
   /** Wraps a [[monix.execution.misc.Local Local]] reference
-    * (given in the `Task` context) in a [[TaskLocal]] value.
+    * (given in the `Task` context) in a [[BIOLocal]] value.
     *
     * $refTransparent
     */
-  def wrap[E, A](local: BIO[E, Local[A]]): BIO[E, TaskLocal[A]] =
-    checkPropagation(local.map(new TaskLocal(_)))
+  def wrap[E, A](local: BIO[E, Local[A]]): BIO[E, BIOLocal[A]] =
+    checkPropagation(local.map(new BIOLocal(_)))
 
-  /** Wraps a provided `task`, such that any changes to any TaskLocal variable
+  /** Wraps a provided `task`, such that any changes to any BIOLocal variable
     * during its execution will not be observable outside of that Task.
     */
   def isolate[E, A](task: BIO[E, A]): BIO[E, A] = checkPropagation {
@@ -264,7 +264,7 @@ object TaskLocal {
     ctx => {
       if (!ctx.options.localContextPropagation) {
         throw new APIContractViolationException(
-          "Support for TaskLocal usage isn't active! " +
+          "Support for BIOLocal usage isn't active! " +
             "See documentation at: https://monix.io/api/current/monix/eval/TaskLocal.html"
         )
       }

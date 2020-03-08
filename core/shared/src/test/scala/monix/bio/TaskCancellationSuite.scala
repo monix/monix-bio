@@ -270,7 +270,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- BIOLocal(10)
       _ <- l.write(100).uncancelable
       _ <- Task.shift
       v <- l.read
@@ -287,7 +287,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     val error = DummyException("dummy")
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- BIOLocal(10)
       _ <- l.write(100).onCancelRaiseError(error)
       _ <- Task.shift
       v <- l.read

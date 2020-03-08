@@ -73,7 +73,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- BIOLocal(10)
       _ <- l.write(100).asyncBoundary
       v <- l.read
     } yield v
@@ -88,7 +88,7 @@ object TaskAsyncBoundarySuite extends BaseTestSuite {
     implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- BIOLocal(10)
       _ <- l.write(100).asyncBoundary(global)
       v <- l.read
     } yield v
