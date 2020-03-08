@@ -38,7 +38,7 @@ object TaskWanderSuite extends BaseTestSuite {
     s.tick(2.seconds)
     assertEquals(f.value, None)
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(Seq(2, 3, 4)))))
+    assertEquals(f.value, Some(Success(Seq(2, 3, 4))))
   }
 
   test("BIO.wander should onError if one of the tasks terminates in error") { implicit s =>
@@ -51,6 +51,7 @@ object TaskWanderSuite extends BaseTestSuite {
             .suspendTotal(if (i < 0) BIO.raiseError(ex) else BIO.now(i + 1))
             .delayExecution(d.seconds)
       }
+      .attempt
       .runToFuture
 
     s.tick()
@@ -101,7 +102,7 @@ object TaskWanderSuite extends BaseTestSuite {
     val composite = BIO.wander(seq)(BIO.now).map(_.sum)
     val result = composite.runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(Right(count))))
+    assertEquals(result.value, Some(Success(count)))
   }
 
   test("BIO.wander runAsync multiple times") { implicit s =>
@@ -116,11 +117,11 @@ object TaskWanderSuite extends BaseTestSuite {
     }
 
     val result1 = task2.runToFuture; s.tick()
-    assertEquals(result1.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(result1.value, Some(Success(List(4, 4, 4))))
     assertEquals(effect, 1 + 3)
 
     val result2 = task2.runToFuture; s.tick()
-    assertEquals(result2.value, Some(Success(Right(List(4, 4, 4)))))
+    assertEquals(result2.value, Some(Success(List(4, 4, 4))))
     assertEquals(effect, 1 + 3 + 3)
   }
 

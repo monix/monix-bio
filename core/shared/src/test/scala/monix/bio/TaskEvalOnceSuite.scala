@@ -21,7 +21,7 @@ import cats.laws._
 import cats.laws.discipline._
 import monix.execution.exceptions.DummyException
 
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TaskEvalOnceSuite extends BaseTestSuite {
   // TODO: needs to be implemented with Coeval and s.tick() removed in other tests
@@ -42,7 +42,7 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     val f = BIO.evalOnce[Int](if (1 == 1) throw ex else 1).runToFuture
     s.tick()
 
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
@@ -75,11 +75,11 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     val iterations = s.executionModel.recommendedBatchSize * 20
     val f = loop(iterations, 0).runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(iterations * 2))))
+    assertEquals(f.value, Some(Success(iterations * 2)))
   }
 
   // won't pass until it is  implemented with Coeval
-  
+
 //  test("BIO.evalOnce should not be cancelable") { implicit s =>
 //    val t = BIO.evalOnce(10)
 //    val f = t.runToFuture
@@ -98,14 +98,14 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     val task = BIO.evalOnce { if (1 == 1) throw dummy else 10 }
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Left(dummy))))
+    assertEquals(f.value, Some(Failure(dummy)))
   }
 
   test("BIO.evalOnce.materialize should work for success") { implicit s =>
     val task = BIO.evalOnce(1).materialize
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Success(Right(1))))))
+    assertEquals(f.value, Some(Success(Success(1))))
   }
 
   test("BIO.evalOnce.materialize should work for failure") { implicit s =>
@@ -113,7 +113,6 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     val task = BIO.evalOnce[Int](throw dummy).materialize
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(Success(Left(dummy))))))
+    assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 }
-

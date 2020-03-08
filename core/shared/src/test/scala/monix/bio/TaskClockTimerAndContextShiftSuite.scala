@@ -37,7 +37,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     val f = BIO.clock.monotonic(TimeUnit.SECONDS).runToFuture
     s.tick()
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.clock.realTime") { implicit s =>
@@ -46,7 +46,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     val f = BIO.clock.realTime(TimeUnit.SECONDS).runToFuture
     s.tick()
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.clock(s2).monotonic") { implicit s =>
@@ -56,7 +56,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     val f = BIO.clock(s2).monotonic(TimeUnit.SECONDS).runToFuture
     s.tick()
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.clock(s).realTime") { implicit s =>
@@ -66,7 +66,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     val f = BIO.clock(s2).realTime(TimeUnit.SECONDS).runToFuture
     s.tick()
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.timer is implicit") { implicit s =>
@@ -79,12 +79,12 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     s.tick()
     assertEquals(f.value, None)
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("BIO.timer(s)") { implicit s =>
     val s2 = TestScheduler()
-    val f = BIO.timer(s2).sleep(1.second).runToFuture
+    val f = BIO.timer(s2).sleep(1.second).attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -99,7 +99,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     val s2 = TestScheduler()
     s2.tick(1.second)
 
-    val f = BIO.timer(s2).clock.monotonic(TimeUnit.SECONDS).runToFuture
+    val f = BIO.timer(s2).clock.monotonic(TimeUnit.SECONDS).attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(1))))
   }
@@ -112,7 +112,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     val f = BIO.contextShift.shift.runToFuture
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("BIO.contextShift.evalOn(s2)") { implicit s =>
@@ -124,12 +124,12 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     s2.tick()
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.contextShift.evalOn(s2) failure") { implicit s =>
     val s2 = TestScheduler()
-    val f = BIO.contextShift.evalOn(s2)(BIO.raiseError("dummy")).runToFuture
+    val f = BIO.contextShift.evalOn(s2)(BIO.raiseError("dummy")).attempt.runToFuture
 
     assertEquals(f.value, None)
     s.tick()
@@ -166,7 +166,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     s2.tick(100.millis)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.contextShift.evalOn(s2) injects s2 to BIO.deferAction") { implicit s =>
@@ -186,14 +186,14 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     s2.tick()
     assertEquals(wasScheduled, true)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("BIO.contextShift(s).shift") { implicit s =>
     val f = BIO.contextShift(s).shift.runToFuture
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("BIO.contextShift(s).evalOn(s2)") { implicit s =>
@@ -205,12 +205,12 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     s2.tick()
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.contextShift(s).evalOn(s2) failure") { implicit s =>
     val s2 = TestScheduler()
-    val f = BIO.contextShift(s).evalOn(s2)(BIO.raiseError("dummy")).runToFuture
+    val f = BIO.contextShift(s).evalOn(s2)(BIO.raiseError("dummy")).attempt.runToFuture
 
     assertEquals(f.value, None)
     s.tick()
@@ -237,7 +237,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
 
   test("BIO.contextShift(s).evalOn(s2) uses s2 for async boundaries") { implicit s =>
     val s2 = TestScheduler()
-    val f = BIO.contextShift(s).evalOn(s2)(BIO(1).delayExecution(100.millis)).runToFuture
+    val f = BIO.contextShift[Throwable](s).evalOn(s2)(BIO(1).delayExecution(100.millis)).runToFuture
 
     assertEquals(f.value, None)
     s.tick()
@@ -247,7 +247,7 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     assertEquals(f.value, None)
     s2.tick(100.millis)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.contextShift(s).evalOn(s2) injects s2 to BIO.deferAction") { implicit s =>
@@ -267,6 +267,6 @@ object TaskClockTimerAndContextShiftSuite extends BaseTestSuite {
     s2.tick()
     assertEquals(wasScheduled, true)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 }

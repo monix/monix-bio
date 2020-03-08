@@ -28,7 +28,7 @@ import scala.util.{Failure, Success}
 object TaskMiscSuite extends BaseTestSuite {
   test("BIO.attempt should succeed") { implicit s =>
     val result = BIO.now(1).attempt.runToFuture
-    assertEquals(result.value, Some(Success(Right(Right(1)))))
+    assertEquals(result.value, Some(Success(Right(1))))
   }
 
   test("BIO.raiseError.attempt should expose error") { implicit s =>
@@ -37,12 +37,13 @@ object TaskMiscSuite extends BaseTestSuite {
     s.tickOne()
     assertEquals(result.value, Some(Success(Left(ex))))
   }
-  
+
   test("BIO.mapError should map error") { implicit s =>
     val ex = "not dummy"
     val result = BIO
       .raiseError("dummy")
       .mapError(_ => ex)
+      .attempt
       .runToFuture
 
     s.tickOne()
@@ -57,13 +58,13 @@ object TaskMiscSuite extends BaseTestSuite {
   }
 
   test("BIO.tapError should not alter original successful value") { implicit s =>
-    val result = BIO.fromEither[String, Int](1.asRight).tapError(e => BIO.raiseError(e)).runToFuture
+    val result = BIO.fromEither[String, Int](1.asRight).tapError(e => BIO.raiseError(e)).attempt.runToFuture
     assertEquals(result.value, Some(Success(Right(1))))
   }
 
   test("BIO.tapError should not alter original error value") { implicit s =>
     var effect = 0
-    val result = BIO.fromEither[String, Int]("Error".asLeft).tapError(_ => BIO.delay(effect += 1)).runToFuture
+    val result = BIO.fromEither[String, Int]("Error".asLeft).tapError(_ => BIO.delay(effect += 1)).attempt.runToFuture
     assertEquals(result.value, Some(Success(Left("Error"))))
     assertEquals(effect, 1)
   }
@@ -79,7 +80,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("BIO.failed should expose error") { implicit s =>
     val dummy = DummyException("dummy")
     val f = BIO.raiseError(dummy).failed.runToFuture
-    assertEquals(f.value, Some(Success(Right(dummy))))
+    assertEquals(f.value, Some(Success(dummy)))
   }
 
   test("BIO.failed should fail for successful values") { implicit s =>
@@ -100,14 +101,14 @@ object TaskMiscSuite extends BaseTestSuite {
     val result = BIO.eval { if (effect < 10) effect += 1 else throw ex }.loopForever
       .onErrorFallbackTo(BIO.eval(effect))
       .runToFuture
-    assertEquals(result.value.get.get, Right(10))
+    assertEquals(result.value.get.get, 10)
   }
 
   test("BIO.restartUntil should keep retrying BIO until predicate succeeds") { implicit s =>
     var effect = 0
     val r = BIO.evalAsync { effect += 1; effect }.restartUntil(_ >= 10).runToFuture
     s.tick()
-    assertEquals(r.value, Some(Success(Right(10))))
+    assertEquals(r.value, Some(Success(10)))
   }
 
   test("BIO.toReactivePublisher should convert tasks with no errors") { implicit s =>

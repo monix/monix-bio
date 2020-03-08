@@ -37,13 +37,13 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(("hello", 1000)))))
+    assertEquals(f.value, Some(Success(("hello", 1000))))
   }
 
   test("BIO.deferAction works for failed tasks") { implicit s =>
     val dummy = "dummy"
     val task = BIO.deferAction(_ => BIO.raiseError(dummy))
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))
@@ -77,7 +77,7 @@ object TaskDeferActionSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   testAsync("BIO.deferAction(local.write) works") { _ =>
@@ -92,7 +92,7 @@ object TaskDeferActionSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 }

@@ -58,7 +58,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
     val f = task.runToFutureOpt
     ec.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
     assertEquals(effect, 0)
   }
 
@@ -108,7 +108,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     f2.cancel()
 
     ec.tick()
-    assertEquals(f1.value, Some(Success(Right(2))))
+    assertEquals(f1.value, Some(Success(2)))
     assertEquals(f2.value, None)
   }
 
@@ -123,7 +123,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
     val f = loop(10000).runToFuture
     ec.tick()
-    assertEquals(f.value, Some(Success(Right(0))))
+    assertEquals(f.value, Some(Success(0)))
   }
 
   test("uncancelable is stack safe in flatMap loop, take 2") { implicit ec =>
@@ -132,7 +132,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     ec.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("fa.onCancelRaiseError <-> fa") { implicit ec =>
@@ -165,7 +165,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   test("cancelBoundary execution is immediate") { implicit ec =>
     val task = BIO.cancelBoundary >> UIO(1)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("cancelBoundary is stack safe") { implicit ec =>
@@ -175,7 +175,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
     val count = if (Platform.isJVM) 10000 else 1000
     val f = loop(count).runToFuture; ec.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("cancelBoundary cancels") { implicit ec =>
@@ -196,7 +196,7 @@ object TaskCancellationSuite extends BaseTestSuite {
       .start
       .flatMap(f => f.cancel >> f.join)
 
-    val f = task.runToFutureOpt
+    val f = task.attempt.runToFutureOpt
     ec.tick()
     assertEquals(f.value, Some(Success(Right(10))))
   }
@@ -210,7 +210,7 @@ object TaskCancellationSuite extends BaseTestSuite {
       .executeAsync
       .onCancelRaiseError(cancelError)
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     f.cancel()
     sc.tick()
 
@@ -227,7 +227,7 @@ object TaskCancellationSuite extends BaseTestSuite {
       .executeAsync
       .onCancelRaiseError(cancelError)
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     f.cancel()
     sc.tick()
 
@@ -247,7 +247,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
     val f = loop(10000).runToFuture
     ec.tick()
-    assertEquals(f.value, Some(Success(Right(0))))
+    assertEquals(f.value, Some(Success(0)))
   }
 
   test("onCancelRaiseError is stack safe in flatMap loop, take 2") { implicit ec =>
@@ -262,7 +262,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
     val f = loop(10000).runToFuture
     ec.tick()
-    assertEquals(f.value, Some(Success(Right(0))))
+    assertEquals(f.value, Some(Success(0)))
   }
 
   testAsync("local.write.uncancelable works") { _ =>
@@ -277,7 +277,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 
@@ -294,7 +294,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 }

@@ -92,7 +92,7 @@ object TaskBracketSuite extends BaseTestSuite {
     sc.tick()
 
     assertEquals(input, Some((1, Right(2))))
-    assertEquals(f.value, Some(Success(Right(2))))
+    assertEquals(f.value, Some(Success(2)))
   }
 
   test("release is evaluated on error") { implicit sc =>
@@ -102,7 +102,7 @@ object TaskBracketSuite extends BaseTestSuite {
       UIO.eval { input = Some((a, i)) }
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
 
     assertEquals(input, Some((1, Left(Some(Cause.Error(-99))))))
@@ -117,7 +117,7 @@ object TaskBracketSuite extends BaseTestSuite {
       UIO.eval { input = Some((a, i)) }
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
 
     assertEquals(input, Some((1, Left(Some(Cause.Termination(dummy))))))
@@ -210,7 +210,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = loop(cycles).runToFuture
 
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("bracket is stack safe (2)") { implicit sc =>
@@ -222,7 +222,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("bracket is stack safe (3)") { implicit sc =>
@@ -233,7 +233,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("bracket is stack safe (4)") { implicit sc =>
@@ -244,7 +244,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("use is not evaluated on cancel") { implicit sc =>
@@ -282,7 +282,7 @@ object TaskBracketSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     sc.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("cancel should wait for already started finalizers on failure") { implicit sc =>
@@ -301,7 +301,7 @@ object TaskBracketSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     sc.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("cancel should wait for already started use finalizers") { implicit sc =>
@@ -320,7 +320,7 @@ object TaskBracketSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     sc.tick(2.second)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("second cancel should wait for use finalizers") { implicit sc =>
@@ -339,7 +339,7 @@ object TaskBracketSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     sc.tick(2.second)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("second cancel during acquire should wait for it and finalizers to complete") { implicit sc =>
@@ -361,7 +361,7 @@ object TaskBracketSuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     sc.tick(1.second)
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
   test("second cancel during acquire should wait for it and finalizers to complete (non-terminating)") { implicit sc =>
@@ -393,7 +393,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val f = fa.runToFuture
 
     sc.tick()
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 
 }

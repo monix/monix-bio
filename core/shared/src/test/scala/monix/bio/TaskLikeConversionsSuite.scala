@@ -48,7 +48,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
 
     p.success(123)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed Future") { implicit s =>
@@ -61,12 +61,12 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
 
     p.failure(ex)
     s.tick()
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts successful sync IO") { implicit s =>
     val task = BIO.from(IO(123))
-    assertEquals(task.runToFuture.value, Some(Success(Right(123))))
+    assertEquals(task.runToFuture.value, Some(Success(123)))
   }
 
   test("BIO.from converts successful async IO") { implicit s =>
@@ -78,13 +78,13 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed sync IO") { implicit s =>
     val ex = DummyException("dummy")
     val task = BIO.from(IO.raiseError(ex))
-    assertEquals(task.runToFuture.value, Some(Success(Left(ex))))
+    assertEquals(task.runToFuture.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts failed async IO") { implicit s =>
@@ -97,7 +97,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.from preserves cancellability of an IO") { implicit s =>
@@ -128,7 +128,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed Eval") { implicit s =>
@@ -140,16 +140,16 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.from preserves Eval laziness") { implicit s =>
     var result = 0
     val task = BIO.from(Eval.always { result += 1; result })
 
-    assertEquals(task.runToFuture.value, Some(Success(Right(1))))
-    assertEquals(task.runToFuture.value, Some(Success(Right(2))))
-    assertEquals(task.runToFuture.value, Some(Success(Right(3))))
+    assertEquals(task.runToFuture.value, Some(Success(1)))
+    assertEquals(task.runToFuture.value, Some(Success(2)))
+    assertEquals(task.runToFuture.value, Some(Success(3)))
   }
 
   test("BIO.from converts successful SyncIO") { implicit s =>
@@ -160,7 +160,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed SyncIO") { implicit s =>
@@ -172,33 +172,33 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts successful Try") { implicit s =>
     val source: Try[Int] = Success(123)
     val task = BIO.from(source)
-    assertEquals(task.runToFuture.value, Some(Success(Right(123))))
+    assertEquals(task.runToFuture.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed Try") { implicit s =>
     val ex = DummyException("dummy")
     val source: Try[Int] = Failure(ex)
     val task = BIO.from(source)
-    assertEquals(task.runToFuture.value, Some(Success(Left(ex))))
+    assertEquals(task.runToFuture.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts right Either") { implicit s =>
     val source = 123.asRight[Throwable]
     val task = BIO.from(source)
-    assertEquals(task.runToFuture.value, Some(Success(Right(123))))
+    assertEquals(task.runToFuture.value, Some(Success(123)))
   }
 
   test("BIO.from converts left Either") { implicit s =>
     val ex = DummyException("dummy")
     val source = ex.asLeft[Int]
     val task = BIO.from(source)
-    assertEquals(task.runToFuture.value, Some(Success(Left(ex))))
+    assertEquals(task.runToFuture.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts successful custom Effect") { implicit s =>
@@ -212,7 +212,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed custom Effect") { implicit s =>
@@ -227,7 +227,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts successful custom ConcurrentEffect") { implicit s =>
@@ -241,7 +241,7 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed custom ConcurrentEffect") { implicit s =>
@@ -256,13 +256,13 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assert(!executed)
     val f = task.runToFuture
     assert(executed)
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.from converts Function0") { implicit s =>
     val task = BIO.from(() => 123)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts CancelablePromise") { implicit s =>
@@ -278,10 +278,10 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     token1.cancel()
     p.success(123)
     assertEquals(token1.value, None)
-    assertEquals(token2.value, Some(Success(Right(123))))
+    assertEquals(token2.value, Some(Success(123)))
 
     val token3 = task.runToFuture
-    assertEquals(token3.value, Some(Success(Right(123))))
+    assertEquals(token3.value, Some(Success(123)))
   }
 
 }

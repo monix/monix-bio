@@ -29,7 +29,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.now.executeOn should execute async if forceAsync = true") { implicit s =>
@@ -43,7 +43,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
     s2.tick()
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.now.executeOn should not execute async if forceAsync = false") { implicit s =>
@@ -51,7 +51,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
     val t = BIO.now(10).executeOn(s2, forceAsync = false)
     val f = t.runToFuture
 
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.create.executeOn should execute async") { implicit s =>
@@ -60,7 +60,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
       cb.onSuccess(10); BIO.unit
     }
     val t = source.executeOn(s2)
-    val f = t.runToFuture
+    val f = t.attempt.runToFuture
 
     assertEquals(f.value, None)
     s.tick()
@@ -78,7 +78,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
 
     val result = task.runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(Right(1))))
+    assertEquals(result.value, Some(Success(1)))
   }
 
   test("BIO.executeOn should be stack safe, test 2") { implicit s =>
@@ -88,7 +88,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
 
     val result = task.runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(Right(1))))
+    assertEquals(result.value, Some(Success(1)))
   }
 
   test("executeAsync should be stack safe, test 3") { implicit s =>
@@ -100,6 +100,6 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
 
     val result = loop(count).runToFuture
     s.tick()
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 }

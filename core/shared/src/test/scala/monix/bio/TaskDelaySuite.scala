@@ -41,7 +41,7 @@ object TaskDelaySuite extends BaseTestSuite {
 
     s.tick(1.second)
     assert(wasTriggered, "wasTriggered")
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO#delayExecution is stack safe, test 1") { implicit s =>
@@ -56,7 +56,7 @@ object TaskDelaySuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture
     s.tick(count.seconds)
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO#delayExecution is stack safe, test 2") { implicit s =>
@@ -65,7 +65,7 @@ object TaskDelaySuite extends BaseTestSuite {
     for (_ <- 0 until count) task = task.delayExecution(1.second)
     val result = task.runToFuture
     s.tick(count.seconds)
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO#delayExecution is cancelable") { implicit s =>
@@ -106,7 +106,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(f.value, None)
 
     s.tick(1.second)
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO#delayResult is stack safe, test 1") { implicit s =>
@@ -121,7 +121,7 @@ object TaskDelaySuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 50000 else 5000
     val result = loop(count).runToFuture
     s.tick(count.seconds)
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO#delayResult is stack safe, test 2") { implicit s =>
@@ -130,7 +130,7 @@ object TaskDelaySuite extends BaseTestSuite {
     for (_ <- 0 until count) task = task.delayResult(1.second)
     val result = task.runToFuture
     s.tick(count.seconds)
-    assertEquals(result.value, Some(Success(Right(0))))
+    assertEquals(result.value, Some(Success(0)))
   }
 
   test("BIO#delayResult is cancelable") { implicit s =>
@@ -156,7 +156,7 @@ object TaskDelaySuite extends BaseTestSuite {
   test("BIO#delayResult should not delay in case of error") { implicit s =>
     val ex = "dummy"
     val task = BIO.raiseError(ex).delayResult(1.second)
-    val result = task.runToFuture
+    val result = task.attempt.runToFuture
 
     s.tick()
     assertEquals(result.value, Some(Success(Left(ex))))

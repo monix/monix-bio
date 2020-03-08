@@ -151,7 +151,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("TaskLocals get restored in BIO.create on error") {
+  testAsyncE("TaskLocals get restored in BIO.create on error") {
     val dummy = "dummy"
     val task = BIO.create[String, Int] { (_, cb) =>
       ec.execute(new Runnable {
@@ -168,7 +168,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
       _     <- UIO.eval(assertEquals(l, 10))
     } yield ()
 
-    t.runToFutureOpt
+    t.attempt.runToFutureOpt
   }
 
   testAsync("TaskLocals get restored in BIO.create on termination") {

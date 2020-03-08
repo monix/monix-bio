@@ -27,7 +27,7 @@ import scala.util.{Failure, Success}
 object TaskCreateSuite extends BaseTestSuite {
   test("can use Unit as return type") { implicit sc =>
     val task = BIO.create[Long, Int]((_, cb) => cb.onSuccess(1))
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
 
     sc.tick()
     assertEquals(f.value, Some(Success(Right(1))))
@@ -37,7 +37,7 @@ object TaskCreateSuite extends BaseTestSuite {
     val task = BIO.create[Long, Int] { (_, cb) =>
       cb.onSuccess(1); Cancelable.empty
     }
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
 
     sc.tick()
     assertEquals(f.value, Some(Success(Right(1))))
@@ -51,7 +51,7 @@ object TaskCreateSuite extends BaseTestSuite {
       ()
     }
 
-    val f = task.runToFutureOpt
+    val f = task.attempt.runToFutureOpt
     sc.tick()
     assertEquals(f.value, None)
 
@@ -65,7 +65,7 @@ object TaskCreateSuite extends BaseTestSuite {
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
     assertEquals(f.value, None)
 
@@ -78,7 +78,7 @@ object TaskCreateSuite extends BaseTestSuite {
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
     assertEquals(f.value, None)
 
@@ -93,7 +93,7 @@ object TaskCreateSuite extends BaseTestSuite {
       IO(c.cancel())
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
     assertEquals(f.value, None)
 
@@ -107,7 +107,7 @@ object TaskCreateSuite extends BaseTestSuite {
       IO(c.cancel())
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
     assertEquals(f.value, None)
 
@@ -122,7 +122,7 @@ object TaskCreateSuite extends BaseTestSuite {
       UIO.evalAsync(c.cancel())
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
     assertEquals(f.value, None)
 
@@ -136,7 +136,7 @@ object TaskCreateSuite extends BaseTestSuite {
       UIO.evalAsync(c.cancel())
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
     assertEquals(f.value, None)
 
@@ -151,7 +151,7 @@ object TaskCreateSuite extends BaseTestSuite {
       (throw dummy): Unit
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
 
     assertEquals(f.value, Some(Failure(dummy)))
@@ -164,7 +164,7 @@ object TaskCreateSuite extends BaseTestSuite {
       (throw dummy): Cancelable
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     sc.tick()
 
     assertEquals(f.value, Some(Failure(dummy)))

@@ -84,7 +84,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -97,10 +97,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .fromFuture(f)
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -120,7 +120,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -135,10 +135,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .fromFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -155,7 +155,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -168,10 +168,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .deferFuture(f)
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -191,7 +191,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -206,10 +206,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .deferFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -226,7 +226,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -239,10 +239,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .deferFutureAction(_ => f)
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -262,7 +262,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -277,10 +277,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .deferFutureAction(_ => f)
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -297,7 +297,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -310,10 +310,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .fromFuture(f)
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -333,7 +333,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -348,10 +348,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .fromFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -368,7 +368,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -381,10 +381,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .deferFuture(f)
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -404,7 +404,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -419,10 +419,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .deferFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -439,7 +439,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -452,10 +452,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .deferFutureAction(_ => f)
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -475,7 +475,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
 
       latch.countDown()
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -490,10 +490,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .deferFutureAction(_ => f)
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -508,10 +508,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -523,10 +523,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .async[Unit](_.onSuccess(()))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -543,10 +543,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -560,10 +560,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .async[Unit](_.onError(dummy))
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -578,10 +578,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -593,10 +593,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .async0[Unit]((_, cb) => cb.onSuccess(()))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -613,10 +613,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -630,10 +630,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .async0[Unit]((_, cb) => cb.onError(dummy))
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -649,10 +649,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -667,10 +667,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
           Task(())
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -688,10 +688,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -708,10 +708,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -727,10 +727,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -745,10 +745,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
           Task(())
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -766,10 +766,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -786,10 +786,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -805,10 +805,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -823,10 +823,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
           Task(())
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -844,10 +844,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -864,10 +864,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -883,10 +883,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -898,10 +898,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = Task
         .asyncF[Unit](cb => Task(cb.onSuccess(())))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -918,10 +918,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(name.toTry.get.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
       }
     }
   }
@@ -935,10 +935,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
         .asyncF[Unit](cb => Task(cb.onError(dummy)))
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s)
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
-        assert(!name.toTry.get.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
     }
   }
@@ -962,10 +962,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       .executeOn(s2)
       .redeem(_ => 2, identity)
       .redeemCause(_ => 3, identity)
-      .runToFuture(s)
+      .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
     for (result <- f) yield {
-      assertEquals(result, Right(3))
+      assertEquals(result, 3)
     }
   }
 }

@@ -39,7 +39,7 @@ object TaskTraverseSuite extends BaseTestSuite {
     s.tick(1.second)
     assertEquals(f.value, None)
     s.tick(3.second)
-    assertEquals(f.value, Some(Success(Right(Seq(2, 3, 4)))))
+    assertEquals(f.value, Some(Success(Seq(2, 3, 4))))
   }
 
   test("BIO.traverse should onError if one of the tasks terminates in error") { implicit s =>
@@ -52,6 +52,7 @@ object TaskTraverseSuite extends BaseTestSuite {
             .suspendTotal(if (i < 0) BIO.raiseError(ex) else BIO.now(i + 1))
             .delayExecution(d.seconds)
       }
+      .attempt
       .runToFuture
 
     // First

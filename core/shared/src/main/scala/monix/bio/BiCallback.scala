@@ -153,17 +153,6 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
     }
 
   /**
-    * Attempts to call [[BiCallback.apply BiCallback.apply]].
-    *
-    * $tryMethodDescription
-    */
-  def tryApply(result: Try[Either[E, A]]): Boolean = result match {
-    case Success(Right(a)) => tryOnSuccess(a)
-    case Success(Left(e)) => tryOnError(e)
-    case Failure(t) => tryOnTermination(t)
-  }
-
-  /**
     * Attempts to call [[BiCallback.apply(result:Either[monix\.bio\.Cause[E],A])* BiCallback.apply]].
     *
     * $tryMethodDescription
@@ -176,17 +165,6 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
     }
 
   /**
-    * Signals a value via Scala's `Either`.
-    *
-    * $safetyIssues
-    */
-  def apply(result: Either[E, A])(implicit ev: Throwable <:< E): Unit =
-    result match {
-      case Right(a) => onSuccess(a)
-      case Left(e) => onError(e)
-    }
-
-  /**
     * Signals a value via Scala's `Try`.
     *
     * $safetyIssues
@@ -196,6 +174,16 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case Success(a) => onSuccess(a)
       case Failure(e) => onError(e)
     }
+
+  /**
+    * Attempts to call [[BiCallback.apply BiCallback.apply]].
+    *
+    * $tryMethodDescription
+    */
+  def tryApply(result: Try[A])(implicit ev: Throwable <:< E): Boolean = result match {
+    case Success(a) => tryOnSuccess(a)
+    case Failure(e) => tryOnError(e)
+  }
 }
 
 /**
@@ -247,9 +235,6 @@ object BiCallback {
   def fromPromise[E, A](p: Promise[Either[E, A]]): BiCallback[E, A] =
     new BiCallback[E, A] {
 
-      override def tryApply(result: Try[Either[E, A]]): Boolean =
-        p.tryComplete(result)
-
       override def tryApply(result: Either[Cause[E], A]): Boolean = {
         result match {
           case Left(Cause.Error(value)) => p.trySuccess(Left(value))
@@ -273,14 +258,40 @@ object BiCallback {
         }
       }
 
-      override def apply(result: Try[Either[E, A]]): Unit =
-        if (!tryApply(result)) throw CallbackCalledMultipleTimesException.forResult(result)
-
       override def onTermination(e: Throwable): Unit =
         if (!tryOnTermination(e)) throw new CallbackCalledMultipleTimesException("onTermination")
 
       override def tryOnTermination(e: Throwable): Boolean =
         p.tryFailure(e)
+    }
+
+  /** Turns `Try[A] => Unit` callbacks into Monix callbacks.
+    *
+    * These are common within Scala's standard library implementation,
+    * due to usage with Scala's `Future`.
+    *
+    * WARNING: the returned callback is NOT thread-safe!
+    */
+  def fromTry[A](cb: Try[A] => Unit): BiCallback[Throwable, A] =
+    new BiCallback[Throwable, A] {
+      private[this] var isActive = true
+      override def onSuccess(value: A): Unit = apply(Success(value))
+      override def onError(e: Throwable): Unit = apply(Failure(e))
+      override def onTermination(e: Throwable): Unit = apply(Failure(e))
+
+      override def apply(result: Try[A])(implicit ev: Throwable <:< Throwable): Unit =
+        if (!tryApply(result)) {
+          throw CallbackCalledMultipleTimesException.forResult(result)
+        }
+
+      override def tryApply(result: Try[A])(implicit ev: Throwable <:< Throwable): Boolean =
+        if (isActive) {
+          isActive = false
+          cb(result)
+          true
+        } else {
+          false
+        }
     }
 
   /** Given a [[BiCallback]] wraps it into an implementation that
@@ -414,6 +425,10 @@ object BiCallback {
     /** See [[BiCallback.fromPromise]]. */
     def fromPromise[A](p: Promise[Either[E, A]]): BiCallback[E, A] =
       BiCallback.fromPromise(p)
+
+    /** See [[BiCallback.fromTry]]. */
+    def fromTry[A](cb: Try[A] => Unit)(implicit ev: Throwable <:< E): BiCallback[Throwable, A] =
+      BiCallback.fromTry(cb)
 
     /** See [[BiCallback.forked]]. */
     def forked[A](cb: BiCallback[E, A])(implicit ec: ExecutionContext): BiCallback[E, A] =
@@ -591,6 +606,8 @@ object BiCallback {
       underlying.onTermination(e)
   }
 
-  private[bio] def toEither[A](bcb: BiCallback[Throwable, A]): (Either[Throwable, A]) => Unit =
-    (result: Either[Throwable, A]) => bcb.apply(result)
+  private[bio] def toEither[A](bcb: BiCallback[Throwable, A]): Either[Throwable, A] => Unit = {
+    case Left(value) => bcb.onError(value)
+    case Right(value) => bcb.onSuccess(value)
+  }
 }

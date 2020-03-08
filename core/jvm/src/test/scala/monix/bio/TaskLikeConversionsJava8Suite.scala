@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture
 
 import monix.execution.exceptions.DummyException
 
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TaskLikeConversionsJava8Suite extends BaseTestSuite {
 
@@ -34,7 +34,7 @@ object TaskLikeConversionsJava8Suite extends BaseTestSuite {
 
     future.complete(123)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
   }
 
   test("BIO.from converts failed CompletableFuture") { implicit s =>
@@ -48,7 +48,7 @@ object TaskLikeConversionsJava8Suite extends BaseTestSuite {
     future.completeExceptionally(dummy)
 
     s.tick()
-    assertEquals(f.value, Some(Success(Left(dummy))))
+    assertEquals(f.value, Some(Failure(dummy)))
   }
 
   test("BIO.from preserves cancellability of CompletableFuture") { implicit s =>

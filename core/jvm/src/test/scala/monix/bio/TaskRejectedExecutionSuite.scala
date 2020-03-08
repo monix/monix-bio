@@ -39,7 +39,7 @@ object TaskRejectedExecutionSuite extends SimpleTestSuite {
     intercept[RejectedExecutionException] {
 
       val f = Future.traverse(1 to 10) { _ =>
-        task.runToFuture(limited)
+        task.runToFuture(limited, implicitly[<:<[Throwable, Throwable]])
       }
 
       Await.result(f, 3.seconds)

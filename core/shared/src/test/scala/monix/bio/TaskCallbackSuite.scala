@@ -149,7 +149,6 @@ object TaskCallbackSuite extends TestSuite[TestScheduler] {
     intercept[CallbackCalledMultipleTimesException] { cb.onSuccess(1) }
   }
 
-
   test("BiCallback.empty reports errors") { implicit s =>
     val empty = BiCallback[Throwable].empty[Int]
     val dummy = DummyException("dummy")

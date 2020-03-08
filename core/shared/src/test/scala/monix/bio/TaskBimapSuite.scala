@@ -24,6 +24,7 @@ object TaskBimapSuite extends BaseTestSuite {
     val f = BIO
       .now(1)
       .bimap(_ => "Error", _ => "Success")
+      .attempt
       .runToFuture
 
     assertEquals(f.value, Some(Success(Right("Success"))))
@@ -33,6 +34,7 @@ object TaskBimapSuite extends BaseTestSuite {
     val f = BIO
       .raiseError(1)
       .bimap(_ => "Error", _ => "Success")
+      .attempt
       .runToFuture
 
     assertEquals(f.value, Some(Success(Left("Error"))))

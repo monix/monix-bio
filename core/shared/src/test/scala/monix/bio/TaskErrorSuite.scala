@@ -44,7 +44,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("BIO.rethrow should turn Left to typed error") { implicit s =>
     val dummy = "dummy"
-    val f = BIO.now(Left(dummy)).rethrow.runToFuture
+    val f = BIO.now(Left(dummy)).rethrow.attempt.runToFuture
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
@@ -76,7 +76,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("BIO#onErrorRecover should mirror source on success") { implicit s =>
     val task = (UIO.evalAsync(1): BIO[String, Int]).onErrorRecover { case _: String => 99 }
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(1))))
   }
@@ -87,7 +87,7 @@ object TaskErrorSuite extends BaseTestSuite {
       case "dummy" => 99
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(99))))
   }
@@ -98,7 +98,7 @@ object TaskErrorSuite extends BaseTestSuite {
       case _ => 99
     }
 
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Failure(ex)))
   }
@@ -119,7 +119,7 @@ object TaskErrorSuite extends BaseTestSuite {
     }
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO#onErrorHandle should recover typed error") { implicit s =>
@@ -130,7 +130,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(99))))
+    assertEquals(f.value, Some(Success(99)))
   }
 
   test("BIO#onErrorHandle should not recover unexpected error") { implicit s =>
@@ -160,7 +160,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = UIO.evalAsync(1).onErrorFallbackTo(UIO.evalAsync(2))
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.onErrorFallbackTo should fallback to backup onError") { implicit s =>
@@ -168,7 +168,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = (BIO.raiseError(ex): BIO[String, Int]).onErrorFallbackTo(UIO.evalAsync(2))
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(2))))
+    assertEquals(f.value, Some(Success(2)))
   }
 
   test("BIO.onErrorFallbackTo should not fallback to backup onTermination") { implicit s =>
@@ -183,7 +183,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val ex = "dummy"
     val err = DummyException("unexpected")
     val task = (BIO.raiseError(ex): BIO[String, Int]).executeAsync.onErrorFallbackTo(BIO.defer(throw err))
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Left(err))))
   }
@@ -207,7 +207,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = UIO.eval { tries += 1; 1 }.onErrorRestart(10)
     val f = task.runToFuture
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
     assertEquals(tries, 1)
   }
 
@@ -215,7 +215,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val ex = "dummy"
     var tries = 0
     val task = BIO.deferTotal { tries += 1; if (tries < 5) BIO.raiseError(ex) else BIO.now(1) }.onErrorRestart(10)
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
 
     assertEquals(f.value, Some(Success(Right(1))))
     assertEquals(tries, 5)
@@ -225,7 +225,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val ex = DummyException("dummy")
     var tries = 0
     val task = BIO.eval { tries += 1; throw ex }.onErrorRestart(10)
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
 
     assertEquals(f.value, Some(Success(Left(ex))))
     assertEquals(tries, 11)
@@ -259,7 +259,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = BIO.eval { tries += 1; 1 }.onErrorRestartIf(_ => tries < 10)
     val f = task.runToFuture
 
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
     assertEquals(tries, 1)
   }
 
@@ -270,7 +270,7 @@ object TaskErrorSuite extends BaseTestSuite {
       .onErrorRestartIf(_ => tries <= 10)
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
     assertEquals(tries, 5)
   }
 
@@ -281,7 +281,7 @@ object TaskErrorSuite extends BaseTestSuite {
       .onErrorRestartIf(_ => tries <= 10)
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Left(ex))))
+    assertEquals(f.value, Some(Failure(ex)))
     assertEquals(tries, 11)
   }
 
@@ -310,14 +310,14 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = BIO.unit.flatMap { _ =>
       tries += 1; if (tries < 5) BIO.raiseError("error") else BIO.pure(1)
     }
-    val f = task.onErrorRestartIf(_ == "error").runToFuture
+    val f = task.onErrorRestartIf(_ == "error").attempt.runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
     assertEquals(tries, 5)
   }
 
   test("BIO#onErrorRecoverWith should mirror source on success") { implicit s =>
     val task = (UIO.evalAsync(1): BIO[Int, Int]).onErrorRecoverWith { case _: Int => UIO.evalAsync(99) }
-    val f = task.runToFuture
+    val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(1))))
   }
@@ -330,7 +330,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
     val f = task.runToFuture
     s.tick()
-    assertEquals(f.value, Some(Success(Right(99))))
+    assertEquals(f.value, Some(Success(99)))
   }
 
   test("BIO#onErrorRecoverWith should protect against user code") { implicit s =>
@@ -360,7 +360,7 @@ object TaskErrorSuite extends BaseTestSuite {
   test("BIO#onErrorRecover should emit error if not matches") { implicit s =>
     val dummy = DummyException("dummy")
     val task = BIO[Int](throw dummy).onErrorRecover { case _: TimeoutException => 10 }
-    val f = task.runToFuture; s.tick()
+    val f = task.attempt.runToFuture; s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
@@ -368,7 +368,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val dummy = DummyException("dummy")
     val task = BIO[Int](throw dummy).onErrorRecoverWith { case _: TimeoutException => Task.now(10) }
     val f = task.runToFuture; s.tick()
-    assertEquals(f.value, Some(Success(Left(dummy))))
+    assertEquals(f.value, Some(Failure(dummy)))
   }
 
   test("BIO.eval.flatMap.redeemCauseWith should work") { implicit s =>
@@ -376,7 +376,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = UIO.eval(1).flatMap(_ => throw dummy).redeemCauseWith(_ => BIO.now(10), BIO.now)
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.evalAsync.flatMap.redeemCauseWith should work") { implicit s =>
@@ -384,7 +384,7 @@ object TaskErrorSuite extends BaseTestSuite {
     val task = UIO.evalAsync(1).flatMap(_ => throw dummy).redeemCauseWith(_ => BIO.now(10), BIO.now)
 
     val f = task.runToFuture; s.tick()
-    assertEquals(f.value, Some(Success(Right(10))))
+    assertEquals(f.value, Some(Success(10)))
   }
 
   test("BIO.now.onErrorRecoverWith should be stack safe") { implicit s =>
@@ -398,7 +398,7 @@ object TaskErrorSuite extends BaseTestSuite {
       }
 
     val task = loop(BIO.raiseError(ex), count)
-    val result = task.runToFuture
+    val result = task.attempt.runToFuture
 
     s.tick()
     assertEquals(result.value, Some(Success(Right(count))))
@@ -415,7 +415,7 @@ object TaskErrorSuite extends BaseTestSuite {
       }
 
     val task = loop(BIO.raiseError(ex), count)
-    val result = task.runToFuture
+    val result = task.attempt.runToFuture
 
     s.tick()
     assertEquals(result.value, Some(Success(Right(count))))
@@ -438,7 +438,7 @@ object TaskErrorSuite extends BaseTestSuite {
     }
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(5))))
+    assertEquals(f.value, Some(Success(5)))
     assertEquals(tries, 5)
   }
 
@@ -455,7 +455,7 @@ object TaskErrorSuite extends BaseTestSuite {
     }
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Left(timeout))))
+    assertEquals(f.value, Some(Failure(timeout)))
   }
 
   test("Task.onErrorRestartLoop can rethrow") { implicit s =>
@@ -470,6 +470,6 @@ object TaskErrorSuite extends BaseTestSuite {
     }
 
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Left(dummy))))
+    assertEquals(f.value, Some(Failure(dummy)))
   }
 }

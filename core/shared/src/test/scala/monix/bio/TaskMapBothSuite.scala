@@ -32,7 +32,7 @@ object TaskMapBothSuite extends BaseTestSuite {
     val f = r.runToFuture
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(3))))
+    assertEquals(f.value, Some(Success(3)))
   }
 
   test("sum two async tasks") { implicit s =>
@@ -41,7 +41,7 @@ object TaskMapBothSuite extends BaseTestSuite {
 
     val r = BIO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture; s.tick()
-    assertEquals(f.value.get, Success(Right(3)))
+    assertEquals(f.value.get, Success(3))
   }
 
   test("sum two synchronous tasks") { implicit s =>
@@ -50,7 +50,7 @@ object TaskMapBothSuite extends BaseTestSuite {
 
     val r = BIO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture; s.tick()
-    assertEquals(f.value.get, Success(Right(3)))
+    assertEquals(f.value.get, Success(3))
   }
 
   test("should be stack-safe for synchronous tasks") { implicit s =>
@@ -62,7 +62,7 @@ object TaskMapBothSuite extends BaseTestSuite {
     val result = sum.runToFuture
 
     s.tick()
-    assertEquals(result.value.get, Success(Right(count * (count - 1) / 2)))
+    assertEquals(result.value.get, Success(count * (count - 1) / 2))
   }
 
   test("should be stack-safe for asynchronous tasks") { implicit s =>
@@ -74,7 +74,7 @@ object TaskMapBothSuite extends BaseTestSuite {
     val result = sum.runToFuture
 
     s.tick()
-    assertEquals(result.value.get, Success(Right(count * (count - 1) / 2)))
+    assertEquals(result.value.get, Success(count * (count - 1) / 2))
   }
 
   test("should have a stack safe cancelable") { implicit sc =>
@@ -93,14 +93,14 @@ object TaskMapBothSuite extends BaseTestSuite {
   }
 
   test("sum random synchronous tasks") { implicit s =>
-    check1 { (numbers: List[Int]) =>
+    check1 { numbers: List[Int] =>
       val sum = numbers.foldLeft(Task.now(0))((acc, t) => BIO.mapBoth(acc, BIO.eval(t))(_ + _))
       sum <-> Task.now(numbers.sum)
     }
   }
 
   test("sum random asynchronous tasks") { implicit s =>
-    check1 { (numbers: List[Int]) =>
+    check1 { numbers: List[Int] =>
       val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => BIO.mapBoth(acc, BIO.evalAsync(t))(_ + _))
       sum <-> Task.evalAsync(numbers.sum)
     }
@@ -119,9 +119,9 @@ object TaskMapBothSuite extends BaseTestSuite {
 
     s.tick()
     fb.value match {
-      case Some(Success(Left(`err1`))) =>
+      case Some(Failure(`err1`)) =>
         assertEquals(s.state.lastReportedError, err2)
-      case Some(Success(Left(`err2`))) =>
+      case Some(Failure(`err2`)) =>
         assertEquals(s.state.lastReportedError, err1)
       case other =>
         fail(s"fb.value is $other")

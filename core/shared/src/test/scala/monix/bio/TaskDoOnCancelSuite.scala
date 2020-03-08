@@ -39,7 +39,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
       .runToFuture
 
     s.tick(3.seconds)
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
     assertEquals(effect1, 0)
     assertEquals(effect2, 0)
     assertEquals(effect3, 0)
@@ -52,6 +52,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
       .raiseError(dummy)
       .executeAsync
       .doOnCancel(UIO.eval { effect += 1 })
+      .attempt
       .runToFuture
 
     s.tick()
@@ -220,7 +221,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
-    assertEquals(f.value, Some(Success(Right(10000))))
+    assertEquals(f.value, Some(Success(10000)))
   }
 
   testAsync("local.write.doOnCancel works") { _ =>
@@ -236,7 +237,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     } yield v
 
     for (v <- task.runToFutureOpt) yield {
-      assertEquals(v, Right(100))
+      assertEquals(v, 100)
     }
   }
 }

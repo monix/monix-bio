@@ -184,18 +184,18 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val f = BIO.fromEffect(IO(123)).runToFuture
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
 
     val io2 = IO.shift >> IO(123)
     val f2 = BIO.fromEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
-    assertEquals(f2.value, Some(Success(Right(123))))
+    assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
     val io3 = IO.raiseError(ex)
     val f3 = BIO.fromEffect(io3).runToFuture
-    assertEquals(f3.value, Some(Success(Left(ex))))
+    assertEquals(f3.value, Some(Failure(ex)))
   }
 
   test("BIO.fromEffect converts valid custom effects") { implicit s =>
@@ -203,17 +203,17 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val effect: Effect[CIO] = new CustomEffect
 
     val f = BIO.fromEffect(CIO(IO(123))).runToFuture
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
 
     val io2 = CIO(IO.shift) >> CIO(IO(123))
     val f2 = BIO.fromEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
-    assertEquals(f2.value, Some(Success(Right(123))))
+    assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
     val f3 = BIO.fromEffect(CIO(IO.raiseError(ex))).runToFuture
-    assertEquals(f3.value, Some(Success(Left(ex))))
+    assertEquals(f3.value, Some(Failure(ex)))
   }
 
   test("BIO.fromEffect doesn't convert invalid custom effects") { implicit s =>
@@ -284,18 +284,18 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val f = BIO.fromConcurrentEffect(IO(123)).runToFuture
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
 
     val io2 = IO.shift >> IO(123)
     val f2 = BIO.fromConcurrentEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
-    assertEquals(f2.value, Some(Success(Right(123))))
+    assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
     val io3 = IO.raiseError(ex)
     val f3 = BIO.fromConcurrentEffect(io3).runToFuture
-    assertEquals(f3.value, Some(Success(Left(ex))))
+    assertEquals(f3.value, Some(Failure(ex)))
   }
 
   test("BIO.fromConcurrentEffect converts valid custom effects") { implicit s =>
@@ -303,17 +303,17 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val effect: ConcurrentEffect[CIO] = new CustomConcurrentEffect()
 
     val f = BIO.fromConcurrentEffect(CIO(IO(123))).runToFuture
-    assertEquals(f.value, Some(Success(Right(123))))
+    assertEquals(f.value, Some(Success(123)))
 
     val io2 = CIO(IO.shift) >> CIO(IO(123))
     val f2 = BIO.fromConcurrentEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
-    assertEquals(f2.value, Some(Success(Right(123))))
+    assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
     val f3 = BIO.fromConcurrentEffect(CIO(IO.raiseError(ex))).runToFuture
-    assertEquals(f3.value, Some(Success(Left(ex))))
+    assertEquals(f3.value, Some(Failure(ex)))
   }
 
   test("BIO.fromConcurrentEffect doesn't convert invalid custom effects") { implicit s =>
@@ -436,7 +436,7 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(Right(Some(123)))))
+    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(Some(123))))
   }
 
   test("BIO.fromReactivePublisher converts `.onComplete` callbacks") { implicit s =>
@@ -459,7 +459,7 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(Right(None))))
+    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(None)))
   }
 
   test("BIO.fromReactivePublisher converts `.onError` callbacks") { implicit s =>
@@ -483,7 +483,7 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(Left(dummy))))
+    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Failure(dummy)))
   }
 
   test("BIO.fromReactivePublisher protects against user errors") { implicit s =>

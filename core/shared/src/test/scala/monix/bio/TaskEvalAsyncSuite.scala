@@ -37,12 +37,12 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
 
     s.tick()
     assert(wasTriggered, "wasTriggered")
-    assertEquals(f.value, Some(Success(Right("result"))))
+    assertEquals(f.value, Some(Success("result")))
   }
 
   test("BIO.evalAsync should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.evalAsync[Int](if (1 == 1) throw ex else 1).runToFuture
+    val f = BIO.evalAsync[Int](if (1 == 1) throw ex else 1).attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(ex))))
@@ -108,7 +108,7 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
     val f = loop(iterations, 0).runToFuture
 
     s.tick()
-    assertEquals(f.value, Some(Success(Right(iterations * 2))))
+    assertEquals(f.value, Some(Success(iterations * 2)))
   }
 
   test("BIO.evalAsync.flatten is equivalent with flatMap") { implicit s =>
@@ -123,7 +123,7 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
     f.value match {
       case None =>
         s.tick()
-        assertEquals(f.value, Some(Success(Right(100))))
+        assertEquals(f.value, Some(Success(100)))
       case r @ Some(_) =>
         fail(s"Received incorrect result: $r")
     }

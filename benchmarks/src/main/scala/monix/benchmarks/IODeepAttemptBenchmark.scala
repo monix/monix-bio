@@ -19,6 +19,7 @@ package monix.benchmarks
 
 import java.util.concurrent.TimeUnit
 
+import monix.execution.exceptions.UncaughtErrorException
 import org.openjdk.jmh.annotations._
 
 /** To run the benchmark from within SBT:
@@ -83,7 +84,7 @@ class IODeepAttemptBenchmark {
       else if (n == halfway) descend(n + 1).redeem(_ => 50, identity)
       else descend(n + 1).map(_ + n)
 
-    descend(0).runSyncUnsafe()
+    descend(0).mapError(UncaughtErrorException.wrap).runSyncUnsafe()
   }
 
   @Benchmark

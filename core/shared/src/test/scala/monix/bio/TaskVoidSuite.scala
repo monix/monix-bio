@@ -31,6 +31,6 @@ object TaskVoidSuite extends BaseTestSuite {
     val f = task.runToFuture
 
     assert(wasTriggered, "wasTriggered")
-    assertEquals(f.value, Some(Success(Right(()))))
+    assertEquals(f.value, Some(Success(())))
   }
 }

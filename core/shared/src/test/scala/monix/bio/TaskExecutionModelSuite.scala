@@ -27,14 +27,14 @@ object TaskExecutionModelSuite extends BaseTestSuite {
     val f = task.runToFuture
 
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.now.runAsync (CancelableFuture) should not be async with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
     val task = BIO.now(1)
     val f = task.runToFuture
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.eval.executeWithModel(AlwaysAsyncExecution) should work") { implicit s =>
@@ -43,7 +43,7 @@ object TaskExecutionModelSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.eval should be async with AlwaysAsyncExecution") { s =>
@@ -53,7 +53,7 @@ object TaskExecutionModelSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(1))))
+    assertEquals(f.value, Some(Success(1)))
   }
 
   test("BIO.now.flatMap loops should work with AlwaysAsyncExecution") { s =>
@@ -70,7 +70,7 @@ object TaskExecutionModelSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(0))))
+    assertEquals(f.value, Some(Success(0)))
   }
 
   test("BIO.eval.flatMap loops should work with AlwaysAsyncExecution") { s =>
@@ -87,7 +87,7 @@ object TaskExecutionModelSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(0))))
+    assertEquals(f.value, Some(Success(0)))
   }
 
   test("BIO.flatMap loops should work with AlwaysAsyncExecution") { s =>
@@ -104,6 +104,6 @@ object TaskExecutionModelSuite extends BaseTestSuite {
 
     assertEquals(f.value, None)
     s.tick()
-    assertEquals(f.value, Some(Success(Right(0))))
+    assertEquals(f.value, Some(Success(0)))
   }
 }

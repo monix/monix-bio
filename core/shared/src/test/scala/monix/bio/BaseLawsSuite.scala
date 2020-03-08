@@ -58,7 +58,7 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
 
     new Eq[BIO[E, A]] {
       def eqv(lh: BIO[E, A], rh: BIO[E, A]): Boolean =
-        equalityFutureEither(A, E, sc).eqv(lh.runToFutureOpt, rh.runToFutureOpt)
+        equalityFutureEither(A, E, sc).eqv(lh.attempt.runToFutureOpt, rh.attempt.runToFutureOpt)
     }
   }
 
@@ -72,8 +72,8 @@ trait ArbitraryInstances extends ArbitraryInstancesBase {
     new Eq[UIO[A]] {
       def eqv(lh: UIO[A], rh: UIO[A]): Boolean =
         equalityFuture(A, sc).eqv(
-          lh.runToFutureOpt.map(_.getOrElse(throw DummyException("UIO had error"))),
-          rh.runToFutureOpt.map(_.getOrElse(throw DummyException("UIO had error")))
+          lh.runToFutureOpt,
+          rh.runToFutureOpt
         )
     }
   }
