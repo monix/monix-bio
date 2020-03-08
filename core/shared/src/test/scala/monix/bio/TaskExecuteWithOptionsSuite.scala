@@ -42,7 +42,7 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
     implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- BIOLocal(10)
       _ <- l.write(100).executeWithOptions(_.enableAutoCancelableRunLoops)
       _ <- BIO.shift
       v <- l.read

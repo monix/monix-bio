@@ -557,7 +557,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * This is the configurable version of [[runToFuture]].
     * It allows you to specify options such as:
     *
-    *  - enabling support for [[TaskLocal]]
+    *  - enabling support for [[BIOLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See [[BIO.Options]]. Example:
@@ -567,13 +567,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *   val task =
     *     for {
-    *       local <- TaskLocal(0)
+    *       local <- BIOLocal(0)
     *       _     <- local.write(100)
     *       _     <- BIO.shift
     *       value <- local.read
     *     } yield value
     *
-    *   // We need to activate support of TaskLocal via:
+    *   // We need to activate support of BIOLocal via:
     *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
     *   // Actual execution that depends on these custom options:
     *   // task.runToFutureOpt
@@ -679,7 +679,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[TaskLocal]]
+    *  - enabling support for [[BIOLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * Example:
@@ -689,13 +689,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *   val task =
     *     for {
-    *       local <- TaskLocal(0)
+    *       local <- BIOLocal(0)
     *       _     <- local.write(100)
     *       _     <- BIO.shift
     *       value <- local.read
     *     } yield value
     *
-    *   // We need to activate support of TaskLocal via:
+    *   // We need to activate support of BIOLocal via:
     *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
     *
     *   // Actual execution that depends on these custom options:
@@ -794,7 +794,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[TaskLocal]]
+    *  - enabling support for [[BIOLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runToFutureOpt]] for an example.
@@ -868,7 +868,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[TaskLocal]]
+    *  - enabling support for [[BIOLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of customizing the
@@ -934,7 +934,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[TaskLocal]]
+    *  - enabling support for [[BIOLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of customizing the
@@ -1087,7 +1087,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   @UnsafeBecauseBlocking
-  final def runSyncUnsafe(timeout: Duration = Duration.Inf)(implicit s: Scheduler, permit: CanBlock, ev: E <:< Throwable): A =
+  final def runSyncUnsafe(
+    timeout: Duration = Duration.Inf
+  )(implicit s: Scheduler, permit: CanBlock, ev: E <:< Throwable): A =
     runSyncUnsafeOpt(timeout)(s, defaultOptions, permit, ev)
 
   /** Variant of [[runSyncUnsafe]] that takes a [[BIO.Options]]
@@ -1096,7 +1098,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[TaskLocal]]
+    *  - enabling support for [[BIOLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of
@@ -3782,6 +3784,26 @@ object BIO extends TaskInstancesLevel0 {
     */
   def gatherUnordered[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskGatherUnordered(in)
+
+  /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
+    * nondeterministically apply the function to each element of the collection
+    * without keeping the original ordering of the results.
+    *
+    * This function is similar to [[wander]], but neither the effects nor the
+    * results will be ordered. Useful when you don't need ordering because:
+    *
+    *  - it has non-blocking behavior (but not wait-free)
+    *  - it can be more efficient (compared with [[wander]]), but not
+    *    necessarily (if you care about performance, then test)
+    *
+    * It's a generalized version of [[gatherUnordered]].
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    */
+  def wanderUnordered[E, A, B](in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] =
+    BIO.evalTotal(in.map(f)).flatMap(gatherUnordered)
 
   /** Yields a task that on evaluation will process the given tasks
     * in parallel, then apply the given mapping function on their results.
