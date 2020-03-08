@@ -2,25 +2,16 @@
 
 <p><a href="https://gitter.im/monix/monix-bio?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img src="https://badges.gitter.im/monix/monix-bio.svg" alt="Join the chat at https://gitter.im/monix/monix-bio" /></a></p>
 
-<p>Experimental alternative to <a href="https://monix.io/api/3.1/monix/eval/Task.html">monix.eval.Task</a> from <a href="https://github.com/monix/monix">Monix</a> which uses a second type parameter to represent recoverable errors.</p>
-
-<p>WORK IN PROGRESS.</p>
+<p>Alternative to <a href="https://monix.io/api/3.1/monix/eval/Task.html">monix.eval.Task</a> from <a href="https://github.com/monix/monix">Monix</a> which uses a second type parameter to represent recoverable errors.</p>
 
 <p><a href="https://monix.github.io/monix-bio/">Documentation Website</a></p>
 
 <h2 id="getting-started">Getting Started</h2>
 
-<p>There is a SNAPSHOT version (compatible with Monix 3.x and Cats and Cats-Effect 2.x) available:</p>
+<p>The latest stable version which is compatible with Monix 3.x, Cats 2.x and Cats-Effect 2.x:</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">resolvers</span> <span class="o">+=</span> <span class="s">"Sonatype OSS Snapshots"</span> <span class="n">at</span> <span class="s">"https://oss.sonatype.org/content/repositories/snapshots"</span>
-
-<span class="n">libraryDependencies</span> <span class="o">+=</span> <span class="s">"io.monix"</span> <span class="o">%%</span> <span class="s">"monix-bio"</span> <span class="o">%</span> <span class="s">"0.0.2-SNAPSHOT"</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">libraryDependencies</span> <span class="o">+=</span> <span class="s">"io.monix"</span> <span class="o">%%</span> <span class="s">"monix-bio"</span> <span class="o">%</span> <span class="s">"0.1.0"</span>
 </code></pre></div></div>
-
-<p>I will really appreciate feedback, bugs and complaints about API if you play with it. Just please do not use it in production yet!</p>
-
-<p>If you’d like to join and help then look for issues tagged with <a href="https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22">good first issue</a>.
-I’m happy to guide anyone interested in contributing. Just let me know on specific issue or write to me on <a href="https://gitter.im/monix/monix-bio">gitter</a>.</p>
 
 <h2 id="short-introduction">Short introduction</h2>
 
@@ -60,111 +51,44 @@ a successful value <code class="highlighter-rouge">A</code>, an error <code clas
 <span class="c1">// The error is handled and it is reflected in the signature</span>
 <span class="k">val</span> <span class="nv">handled</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">t</span><span class="o">.</span><span class="py">onErrorHandle</span> <span class="o">{</span> <span class="k">case</span> <span class="nc">TypedError</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">i</span><span class="o">}</span>
 
-<span class="c1">// Nothing happens until it runs, returns Right(-1) after completion</span>
-<span class="k">val</span> <span class="nv">f</span><span class="k">:</span> <span class="kt">CancelableFuture</span><span class="o">[</span><span class="kt">Either</span><span class="o">[</span><span class="kt">Nothing</span>, <span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span> <span class="nv">handled</span><span class="o">.</span><span class="py">runToFuture</span>
+<span class="c1">// Nothing happens until it runs, returns -1 after completion</span>
+<span class="k">val</span> <span class="nv">f</span><span class="k">:</span> <span class="kt">CancelableFuture</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">handled</span><span class="o">.</span><span class="py">runToFuture</span>
     
 <span class="c1">// =&gt; taskB has finished</span>
 <span class="c1">// =&gt; taskA has been cancelled</span>
 </code></pre></div></div>
 
-<p>I will elaborate much more once the project is ready for general use.</p>
+<h2 id="current-status">Current Status</h2>
 
-<h2 id="stability">Stability</h2>
+<p>The project will maintain binary compatibility in <code class="highlighter-rouge">0.1.x</code> line. 
+It is suitable for general usage but I would not recommend building a lot of libraries on it just yet unless you are fine with upgrade in few months.</p>
 
-<p>Currently there are no backwards compatibility guarantees. It will take a bit of time for everything to stabilize so I strongly advise against using it in serious projects at the moment. :) On the other hand, please play with it, give feedback and report bugs! It will be a tremendous help in getting this production-ready faster.</p>
+<p>WARNING: Not all scaladocs are updated for <code class="highlighter-rouge">BIO</code> and currently there is no documentation. 
+It will be my priority in April.
+Until then I consider the project as something for more advanced user who are already familiar with idea of IO Monad and error type exposed in the type parameter.</p>
 
-<p>One of the main goals is to stay as consistent with <code class="highlighter-rouge">monix.eval.Task</code> as possible so the core functionality will not see much changes but it is likely that some type signatures change, e.g. to return <code class="highlighter-rouge">UIO[A]</code> where possible.</p>
+<h3 id="plans-for-the-future">Plans for the future</h3>
+<p>I hope to gather some feedback from production usage and then move towards long term stable version.
+Core of the functionality is shared with <code class="highlighter-rouge">monix.eval.Task</code> (which is stable) and will remain consistent with it. 
+There might be breaking changes in regards to new error handling combinators, terminology, return types or error reporting.</p>
 
-<p>Error handling operators and error reporting are actively worked on and they will most likely see breaking changes.</p>
+<h2 id="contributing">Contributing</h2>
 
-<p>Most of the internals didn’t see significant changes when compared to <code class="highlighter-rouge">monix.eval.Task</code> so this implementation can greatly benefit from maturity of its parent but the project has just started and the changes weren’t thoroughly tested yet.</p>
+<p>I will really appreciate feedback, bugs and complaints about the project.</p>
 
-<h2 id="motivation">Motivation</h2>
+<p>If you’d like to contribute code then look for issues tagged with <a href="https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22">good first issue</a>
+or just ask me on gitter and I should be able to find something regardless of your level of expertise. :)</p>
 
-<h2 id="brief-comparison-to-other-solutions">Brief comparison to other solutions</h2>
+<p>I’m happy to mentor anyone interested in contributing.</p>
 
 <h2 id="performance">Performance</h2>
 
-<p>DISCLAIMER: Benchmarks do not necessarily reflect the performance in real conditions so take the results with a grain with salt. 
-It is possible that in your specific use different effects will perform differently than the benchmark would suggest.
-It is best to always measure yourself and for your specific use case if you are concerned about the performance.</p>
+<p>At the time of writing (Q1 2020) performance is as good as <code class="highlighter-rouge">monix.eval.Task</code> in most benchmarks and <code class="highlighter-rouge">BIO</code> can outperform it for error handling operators if the error type is not <code class="highlighter-rouge">Throwable</code>.
+It makes it the most performant effect type in today’s Scala ecosystem.</p>
 
-<p>At the time of writing (10 Dec 2019) the performance is excellent and we did not observe any regressions when compared to <code class="highlighter-rouge">monix.eval.Task</code>.
-Please open an issue or write on gitter (https://gitter.im/monix/monix) in case you measure completely different results or find a benchmark where <code class="highlighter-rouge">monix-bio</code> does not perform well.</p>
+<p>Performance is high priority for us and we will greatly appreciate if you open an issue or write on <a href="https://gitter.im/monix/monix">gitter</a> if you discover use cases where it performs badly.</p>
 
-<p>The benchmarks are inside <a href="benchmarks">benchmarks module</a>.</p>
-
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[info] Benchmark                                        (depth)   Mode  Cnt      Score     Error  Units
-[info] IODeepAttemptBenchmark.catsDeepAttempt              1000  thrpt   30  20867.936 ± 113.416  ops/s
-[info] IODeepAttemptBenchmark.futureDeepAttempt            1000  thrpt   30  10617.519 ± 266.933  ops/s
-[info] IODeepAttemptBenchmark.monixBioDeepAttempt          1000  thrpt   30  21098.927 ±  76.705  ops/s
-[info] IODeepAttemptBenchmark.monixBioDeepAttemptTyped     1000  thrpt   30  49799.909 ± 900.961  ops/s
-[info] IODeepAttemptBenchmark.monixDeepAttempt             1000  thrpt   30  20858.228 ± 225.967  ops/s
-[info] IODeepAttemptBenchmark.zioDeepAttempt               1000  thrpt   30  17182.169 ± 256.507  ops/s
-[info] IODeepAttemptBenchmark.zioDeepAttemptTyped          1000  thrpt   30  33391.597 ± 227.462  ops/s
-
-[info] Benchmark                                              (count)  (depth)  (size)   Mode  Cnt       Score      Error  Units 
-[info] IOShallowAttemptBenchmark.catsShallowAttempt               N/A     1000     N/A  thrpt   30    2082.374 ±   56.612  ops/s 
-[info] IOShallowAttemptBenchmark.futureShallowAttempt             N/A     1000     N/A  thrpt   30   13673.549 ±  254.908  ops/s 
-[info] IOShallowAttemptBenchmark.monixBioShallowAttempt           N/A     1000     N/A  thrpt   30    2166.767 ±   70.277  ops/s 
-[info] IOShallowAttemptBenchmark.monixBioShallowAttemptTyped      N/A     1000     N/A  thrpt   30   45237.518 ±  201.742  ops/s 
-[info] IOShallowAttemptBenchmark.monixShallowAttempt              N/A     1000     N/A  thrpt   30    2237.589 ±   66.912  ops/s 
-[info] IOShallowAttemptBenchmark.zioShallowAttempt                N/A     1000     N/A  thrpt   30    1655.358 ±   41.271  ops/s 
-[info] IOShallowAttemptBenchmark.zioShallowAttemptTyped           N/A     1000     N/A  thrpt   30   15874.855 ±   55.476  ops/s
-
-[info] IODeepFlatMapBenchmark.catsDeepFlatMap                     N/A       20     N/A  thrpt   30    1369.812 ±   13.374  ops/s 
-[info] IODeepFlatMapBenchmark.futureDeepFlatMap                   N/A       20     N/A  thrpt   30     347.436 ±    6.665  ops/s 
-[info] IODeepFlatMapBenchmark.monixBioDeepFlatMap                 N/A       20     N/A  thrpt   30    1933.068 ±   13.436  ops/s 
-[info] IODeepFlatMapBenchmark.monixDeepFlatMap                    N/A       20     N/A  thrpt   30    1937.212 ±   13.173  ops/s 
-[info] IODeepFlatMapBenchmark.zioDeepFlatMap                      N/A       20     N/A  thrpt   30    1159.547 ±    6.212  ops/s 
-
-[info] IODeepLeftBindBenchmark.catsDeepLeftBind                   N/A    10000     N/A  thrpt   30    4340.087 ±   28.919  ops/s 
-[info] IODeepLeftBindBenchmark.monixBioDeepLeftBind               N/A    10000     N/A  thrpt   30    7392.089 ±   35.754  ops/s 
-[info] IODeepLeftBindBenchmark.monixDeepLeftBind                  N/A    10000     N/A  thrpt   30    7382.817 ±   25.495  ops/s 
-[info] IODeepLeftBindBenchmark.zioDeepLeftBind                    N/A    10000     N/A  thrpt   30    2875.241 ±   47.077  ops/s 
-
-[info] IONarrowFlatMapBenchmark.catsNarrowFlatMap                 N/A      N/A   10000  thrpt   30    5878.830 ±   20.724  ops/s 
-[info] IONarrowFlatMapBenchmark.futureNarrowFlatMap               N/A      N/A   10000  thrpt   30     847.120 ±   30.852  ops/s 
-[info] IONarrowFlatMapBenchmark.monixBioNarrowFlatMap             N/A      N/A   10000  thrpt   30    7502.053 ±   29.003  ops/s 
-[info] IONarrowFlatMapBenchmark.monixNarrowFlatMap                N/A      N/A   10000  thrpt   30    7494.606 ±   42.565  ops/s 
-[info] IONarrowFlatMapBenchmark.zioNarrowFlatMap                  N/A      N/A   10000  thrpt   30    6053.870 ±   25.552  ops/s 
-
-[info] IOEmptyRaceBenchmark.catsEmptyRace                         N/A      N/A    1000  thrpt   30     376.517 ±    9.853  ops/s 
-[info] IOEmptyRaceBenchmark.monixBioEmptyRace                     N/A      N/A    1000  thrpt   30     343.120 ±    1.743  ops/s 
-[info] IOEmptyRaceBenchmark.monixEmptyRace                        N/A      N/A    1000  thrpt   30     346.287 ±    3.841  ops/s 
-[info] IOEmptyRaceBenchmark.zioEmptyRace                          N/A      N/A    1000  thrpt   30      65.288 ±    1.717  ops/s 
-
-[info] IOSequenceBenchmark.catsParSequence                        100      N/A     N/A  thrpt   30    5931.683 ±   31.683  ops/s 
-[info] IOSequenceBenchmark.catsParSequence                       1000      N/A     N/A  thrpt   30     555.898 ±    2.747  ops/s 
-[info] IOSequenceBenchmark.catsParSequenceN                       100      N/A     N/A  thrpt   30    6468.484 ±   70.442  ops/s 
-[info] IOSequenceBenchmark.catsParSequenceN                      1000      N/A     N/A  thrpt   30     302.005 ±   31.390  ops/s 
-[info] IOSequenceBenchmark.catsSequence                           100      N/A     N/A  thrpt   30   99080.596 ±  362.897  ops/s 
-[info] IOSequenceBenchmark.catsSequence                          1000      N/A     N/A  thrpt   30    9688.414 ±   45.275  ops/s 
-[info] IOSequenceBenchmark.futureSequence                         100      N/A     N/A  thrpt   30   11469.757 ±   48.180  ops/s 
-[info] IOSequenceBenchmark.futureSequence                        1000      N/A     N/A  thrpt   30    1556.510 ±  106.805  ops/s 
-[info] IOSequenceBenchmark.monixBioGather                         100      N/A     N/A  thrpt   30    9992.616 ±   68.297  ops/s 
-[info] IOSequenceBenchmark.monixBioGather                        1000      N/A     N/A  thrpt   30    1825.815 ±   18.950  ops/s 
-[info] IOSequenceBenchmark.monixBioGatherN                        100      N/A     N/A  thrpt   30   18452.927 ±   67.554  ops/s 
-[info] IOSequenceBenchmark.monixBioGatherN                       1000      N/A     N/A  thrpt   30    3818.984 ±   17.530  ops/s 
-[info] IOSequenceBenchmark.monixBioGatherUnordered                100      N/A     N/A  thrpt   30   12254.025 ±  132.574  ops/s 
-[info] IOSequenceBenchmark.monixBioGatherUnordered               1000      N/A     N/A  thrpt   30    1177.839 ±   91.644  ops/s 
-[info] IOSequenceBenchmark.monixBioSequence                       100      N/A     N/A  thrpt   30  299900.839 ± 1734.770  ops/s 
-[info] IOSequenceBenchmark.monixBioSequence                      1000      N/A     N/A  thrpt   30   32325.930 ±  127.897  ops/s 
-[info] IOSequenceBenchmark.monixGather                            100      N/A     N/A  thrpt   30   10318.503 ±   79.700  ops/s 
-[info] IOSequenceBenchmark.monixGather                           1000      N/A     N/A  thrpt   30    1838.422 ±   41.339  ops/s 
-[info] IOSequenceBenchmark.monixGatherN                           100      N/A     N/A  thrpt   30   18673.274 ±   30.147  ops/s 
-[info] IOSequenceBenchmark.monixGatherN                          1000      N/A     N/A  thrpt   30    4044.859 ±   23.332  ops/s 
-[info] IOSequenceBenchmark.monixGatherUnordered                   100      N/A     N/A  thrpt   30   12635.339 ±  477.038  ops/s 
-[info] IOSequenceBenchmark.monixGatherUnordered                  1000      N/A     N/A  thrpt   30    1079.405 ±   64.828  ops/s 
-[info] IOSequenceBenchmark.monixSequence                          100      N/A     N/A  thrpt   30  310564.348 ± 8099.175  ops/s 
-[info] IOSequenceBenchmark.monixSequence                         1000      N/A     N/A  thrpt   30   32006.174 ±  154.372  ops/s 
-[info] IOSequenceBenchmark.zioParSequence                         100      N/A     N/A  thrpt   30     583.752 ±    4.781  ops/s 
-[info] IOSequenceBenchmark.zioParSequence                        1000      N/A     N/A  thrpt   30      19.831 ±    0.118  ops/s 
-[info] IOSequenceBenchmark.zioParSequenceN                        100      N/A     N/A  thrpt   30    1897.714 ±   17.671  ops/s 
-[info] IOSequenceBenchmark.zioParSequenceN                       1000      N/A     N/A  thrpt   30     323.613 ±    4.579  ops/s 
-[info] IOSequenceBenchmark.zioSequence                            100      N/A     N/A  thrpt   30  133190.725 ±  707.170  ops/s 
-[info] IOSequenceBenchmark.zioSequence                           1000      N/A     N/A  thrpt   30   14209.771 ±  200.079  ops/s 
-</code></pre></div></div>
+<p>You can find benchmarks and their results inside <a href="benchmarks">benchmarks module</a>.</p>
 
 <h2 id="credits">Credits</h2>
 
