@@ -23,7 +23,6 @@ import cats.effect.laws.discipline.Parameters
 import cats.effect.laws.discipline.arbitrary.{catsEffectLawsArbitraryForIO, catsEffectLawsCogenForIO}
 import monix.bio.internal.TaskCreate
 import monix.execution.atomic.Atomic
-import monix.execution.exceptions.DummyException
 import monix.execution.internal.Platform
 import monix.execution.schedulers.TestScheduler
 import org.scalacheck.Arbitrary.{arbitrary => getArbitrary}

@@ -211,6 +211,12 @@ object UIO {
     BIO.wander(in)(f)
 
   /**
+    * @see See [[monix.bio.BIO.wanderN]]
+    */
+  def wanderN[A, B](parallelism: Int)(in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
+    BIO.wanderN(parallelism)(in)(f)
+
+  /**
     * @see See [[monix.bio.BIO.gatherUnordered]]
     */
   def gatherUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
