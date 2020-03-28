@@ -193,34 +193,34 @@ object UIO {
     TaskSequence.traverse(in, f)(bf)
 
   /**
-    * @see See [[monix.bio.BIO.gather]]
+    * @see See [[monix.bio.BIO.parSequence]]
     */
-  def gather[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
-    TaskGather[Nothing, A, M](in, () => newBuilder(bf, in))
+  def parSequence[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
+    TaskParSequence[Nothing, A, M](in, () => newBuilder(bf, in))
 
   /**
-    * @see See [[monix.bio.BIO.gatherN]]
+    * @see See [[monix.bio.BIO.parSequenceN]]
     */
-  def gatherN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
-    TaskGatherN[Nothing, A](parallelism, in)
+  def parSequenceN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskParSequenceN[Nothing, A](parallelism, in)
 
   /**
-    * @see [[monix.bio.BIO.wander]]
+    * @see [[monix.bio.BIO.parTraverse]]
     */
-  def wander[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
-    BIO.wander(in)(f)
+  def parTraverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
+    BIO.parTraverse(in)(f)
 
   /**
-    * @see See [[monix.bio.BIO.gatherUnordered]]
+    * @see See [[monix.bio.BIO.parSequenceUnordered]]
     */
-  def gatherUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
-    TaskGatherUnordered[Nothing, A](in)
+  def parSequenceUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskParSequenceUnordered[Nothing, A](in)
 
   /**
-    * @see [[monix.bio.BIO.wanderUnordered]]
+    * @see [[monix.bio.BIO.parTraverseUnordered]]
     */
-  def wanderUnordered[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
-    BIO.wanderUnordered(in)(f)
+  def parTraverseUnordered[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
+    BIO.parTraverseUnordered(in)(f)
 
   /**
     * @see See [[monix.bio.BIO.mapBoth]]

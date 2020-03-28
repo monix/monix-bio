@@ -287,34 +287,34 @@ object Task {
     BIO.traverse(in)(f)
 
   /**
-    * @see See [[monix.bio.BIO.gather]]
+    * @see See [[monix.bio.BIO.parSequence]]
     */
-  def gather[A, M[X] <: Iterable[X]](in: M[Task[A]])(implicit bf: BuildFrom[M[Task[A]], A, M[A]]): Task[M[A]] =
-    BIO.gather(in)
+  def parSequence[A, M[X] <: Iterable[X]](in: M[Task[A]])(implicit bf: BuildFrom[M[Task[A]], A, M[A]]): Task[M[A]] =
+    BIO.parSequence(in)
 
   /**
-    * @see See [[monix.bio.BIO.gatherN]]
+    * @see See [[monix.bio.BIO.parSequenceN]]
     */
-  def gatherN[A](parallelism: Int)(in: Iterable[Task[A]]): Task[List[A]] =
-    BIO.gatherN(parallelism)(in)
+  def parSequenceN[A](parallelism: Int)(in: Iterable[Task[A]]): Task[List[A]] =
+    BIO.parSequenceN(parallelism)(in)
 
   /**
-    * @see [[monix.bio.BIO.wander]]
+    * @see [[monix.bio.BIO.parTraverse]]
     */
-  def wander[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => Task[B])(implicit bf: BuildFrom[M[A], B, M[B]]): Task[M[B]] =
-    BIO.wander(in)(f)
+  def parTraverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => Task[B])(implicit bf: BuildFrom[M[A], B, M[B]]): Task[M[B]] =
+    BIO.parTraverse(in)(f)
 
   /**
-    * @see See [[monix.bio.BIO.gatherUnordered]]
+    * @see See [[monix.bio.BIO.parSequenceUnordered]]
     */
-  def gatherUnordered[A](in: Iterable[Task[A]]): Task[List[A]] =
-    BIO.gatherUnordered(in)
+  def parSequenceUnordered[A](in: Iterable[Task[A]]): Task[List[A]] =
+    BIO.parSequenceUnordered(in)
 
   /**
-    * @see [[monix.bio.BIO.wanderUnordered]]
+    * @see [[monix.bio.BIO.parTraverseUnordered]]
     */
-  def wanderUnordered[A, B](in: Iterable[A])(f: A => Task[B]): Task[List[B]] =
-    BIO.wanderUnordered(in)(f)
+  def parTraverseUnordered[A, B](in: Iterable[A])(f: A => Task[B]): Task[List[B]] =
+    BIO.parTraverseUnordered(in)(f)
 
   /**
     * @see See [[monix.bio.BIO.mapBoth]]

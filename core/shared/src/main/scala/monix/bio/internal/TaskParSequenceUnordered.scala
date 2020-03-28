@@ -30,7 +30,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
-private[bio] object TaskGatherUnordered {
+private[bio] object TaskParSequenceUnordered {
 
   /**
     * Implementation for `Task.gatherUnordered`

@@ -23,11 +23,11 @@ import monix.execution.internal.Platform
 import concurrent.duration._
 import scala.util.{Failure, Success}
 
-object TaskWanderSuite extends BaseTestSuite {
-  test("BIO.wander should execute in parallel for async tasks") { implicit s =>
+object TaskParTraverseSuite extends BaseTestSuite {
+  test("BIO.parTraverse should execute in parallel for async tasks") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = BIO
-      .wander(seq) {
+      .parTraverse(seq) {
         case (i, d) =>
           BIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
@@ -41,11 +41,11 @@ object TaskWanderSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Seq(2, 3, 4))))
   }
 
-  test("BIO.wander should onError if one of the tasks terminates in error") { implicit s =>
+  test("BIO.parTraverse should onError if one of the tasks terminates in error") { implicit s =>
     val ex = 1000L
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
     val f = BIO
-      .wander(seq) {
+      .parTraverse(seq) {
         case (i, d) =>
           BIO
             .suspendTotal(if (i < 0) BIO.raiseError(ex) else BIO.now(i + 1))
@@ -60,11 +60,11 @@ object TaskWanderSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("BIO.wander should onTerminate if one of the tasks terminates in unexpected error") { implicit s =>
+  test("BIO.parTraverse should onTerminate if one of the tasks terminates in unexpected error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
     val f = BIO
-      .wander(seq) {
+      .parTraverse(seq) {
         case (i, d) =>
           UIO
             .evalAsync(if (i < 0) throw ex else i + 1)
@@ -78,10 +78,10 @@ object TaskWanderSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.wander should be canceled") { implicit s =>
+  test("BIO.parTraverse should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = BIO
-      .wander(seq) {
+      .parTraverse(seq) {
         case (i, d) => BIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
@@ -96,21 +96,21 @@ object TaskWanderSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.wander should be stack safe for synchronous tasks") { implicit s =>
+  test("BIO.parTraverse should be stack safe for synchronous tasks") { implicit s =>
     val count = if (Platform.isJVM) 200000 else 5000
     val seq = for (i <- 0 until count) yield 1
-    val composite = BIO.wander(seq)(BIO.now).map(_.sum)
+    val composite = BIO.parTraverse(seq)(BIO.now).map(_.sum)
     val result = composite.runToFuture
     s.tick()
     assertEquals(result.value, Some(Success(count)))
   }
 
-  test("BIO.wander runAsync multiple times") { implicit s =>
+  test("BIO.parTraverse runAsync multiple times") { implicit s =>
     var effect = 0
 
     val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
 
-    val task2 = BIO.wander(Seq(0, 0, 0)) { _ =>
+    val task2 = BIO.parTraverse(Seq(0, 0, 0)) { _ =>
       task1 map { x =>
         effect += 1; x + 1
       }
@@ -125,9 +125,9 @@ object TaskWanderSuite extends BaseTestSuite {
     assertEquals(effect, 1 + 3 + 3)
   }
 
-  test("BIO.wander should wrap exceptions in the function") { implicit s =>
+  test("BIO.parTraverse should wrap exceptions in the function") { implicit s =>
     val ex = DummyException("dummy")
-    val task1 = BIO.wander(Seq(0)) { i =>
+    val task1 = BIO.parTraverse(Seq(0)) { i =>
       throw ex
       BIO.now(i)
     }
