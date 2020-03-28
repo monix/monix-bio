@@ -32,12 +32,12 @@ import cats.effect.{
 import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
-import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.internal._
 import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
 import monix.execution.compat.BuildFrom
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.Platform
 import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
@@ -3756,6 +3756,43 @@ object BIO extends TaskInstancesLevel0 {
     implicit bf: BuildFrom[M[A], B, M[B]]
   ): BIO[E, M[B]] =
     UIO.eval(in.map(f)).flatMap(col => TaskGather[E, B, M](col, () => newBuilder(bf, in)))
+
+  /** Applies the provided function in a non-deterministic way to each element
+    * of the input collection. The result will be signalled once all tasks
+    * are finished with a success, or as soon as some task finishes with a
+    * typed or terminal error.
+    *
+    * Note that his method has a fail-fast semantics: as soon as one of the tasks
+    * fails (either in a typed or terminal manner), no subsequent tasks will be
+    * executed and they will be cancelled.
+    *
+    * The final result will be a collection of success values, or a typed/fatal
+    * error if at least one of the tasks finished without a success.
+    *
+    * This method allows specifying the parallelism level of the execution, i.e.
+    * the maximum number of how many tasks should be running concurrently.
+    *
+    * Although the execution of the effects is unordered and non-deterministic,
+    * the collection of results will preserve the order of the input collection.
+    *
+    * Example:
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   val numbers = List(1, 2, 3, 4)
+    *
+    *   // Yields 2, 4, 6, 8 after around 6 seconds
+    *   BIO.wanderN(2)(numbers)(n => BIO(n + n).delayExecution(n.second))
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * @see [[wander]] for a version that does not limit parallelism.
+    */
+  def wanderN[E, A, B](parallelism: Int)(in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] =
+    deferTotal(TaskGatherN(parallelism, in.map(f)))
 
   /** Processes the given collection of tasks in parallel and
     * nondeterministically gather the results without keeping the original

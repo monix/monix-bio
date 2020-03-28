@@ -21,8 +21,8 @@ import cats.effect.{CancelToken, ConcurrentEffect, Effect}
 import cats.~>
 import monix.bio.BIO.AsyncBuilder
 import monix.bio.internal.{TaskCreate, TaskFromFuture}
-import monix.execution.compat.BuildFrom
 import monix.catnap.FutureLift
+import monix.execution.compat.BuildFrom
 import monix.execution.{CancelablePromise, Scheduler}
 import org.reactivestreams.Publisher
 
@@ -303,6 +303,12 @@ object Task {
     */
   def wander[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => Task[B])(implicit bf: BuildFrom[M[A], B, M[B]]): Task[M[B]] =
     BIO.wander(in)(f)
+
+  /**
+    * @see See [[monix.bio.BIO.wanderN]]
+    */
+  def wanderN[A, B](parallelism: Int)(in: Iterable[A])(f: A => Task[B]): Task[List[B]] =
+    BIO.wanderN(parallelism)(in)(f)
 
   /**
     * @see See [[monix.bio.BIO.gatherUnordered]]
