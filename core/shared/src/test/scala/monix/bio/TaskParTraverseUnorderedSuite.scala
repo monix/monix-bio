@@ -42,7 +42,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Seq(4, 2, 3))))
   }
 
-  test("Task.parTraverseUnordered should onError if one of the tasks terminates in error") { implicit s =>
+  test("BIO.parTraverseUnordered should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
     val f = Task
@@ -60,7 +60,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.parTraverseUnordered should be canceled") { implicit s =>
+  test("BIO.parTraverseUnordered should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = Task
       .parTraverseUnordered(seq) {
@@ -78,7 +78,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("Task.parTraverseUnordered should run over an iterable") { implicit s =>
+  test("BIO.parTraverseUnordered should run over an iterable") { implicit s =>
     val count = 10
     val seq = 0 until count
     val sum = Task.parTraverseUnordered(seq)(x => Task.eval(x + 1)).map(_.sum)
@@ -87,7 +87,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(result.value.get, Success((count + 1) * count / 2))
   }
 
-  test("Task.parTraverseUnordered should be stack-safe on handling many tasks") { implicit s =>
+  test("BIO.parTraverseUnordered should be stack-safe on handling many tasks") { implicit s =>
     val count = 10000
     val seq = for (i <- 0 until count) yield i
     val sum = Task.parTraverseUnordered(seq)(x => Task.eval(x)).map(_.sum)
@@ -96,7 +96,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(result.value.get, Success(count * (count - 1) / 2))
   }
 
-  test("Task.parTraverseUnordered should be stack safe on success") { implicit s =>
+  test("BIO.parTraverseUnordered should be stack safe on success") { implicit s =>
     def fold[A](ta: Task[ListBuffer[A]], next: A): Task[ListBuffer[A]] =
       ta flatMap { acc =>
         Task.parTraverseUnordered(Seq(acc, next)) { v =>
@@ -139,7 +139,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(result, Some(Success(count * (count - 1) / 2)))
   }
 
-  test("Task.parTraverseUnordered should log errors if multiple errors happen") { implicit s =>
+  test("BIO.parTraverseUnordered should log errors if multiple errors happen") { implicit s =>
     implicit val opts = BIO.defaultOptions.disableAutoCancelableRunLoops
 
     val ex = DummyException("dummy1")
@@ -163,7 +163,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(errorsThrow, 2)
   }
 
-  test("Task.parTraverseUnordered runAsync multiple times") { implicit s =>
+  test("BIO.parTraverseUnordered runAsync multiple times") { implicit s =>
     var effect = 0
     val task1 = Task.evalAsync {
       effect += 1; 3
@@ -186,7 +186,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     assertEquals(effect, 1 + 3 + 3)
   }
 
-  test("Task.parTraverseUnordered should wrap exceptions in the function") { implicit s =>
+  test("BIO.parTraverseUnordered should wrap exceptions in the function") { implicit s =>
     val ex = DummyException("dummy")
     val task1 = Task.parTraverseUnordered(Seq(0)) { _ =>
       throw ex
