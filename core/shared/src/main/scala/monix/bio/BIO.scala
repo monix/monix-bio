@@ -3772,7 +3772,7 @@ object BIO extends TaskInstancesLevel0 {
     *   val numbers = List(1, 2, 3, 4)
     *
     *   // Yields 2, 4, 6, 8 after around 6 seconds
-    *   BIO.parTraversN(2)(numbers)(n => BIO(n + n).delayExecution(n.second))
+    *   BIO.parTraverseN(2)(numbers)(n => BIO(n + n).delayExecution(n.second))
     * }}}
     *
     * $parallelismAdvice
