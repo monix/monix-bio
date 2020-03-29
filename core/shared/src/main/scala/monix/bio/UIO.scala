@@ -25,7 +25,7 @@ import monix.execution.{CancelablePromise, Scheduler}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-object UIO {
+object UIO extends TaskDeprecated.`UIO.Companion` {
 
   /**
     * @see See [[monix.bio.BIO.apply]]

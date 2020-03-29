@@ -1327,7 +1327,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * If an exception is raised, then `bracket` will re-raise the exception
     * ''after'' performing the `release`. If the resulting task gets cancelled,
     * then `bracket` will still perform the `release`, but the yielded task
-    * will be non-terminating (equivalent with [[Task.never]]).
+    * will be non-terminating (equivalent with [[BIO.never]]).
     *
     * Example:
     *
@@ -1622,11 +1622,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   readFile("path/to/file").executeOn(io, forceAsync = true)
     * }}}
     *
-    * In this example we are using [[Task.eval]], which executes the
+    * In this example we are using [[BIO.eval]], which executes the
     * given `thunk` immediately (on the current thread and call stack).
     *
     * By calling `executeOn(io)`, we are ensuring that the used
-    * `Scheduler` (injected in [[Task.cancelable0[A](register* async tasks]])
+    * `Scheduler` (injected in [[BIO.cancelable0[A](register* async tasks]])
     * will be `io`, a `Scheduler` that we intend to use for blocking
     * I/O actions. And we are also forcing an asynchronous boundary
     * right before execution, by passing the `forceAsync` parameter as
@@ -2659,7 +2659,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   *         parallelism being guaranteed when multi-threading is available!
   *
   *         All specified tasks get evaluated in parallel, regardless of their
-  *         execution model ([[Task.eval]] vs [[Task.evalAsync]] doesn't matter).
+  *         execution model ([[BIO.eval]] vs [[BIO.evalAsync]] doesn't matter).
   *         Also the implementation tries to be smart about detecting forked
   *         tasks so it can eliminate extraneous forks for the very obvious
   *         cases.
@@ -3397,7 +3397,7 @@ object BIO extends TaskInstancesLevel0 {
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type technique]].
     *
     * Calling `create` with a callback that returns `Unit` is
-    * equivalent with [[Task.async0]]:
+    * equivalent with [[BIO.async0]]:
     *
     * `Task.async0(f) <-> Task.create(f)`
     *
@@ -3444,7 +3444,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * Passed function can also return `Task[Unit]` as a task that
     * describes a cancelation action, thus for an `f` that can be
-    * passed to [[Task.cancelable0]], and this equivalence holds:
+    * passed to [[BIO.cancelable0]], and this equivalence holds:
     *
     * `Task.cancelable(f) <-> Task.create(f)`
     *
@@ -4950,7 +4950,7 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     }
 }
 
-private[bio] abstract class TaskClocks {
+private[bio] abstract class TaskClocks extends TaskDeprecated.`BIO.Companion` {
 
   /**
     * Default, pure, globally visible `cats.effect.Clock`

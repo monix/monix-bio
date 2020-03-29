@@ -20,7 +20,7 @@ package monix.bio
 import cats.effect.{CancelToken, ConcurrentEffect, Effect}
 import cats.~>
 import monix.bio.BIO.AsyncBuilder
-import monix.bio.internal.{TaskCreate, TaskFromFuture}
+import monix.bio.internal.{TaskCreate, TaskDeprecated, TaskFromFuture}
 import monix.catnap.FutureLift
 import monix.execution.compat.BuildFrom
 import monix.execution.{CancelablePromise, Scheduler}
@@ -30,7 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-object Task {
+object Task extends TaskDeprecated.Companion {
 
   /**
     * @see See [[monix.bio.BIO.apply]]
