@@ -17,22 +17,11 @@
 
 package monix.bio
 
-import cats.effect.{
-  CancelToken,
-  Clock,
-  Concurrent,
-  ConcurrentEffect,
-  ContextShift,
-  Effect,
-  ExitCase,
-  IO,
-  Timer,
-  Fiber => _
-}
-import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
+import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, IO, Timer, Fiber => _}
+import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup, ~>}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
-import monix.bio.internal._
+import monix.bio.internal.{TaskDeprecated, _}
 import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
@@ -4950,7 +4939,7 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     }
 }
 
-private[bio] abstract class TaskClocks extends TaskDeprecated.`BIO.Companion` {
+private[bio] abstract class TaskClocks extends BIODeprecated.Companion {
 
   /**
     * Default, pure, globally visible `cats.effect.Clock`

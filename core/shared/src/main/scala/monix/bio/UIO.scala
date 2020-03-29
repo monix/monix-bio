@@ -18,14 +18,14 @@
 package monix.bio
 
 import monix.bio.compat.internal.newBuilder
-import monix.bio.internal._
+import monix.bio.internal.{TaskDeprecated, _}
 import monix.execution.compat.BuildFrom
 import monix.execution.{CancelablePromise, Scheduler}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-object UIO extends TaskDeprecated.`UIO.Companion` {
+object UIO extends UIODeprecated.Companion {
 
   /**
     * @see See [[monix.bio.BIO.apply]]
