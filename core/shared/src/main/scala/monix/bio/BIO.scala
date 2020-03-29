@@ -1615,7 +1615,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * given `thunk` immediately (on the current thread and call stack).
     *
     * By calling `executeOn(io)`, we are ensuring that the used
-    * `Scheduler` (injected in [[BIO.cancelable0[A](register* async tasks]])
+    * `Scheduler` (injected in [[BIO.cancelable0[E, A](register* async tasks]])
     * will be `io`, a `Scheduler` that we intend to use for blocking
     * I/O actions. And we are also forcing an asynchronous boundary
     * right before execution, by passing the `forceAsync` parameter as

@@ -29,10 +29,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN allows fully sequential execution") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 1)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 1)(numbers) { num =>
       BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -47,10 +47,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN allows fully concurrent execution") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
       BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -65,10 +65,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN allows partially concurrent execution") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
       BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -87,11 +87,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns an error when fully sequential execution fails in a typed way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 1)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 1)(numbers) { num =>
       if (num == 10) BIO.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
       else BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -106,11 +106,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns an error when fully sequential execution fails in a terminal way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 1)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 1)(numbers) { num =>
       if (num == 10) BIO.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
       else BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -125,11 +125,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns an error when fully concurrent execution fails in a typed way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
       if (num == 10) BIO.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
       else BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -144,11 +144,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns an error when fully concurrent execution fails in a terminal way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
       if (num == 10) BIO.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
       else BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -163,11 +163,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns an error when partially concurrent execution fails in a typed way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
       if (num == 10) BIO.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
       else BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -184,11 +184,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns an error when partially concurrent execution fails in a terminal way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
       if (num == 10) BIO.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
       else BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -205,11 +205,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN returns a terminal error when an exception is thrown") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 5)(numbers) { num =>
       if (num == 10) throw DummyException("dummy exception")
       else BIO.fromEither(num.asRight[String])
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Failure(DummyException("dummy exception"))))
@@ -217,10 +217,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
 
   test("BIO.parTraverseN should be cancelable") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val wander = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
       BIO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -235,10 +235,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
   test("BIO.parTraverseN should be stack safe for synchronous tasks with low parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val wander = BIO
+    val traverse = BIO
       .parTraverseN(parallelism = 10)(numbers)(num => BIO.fromEither(num.asRight[String]))
       .map(_.sum)
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
@@ -247,10 +247,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
   test("BIO.parTraverseN should be stack safe for asynchronous tasks with low parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val wander = BIO
+    val traverse = BIO
       .parTraverseN(parallelism = 10)(numbers)(num => BIO.fromEither(num.asRight[String]).executeAsync)
       .map(_.sum)
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
@@ -259,10 +259,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
   test("BIO.parTraverseN should be stack safe for synchronous tasks with high parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val wander = BIO
+    val traverse = BIO
       .parTraverseN(parallelism = count)(numbers)(num => BIO.fromEither(num.asRight[String]))
       .map(_.sum)
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
@@ -271,10 +271,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
   test("BIO.parTraverseN should be stack safe for asynchronous tasks with high parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val wander = BIO
+    val traverse = BIO
       .parTraverseN(parallelism = count)(numbers)(num => BIO.fromEither(num.asRight[String]).executeAsync)
       .map(_.sum)
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
@@ -284,10 +284,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     val counter = AtomicInt(0)
     val numbers = List(2, 5, 10, 20, 40)
     val effect = BIO.evalAsync(counter.increment())
-    val wander = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
       effect.map(_ => num * num)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(counter.get, 5)
@@ -298,10 +298,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     val counter = AtomicInt(0)
     val numbers = List(2, 5, 10, 20, 40)
     val effect = BIO.evalAsync(counter.increment()).memoize
-    val wander = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
+    val traverse = BIO.parTraverseN(parallelism = 2)(numbers) { num =>
       effect.map(_ => num * num)
     }
-    val f = wander.attempt.runToFuture
+    val f = traverse.attempt.runToFuture
 
     s.tick()
     assertEquals(counter.get, 1)
