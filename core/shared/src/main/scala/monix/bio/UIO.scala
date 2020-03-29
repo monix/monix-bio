@@ -18,7 +18,7 @@
 package monix.bio
 
 import monix.bio.compat.internal.newBuilder
-import monix.bio.internal.{TaskDeprecated, _}
+import monix.bio.internal._
 import monix.execution.compat.BuildFrom
 import monix.execution.{CancelablePromise, Scheduler}
 

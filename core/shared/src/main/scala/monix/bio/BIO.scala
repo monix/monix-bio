@@ -21,7 +21,7 @@ import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShi
 import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup, ~>}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
-import monix.bio.internal.{TaskDeprecated, _}
+import monix.bio.internal._
 import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
