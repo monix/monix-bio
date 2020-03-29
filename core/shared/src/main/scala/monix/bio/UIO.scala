@@ -199,16 +199,22 @@ object UIO {
     TaskParSequence[Nothing, A, M](in, () => newBuilder(bf, in))
 
   /**
+    * @see [[monix.bio.BIO.parTraverse]]
+    */
+  def parTraverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
+    BIO.parTraverse(in)(f)
+
+  /**
     * @see See [[monix.bio.BIO.parSequenceN]]
     */
   def parSequenceN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
     TaskParSequenceN[Nothing, A](parallelism, in)
 
   /**
-    * @see [[monix.bio.BIO.parTraverse]]
+    * @see See [[monix.bio.BIO.parTraverseN]]
     */
-  def parTraverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
-    BIO.parTraverse(in)(f)
+  def parTraverseN[A, B](parallelism: Int)(in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
+    BIO.parTraverseN(parallelism)(in)(f)
 
   /**
     * @see See [[monix.bio.BIO.parSequenceUnordered]]

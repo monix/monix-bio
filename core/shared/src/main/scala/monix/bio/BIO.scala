@@ -32,12 +32,12 @@ import cats.effect.{
 import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
-import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.internal._
 import monix.catnap.FutureLift
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
 import monix.execution.compat.BuildFrom
+import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.Platform
 import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
@@ -3698,6 +3698,34 @@ object BIO extends TaskInstancesLevel0 {
   def parSequence[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
     TaskParSequence[E, A, M](in, () => newBuilder(bf, in))
 
+  /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
+    * nondeterministically apply the function to each element of the collection
+    * and return a task that will signal a collection of the results once all
+    * tasks are finished.
+    *
+    * This function is the nondeterministic analogue of `traverse` and should
+    * behave identically to `traverse` so long as there is no interaction between
+    * the effects being gathered. However, unlike `traverse`, which decides on
+    * a total order of effects, the effects in a `parTraverse` are unordered with
+    * respect to each other.
+    *
+    * Although the effects are unordered, we ensure the order of results
+    * matches the order of the input sequence. Also see doctodo parTraverseUnordered
+    * for the more efficient alternative.
+    *
+    * It's a generalized version of [[parSequence]].
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * @see doctodo parTraverseN for a version that limits parallelism.
+    */
+  def parTraverse[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(
+    implicit bf: BuildFrom[M[A], B, M[B]]
+  ): BIO[E, M[B]] =
+    UIO.eval(in.map(f)).flatMap(col => TaskParSequence[E, B, M](col, () => newBuilder(bf, in)))
+
   /** Executes the given sequence of tasks in parallel, non-deterministically
     * gathering their results, returning a task that will signal the sequence
     * of results once all tasks are finished.
@@ -3729,33 +3757,43 @@ object BIO extends TaskInstancesLevel0 {
   def parSequenceN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskParSequenceN[E, A](parallelism, in)
 
-  /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
-    * nondeterministically apply the function to each element of the collection
-    * and return a task that will signal a collection of the results once all
-    * tasks are finished.
+
+  /** Applies the provided function in a non-deterministic way to each element
+    * of the input collection. The result will be signalled once all tasks
+    * are finished with a success, or as soon as some task finishes with a
+    * typed or terminal error.
     *
-    * This function is the nondeterministic analogue of `traverse` and should
-    * behave identically to `traverse` so long as there is no interaction between
-    * the effects being gathered. However, unlike `traverse`, which decides on
-    * a total order of effects, the effects in a `parTraverse` are unordered with
-    * respect to each other.
+    * Note that his method has a fail-fast semantics: as soon as one of the tasks
+    * fails (either in a typed or terminal manner), no subsequent tasks will be
+    * executed and they will be cancelled.
     *
-    * Although the effects are unordered, we ensure the order of results
-    * matches the order of the input sequence. Also see doctodo parTraverseUnordered
-    * for the more efficient alternative.
+    * The final result will be a collection of success values, or a typed/fatal
+    * error if at least one of the tasks finished without a success.
     *
-    * It's a generalized version of [[parSequence]].
+    * This method allows specifying the parallelism level of the execution, i.e.
+    * the maximum number of how many tasks should be running concurrently.
+    *
+    * Although the execution of the effects is unordered and non-deterministic,
+    * the collection of results will preserve the order of the input collection.
+    *
+    * Example:
+    * {{{
+    *   import scala.concurrent.duration._
+    *
+    *   val numbers = List(1, 2, 3, 4)
+    *
+    *   // Yields 2, 4, 6, 8 after around 6 seconds
+    *   BIO.parTraversN(2)(numbers)(n => BIO(n + n).delayExecution(n.second))
+    * }}}
     *
     * $parallelismAdvice
     *
     * $parallelismNote
     *
-    * @see doctodo parTraverseN for a version that limits parallelism.
+    * @see [[parTraverse]] for a version that does not limit parallelism.
     */
-  def parTraverse[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B])(
-    implicit bf: BuildFrom[M[A], B, M[B]]
-  ): BIO[E, M[B]] =
-    UIO.eval(in.map(f)).flatMap(col => TaskParSequence[E, B, M](col, () => newBuilder(bf, in)))
+  def parTraverseN[E, A, B](parallelism: Int)(in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] =
+    deferTotal(TaskParSequenceN(parallelism, in.map(f)))
 
   /** Processes the given collection of tasks in parallel and
     * nondeterministically gather the results without keeping the original
