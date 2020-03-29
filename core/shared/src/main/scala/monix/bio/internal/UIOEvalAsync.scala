@@ -11,7 +11,7 @@ private[bio] object UIOEvalAsync {
     */
   def apply[A](a: () => A): UIO[A] =
     BIO.Async[Nothing, A](
-      new EvalAsyncRegister[A](a).apply,
+      new EvalAsyncRegister[A](a),
       trampolineAfter = false,
       trampolineBefore = false,
       restoreLocals = false
