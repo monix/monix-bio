@@ -97,7 +97,7 @@ object UIO {
     * @see See [[monix.bio.BIO.evalAsync]]
     */
   def evalAsync[A](a: => A): UIO[A] =
-    BIO.EvalTotal(a _).executeAsync
+    UIOEvalAsync(a _)
 
   /**
     * @see See [[monix.bio.BIO.delay]]
