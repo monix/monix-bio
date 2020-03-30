@@ -24,7 +24,7 @@ import monix.catnap.ConcurrentQueue
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{BufferCapacity, ChannelType}
 
-private[bio] object TaskGatherN {
+private[bio] object TaskParSequenceN {
 
   def apply[E, A](
     parallelism: Int,
@@ -44,7 +44,7 @@ private[bio] object TaskGatherN {
           .hideErrors
         pairs <- BIO.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
         _     <- queue.offerMany(pairs).hideErrors
-        workers = UIO.gather(List.fill(parallelism.min(itemSize)) {
+        workers = UIO.parSequence(List.fill(parallelism.min(itemSize)) {
           queue.poll.hideErrors.flatMap {
             case (p, task) =>
               task.redeemCauseWith(

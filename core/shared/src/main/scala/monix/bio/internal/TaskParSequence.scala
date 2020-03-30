@@ -27,10 +27,10 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
-private[bio] object TaskGather {
+private[bio] object TaskParSequence {
 
   /**
-    * Implementation for `Task.gather`
+    * Implementation for `Task.parSequence`
     */
   def apply[E, A, M[X] <: Iterable[X]](
     in: Iterable[BIO[E, A]],

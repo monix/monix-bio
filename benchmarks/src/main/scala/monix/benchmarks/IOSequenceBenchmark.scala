@@ -116,24 +116,24 @@ class IOSequenceBenchmark {
 
 
   @Benchmark
-  def monixBioGather(): Long = {
+  def monixBioParSequence(): Long = {
     val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.gather(tasks).map(_.sum.toLong)
+    val result = BIO.parSequence(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
 
   @Benchmark
-  def monixBioGatherUnordered(): Long = {
+  def monixBioParSequenceUnordered(): Long = {
     val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.gatherUnordered(tasks).map(_.sum.toLong)
+    val result = BIO.parSequenceUnordered(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
   @Benchmark
-  def monixBioGatherN(): Long = {
+  def monixBioParSequenceN(): Long = {
     val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.gatherN(parallelism)(tasks).map(_.sum.toLong)
+    val result = BIO.parSequenceN(parallelism)(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
