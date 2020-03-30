@@ -17,8 +17,19 @@
 
 package monix.bio
 
-import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, IO, Timer, Fiber => _}
-import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup, ~>}
+import cats.effect.{
+  CancelToken,
+  Clock,
+  Concurrent,
+  ConcurrentEffect,
+  ContextShift,
+  Effect,
+  ExitCase,
+  IO,
+  Timer,
+  Fiber => _
+}
+import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal._
@@ -3684,7 +3695,9 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see [[parSequenceN]] for a version that limits parallelism.
     */
-  def parSequence[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
+  def parSequence[E, A, M[X] <: Iterable[X]](
+    in: M[BIO[E, A]]
+  )(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] =
     TaskParSequence[E, A, M](in, () => newBuilder(bf, in))
 
   /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
@@ -3745,7 +3758,6 @@ object BIO extends TaskInstancesLevel0 {
     */
   def parSequenceN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
     TaskParSequenceN[E, A](parallelism, in)
-
 
   /** Applies the provided function in a non-deterministic way to each element
     * of the input collection. The result will be signalled once all tasks

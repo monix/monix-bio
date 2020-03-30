@@ -201,7 +201,9 @@ object UIO extends UIODeprecated.Companion {
   /**
     * @see [[monix.bio.BIO.parTraverse]]
     */
-  def parTraverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
+  def parTraverse[A, B, M[X] <: Iterable[X]](
+    in: M[A]
+  )(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
     BIO.parTraverse(in)(f)
 
   /**

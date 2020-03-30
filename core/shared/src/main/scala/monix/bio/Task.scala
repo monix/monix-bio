@@ -295,7 +295,9 @@ object Task extends TaskDeprecated.Companion {
   /**
     * @see [[monix.bio.BIO.parTraverse]]
     */
-  def parTraverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => Task[B])(implicit bf: BuildFrom[M[A], B, M[B]]): Task[M[B]] =
+  def parTraverse[A, B, M[X] <: Iterable[X]](
+    in: M[A]
+  )(f: A => Task[B])(implicit bf: BuildFrom[M[A], B, M[B]]): Task[M[B]] =
     BIO.parTraverse(in)(f)
 
   /**
