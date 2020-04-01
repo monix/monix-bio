@@ -17,19 +17,8 @@
 
 package monix.bio
 
-import cats.effect.{
-  CancelToken,
-  Clock,
-  Concurrent,
-  ConcurrentEffect,
-  ContextShift,
-  Effect,
-  ExitCase,
-  IO,
-  Timer,
-  Fiber => _
-}
-import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
+import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, IO, Timer, Fiber => _}
+import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup, ~>}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal._
@@ -1794,6 +1783,33 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   final def flatMap[E1 >: E, B](f: A => BIO[E1, B]): BIO[E1, B] =
     FlatMap(this, f)
+
+  /**  Describes flatMap-driven loops, as an alternative to recursive functions.
+    *
+    * Sample:
+    *
+    * {{{
+    *   import scala.util.Random
+    *
+    *   val random = BIO(Random.nextInt())
+    *   val loop = random.flatMapLoop(Vector.empty[Int]) { (a, list, continue) =>
+    *     val newList = list :+ a
+    *     if (newList.length < 5)
+    *       continue(newList)
+    *     else
+    *       BIO.now(newList)
+    *   }
+    * }}}
+    *
+    * @param seed initializes the result of the loop
+    * @param f is the function that updates the result
+    *        on each iteration, returning a `BIO`.
+    * @return a new [[BIO]] that contains the result of the loop.
+    */
+  final def flatMapLoop[E1 >: E, S](seed: S)(f: (A, S, S => BIO[E1, S]) => BIO[E1, S]): BIO[E1, S] =
+    this.flatMap { a =>
+      f(a, seed,  flatMapLoop[E1, S](_)(f))
+    }
 
   /** Given a source Task that emits another Task, this function
     * flattens the result, returning a Task equivalent to the emitted

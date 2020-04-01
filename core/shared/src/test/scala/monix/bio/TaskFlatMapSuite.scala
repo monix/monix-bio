@@ -23,7 +23,7 @@ import monix.execution.atomic.{Atomic, AtomicInt}
 import monix.execution.exceptions.{DummyException, UncaughtErrorException}
 import monix.execution.internal.Platform
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 object TaskFlatMapSuite extends BaseTestSuite {
   test("runAsync flatMap loop is not cancelable if autoCancelableRunLoops=false") { implicit s =>
@@ -149,19 +149,19 @@ object TaskFlatMapSuite extends BaseTestSuite {
     assert(wasCancelled)
   }
 
-//  test("flatMapLoop enables loops") { implicit s =>
-//    val random = BIO(Random.nextInt())
-//    val loop = random.flatMapLoop(Vector.empty[Int]) { (a, list, continue) =>
-//      val newList = list :+ a
-//      if (newList.length < 5)
-//        continue(newList)
-//      else
-//        BIO.now(newList)
-//    }
-//    val f = loop.runToFuture
-//    s.tick()
-//    assert(f.value.isDefined)
-//    assert(f.value.get.isSuccess)
-//    assertEquals(f.value.get.get.size, 5)
-//  }
+  test("flatMapLoop enables loops") { implicit s =>
+    val random = BIO(Random.nextInt())
+    val loop = random.flatMapLoop(Vector.empty[Int]) { (a, list, continue) =>
+      val newList = list :+ a
+      if (newList.length < 5)
+        continue(newList)
+      else
+        BIO.now(newList)
+    }
+    val f = loop.runToFuture
+    s.tick()
+    assert(f.value.isDefined)
+    assert(f.value.get.isSuccess)
+    assertEquals(f.value.get.get.size, 5)
+  }
 }
