@@ -17,8 +17,19 @@
 
 package monix.bio
 
-import cats.effect.{CancelToken, Clock, Concurrent, ConcurrentEffect, ContextShift, Effect, ExitCase, IO, Timer, Fiber => _}
-import cats.{CommutativeApplicative, Monoid, Parallel, Semigroup, ~>}
+import cats.effect.{
+  CancelToken,
+  Clock,
+  Concurrent,
+  ConcurrentEffect,
+  ContextShift,
+  Effect,
+  ExitCase,
+  IO,
+  Timer,
+  Fiber => _
+}
+import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
 import monix.bio.compat.internal.newBuilder
 import monix.bio.instances._
 import monix.bio.internal._
@@ -1808,7 +1819,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   final def flatMapLoop[E1 >: E, S](seed: S)(f: (A, S, S => BIO[E1, S]) => BIO[E1, S]): BIO[E1, S] =
     this.flatMap { a =>
-      f(a, seed,  flatMapLoop[E1, S](_)(f))
+      f(a, seed, flatMapLoop[E1, S](_)(f))
     }
 
   /** Given a source Task that emits another Task, this function
