@@ -276,4 +276,96 @@ object UIO extends UIODeprecated.Companion {
     fa6: UIO[A6]
   )(f: (A1, A2, A3, A4, A5, A6) => R): UIO[R] =
     BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6)(f)
+
+  /**
+    * @see See [[monix.bio.BIO.parMap2]]
+    */
+  def parMap2[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
+    UIO.mapBoth(fa1, fa2)(f)
+
+  /**
+    * @see See [[monix.bio.BIO.parMap3]]
+    */
+  def parMap3[A1, A2, A3, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3])(f: (A1, A2, A3) => R): UIO[R] = {
+    val fa12 = parZip2(fa1, fa2)
+    parMap2(fa12, fa3) { case ((a1, a2), a3) => f(a1, a2, a3) }
+  }
+
+  /**
+    * @see See [[monix.bio.BIO.parMap4]]
+    */
+  def parMap4[A1, A2, A3, A4, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4])(
+    f: (A1, A2, A3, A4) => R
+  ): UIO[R] = {
+    val fa123 = parZip3(fa1, fa2, fa3)
+    parMap2(fa123, fa4) { case ((a1, a2, a3), a4) => f(a1, a2, a3, a4) }
+  }
+
+  /**
+    * @see See [[monix.bio.BIO.parMap5]]
+    */
+  def parMap5[A1, A2, A3, A4, A5, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4], fa5: UIO[A5])(
+    f: (A1, A2, A3, A4, A5) => R
+  ): UIO[R] = {
+    val fa1234 = parZip4(fa1, fa2, fa3, fa4)
+    parMap2(fa1234, fa5) { case ((a1, a2, a3, a4), a5) => f(a1, a2, a3, a4, a5) }
+  }
+
+  /**
+    * @see See [[BIO.parMap6]]
+    */
+  def parMap6[A1, A2, A3, A4, A5, A6, R](
+    fa1: UIO[A1],
+    fa2: UIO[A2],
+    fa3: UIO[A3],
+    fa4: UIO[A4],
+    fa5: UIO[A5],
+    fa6: UIO[A6]
+  )(f: (A1, A2, A3, A4, A5, A6) => R): UIO[R] = {
+    val fa12345 = parZip5(fa1, fa2, fa3, fa4, fa5)
+    parMap2(fa12345, fa6) { case ((a1, a2, a3, a4, a5), a6) => f(a1, a2, a3, a4, a5, a6) }
+  }
+
+  /**
+    * @see See [[BIO.parZip2]]
+    */
+  def parZip2[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2]): UIO[(A1, A2)] =
+    BIO.mapBoth(fa1, fa2)((_, _))
+
+  /**
+    * @see See [[BIO.parZip3]]
+    */
+  def parZip3[A1, A2, A3](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3]): UIO[(A1, A2, A3)] =
+    parMap3(fa1, fa2, fa3)((a1, a2, a3) => (a1, a2, a3))
+
+  /**
+    * @see See [[BIO.parZip4]]
+    */
+  def parZip4[A1, A2, A3, A4](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4]): UIO[(A1, A2, A3, A4)] =
+    parMap4(fa1, fa2, fa3, fa4)((a1, a2, a3, a4) => (a1, a2, a3, a4))
+
+  /**
+    * @see See [[BIO.parZip5]]
+    */
+  def parZip5[A1, A2, A3, A4, A5](
+    fa1: UIO[A1],
+    fa2: UIO[A2],
+    fa3: UIO[A3],
+    fa4: UIO[A4],
+    fa5: UIO[A5]
+  ): UIO[(A1, A2, A3, A4, A5)] =
+    parMap5(fa1, fa2, fa3, fa4, fa5)((a1, a2, a3, a4, a5) => (a1, a2, a3, a4, a5))
+
+  /**
+    * @see See [[BIO.parZip6]]
+    */
+  def parZip6[A1, A2, A3, A4, A5, A6](
+    fa1: UIO[A1],
+    fa2: UIO[A2],
+    fa3: UIO[A3],
+    fa4: UIO[A4],
+    fa5: UIO[A5],
+    fa6: UIO[A6]
+  ): UIO[(A1, A2, A3, A4, A5, A6)] =
+    parMap6(fa1, fa2, fa3, fa4, fa5, fa6)((a1, a2, a3, a4, a5, a6) => (a1, a2, a3, a4, a5, a6))
 }
