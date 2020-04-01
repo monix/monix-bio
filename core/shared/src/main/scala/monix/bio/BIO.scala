@@ -1788,6 +1788,64 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def failed: UIO[E] =
     FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
 
+  /**
+    * Creates a new BIO by swapping the error and value parameters.
+    *
+    * This allows easier handling of errors. Especially in scenarios like just
+    * before returning an HttpResponse. Example:
+    *
+    * {{{
+    *
+    *   final case class HttpResponse()
+    *   final case class ApiError(message: String, code: Int)
+    *
+    *   def logToStdout(ex: ApiError): Task[Unit] = ???
+    *   def logErrorToFile(ex: ApiError): Task[Unit] = ???
+    *   def sendHttpResponse(ex: ApiError): Task[HttpResponse] = ???
+    *
+    *   val f1 = BIO.raiseError(ApiError("Oops", 500))
+    *
+    *   for {
+    *     error <- f1.flip
+    *     _     <- logToStdout(error)
+    *     _     <- logErrorToFile(error)
+    *     _     <- sendHttpResponse(error)
+    *   } yield ()
+    *
+    * }}}
+    */
+  final def flip: BIO[A, E] = {
+    this.redeemWith(BIO.now, BIO.raiseError)
+  }
+
+  /***
+    * Creates a new BIO by swapping the error and value parameters and applying
+    * the provided function. Returning a BIO that has had it's error and value parameters
+    * swapped.
+    *
+    * {{{
+    *
+    *   final case class HttpResponse()
+    *   final case class ApiError(message: String, code: Int)
+    *
+    *   def logToStdout(ex: ApiError): Task[ApiError] = ???
+    *   def logErrorToFile(ex: ApiError): Task[ApiError] = ???
+    *   def sendHttpResponse(ex: ApiError): Task[ApiError] = ???
+    *
+    *   val f1 = BIO.raiseError(ApiError("Oops", 500))
+    *
+    *   f1.flipWith(_.flatMap(sendHttpResponse(_))) // Respond to client as soon as possible.
+    *     .flatMap(logToStdout(_))    // Perform actions after response has been sent.
+    *     .flatMap(logErrorToFile(_))
+    *
+    * }}}
+    *
+    * @param f function to apply to the flipped error value.
+    */
+  final def flipWith[E1, A1](f: BIO[A, E] => BIO[E1, A1]): BIO[E1, A1] = {
+    f(this.flip)
+  }
+
   /** Creates a new Task by applying a function to the successful result
     * of the source Task, and returns a task equivalent to the result
     * of the function.
