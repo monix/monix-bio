@@ -1791,25 +1791,28 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   /**
     * Creates a new BIO by swapping the error and value parameters.
     *
-    * This allows easier handling of errors. Especially in scenarios like just
-    * before returning an HttpResponse. Example:
+    * This allows you to work with the error in the right-biased context
+    * and allows for easier error handling and chaining of events that
+    * depend on one another.
     *
+    * Example:
     * {{{
+    *   import java.time.Instant
     *
-    *   final case class HttpResponse()
-    *   final case class ApiError(message: String, code: Int)
+    *   case class ErrorA(i: Int)
+    *   case class ErrorB(errA: ErrorA, createdAt: Instant)
     *
-    *   def logToStdout(ex: ApiError): Task[Unit] = ???
-    *   def logErrorToFile(ex: ApiError): Task[Unit] = ???
-    *   def sendHttpResponse(ex: ApiError): Task[HttpResponse] = ???
+    *   def mapToErrorB(error: ErrorA): Task[ErrorB] = ???
+    *   def logToStdErr(error: ErrorB): Task[ErrorB] = ???
+    *   def logErrorToFile(error: ErrorB): Task[ErrorB] = ???
     *
-    *   val f1 = BIO.raiseError(ApiError("Oops", 500))
+    *   val f1 = BIO.raiseError(ErrorA(500))
     *
     *   for {
-    *     error <- f1.flip
-    *     _     <- logToStdout(error)
-    *     _     <- logErrorToFile(error)
-    *     _     <- sendHttpResponse(error)
+    *     errorA <- f1.flip
+    *     errorB <- mapToErrorB(errorA)
+    *     _      <- logToStdErr(errorB)
+    *     _      <- logErrorToFile(errorB)
     *   } yield ()
     *
     * }}}
@@ -1823,28 +1826,34 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * the provided function. Returning a BIO that has had it's error and value parameters
     * swapped.
     *
+    * This function is a useful alternative to [[flip]] in that it applies a series
+    * of operations that may depend on the error thrown by this task, allowing you
+    * to work with the error in a right biased context, before flipping the error and value parameters back.
+    *
+    * Example:
     * {{{
+    *   import java.time.Instant
     *
-    *   final case class HttpResponse()
-    *   final case class ApiError(message: String, code: Int)
+    *   case class ErrorA(i: Int)
+    *   case class ErrorB(errA: ErrorA, createdAt: Instant)
     *
-    *   def logToStdout(ex: ApiError): Task[ApiError] = ???
-    *   def logErrorToFile(ex: ApiError): Task[ApiError] = ???
-    *   def sendHttpResponse(ex: ApiError): Task[ApiError] = ???
+    *   def mapToErrorB(error: ErrorA): Task[ErrorB] = ???
+    *   def logToStdErr(error: ErrorB): Task[ErrorB] = ???
+    *   def logErrorToFile(error: ErrorB): Task[ErrorB] = ???
     *
-    *   val f1 = BIO.raiseError(ApiError("Oops", 500))
-    *
-    *   f1.flipWith(_.flatMap(sendHttpResponse(_))) // Respond to client as soon as possible.
-    *     .flatMap(logToStdout(_))    // Perform actions after response has been sent.
-    *     .flatMap(logErrorToFile(_))
+    *   val f1 = BIO.raiseError(ErrorA(500)).flipWith { f1 =>
+    *     for {
+    *       errorA <- f1
+    *       errorB <- mapToErrorB(errorA)
+    *       _      <- logToStdErr(errorB)
+    *       _      <- logErrorToFile(errorB)
+    *     } yield errorB
+    *   }
     *
     * }}}
-    *
-    * @param f function to apply to the flipped error value.
     */
-  final def flipWith[E1, A1](f: BIO[A, E] => BIO[E1, A1]): BIO[E1, A1] = {
-    f(this.flip)
-  }
+  final def flipWith[E1, A1](f: BIO[A, E] => BIO[A1, E1]): BIO[E1, A1] =
+    f(this.flip).flip
 
   /** Creates a new Task by applying a function to the successful result
     * of the source Task, and returns a task equivalent to the result
