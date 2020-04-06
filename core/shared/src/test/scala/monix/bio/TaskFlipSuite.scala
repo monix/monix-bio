@@ -22,12 +22,11 @@ import monix.execution.exceptions.DummyException
 import scala.util.{Failure, Success}
 
 object TaskFlipSuite extends BaseTestSuite {
-  test("flip successfully swaps the error and value values") { implicit s =>
+  test("flip successfully swaps the error and value parameters") { implicit s =>
     val ex = DummyException("dummy")
 
     val f = BIO.raiseError(ex).flip.runToFuture
     s.tick()
-
     assertEquals(f.value, Some(Success(ex)))
   }
 
@@ -39,15 +38,17 @@ object TaskFlipSuite extends BaseTestSuite {
   }
 
   test("flipWith should successfully apply the provided function to the swapped error value") { implicit s =>
-    val ex = DummyException("dummy")
+    val ex0 = DummyException("dummy0")
+    val ex1 = DummyException("dummy1")
 
-    val f = BIO[Int](throw ex).flipWith(_.map(identity)).runToFuture
+    val f = BIO.raiseError(ex0).flipWith(_.map(_ => ex1)).runToFuture
     s.tick()
-    assertEquals(f.value, Some(Failure(ex)))
+    assertEquals(f.value, Some(Failure(ex1)))
   }
 
   test("flipWith should not alter original successful value") { implicit s =>
     val f = BIO(1).flipWith(_.map(identity)).runToFuture
+
     s.tick()
     assertEquals(f.value, Some(Success(1)))
   }
