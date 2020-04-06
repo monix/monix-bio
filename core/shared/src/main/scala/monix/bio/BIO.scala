@@ -1822,13 +1822,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   }
 
   /***
-    * Creates a new BIO by swapping the error and value parameters and applying
-    * the provided function. Returning a BIO that has had it's error and value parameters
-    * swapped.
-    *
     * This function is a useful alternative to [[flip]] in that it applies a series
     * of operations that may depend on the error thrown by this task, allowing you
-    * to work with the error in a right biased context, before flipping the error and value parameters back.
+    * to work with the error in a right biased context, before flipping the error
+    * and value parameters back.
     *
     * Example:
     * {{{
