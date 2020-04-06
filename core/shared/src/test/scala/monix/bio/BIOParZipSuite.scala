@@ -83,17 +83,12 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 should onError from the source before other and return the user error") { implicit s =>
-    val ex0 = DummyException("dummy")
-    val ex1 = DummyErrorResponse("dummy")
+  test("BIO.parZip2 handle terminal errors from the source before other") { implicit s =>
+    val ex = DummyException("dummy")
+    val f = BIO.parZip2(BIO.terminate(ex).delayExecution(1.second), BIO(2).delayExecution(2.seconds)).runToFuture
 
-    val f = BIO
-      .parZip2(BIO(throw ex0).mapError(_ => ex1).delayExecution(2.second), BIO(2).delayExecution(1.seconds))
-      .attempt
-      .runToFuture
-
-    s.tick(2.second)
-    assertEquals(f.value, Some(Success(Left(ex1))))
+    s.tick(1.second)
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.parZip2 should onError from the other after the source") { implicit s =>
@@ -105,18 +100,13 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 should onError from the other after the source and return the user error") { implicit s =>
-    val ex0 = DummyException("dummy")
-    val ex1 = DummyErrorResponse("dummy")
+  test("BIO.parZip2 should handle terminal errors from the other after the source") { implicit s =>
+    val ex = DummyException("dummy")
 
-    val f = BIO
-      .parZip2(BIO(1).delayExecution(1.second), BIO(throw ex0).mapError(_ => ex1))
-      .delayExecution(2.seconds)
-      .attempt
-      .runToFuture
+    val f = BIO.parZip2(BIO(1).delayExecution(1.second), BIO.terminate(ex)).delayExecution(2.seconds).runToFuture
 
     s.tick(2.second)
-    assertEquals(f.value, Some(Success(Left(ex1))))
+    assertEquals(f.value, Some(Failure(ex)))
   }
 
   test("BIO.parZip2 should onError from the other before the source") { implicit s =>
