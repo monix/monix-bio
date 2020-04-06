@@ -4060,6 +4060,252 @@ object BIO extends TaskInstancesLevel0 {
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5; a6 <- fa6)
       yield f(a1, a2, a3, a4, a5, a6)
 
+  /** Pairs 2 `BIO` values, applying the given mapping function,
+    * ordering the results, but not the side effects, the evaluation
+    * being done in parallel.
+    *
+    * This is a specialized [[BIO.parSequence]] operation and as such
+    * the tasks are evaluated in parallel, ordering the results.
+    * In case one of the tasks fails, then all other tasks get
+    * cancelled and the final result will be a failure.
+    *
+    * {{{
+    *   val fa1 = UIO(1)
+    *   val fa2 = UIO(2)
+    *
+    *   // Yields Success(3)
+    *   BIO.parMap2(fa1, fa2) { (a, b) =>
+    *     a + b
+    *   }
+    *
+    *   val ex: Task[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.parMap2(fa1, ex) { (a, b) =>
+    *     a + b
+    *   }
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * See [[BIO.map2]] for sequential processing.
+    */
+  def parMap2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
+    BIO.mapBoth(fa1, fa2)(f)
+
+  /** Pairs 3 `BIO` values, applying the given mapping function,
+    * ordering the results, but not the side effects, the evaluation
+    * being done in parallel.
+    *
+    * This is a specialized [[BIO.parSequence]] operation and as such
+    * the tasks are evaluated in parallel, ordering the results.
+    * In case one of the tasks fails, then all other tasks get
+    * cancelled and the final result will be a failure.
+    *
+    * {{{
+    *   val fa1 = UIO(1)
+    *   val fa2 = UIO(2)
+    *   val fa3 = UIO(3)
+    *
+    *   // Yields Success(6)
+    *   BIO.parMap3(fa1, fa2, fa3) { (a, b, c) =>
+    *     a + b + c
+    *   }
+    *
+    *   val ex: Task[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.parMap3(fa1, ex, fa3) { (a, b, c) =>
+    *     a + b + c
+    *   }
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * See [[BIO.map3]] for sequential processing.
+    */
+  def parMap3[E, A1, A2, A3, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3])(f: (A1, A2, A3) => R): BIO[E, R] = {
+    val fa12 = parZip2(fa1, fa2)
+    parMap2(fa12, fa3) { case ((a1, a2), a3) => f(a1, a2, a3) }
+  }
+
+  /** Pairs 4 `BIO` values, applying the given mapping function,
+    * ordering the results, but not the side effects, the evaluation
+    * being done in parallel if the tasks are async.
+    *
+    * This is a specialized [[BIO.parSequence]] operation and as such
+    * the tasks are evaluated in parallel, ordering the results.
+    * In case one of the tasks fails, then all other tasks get
+    * cancelled and the final result will be a failure.
+    *
+    * {{{
+    *   val fa1 = UIO(1)
+    *   val fa2 = UIO(2)
+    *   val fa3 = UIO(3)
+    *   val fa4 = UIO(4)
+    *
+    *   // Yields Success(10)
+    *   BIO.parMap4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
+    *     a + b + c + d
+    *   }
+    *
+    *   val ex: Task[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.parMap4(fa1, ex, fa3, fa4) {
+    *     (a, b, c, d) => a + b + c + d
+    *   }
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * See [[BIO.map4]] for sequential processing.
+    */
+  def parMap4[E, A1, A2, A3, A4, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4])(
+    f: (A1, A2, A3, A4) => R
+  ): BIO[E, R] = {
+    val fa123 = parZip3(fa1, fa2, fa3)
+    parMap2(fa123, fa4) { case ((a1, a2, a3), a4) => f(a1, a2, a3, a4) }
+  }
+
+  /** Pairs 5 `BIO` values, applying the given mapping function,
+    * ordering the results, but not the side effects, the evaluation
+    * being done in parallel if the tasks are async.
+    *
+    * This is a specialized [[BIO.parSequence]] operation and as such
+    * the tasks are evaluated in parallel, ordering the results.
+    * In case one of the tasks fails, then all other tasks get
+    * cancelled and the final result will be a failure.
+    *
+    * {{{
+    *   val fa1 = UIO(1)
+    *   val fa2 = UIO(2)
+    *   val fa3 = UIO(3)
+    *   val fa4 = UIO(4)
+    *   val fa5 = UIO(5)
+    *
+    *   // Yields Success(15)
+    *   BIO.parMap5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
+    *     a + b + c + d + e
+    *   }
+    *
+    *   val ex: Task[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.parMap5(fa1, ex, fa3, fa4, fa5) {
+    *     (a, b, c, d, e) => a + b + c + d + e
+    *   }
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * See [[BIO.map5]] for sequential processing.
+    */
+  def parMap5[E, A1, A2, A3, A4, A5, R](
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4],
+    fa5: BIO[E, A5]
+  )(f: (A1, A2, A3, A4, A5) => R): BIO[E, R] = {
+    val fa1234 = parZip4(fa1, fa2, fa3, fa4)
+    parMap2(fa1234, fa5) { case ((a1, a2, a3, a4), a5) => f(a1, a2, a3, a4, a5) }
+  }
+
+  /** Pairs 6 `BIO` values, applying the given mapping function,
+    * ordering the results, but not the side effects, the evaluation
+    * being done in parallel if the tasks are async.
+    *
+    * This is a specialized [[BIO.parSequence]] operation and as such
+    * the tasks are evaluated in parallel, ordering the results.
+    * In case one of the tasks fails, then all other tasks get
+    * cancelled and the final result will be a failure.
+    *
+    * {{{
+    *   val fa1 = UIO(1)
+    *   val fa2 = UIO(2)
+    *   val fa3 = UIO(3)
+    *   val fa4 = UIO(4)
+    *   val fa5 = UIO(5)
+    *   val fa6 = UIO(6)
+    *
+    *   // Yields Success(21)
+    *   BIO.parMap6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
+    *     a + b + c + d + e + f
+    *   }
+    *
+    *   val ex: Task[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *
+    *   // Yields Failure(e), because the second arg is a failure
+    *   BIO.parMap6(fa1, ex, fa3, fa4, fa5, fa6) {
+    *     (a, b, c, d, e, f) => a + b + c + d + e + f
+    *   }
+    * }}}
+    *
+    * $parallelismAdvice
+    *
+    * $parallelismNote
+    *
+    * See [[BIO.map6]] for sequential processing.
+    */
+  def parMap6[E, A1, A2, A3, A4, A5, A6, R](
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4],
+    fa5: BIO[E, A5],
+    fa6: BIO[E, A6]
+  )(f: (A1, A2, A3, A4, A5, A6) => R): BIO[E, R] = {
+    val fa12345 = parZip5(fa1, fa2, fa3, fa4, fa5)
+    parMap2(fa12345, fa6) { case ((a1, a2, a3, a4, a5), a6) => f(a1, a2, a3, a4, a5, a6) }
+  }
+
+  /** Pairs two [[BIO]] instances using [[parMap2]]. */
+  def parZip2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2]): BIO[E, (A1, A2)] =
+    BIO.mapBoth(fa1, fa2)((_, _))
+
+  /** Pairs three [[BIO]] instances using [[parMap3]]. */
+  def parZip3[E, A1, A2, A3](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3]): BIO[E, (A1, A2, A3)] =
+    parMap3(fa1, fa2, fa3)((a1, a2, a3) => (a1, a2, a3))
+
+  /** Pairs four [[BIO]] instances using [[parMap4]]. */
+  def parZip4[E, A1, A2, A3, A4](
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4]
+  ): BIO[E, (A1, A2, A3, A4)] =
+    parMap4(fa1, fa2, fa3, fa4)((a1, a2, a3, a4) => (a1, a2, a3, a4))
+
+  /** Pairs five [[BIO]] instances using [[parMap5]]. */
+  def parZip5[E, A1, A2, A3, A4, A5](
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4],
+    fa5: BIO[E, A5]
+  ): BIO[E, (A1, A2, A3, A4, A5)] =
+    parMap5(fa1, fa2, fa3, fa4, fa5)((a1, a2, a3, a4, a5) => (a1, a2, a3, a4, a5))
+
+  /** Pairs six [[BIO]] instances using [[parMap6]]. */
+  def parZip6[E, A1, A2, A3, A4, A5, A6](
+    fa1: BIO[E, A1],
+    fa2: BIO[E, A2],
+    fa3: BIO[E, A3],
+    fa4: BIO[E, A4],
+    fa5: BIO[E, A5],
+    fa6: BIO[E, A6]
+  ): BIO[E, (A1, A2, A3, A4, A5, A6)] =
+    parMap6(fa1, fa2, fa3, fa4, fa5, fa6)((a1, a2, a3, a4, a5, a6) => (a1, a2, a3, a4, a5, a6))
+
   /**
     * Generates `cats.FunctionK` values for converting from `Task` to
     * supporting types (for which we have a [[TaskLift]] instance).

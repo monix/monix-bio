@@ -237,22 +237,21 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  // TODO: uncomment when Task.map3 is implemented
-//  testAsync("BIOLocal.bind scoping works") {
-//    val tl = BIOLocal(999)
-//    val t = Task
-//      .map3(tl, tl, tl) { (l1, l2, l3) =>
-//        def setAll(x: Int) = Task.traverse(List(l1, l2, l3))(_.write(x))
-//        l1.bind(0) {
-//          setAll(0) >> l2.bind(1) {
-//            setAll(1)
-//          }
-//        } >> List(l1, l2, l3).traverse(_.read).map(assertEquals(_, List(999, 0, 1)))
-//      }
-//      .flatten
-//      .map(_ => ())
-//    t.runToFutureOpt
-//  }
+  testAsync("BIOLocal.bind scoping works") {
+    val tl = BIOLocal(999)
+    val t = Task
+      .map3(tl, tl, tl) { (l1, l2, l3) =>
+        def setAll(x: Int) = Task.traverse(List(l1, l2, l3))(_.write(x))
+        l1.bind(0) {
+          setAll(0) >> l2.bind(1) {
+            setAll(1)
+          }
+        } >> List(l1, l2, l3).traverse(_.read).map(assertEquals(_, List(999, 0, 1)))
+      }
+      .flatten
+      .map(_ => ())
+    t.runToFutureOpt
+  }
 
   testAsync("BIOLocal.bind actually isolates reads") {
     val t = for {

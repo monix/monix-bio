@@ -23,7 +23,6 @@ import minitest.TestSuite
 import monix.execution.exceptions.DummyException
 import monix.execution.schedulers.SchedulerService
 import monix.execution.{Cancelable, CancelableFuture, ExecutionModel, Scheduler}
-
 import scala.concurrent.duration._
 import scala.concurrent.{blocking, ExecutionContext, Future}
 
