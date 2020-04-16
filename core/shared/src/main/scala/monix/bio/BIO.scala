@@ -3009,11 +3009,8 @@ object BIO extends TaskInstancesLevel0 {
     TaskConversions.fromEffect(fa)
 
   /**
-    * Builds a new [[BIO]] from the provided `Option`. This function is similar to [[BIO.fromOption]] except it
-    * doesn't allow specifying a fallback value in the case the `Option` is empty, and instead returns `Unit` in
-    * the error channel yielding a result of `BIO[Unit, A]`.
-    *
-    * @see [[BIO.fromOption]] for a version that allows providing a fallback value.
+    * Builds a new [[BIO]] from the provided `Option`. This function returns a unit in the error channel
+    * if the option is empty, otherwise it returns the value from the option in the success channel.
     *
     * Example:
     *
@@ -3030,11 +3027,11 @@ object BIO extends TaskInstancesLevel0 {
     }
 
   /**
-    * Builds a [[BIO]] from the provided Option. If the Option is defined a [[BIO[Nothing, A]] is returned,
+    * Builds a [[BIO]] from the provided Option. If the Option is defined a `BIO[Nothing, A]` is returned,
     * if the Option is empty, the provided fallback is evaluated and the result is returned in the error
     * channel yielding a result of `BIO[E, A]`.
     *
-    * @see [[BIO.fromOptionEval]] for a version that takes an `BIO[E, Option[A]]`
+    * @see [[BIO.fromOptionEval]] for a version that takes a `BIO[E, Option[A]]`
     *
     * Example:
     *
@@ -3064,7 +3061,7 @@ object BIO extends TaskInstancesLevel0 {
     *  final case class Item()
     *
     *  def findItem(id: Int): BIO[ErrorCode, Option[Item]] =
-    *    BIO.now(Some(Item())).mapError(_ => 500)
+    *    UIO.now(Some(Item()))
     *
     *  BIO.fromOptionEval(findItem(1), 404)
     * }}}
