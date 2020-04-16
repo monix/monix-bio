@@ -58,7 +58,7 @@ There are two convenience type aliases:
 * `type UIO[+A] = BIO[Nothing, A]` - represents `BIO` which cannot fail
 
 Similarly to `Either`, in `BIO` you can transform both: error
-and value chanel. Please take a look at the example below:
+and value channel. Please take a look at the example below:
 
 ```scala
 import monix.bio.BIO
@@ -74,14 +74,14 @@ object Bifunctor {
 
   def main(args: Array[String]): Unit = {
 
-    // BIO.now is a builder form already evaluated value, don't put there anything that can throw
+    // BIO.now is a builder from already evaluated value, don't put there anything that can throw
     // its similar to Future.successful
     val successfulBIO: BIO[Error, String] = BIO.now("Hello world!")
 
-    // You can transform the result value with map and flat map
+    // You can transform the result value with map and flatMap
     val stringLength: BIO[Error, Int] = successfulBIO.map(_.length)
 
-    // BIO.raise error creates new instance from already evaluated error, again don't put there anything that can throw
+    // BIO.raiseError creates new instance from already evaluated error, again don't put there anything that can throw
     // its similar to Future.failed
     val failedBIO: BIO[Error, Int] = BIO.raiseError(new Error("Error!"))
 
@@ -107,4 +107,3 @@ object Bifunctor {
 
 
  
-
