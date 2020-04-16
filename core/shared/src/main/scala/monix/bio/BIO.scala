@@ -3008,6 +3008,75 @@ object BIO extends TaskInstancesLevel0 {
   def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
     TaskConversions.fromEffect(fa)
 
+  /**
+    * Builds a new [[BIO]] from the provided `Option`. This function is similar to [[BIO.fromOption]] except it
+    * doesn't allow specifying a fallback value in the case the `Option` is empty, and instead returns `Unit` in
+    * the error channel yielding a result of `BIO[Unit, A]`.
+    *
+    * @see [[BIO.fromOption]] for a version that allows providing a fallback value.
+    *
+    * Example:
+    *
+    * {{{
+    *   BIO.fromOption(Some(1)) // BIO[Nothing, A]
+    *   BIO.fromOption(None)    // BIO[Unit, A]
+    * }}}
+    *
+    */
+  def fromOption[A](opt: Option[A]): BIO[Unit, A] =
+    opt match {
+      case None => Error(())
+      case Some(v) => Now(v)
+    }
+
+  /**
+    * Builds a [[BIO]] from the provided Option. If the Option is defined a [[BIO[Nothing, A]] is returned,
+    * if the Option is empty, the provided fallback is evaluated and the result is returned in the error
+    * channel yielding a result of `BIO[E, A]`.
+    *
+    * @see [[BIO.fromOptionEval]] for a version that takes an `BIO[E, Option[A]]`
+    *
+    * Example:
+    *
+    * {{{
+    *   final case class NotFound()
+    *
+    *   BIO.fromOption(NotFound())(Some(1)) // BIO[Nothing, Int]
+    *   BIO.fromOption(NotFound())(None)    // BIO[NotFound, Nothing]
+    * }}}
+    *
+    */
+  def fromOption[E, A](ifEmpty: => E)(opt: Option[A]): BIO[E, A] =
+    opt match {
+      case None => Error(ifEmpty)
+      case Some(v) => Now(v)
+    }
+
+  /**
+    * Builds a new [[BIO]] from the provided [[BIO]]. If the inner `Option` is not empty then a `BIO[E, A]` is
+    * returned, if the inner `Option` is empty, the provided fallback is evaluated and the result is returned in the
+    * error channel, yielding a result of `BIO[E1, A]`.
+    *
+    * Example:
+    *
+    * {{{
+    *  type ErrorCode = Int
+    *  final case class Item()
+    *
+    *  def findItem(id: Int): BIO[ErrorCode, Option[Item]] =
+    *    BIO.now(Some(Item())).mapError(_ => 500)
+    *
+    *  BIO.fromOptionEval(findItem(1), 404)
+    * }}}
+    *
+    */
+  def fromOptionEval[E, E1 >: E, A](opt: BIO[E, Option[A]], ifEmpty: => E1): BIO[E1, A] = {
+    opt.flatMap {
+      case None => Error(ifEmpty)
+      case Some(v) => Now(v)
+    }
+  }
+
   /** Builds a [[Task]] instance out of a Scala `Try`. */
   def fromTry[A](a: Try[A]): Task[A] =
     a match {
