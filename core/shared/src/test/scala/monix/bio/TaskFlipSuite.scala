@@ -17,24 +17,19 @@
 
 package monix.bio
 
+import cats.laws._
+import cats.laws.discipline._
 import monix.execution.exceptions.DummyException
 
 import scala.util.{Failure, Success}
 
-object TaskFlipSuite extends BaseTestSuite {
+object TaskFlipSuite extends BaseTestSuite with ArbitraryInstances {
+
   test("flip successfully swaps the error and value parameters") { implicit s =>
     val ex = DummyException("dummy")
-
     val f = BIO.raiseError(ex).flip.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(ex)))
-  }
-
-  test("flip should not alter original successful value") { implicit s =>
-    val f = BIO(1).flip.attempt.runToFuture
-
-    s.tick()
-    assertEquals(f.value, Some(Success(Left(1))))
   }
 
   test("flipWith should successfully apply the provided function to the swapped error value") { implicit s =>
@@ -46,10 +41,34 @@ object TaskFlipSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex1)))
   }
 
+  test("flip should not alter original successful value") { implicit s =>
+    val f = BIO(1).flip.attempt.runToFuture
+
+    s.tick()
+    assertEquals(f.value, Some(Success(Left(1))))
+  }
+
   test("flipWith should not alter original successful value") { implicit s =>
     val f = BIO(1).flipWith(_.map(identity)).runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(1)))
+  }
+
+  test("F.flip.map(f) <-> F.mapError(f).flip") { implicit ec =>
+    val f = (ex: String) => "dummy1"
+
+    check1 { F: BIO[String, Int] =>
+      F.flip.map(f) <-> F.mapError(f).flip
+    }
+  }
+
+  test("F.flipWith(f) <-> F.mapError(f)") { implicit s =>
+    val f0 = (ex: BIO[Int, String]) => ex.map(_ => "dummy1")
+    val f1 = (ex: String) => "dummy1"
+
+    check1 { F: BIO[String, Int] =>
+      F.flipWith(f0) <-> F.mapError(f1)
+    }
   }
 }

@@ -1789,11 +1789,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
 
   /**
-    * Creates a new BIO by swapping the error and value parameters.
-    *
-    * This allows you to work with the error in the right-biased context
-    * and allows for easier error handling and chaining of events that
-    * depend on one another.
+    * Creates a new BIO by swapping the error and value parameters. This allows you to
+    * work with the error in a right-biased context, allowing you to apply a series of
+    * operations that may depend on the error thrown by this task.
     *
     * Example:
     * {{{
@@ -1822,10 +1820,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   }
 
   /***
-    * This function is a useful alternative to [[flip]] in that it applies a series
-    * of operations that may depend on the error thrown by this task, allowing you
-    * to work with the error in a right biased context, before flipping the error
-    * and value parameters back.
+    * This function implements a common pattern with [[flip]] in that it returns the already flipped task
+    * and allows applying series of operations that may depend on the error thrown by this task, before flipping
+    * the error and value parameters back.
     *
     * Example:
     * {{{
