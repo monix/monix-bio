@@ -33,6 +33,7 @@ object HelloWorld {
     val bio = BIO { "Hello" + " world!" }
 
     // we can convert it to execute our bio
+    // the execution starts here
     val normalScalaFuture = bio.runToFuture
 
     // used only for demonstration, never block
@@ -55,13 +56,20 @@ when the computation finishes.
 
 There are two convenience type aliases:
 * `type Task[+A] = BIO[Throwable, A]` - represents a `BIO` which uses `Throwable` as the error chanel
-* `type UIO[+A] = BIO[Nothing, A]` - represents `BIO` which cannot fail
+* `type UIO[+A] = BIO[Nothing, A]` - represents `BIO` which is not expected to fail
+
+`BIO` has two error channels, one is `E` from the type signature, which indicates an expected error, and the second
+one is `Throwable` which is an unexpected error channel. To fail with an unexpected error you can use `BIO.terminate`,
+which accepts a `Throwable` and fails the `BIO`. Please note that unexpected error skips
+all expected error handlers, except for `BIO.redeemCause` and `BIO.redeemCauseWith`. Please note that `UIO` indicates
+no expected errors, but every `BIO` instance can fail with an unexpected error. 
+
 
 Similarly to `Either`, in `BIO` you can transform both: error
 and value channel. Please take a look at the example below:
 
 ```scala
-import monix.bio.BIO
+import monix.bio.{BIO, UIO}
 
 import monix.execution.Scheduler.Implicits.global
 
@@ -92,14 +100,23 @@ object Bifunctor {
     // this is the same as with running `mapError` on successful BIO
       .map(_ => println("Im never executed!"))
 
+    // sometimes we are not able to handle all the possible cases
+    // we can terminate our BIO with a fatal, non expected exception
+    val unexpectedError: UIO[Unit] = BIO.terminate(new Exception("unexpected error"))
 
-
-    // if we want to run our BIO we need to convert it somehow - we cannot `throw` classes which
-    // which are not subtypes of throwable. We can use attempt which converts our BIO[E, A] into UIO[Either[E, A]]
+    // if we want to run our BIO we need to convert it somehow - we cannot `throw` classes,
+    // which are not subtypes of throwable. Future, form scala standard library uses Throwable as the error channel,
+    // so we either need to handle all of our errors or convert them to Throwable.
+    // We can use attempt which converts our BIO[E, A] into UIO[Either[E, A]] (which means it handles all BIO errors)
     val attemptStringLength = stringLength.attempt
     println(Await.result(attemptStringLength.runToFuture, 1.second))
 
     println(Await.result(remappedError.attempt.runToFuture, 1.second))
+
+    // as opposed to the example above, the exception is thrown here
+    // unexpectedError is of type UIO, which indicated that we are not expecting any error,
+    // but terminate method is used to fail with *unexpected* error
+    println(Await.result(unexpectedError.attempt.runToFuture, 1.second)) 
   }
 
 }
