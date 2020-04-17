@@ -3009,14 +3009,14 @@ object BIO extends TaskInstancesLevel0 {
     TaskConversions.fromEffect(fa)
 
   /**
-    * Builds a new [[BIO]] from the provided `Option`. This function returns a unit in the error channel
-    * if the option is empty, otherwise it returns the value from the option in the success channel.
+    * Builds a [[BIO]] instance out of a Scala `Option`.
+    * If the Option is empty, the task fails with Unit.
     *
     * Example:
     *
     * {{{
-    *   BIO.fromOption(Some(1)) // BIO[Nothing, A]
-    *   BIO.fromOption(None)    // BIO[Unit, A]
+    *   BIO.fromOption(Some(1)) // <-> BIO.now(1))
+    *   BIO.fromOption(None)    // <-> BIO.raiseError(())
     * }}}
     *
     */
@@ -3027,9 +3027,8 @@ object BIO extends TaskInstancesLevel0 {
     }
 
   /**
-    * Builds a [[BIO]] from the provided Option. If the Option is defined a `BIO[Nothing, A]` is returned,
-    * if the Option is empty, the provided fallback is evaluated and the result is returned in the error
-    * channel yielding a result of `BIO[E, A]`.
+    * Builds a [[BIO]] instance out of a Scala `Option`.
+    * If the Option is empty, the task fails with the provided fallback.
     *
     * @see [[BIO.fromOptionEval]] for a version that takes a `BIO[E, Option[A]]`
     *
@@ -3038,21 +3037,20 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   final case class NotFound()
     *
-    *   BIO.fromOption(NotFound())(Some(1)) // BIO[Nothing, Int]
-    *   BIO.fromOption(NotFound())(None)    // BIO[NotFound, Nothing]
+    *   BIO.fromOption(NotFound())(Some(1)) // <-> BIO.now(1))
+    *   BIO.fromOption(NotFound())(None)    // <-> BIO.raiseError(NotFound())
     * }}}
     *
     */
   def fromOption[E, A](ifEmpty: => E)(opt: Option[A]): BIO[E, A] =
     opt match {
-      case None => Error(ifEmpty)
+      case None => BIO.suspendTotal(BIO.raiseError(ifEmpty))
       case Some(v) => Now(v)
     }
 
   /**
-    * Builds a new [[BIO]] from the provided [[BIO]]. If the inner `Option` is not empty then a `BIO[E, A]` is
-    * returned, if the inner `Option` is empty, the provided fallback is evaluated and the result is returned in the
-    * error channel, yielding a result of `BIO[E1, A]`.
+    * Builds a new [[BIO]] instance out of a `BIO[E, Option[A]]`.
+    * If the inner Option is empty, the task fails with the provided fallback.
     *
     * Example:
     *
