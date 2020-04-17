@@ -1821,8 +1821,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
 
   /***
     * This function implements a common pattern with [[flip]] in that it returns the already flipped task
-    * and allows applying series of operations that may depend on the error thrown by this task, before flipping
-    * the error and value parameters back.
+    * and allows applying a series of operations that may depend on the error thrown by this task, before
+    * flipping the error and value parameters back.
     *
     * Example:
     * {{{
