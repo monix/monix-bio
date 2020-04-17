@@ -60,9 +60,9 @@ There are two convenience type aliases:
 
 `BIO` has two error channels, one is `E` from the type signature, which indicates an expected error, and the second
 one is `Throwable` which is an unexpected error channel. To fail with an unexpected error you can use `BIO.terminate`,
-which accepts a `Throwable` and fails the `BIO`. Please note that unexpected error skips
-all expected error handlers, except for `BIO.redeemCause` and `BIO.redeemCauseWith`. Please note that `UIO` indicates
-no expected errors, but every `BIO` instance can fail with an unexpected error. 
+which accepts a `Throwable` and fails the `BIO`. Unexpected error skips
+all expected error handlers, except for `BIO.redeemCause` and `BIO.redeemCauseWith`. Even though `UIO` indicates
+no expected errors, every `BIO` instance can fail with an unexpected error. 
 
 
 Similarly to `Either`, in `BIO` you can transform both: error
