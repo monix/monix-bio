@@ -1788,6 +1788,67 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   final def failed: UIO[E] =
     FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
 
+  /**
+    * Creates a new BIO by swapping the error and value parameters. This allows you to
+    * work with the error in a right-biased context, allowing you to apply a series of
+    * operations that may depend on the error thrown by this task.
+    *
+    * Example:
+    * {{{
+    *   import java.time.Instant
+    *
+    *   case class ErrorA(i: Int)
+    *   case class ErrorB(errA: ErrorA, createdAt: Instant)
+    *
+    *   def mapToErrorB(error: ErrorA): Task[ErrorB] = ???
+    *   def logToStdErr(error: ErrorB): Task[ErrorB] = ???
+    *   def logErrorToFile(error: ErrorB): Task[ErrorB] = ???
+    *
+    *   val f1 = BIO.raiseError(ErrorA(500))
+    *
+    *   for {
+    *     errorA <- f1.flip
+    *     errorB <- mapToErrorB(errorA)
+    *     _      <- logToStdErr(errorB)
+    *     _      <- logErrorToFile(errorB)
+    *   } yield ()
+    *
+    * }}}
+    */
+  final def flip: BIO[A, E] = {
+    this.redeemWith(BIO.now, BIO.raiseError)
+  }
+
+  /***
+    * This function implements a common pattern with [[flip]] in that it returns the already flipped task
+    * and allows applying a series of operations that may depend on the error thrown by this task, before
+    * flipping the error and value parameters back.
+    *
+    * Example:
+    * {{{
+    *   import java.time.Instant
+    *
+    *   case class ErrorA(i: Int)
+    *   case class ErrorB(errA: ErrorA, createdAt: Instant)
+    *
+    *   def mapToErrorB(error: ErrorA): Task[ErrorB] = ???
+    *   def logToStdErr(error: ErrorB): Task[ErrorB] = ???
+    *   def logErrorToFile(error: ErrorB): Task[ErrorB] = ???
+    *
+    *   val f1 = BIO.raiseError(ErrorA(500)).flipWith { f1 =>
+    *     for {
+    *       errorA <- f1
+    *       errorB <- mapToErrorB(errorA)
+    *       _      <- logToStdErr(errorB)
+    *       _      <- logErrorToFile(errorB)
+    *     } yield errorB
+    *   }
+    *
+    * }}}
+    */
+  final def flipWith[E1, A1](f: BIO[A, E] => BIO[A1, E1]): BIO[E1, A1] =
+    f(this.flip).flip
+
   /** Creates a new Task by applying a function to the successful result
     * of the source Task, and returns a task equivalent to the result
     * of the function.
