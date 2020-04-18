@@ -3069,6 +3069,70 @@ object BIO extends TaskInstancesLevel0 {
   def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
     TaskConversions.fromEffect(fa)
 
+  /**
+    * Builds a [[BIO]] instance out of a Scala `Option`.
+    * If the Option is empty, the task fails with Unit.
+    *
+    * Example:
+    *
+    * {{{
+    *   BIO.fromOption(Some(1)) // <-> BIO.now(1))
+    *   BIO.fromOption(None)    // <-> BIO.raiseError(())
+    * }}}
+    *
+    */
+  def fromOption[A](opt: Option[A]): BIO[Unit, A] =
+    opt match {
+      case None => Error(())
+      case Some(v) => Now(v)
+    }
+
+  /**
+    * Builds a [[BIO]] instance out of a Scala `Option`.
+    * If the Option is empty, the task fails with the provided fallback.
+    *
+    * @see [[BIO.fromOptionEval]] for a version that takes a `BIO[E, Option[A]]`
+    *
+    * Example:
+    *
+    * {{{
+    *   final case class NotFound()
+    *
+    *   BIO.fromOption(NotFound())(Some(1)) // <-> BIO.now(1))
+    *   BIO.fromOption(NotFound())(None)    // <-> BIO.raiseError(NotFound())
+    * }}}
+    *
+    */
+  def fromOption[E, A](ifEmpty: => E)(opt: Option[A]): BIO[E, A] =
+    opt match {
+      case None => BIO.suspendTotal(BIO.raiseError(ifEmpty))
+      case Some(v) => Now(v)
+    }
+
+  /**
+    * Builds a new [[BIO]] instance out of a `BIO[E, Option[A]]`.
+    * If the inner Option is empty, the task fails with the provided fallback.
+    *
+    * Example:
+    *
+    * {{{
+    *  type ErrorCode = Int
+    *  final case class Item()
+    *
+    *  def findItem(id: Int): BIO[ErrorCode, Option[Item]] =
+    *    UIO.now(Some(Item()))
+    *
+    *  BIO.fromOptionEval(findItem(1), 404)
+    * }}}
+    *
+    */
+  def fromOptionEval[E, E1 >: E, A](opt: BIO[E, Option[A]], ifEmpty: => E1): BIO[E1, A] = {
+    opt.flatMap {
+      case None => Error(ifEmpty)
+      case Some(v) => Now(v)
+    }
+  }
+
   /** Builds a [[Task]] instance out of a Scala `Try`. */
   def fromTry[A](a: Try[A]): Task[A] =
     a match {
