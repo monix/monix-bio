@@ -97,6 +97,7 @@ object TaskBlockingSuite extends SimpleTestSuite {
     intercept[TimeoutException] {
       Task.never.runSyncUnsafe(100.millis)
     }
+    ()
   }
 
   test("BIO.attempt.runSyncUnsafe works") {
@@ -114,6 +115,7 @@ object TaskBlockingSuite extends SimpleTestSuite {
     intercept[DummyException] {
       task2.attempt.runSyncUnsafe(Duration.Inf)
     }
+    ()
 
   }
 }

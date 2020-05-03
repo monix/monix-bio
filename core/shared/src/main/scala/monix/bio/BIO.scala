@@ -2735,11 +2735,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   *           task.flatMap(a => BIO.shift.map(_ => a))
   *         }}}
   *
-  *         And again we can also describe this with `<<`
+  *         And again we can also describe this with `<*`
   *         from Cats:
   *
   *         {{{
-  *           task << Task.shift
+  *           task <* BIO.shift
   *         }}}
   *
   * @define parallelismNote NOTE: the tasks get forked automatically so there's

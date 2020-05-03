@@ -87,6 +87,7 @@ object TaskMiscSuite extends BaseTestSuite {
     intercept[NoSuchElementException] {
       BIO.eval(10).failed.runSyncStep
     }
+    ()
   }
 
   test("BIO.map protects against user code") { implicit s =>
@@ -205,10 +206,12 @@ object TaskMiscSuite extends BaseTestSuite {
 
     publisher.subscribe {
       new Subscriber[Int] {
-        def onSubscribe(s: Subscription): Unit =
+        def onSubscribe(s: Subscription): Unit = {
           intercept[IllegalArgumentException] {
             s.request(-1)
           }
+          ()
+        }
         def onNext(t: Int): Unit =
           throw new IllegalStateException("onNext")
         def onError(t: Throwable): Unit =

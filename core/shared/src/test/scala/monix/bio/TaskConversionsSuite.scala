@@ -66,6 +66,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     intercept[DummyException] {
       BIO.raiseError(dummy).to[IO].unsafeRunSync()
     }
+    ()
   }
 
   test("BIO.raiseError(dummy).executeAsync.to[IO]") { implicit s =>
@@ -83,6 +84,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     intercept[DummyException] {
       BIO.terminate(dummy).to[IO].unsafeRunSync()
     }
+    ()
   }
 
   test("BIO.terminate(dummy).executeAsync.to[IO]") { implicit s =>

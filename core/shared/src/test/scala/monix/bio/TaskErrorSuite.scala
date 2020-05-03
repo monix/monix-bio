@@ -66,12 +66,14 @@ object TaskErrorSuite extends BaseTestSuite {
     intercept[DummyException] {
       BIO.terminate(dummy).failed.runSyncStep
     }
+    ()
   }
 
   test("BIO.failed should fail for successful values") { implicit s =>
     intercept[NoSuchElementException] {
       BIO.now(10).failed.runSyncStep
     }
+    ()
   }
 
   test("BIO#onErrorRecover should mirror source on success") { implicit s =>

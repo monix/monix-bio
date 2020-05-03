@@ -111,6 +111,7 @@ object TaskCallbackSuite extends TestSuite[TestScheduler] {
     assertEquals(p.future.value, Some(Success(Right(1))))
     intercept[IllegalStateException] { cb.onSuccess(2) }
     intercept[CallbackCalledMultipleTimesException] { cb.onSuccess(2) }
+    ()
   }
 
   test("BiCallback.fromPromise (failure)") { _ =>
@@ -123,6 +124,7 @@ object TaskCallbackSuite extends TestSuite[TestScheduler] {
     assertEquals(p.future.value, Some(Success(Left(dummy))))
     intercept[IllegalStateException] { cb.onSuccess(1) }
     intercept[CallbackCalledMultipleTimesException] { cb.onSuccess(1) }
+    ()
   }
 
   test("BiCallback.fromPromise (terminal failure)") { _ =>
@@ -135,6 +137,7 @@ object TaskCallbackSuite extends TestSuite[TestScheduler] {
     assertEquals(p.future.value, Some(Failure(dummy)))
     intercept[IllegalStateException] { cb.onSuccess(1) }
     intercept[CallbackCalledMultipleTimesException] { cb.onSuccess(1) }
+    ()
   }
 
   test("BiCallback.fromPromise(Cause) (terminal failure)") { _ =>
@@ -147,6 +150,7 @@ object TaskCallbackSuite extends TestSuite[TestScheduler] {
     assertEquals(p.future.value, Some(Failure(dummy)))
     intercept[IllegalStateException] { cb.onSuccess(1) }
     intercept[CallbackCalledMultipleTimesException] { cb.onSuccess(1) }
+    ()
   }
 
   test("BiCallback.empty reports errors") { implicit s =>
