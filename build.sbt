@@ -1,15 +1,17 @@
 import sbt.url
 
-import scala.xml.Elem
-import scala.xml.transform.{RewriteRule, RuleTransformer}
-
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
 addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
+addCommandAlias("ci-jvm-mima", s";ci-jvm ;mimaReportBinaryIssues")
+addCommandAlias("ci-jvm-all",  s";ci-jvm-mima ;unidoc")
 
-val monixVersion = "3.1.0"
-val minitestVersion = "2.7.0"
-val catsVersion = "2.0.0"
-val catsEffectVersion = "2.0.0"
+val monixVersion = "3.2.1"
+val minitestVersion = "2.8.2"
+val catsEffectVersion = "2.1.3"
+
+// The Monix version with which we must keep binary compatibility.
+// https://github.com/typesafehub/migration-manager/wiki/Sbt-plugin
+val monixSeries = "0.1.0"
 
 lazy val `monix-bio` = project.in(file("."))
   .enablePlugins(ScalaUnidocPlugin)
@@ -23,6 +25,7 @@ lazy val coreJVM = project.in(file("core/jvm"))
   .settings(name := "monix-bio")
   .enablePlugins(AutomateHeaderPlugin)
   .settings(doctestTestSettings)
+  .settings(mimaSettings)
 
 lazy val coreJS = project.in(file("core/js"))
   .settings(crossSettings ++ crossVersionSharedSources)
@@ -38,8 +41,8 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .settings(crossSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC18",
-      "io.monix" %% "monix-eval" % "3.1.0"
+      "dev.zio" %% "zio" % "1.0.0-RC18-2",
+      "io.monix" %% "monix-eval" % monixVersion
     ))
 
 /**
@@ -216,18 +219,6 @@ lazy val sharedSettings = Seq(
   publishArtifact in Test := false,
   pomIncludeRepository := { _ => false }, // removes optional dependencies
 
-  // For evicting Scoverage out of the generated POM
-  // See: https://github.com/scoverage/sbt-scoverage/issues/153
-  pomPostProcess := { (node: xml.Node) =>
-    new RuleTransformer(new RewriteRule {
-      override def transform(node: xml.Node): Seq[xml.Node] = node match {
-        case e: Elem
-          if e.label == "dependency" && e.child.exists(child => child.label == "groupId" && child.text == "org.scoverage") => Nil
-        case _ => Seq(node)
-      }
-    }).transform(node).head
-  },
-
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
   homepage := Some(url("https://monix.io")),
 
@@ -311,6 +302,13 @@ lazy val scalaJSSettings = Seq(
     s"-P:scalajs:mapSourceURI:$l->$g"
   }
 )
+
+val mimaSettings = Seq(
+  mimaPreviousArtifacts := Set("io.monix" %% "monix-bio" % monixSeries),
+  mimaBinaryIssueFilters ++= MimaFilters.changes
+)
+// https://github.com/lightbend/mima/pull/289
+mimaFailOnNoPrevious in ThisBuild := false
 
 lazy val docsMappingsAPIDir =
   settingKey[String]("Name of subdirectory in site target directory for api docs")
