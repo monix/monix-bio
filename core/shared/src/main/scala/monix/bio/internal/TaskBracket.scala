@@ -211,6 +211,7 @@ private[monix] object TaskBracket {
           }
 
           override def onTermination(e: Throwable): Unit = {
+            deferredRelease.complete(BIO.unit)(ctx.scheduler)
             cb.onTermination(e)
           }
         }
