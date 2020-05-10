@@ -205,10 +205,13 @@ private[monix] object TaskBracket {
             }
           }
 
-          def onError(ex: E): Unit =
+          def onError(ex: E): Unit = {
+            deferredRelease.complete(BIO.unit)(ctx.scheduler)
             cb.onError(ex)
+          }
 
           override def onTermination(e: Throwable): Unit = {
+            deferredRelease.complete(BIO.unit)(ctx.scheduler)
             cb.onTermination(e)
           }
         }
