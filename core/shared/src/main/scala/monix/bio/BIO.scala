@@ -3098,12 +3098,12 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   final case class NotFound()
     *
-    *   BIO.fromOption(NotFound())(Some(1)) // <-> BIO.now(1))
-    *   BIO.fromOption(NotFound())(None)    // <-> BIO.raiseError(NotFound())
+    *   BIO.fromOption(Some(1), NotFound()) // <-> BIO.now(1)
+    *   BIO.fromOption(None, NotFound())   // <-> BIO.raiseError(NotFound())
     * }}}
     *
     */
-  def fromOption[E, A](ifEmpty: => E)(opt: Option[A]): BIO[E, A] =
+  def fromOption[E, A](opt: Option[A], ifEmpty: => E): BIO[E, A] =
     opt match {
       case None => BIO.suspendTotal(BIO.raiseError(ifEmpty))
       case Some(v) => Now(v)
