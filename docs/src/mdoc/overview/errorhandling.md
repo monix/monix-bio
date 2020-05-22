@@ -89,9 +89,9 @@ def callNumberService(i: Int): Task[Int] = numberService(i).onErrorHandleWith {
 }
 ```
 
-When writing method `callNumberService` we have to check the implementation of `numberService` to see what kind of 
-errors can we expect because the type signature specify only `Throwable` - so it can be pretty much anything. 
-On top of that, we might have to add `case other => ...` just to be safe in case we missed any error and to make our pattern matching in `onErrorHandleWith` exhaustive.
+When writing `callNumberService` method we have to check the implementation of `numberService` to see what kind of 
+errors can we expect because the type signature specifies only `Throwable` - so it can be pretty much anything. 
+On top of that, we might have to add `case other => ...` just to be safe in case we missed any error and to make our pattern matching exhaustive.
 
 At some point, the implementation might change:
 
@@ -249,7 +249,7 @@ task.attempt.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: error
 ```
 
-Other methods which return `UIO` will behave the same way in case of throwing an exception.
+Other methods which return `UIO` or use generic `E` (not fixed to `Throwable`) like `map` / `flatMap` will behave the same way in case of throwing an exception.
 
 ## Recovering from Errors
 
@@ -337,11 +337,11 @@ recovered.attempt.runToFuture.foreach(println)
 
 If `task` is successful then:
 
-`task.redeem(fe, fb) <-> task.flatMap(fb)`
+`task.redeemWith(fe, fb) <-> task.flatMap(fb)`
 
 And when `task` is failed:
 
-`task.redeem(fe, fb) <-> task.onErrorHandle(fe)`
+`task.redeemWith(fe, fb) <-> task.onErrorHandleWith(fe)`
 
 Instead of:
 
@@ -504,6 +504,35 @@ task.runToFuture.value
 ```
 
 If your `E` is not `Throwable` you can use `hideErrorsWith` which takes a `E => Throwable` function.
+
+This method is handy if you are using generic Cats-Effect based libraries, for example:
+
+```scala mdoc:silent
+import monix.bio.{BIO, Task}
+import monix.catnap.ConcurrentQueue
+
+val queueExample: BIO[Throwable, String] = for {
+  queue <- ConcurrentQueue[Task].bounded[String](10)
+  _ <- queue.offer("Message")
+  msg <- queue.poll
+} yield msg
+```
+
+`monix.catnap.ConcurrentQueue` works for a generic effect type (`cats.effect.IO`, `monix.eval.Task`, `zio.ZIO`) but it is written
+in terms of type classes which unfortunately don't support two channels of errors and fix everything as `Throwable`.
+
+These methods don't throw any errors so we can safely hide them and have our typed errors back:
+
+```scala mdoc:silent 
+import monix.bio.{Task, UIO}
+import monix.catnap.ConcurrentQueue
+
+val queueExample: UIO[String] = (for {
+  queue <- ConcurrentQueue[Task].bounded[String](10)
+  _ <- queue.offer("Message")
+  msg <- queue.poll
+} yield msg).hideErrors
+```
 
 ## Restarting on Error
 
