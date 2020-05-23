@@ -50,7 +50,7 @@ task.runSyncUnsafe()
 
 ## Error Channels
 
-Many applications divide errors in two types:
+Many applications divide errors into two types:
 - Recoverable errors which can be acted upon and often have a meaning in the business domain. 
   Examples: Insufficient permissions for a given action, temporary network failure.
 - Non-Recoverable errors which are often fatal or it is not sensible to try to recover from them.
@@ -61,16 +61,16 @@ Many applications divide errors in two types:
 - Errors of type `Throwable` for non-recoverable errors. We call them "terminal" or "unexpected" errors. You might also see terminology like "defect" or "unchecked failure" in other libraries.
 
 The general guideline is to use a typed error channel for errors that are expected to be handled or have a value for the caller.
-The internal channel (non-recoverable errors) should be used for errors which can't be handled properly or can be only handled somewhere deep downstream in a generic manner (let's say to return `InternalServerError` at the edges).
+The internal channel (non-recoverable errors) should be used for errors which can't be handled properly or can only be handled somewhere deep downstream in a generic manner (let's say to return `InternalServerError` at the edges).
 
 Non-recoverable errors are hidden in the internal error channel which has very few operators and is supposed to be used as rarely as possible.
 Most of these errors are outside of our control and ideally we don't have to burden our minds with it and use a smaller, more comprehensible errors' domain for the most part of the coding.
 
-The number of possible recoverable errors is often limited and each of them could have a specific way to handle in the business logic.
+The number of possible recoverable errors is often limited and each of them could be handled in a specific way in the business logic.
 `E` can be any type which allows us to be very precise. 
 For instance, we can choose `E` to be an ADT reflecting errors in our business domain or even use `Nothing` to show that we don't have to worry about recovering from any errors.
-Possible errors are provided in the type signature which serves as an always up to date documentation and allows us to easily statically check if all errors are handled.
-Furthermore, if there is a change and it introduces new errors we might easily miss it.
+Possible errors are provided in the type signature which serves as always up-to-date documentation and allows us to easily statically check if all errors are handled.
+Furthermore, if there is a change, and it introduces new errors, we might easily miss it.
 
 Consider the following example:
 
@@ -90,8 +90,8 @@ def callNumberService(i: Int): Task[Int] = numberService(i).onErrorHandleWith {
 ```
 
 When writing `callNumberService` method we have to check the implementation of `numberService` to see what kind of 
-errors can we expect because the type signature specifies only `Throwable` - so it can be pretty much anything. 
-On top of that, we might have to add `case other => ...` just to be safe in case we missed any error and to make our pattern matching exhaustive.
+errors can we expect because the type signature only specifies `Throwable` - so it can be pretty much anything. 
+On top of that, we might have to add `case other => ...` to be safe in case we missed any error and to make our pattern matching exhaustive.
 
 At some point, the implementation might change:
 
@@ -132,7 +132,7 @@ def callNumberService(i: Int): UIO[Int] = numberService(i).onErrorHandleWith {
 }
 ```
 
-Now `numberService` specifies possible errors in the type signature so it is immediately clear to us and the compiler what are expected failures.
+Now `numberService` specifies possible errors in the type signature, so it is immediately apparent to us and the compiler what the expected failures are.
 We don't need `case other => ...` because there are no other possible errors and if they appear in the future the code will stop compiling.
 As a nice bonus, `callNumberService` returns `UIO[Int]` (type alias of `BIO[Nothing, Int]`) which tells whoever uses `callNumberService` that they don't have to expect any errors.
 
@@ -169,7 +169,7 @@ It would fail on the following input: ServiceTimeout(_)
   def callNumberService(i: Int): UIO[Int] = numberService(i).onErrorHandleWith {
 ```
 
-Similar approach is often used with single parameter effects in combination with `Either` or `EitherT`, that is:
+A similar approach is often used with single parameter effects in combination with `Either` or `EitherT`, that is:
 
 ```scala
 def numberService(i: Int): IO[Either[NumberServiceErrors, Int]]
@@ -235,7 +235,7 @@ task.attempt.runSyncUnsafe()
 ### Catching errors in BIO.evalTotal
 
 If we are sure that our side-effecting code won't have any surprises we can use `BIO.evalTotal` but if we are wrong, the error
-will be caught in internal error channel:
+will be caught in the internal error channel:
 
 ```scala mdoc:compile-only
 import monix.bio.{BIO, UIO}
@@ -249,12 +249,12 @@ task.attempt.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: error
 ```
 
-Other methods which return `UIO` or use generic `E` (not fixed to `Throwable`) like `map` / `flatMap` will behave the same way in case of throwing an exception.
+Other methods which return `UIO` or use a generic `E` (not fixed to `Throwable`) like `map` / `flatMap` will behave in the same way when throwing an exception.
 
 ## Recovering from Errors
 
 When `BIO` fails, it will skip all subsequent operations until the error is handled.
-Typed and terminal errors are in different categories - handling typed error will not do anything to unexpected errors but
+Typed and terminal errors are in different categories - handling typed errors will not do anything to unexpected errors but
 error handling functions for terminal errors handle "normal" errors as well. 
 
 The section only covers the main error handling operators, refer to [API Documentation](https://monix.github.io/monix-bio/api/monix/bio/BIO.html) for the full list.
@@ -270,7 +270,7 @@ final def attempt: UIO[Either[E, A]]
 final def materialize(implicit ev: E <:< Throwable): UIO[Try[A]]
 ```
 
-Note that return type is `UIO` indicating that there are no more expected errors to handle.
+Note that the return type is `UIO` indicating that there are no more expected errors to handle.
 
 ```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}
@@ -285,7 +285,7 @@ attempted.runSyncUnsafe()
 ```
 
 It is common to use `attempt` before `runToFuture` or `runSyncUnsafe`. 
-Typed error will be exposed as a `Left` and terminal error will result in a failed `Future` or an exception thrown (in `runSyncUnsafe`)
+The typed error will be exposed as a `Left` and the terminal error will result in a failed `Future` or an exception thrown (in `runSyncUnsafe`).
 
 Both methods have corresponding reverse operations:
 
@@ -306,7 +306,7 @@ val task: BIO[String, Int] = BIO.raiseError(error).attempt.rethrow
 
 #### onErrorHandle & onErrorHandleWith
 
-`BIO.onErrorHandleWith` is an operation that takes a function mapping possible exceptions to a desired fallback outcome, so we could do this:
+`BIO.onErrorHandleWith` is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:
 
 ```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}
@@ -329,7 +329,7 @@ recovered.attempt.runToFuture.foreach(println)
 //=> Recovered!
 ```
 
-`BIO.onErrorHandle` is a variant which takes a pure recovery function `E => B` instead of effectful `E => BIO[E1, B]` which could also fail.
+`BIO.onErrorHandle` is a variant which takes a pure recovery function `E => B` instead of an effectful `E => BIO[E1, B]` which could also fail.
 
 #### redeem & redeemWith
 
@@ -384,7 +384,7 @@ The latter will be more efficient in terms of memory allocations.
 
 Terminal errors ignore all typed error handlers and can only be caught by more powerful methods.
 
-The example below shows how `redeemWith` does nothing to handle unexpected error even if it uses the same type:
+The example below shows how `redeemWith` does nothing to handle unexpected errors even if it uses the same type:
 
 ```scala mdoc:compile-only
 import monix.bio.BIO
@@ -483,7 +483,7 @@ task.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: boom
 ```
 
-### Moving errors from typed error channel
+### Moving errors from the typed error channel
 
 If you are sure that your `BIO` shouldn't have any errors and if there are any they should shutdown the task as soon as possible
 there is `hideErrors` and `hideErrorsWith` which will hide the error from the type signature and raise it as a terminal error.
@@ -535,7 +535,7 @@ val queueExample: UIO[String] = (for {
 
 ## Restarting on Error
 
-`BIO` type represents a specification of a computation so it can be usually freely restarted if we wish to do so.
+`BIO` type represents a specification of a computation so it can be freely restarted if we wish to do so.
 
 There are few retry combinators available but in general it is quite simple to write a custom recursive function.
 For instance, retry with exponential backoff would look like as follows:
@@ -558,12 +558,12 @@ def retryBackoff[E, A](source: BIO[E, A],
 }
 ```
 
-In more complicated cases it's worth to take a look at [cats-retry](https://github.com/cb372/cats-retry) library and/or use a stream (e.g. [fs2](https://github.com/functional-streams-for-scala/fs2), [Monix Observable](https://monix.io/docs/3x/reactive/observable.html)) instead of recursive functions.
+In more complicated cases it's worth taking a look at [cats-retry](https://github.com/cb372/cats-retry) library and/or use a stream (e.g. [fs2](https://github.com/functional-streams-for-scala/fs2), [Monix Observable](https://monix.io/docs/3x/reactive/observable.html)) instead of recursive functions.
 
 ## Reporting Uncaught Errors
 
 Losing errors is unacceptable.
-We can't always return them as a `BIO` result because sometimes the failure could happen concurrently and `BIO` could be already finished with a different value. 
+We can't always return them as a `BIO` result because sometimes the failure could happen concurrently and `BIO` could already be finished with a different value. 
 In this case the error is reported with `Scheduler.reportFailure` which by default logs uncaught errors to `System.err`:
 
 ```scala
@@ -619,7 +619,7 @@ task.runAsync { r =>
 
 ## Cats Instances
 
-If you are [Cats](https://github.com/typelevel/cats) user then `BIO` provides [`ApplicativeError`](https://typelevel.org/cats/api/cats/ApplicativeError.html) and 
+If you are a [Cats](https://github.com/typelevel/cats) user then `BIO` provides [`ApplicativeError`](https://typelevel.org/cats/api/cats/ApplicativeError.html) and 
 [`MonadError`](https://typelevel.org/cats/api/cats/MonadError.html) instances.
 
 If you import `cats.syntax.monadError._`, `cats.syntax.applicativeError` or just `cats.syntax.all._` you will have access to all the methods provided by library.
