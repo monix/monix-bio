@@ -8,7 +8,7 @@ position: 3
 
 When `BIO` fails with an error it short-circuits the computation and returns the error as a result:
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -27,7 +27,7 @@ task.runSyncUnsafe()
 We can handle the error to prevent it with one of many available methods. 
 For better discoverability, they are often prefixed with `onError`.
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -74,7 +74,7 @@ Furthermore, if there is a change and it introduces new errors we might easily m
 
 Consider the following example:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, Task}
   
 case class ForbiddenNumber() extends Exception
@@ -95,7 +95,7 @@ On top of that, we might have to add `case other => ...` just to be safe in case
 
 At some point, the implementation might change:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, Task}
 import scala.concurrent.duration._
 
@@ -118,7 +118,7 @@ The method `callNumberService` would also compile if we changed error class of `
 
 Now let's see how it would look like if we leverage `BIO` capabilities:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}
   
 case class ForbiddenNumber()
@@ -138,7 +138,7 @@ As a nice bonus, `callNumberService` returns `UIO[Int]` (type alias of `BIO[Noth
 
 If we change `numberService` errors then we will have to change the signature as well:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}  
 import scala.concurrent.duration._
 
@@ -188,7 +188,7 @@ An error can occur when an `Exception` is thrown or we can construct it ourselve
 
 Use `BIO.raiseError` if you already have an error value:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
 import monix.execution.Scheduler.Implicits.global
 
@@ -203,7 +203,7 @@ task.attempt.runSyncUnsafe()
 
 `BIO.terminate` can raise a terminal error (second channel with `Throwable`):
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import monix.bio.BIO
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
@@ -220,7 +220,7 @@ task.attempt.runSyncUnsafe()
 
 `BIO.eval` (and `BIO.apply`) will catch any errors that are thrown in the method's body and expose them as typed errors:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, Task}
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
@@ -237,7 +237,7 @@ task.attempt.runSyncUnsafe()
 If we are sure that our side-effecting code won't have any surprises we can use `BIO.evalTotal` but if we are wrong, the error
 will be caught in internal error channel:
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import monix.bio.{BIO, UIO}
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
@@ -272,7 +272,7 @@ final def materialize(implicit ev: E <:< Throwable): UIO[Try[A]]
 
 Note that return type is `UIO` indicating that there are no more expected errors to handle.
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}
 import monix.execution.Scheduler.Implicits.global
 
@@ -296,7 +296,7 @@ final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task
 
 Example:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
 
 val error = "error"
@@ -308,7 +308,7 @@ val task: BIO[String, Int] = BIO.raiseError(error).attempt.rethrow
 
 `BIO.onErrorHandleWith` is an operation that takes a function mapping possible exceptions to a desired fallback outcome, so we could do this:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}
 import monix.execution.Scheduler.Implicits.global
 
@@ -345,7 +345,7 @@ And when `task` is failed:
 
 Instead of:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -363,7 +363,7 @@ task.runSyncUnsafe()
 
 You can do this:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -386,7 +386,7 @@ Terminal errors ignore all typed error handlers and can only be caught by more p
 
 The example below shows how `redeemWith` does nothing to handle unexpected error even if it uses the same type:
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -422,7 +422,7 @@ object Cause {
 
 Let's modify the previous example to use `redeemCause`:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -450,9 +450,8 @@ and only use `Cause` variants when absolutely necessary like at the edges of the
 
 It can be useful to convert an error from a smaller type to a bigger type:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.BIO
-import monix.execution.Scheduler.Implicits.global
 import java.time.Instant
 
 case class ErrorA(i: Int)
@@ -468,7 +467,7 @@ val task2: BIO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now
 
 For instance, we might want to log the error without handling it:
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -489,7 +488,7 @@ task.runSyncUnsafe()
 If you are sure that your `BIO` shouldn't have any errors and if there are any they should shutdown the task as soon as possible
 there is `hideErrors` and `hideErrorsWith` which will hide the error from the type signature and raise it as a terminal error.
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, UIO}
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -507,7 +506,7 @@ If your `E` is not `Throwable` you can use `hideErrorsWith` which takes a `E => 
 
 This method is handy if you are using generic Cats-Effect based libraries, for example:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
 import monix.bio.{BIO, Task}
 import monix.catnap.ConcurrentQueue
 
@@ -523,7 +522,7 @@ in terms of type classes which unfortunately don't support two channels of error
 
 These methods don't throw any errors so we can safely hide them and have our typed errors back:
 
-```scala mdoc:silent 
+```scala mdoc:silent:reset
 import monix.bio.{Task, UIO}
 import monix.catnap.ConcurrentQueue
 
@@ -541,12 +540,14 @@ val queueExample: UIO[String] = (for {
 There are few retry combinators available but in general it is quite simple to write a custom recursive function.
 For instance, retry with exponential backoff would look like as follows:
 
-```scala mdoc:silent
+```scala mdoc:silent:reset
+import monix.bio.BIO
+import scala.concurrent.duration._
+
 def retryBackoff[E, A](source: BIO[E, A],
   maxRetries: Int, firstDelay: FiniteDuration): BIO[E, A] = {
 
-  source.onErrorHandleWith {
-    case ex: E =>
+  source.onErrorHandleWith { ex =>
       if (maxRetries > 0)
         // Recursive call, it's OK as Monix is stack-safe
         retryBackoff(source, maxRetries - 1, firstDelay * 2)
@@ -565,7 +566,7 @@ Losing errors is unacceptable.
 We can't always return them as a `BIO` result because sometimes the failure could happen concurrently and `BIO` could be already finished with a different value. 
 In this case the error is reported with `Scheduler.reportFailure` which by default logs uncaught errors to `System.err`:
 
-```scala mdoc:silent
+```scala
 import monix.bio.BIO
 import monix.execution.Scheduler.Implicits.global
 import scala.concurrent.duration._
@@ -593,7 +594,7 @@ task.runAsync { r =>
 
 We can customize the behavior to use anything we'd like:
 
-```scala mdoc:silent
+```scala
 import monix.bio.BIO
 import monix.execution.Scheduler
 import monix.execution.UncaughtExceptionReporter

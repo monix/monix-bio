@@ -43,12 +43,12 @@ install:
 script:
   - sbt -J-Xmx6144m ++$TRAVIS_SCALA_VERSION $COMMAND
   - |
-    if [[ "$TRAVIS_SCALA_VERSION" =~ ^2\.13\. ]]; then
+    if [[ "$COMMAND" = "ci-jvm-all" ]]; then
       sbt ++$TRAVIS_SCALA_VERSION microsite/makeMicrosite
     fi
 
 after_success:
-  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" -a "$TRAVIS_SCALA_VERSION" = "2.13.1" -a "$COMMAND" = "ci-jvm" ]; then sbt microsite/publishMicrosite; fi
+  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" -a "$COMMAND" = "ci-jvm-all" ]; then sbt microsite/publishMicrosite; fi
 
 cache:
   directories:
