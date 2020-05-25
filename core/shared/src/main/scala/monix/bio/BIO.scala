@@ -2088,7 +2088,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Example:
     *  {{{
-    *    import monix.bio.{BIO, UIO}
+    *    import monix.bio.BIO
     *
     *    // will result in Left("Error") and print the error to console
     *    BIO.raiseError("Error1").tapError(err => BIO.evalTotal(println(err)))
