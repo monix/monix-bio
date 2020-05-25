@@ -1,0 +1,607 @@
+<!DOCTYPE html><html><head><title>Monix BIO: Error Handling</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Monix Developers" /><meta name="description" content="Asynchronous Programming for Scala and Scala.js" /><meta name="og:image" content="/monix-bio/img/poster.png" /><meta name="image" property="og:image" content="/monix-bio/img/poster.png" /><meta name="og:title" content="Monix BIO: Error Handling" /><meta name="title" property="og:title" content="Monix BIO: Error Handling" /><meta name="og:site_name" content="Monix BIO" /><meta name="og:url" content="https://monix.io" /><meta name="og:type" content="website" /><meta name="og:description" content="Asynchronous Programming for Scala and Scala.js" /><link rel="icon" type="image/png" href="/monix-bio/img/favicon.png" /><meta name="twitter:title" content="Monix BIO: Error Handling" /><meta name="twitter:image" content="https://monix.github.io/monix-bio/monix-bio/img/poster.png" /><meta name="twitter:description" content="Asynchronous Programming for Scala and Scala.js" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:creator" content="@Avasil" /><link rel="icon" type="image/png" sizes="16x16" href="/monix-bio/img/favicon16x16.png" /><link rel="icon" type="image/png" sizes="24x24" href="/monix-bio/img/favicon24x24.png" /><link rel="icon" type="image/png" sizes="32x32" href="/monix-bio/img/favicon32x32.png" /><link rel="icon" type="image/png" sizes="48x48" href="/monix-bio/img/favicon48x48.png" /><link rel="icon" type="image/png" sizes="57x57" href="/monix-bio/img/favicon57x57.png" /><link rel="icon" type="image/png" sizes="60x60" href="/monix-bio/img/favicon60x60.png" /><link rel="icon" type="image/png" sizes="64x64" href="/monix-bio/img/favicon64x64.png" /><link rel="icon" type="image/png" sizes="70x70" href="/monix-bio/img/favicon70x70.png" /><link rel="icon" type="image/png" sizes="72x72" href="/monix-bio/img/favicon72x72.png" /><link rel="icon" type="image/png" sizes="76x76" href="/monix-bio/img/favicon76x76.png" /><link rel="icon" type="image/png" sizes="96x96" href="/monix-bio/img/favicon96x96.png" /><link rel="icon" type="image/png" sizes="114x114" href="/monix-bio/img/favicon114x114.png" /><link rel="icon" type="image/png" sizes="120x120" href="/monix-bio/img/favicon120x120.png" /><link rel="icon" type="image/png" sizes="128x128" href="/monix-bio/img/favicon128x128.png" /><link rel="icon" type="image/png" sizes="144x144" href="/monix-bio/img/favicon144x144.png" /><link rel="icon" type="image/png" sizes="150x150" href="/monix-bio/img/favicon150x150.png" /><link rel="icon" type="image/png" sizes="152x152" href="/monix-bio/img/favicon152x152.png" /><link rel="icon" type="image/png" sizes="196x196" href="/monix-bio/img/favicon196x196.png" /><link rel="icon" type="image/png" sizes="310x310" href="/monix-bio/img/favicon310x310.png" /><link rel="icon" type="image/png" sizes="310x150" href="/monix-bio/img/favicon310x150.png" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/monix-bio/highlight/styles/atom-one-light.css" /><link rel="stylesheet" href="/monix-bio/css/light-style.css" /></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><div id="sidebar-brand"><a href="/monix-bio/" class="brand"><div class="brand-wrapper"></div><span>Monix BIO</span></a><button id="main-toggle" class="sidebar-toggle"><span class="close"></span></button></div><div class="sidebar-nav"> <div class="sidebar-nav-item  "><a href="/monix-bio/overview/" title="Overview" class="drop-nested">Overview</a><i class="fa fa-angle-right"></i><div class="sub-section"> <a href="/monix-bio/overview/gettingstarted.html" title="Getting Started" class="">Getting Started</a></div></div></div></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li id="gh-eyes-item" class="hidden-xs"><a href="https://github.com/monix/monix-bio" target="_blank" rel="noopener noreferrer"><i class="fa fa-eye"></i><span>Watchers<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs"><a href="https://github.com/monix/monix-bio" target="_blank" rel="noopener noreferrer"><i class="fa fa-star-o"></i><span>Stars<span id="stars" class="label label-default">--</span></span></a></li></ul></div></div></div></div><div id="content" data-github-owner="monix" data-github-repo="monix-bio"><div class="content-wrapper"><section><h1 id="error-handling">Error Handling</h1>
+
+<p>When <code class="highlighter-rouge">BIO</code> fails with an error it short-circuits the computation and returns the error as a result:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">fa</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">fb</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">fc</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"C"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="nv">fa</span><span class="o">.</span><span class="py">flatMap</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">fb</span><span class="o">).</span><span class="py">flatMap</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">fc</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<p>We can handle the error to prevent it with one of many available methods. 
+For better discoverability, they are often prefixed with <code class="highlighter-rouge">onError</code>.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">fa</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">fb</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">fc</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"C"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="n">fa</span>
+  <span class="o">.</span><span class="py">flatMap</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">fb</span><span class="o">)</span>
+  <span class="o">.</span><span class="py">onErrorHandleWith</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"B recovered"</span><span class="o">)))</span>
+  <span class="o">.</span><span class="py">flatMap</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">fc</span><span class="o">)</span>
+  <span class="o">.</span><span class="py">onErrorHandleWith</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"C recovered"</span><span class="o">)))</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+<span class="c1">//=&gt; A</span>
+<span class="c1">//=&gt; B recovered</span>
+<span class="c1">//=&gt; C</span>
+</code></pre></div></div>
+
+<h2 id="error-channels">Error Channels</h2>
+
+<p>Many applications divide errors into two types:</p>
+<ul>
+  <li>Recoverable errors which can be acted upon and often have a meaning in the business domain. 
+Examples: Insufficient permissions for a given action, temporary network failure.</li>
+  <li>Non-Recoverable errors which are often fatal or it is not sensible to try to recover from them.
+Examples: <code class="highlighter-rouge">StackOverflow</code>, throwing an exception in a pure function (programmer’s error).</li>
+</ul>
+
+<p><code class="highlighter-rouge">BIO[E, A]</code> follow this pattern and can fail with two kind of errors:</p>
+<ul>
+  <li>Errors of type <code class="highlighter-rouge">E</code> which represents recoverable errors. Other common names are “typed” or “expected” errors.</li>
+  <li>Errors of type <code class="highlighter-rouge">Throwable</code> for non-recoverable errors. We call them “terminal” or “unexpected” errors. You might also see terminology like “defect” or “unchecked failure” in other libraries.</li>
+</ul>
+
+<p>The general guideline is to use a typed error channel for errors that are expected to be handled or have a value for the caller.
+The internal channel (non-recoverable errors) should be used for errors which can’t be handled properly or can only be handled somewhere deep downstream in a generic manner (let’s say to return <code class="highlighter-rouge">InternalServerError</code> at the edges).</p>
+
+<p>Non-recoverable errors are hidden in the internal error channel which has very few operators and is supposed to be used as rarely as possible.
+Most of these errors are outside of our control and ideally we don’t have to burden our minds with it and use a smaller, more comprehensible errors’ domain for the most part of the coding.</p>
+
+<p>The number of possible recoverable errors is often limited and each of them could be handled in a specific way in the business logic.
+<code class="highlighter-rouge">E</code> can be any type which allows us to be very precise. 
+For instance, we can choose <code class="highlighter-rouge">E</code> to be an ADT reflecting errors in our business domain or even use <code class="highlighter-rouge">Nothing</code> to show that we don’t have to worry about recovering from any errors.
+Possible errors are provided in the type signature which serves as always up-to-date documentation and allows us to easily statically check if all errors are handled.
+Furthermore, if there is a change, and it introduces new errors, we might easily miss it.</p>
+
+<p>Consider the following example:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">Task</span><span class="o">}</span>
+  
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span> <span class="k">extends</span> <span class="nc">Exception</span>
+
+<span class="k">def</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span>
+  <span class="nf">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ForbiddenNumber</span><span class="o">())</span>
+  <span class="k">else</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">now</span><span class="o">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="o">)</span>
+
+<span class="k">def</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="py">onErrorHandleWith</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span> <span class="k">=&gt;</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="o">)</span> <span class="c1">// try with a different number</span>
+  <span class="k">case</span> <span class="n">other</span> <span class="k">=&gt;</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="n">other</span><span class="o">)</span> <span class="c1">// propagate error</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>When writing <code class="highlighter-rouge">callNumberService</code> method we have to check the implementation of <code class="highlighter-rouge">numberService</code> to see what kind of 
+errors can we expect because the type signature only specifies <code class="highlighter-rouge">Throwable</code> - so it can be pretty much anything. 
+On top of that, we might have to add <code class="highlighter-rouge">case other =&gt; ...</code> to be safe in case we missed any error and to make our pattern matching exhaustive.</p>
+
+<p>At some point, the implementation might change:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">Task</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="k">sealed</span> <span class="k">trait</span> <span class="nc">NumberServiceErrors</span> <span class="k">extends</span> <span class="nc">Exception</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span> <span class="k">extends</span> <span class="nc">NumberServiceErrors</span>
+  
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ServiceTimeout</span><span class="o">(</span><span class="n">duration</span><span class="k">:</span> <span class="kt">FiniteDuration</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">NumberServiceErrors</span>
+
+<span class="k">def</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span>
+  <span class="c1">// Check if we should timeout the caller</span>
+  <span class="nf">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">5</span><span class="o">)</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ServiceTimeout</span><span class="o">(</span><span class="mf">10.</span><span class="n">second</span><span class="o">))</span>
+  <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ForbiddenNumber</span><span class="o">())</span>
+  <span class="k">else</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">now</span><span class="o">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="o">)</span>
+</code></pre></div></div>
+
+<p>We introduced a <code class="highlighter-rouge">ServiceTimeout</code> error which tells the users that their requests will be accepted after it passes.
+It’s easy to forget to update <code class="highlighter-rouge">callNumberService</code> to support the new behavior and if we didn’t have <code class="highlighter-rouge">case other =&gt; ...</code> then we would end up with errors at runtime.
+The method <code class="highlighter-rouge">callNumberService</code> would also compile if we changed error class of <code class="highlighter-rouge">ForbiddenNumber()</code> leading to more issues.</p>
+
+<p>Now let’s see how it would look like if we leverage <code class="highlighter-rouge">BIO</code> capabilities:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>
+  
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span>
+
+<span class="k">def</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">ForbiddenNumber</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span>
+  <span class="nf">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ForbiddenNumber</span><span class="o">())</span>
+  <span class="k">else</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">now</span><span class="o">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="o">)</span>
+
+<span class="k">def</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="py">onErrorHandleWith</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span> <span class="k">=&gt;</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="o">)</span> <span class="c1">// try with a different number</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Now <code class="highlighter-rouge">numberService</code> specifies possible errors in the type signature, so it is immediately apparent to us and the compiler what the expected failures are.
+We don’t need <code class="highlighter-rouge">case other =&gt; ...</code> because there are no other possible errors and if they appear in the future the code will stop compiling.
+As a nice bonus, <code class="highlighter-rouge">callNumberService</code> returns <code class="highlighter-rouge">UIO[Int]</code> (type alias of <code class="highlighter-rouge">BIO[Nothing, Int]</code>) which tells whoever uses <code class="highlighter-rouge">callNumberService</code> that they don’t have to expect any errors.</p>
+
+<p>If we change <code class="highlighter-rouge">numberService</code> errors then we will have to change the signature as well:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>  
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="k">sealed</span> <span class="k">trait</span> <span class="nc">NumberServiceErrors</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span> <span class="k">extends</span> <span class="nc">NumberServiceErrors</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ServiceTimeout</span><span class="o">(</span><span class="n">duration</span><span class="k">:</span> <span class="kt">FiniteDuration</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">NumberServiceErrors</span>
+
+<span class="k">def</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">NumberServiceErrors</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span>
+  <span class="c1">// Check if we should timeout the caller</span>
+  <span class="nf">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">5</span><span class="o">)</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ServiceTimeout</span><span class="o">(</span><span class="mf">10.</span><span class="n">second</span><span class="o">))</span>
+  <span class="k">else</span> <span class="nf">if</span> <span class="o">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ForbiddenNumber</span><span class="o">())</span>
+  <span class="k">else</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">now</span><span class="o">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="o">)</span>
+
+<span class="k">def</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="py">onErrorHandleWith</span> <span class="o">{</span>
+  <span class="k">case</span> <span class="nc">ForbiddenNumber</span><span class="o">()</span> <span class="k">=&gt;</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="o">)</span> <span class="c1">// try with a different number</span>
+  <span class="c1">// will give a warning without this line!</span>
+  <span class="k">case</span> <span class="nc">ServiceTimeout</span><span class="o">(</span><span class="n">timeout</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nf">callNumberService</span><span class="o">(</span><span class="n">i</span><span class="o">).</span><span class="py">delayExecution</span><span class="o">(</span><span class="n">timeout</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>If the application uses <code class="highlighter-rouge">scalacOptions += "-Xfatal-warnings"</code> in <code class="highlighter-rouge">build.sbt</code> we will get the following error if we forget to change <code class="highlighter-rouge">callNumberService</code>:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Error:(29, 80) match may not be exhaustive.
+It would fail on the following input: ServiceTimeout(_)
+  def callNumberService(i: Int): UIO[Int] = numberService(i).onErrorHandleWith {
+</code></pre></div></div>
+
+<p>A similar approach is often used with single parameter effects in combination with <code class="highlighter-rouge">Either</code> or <code class="highlighter-rouge">EitherT</code>, that is:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">numberService</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">IO</span><span class="o">[</span><span class="kt">Either</span><span class="o">[</span><span class="kt">NumberServiceErrors</span>, <span class="kt">Int</span><span class="o">]]</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">IO</code> can fail with <code class="highlighter-rouge">Throwable</code> (<code class="highlighter-rouge">BIO</code>’s terminal error channel) and <code class="highlighter-rouge">Either</code> can return <code class="highlighter-rouge">Left</code> of any <code class="highlighter-rouge">E</code> (<code class="highlighter-rouge">BIO</code>’s typed error channel).
+<code class="highlighter-rouge">BIO</code> forces this convention which makes it more convenient and safer to follow it but if you are familiar with <code class="highlighter-rouge">IO</code> of <code class="highlighter-rouge">Either</code> then the spirit is the same.</p>
+
+<p>I recommend <a href="https://degoes.net/articles/bifunctor-io">this article by John De Goes</a> if you are interested in the original motivations behind the idea of embedding this pattern directly in the data type.</p>
+
+<h2 id="producing-a-failed-bio">Producing a failed BIO</h2>
+
+<p>An error can occur when an <code class="highlighter-rouge">Exception</code> is thrown or we can construct it ourselves with dedicated builder methods.</p>
+
+<h3 id="bioraiseerror">BIO.raiseError</h3>
+
+<p>Use <code class="highlighter-rouge">BIO.raiseError</code> if you already have an error value:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">error</span> <span class="k">=</span> <span class="s">"error"</span>
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="n">error</span><span class="o">)</span>
+
+<span class="c1">// Left("error")</span>
+<span class="nv">task</span><span class="o">.</span><span class="py">attempt</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<h3 id="bioterminate">BIO.terminate</h3>
+
+<p><code class="highlighter-rouge">BIO.terminate</code> can raise a terminal error (second channel with <code class="highlighter-rouge">Throwable</code>):</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+
+<span class="k">val</span> <span class="nv">error</span> <span class="k">=</span> <span class="nc">DummyException</span><span class="o">(</span><span class="s">"error"</span><span class="o">)</span>
+<span class="c1">// It doesn't affect the signature</span>
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">terminate</span><span class="o">(</span><span class="n">error</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">attempt</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<h3 id="catching-errors-in-bioeval">Catching errors in BIO.eval</h3>
+
+<p><code class="highlighter-rouge">BIO.eval</code> (and <code class="highlighter-rouge">BIO.apply</code>) will catch any errors that are thrown in the method’s body and expose them as typed errors:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">Task</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+
+<span class="k">val</span> <span class="nv">error</span> <span class="k">=</span> <span class="nc">DummyException</span><span class="o">(</span><span class="s">"error"</span><span class="o">)</span>
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">eval</span> <span class="o">{</span> <span class="k">throw</span> <span class="n">error</span> <span class="o">}</span>
+
+<span class="c1">// Left(DummyException("error"))</span>
+<span class="nv">task</span><span class="o">.</span><span class="py">attempt</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<h3 id="catching-errors-in-bioevaltotal">Catching errors in BIO.evalTotal</h3>
+
+<p>If we are sure that our side-effecting code won’t have any surprises we can use <code class="highlighter-rouge">BIO.evalTotal</code> but if we are wrong, the error
+will be caught in the internal error channel:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+
+<span class="k">val</span> <span class="nv">error</span> <span class="k">=</span> <span class="nc">DummyException</span><span class="o">(</span><span class="s">"error"</span><span class="o">)</span>
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">evalTotal</span> <span class="o">{</span> <span class="k">throw</span> <span class="n">error</span> <span class="o">}</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">attempt</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<p>Other methods which return <code class="highlighter-rouge">UIO</code> or use a generic <code class="highlighter-rouge">E</code> (not fixed to <code class="highlighter-rouge">Throwable</code>) like <code class="highlighter-rouge">map</code> / <code class="highlighter-rouge">flatMap</code> will behave in the same way when throwing an exception.</p>
+
+<h2 id="recovering-from-errors">Recovering from Errors</h2>
+
+<p>When <code class="highlighter-rouge">BIO</code> fails, it will skip all subsequent operations until the error is handled.
+Typed and terminal errors are in different categories - handling typed errors will not do anything to unexpected errors but
+error handling functions for terminal errors handle “normal” errors as well.</p>
+
+<p>The section only covers the main error handling operators, refer to <a href="https://monix.github.io/monix-bio/api/monix/bio/BIO.html">API Documentation</a> for the full list.</p>
+
+<h3 id="typed-errors">Typed Errors</h3>
+
+<h4 id="exposing-errors">Exposing Errors</h4>
+
+<p><code class="highlighter-rouge">attempt</code> and <code class="highlighter-rouge">materialize</code> take the error away and return it as a normal value:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">final</span> <span class="k">def</span> <span class="nf">attempt</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Either</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]]</span>
+<span class="k">final</span> <span class="k">def</span> <span class="nf">materialize</span><span class="o">(</span><span class="k">implicit</span> <span class="n">ev</span><span class="k">:</span> <span class="kt">E</span> <span class="k">&lt;:</span><span class="kt">&lt;</span> <span class="kt">Throwable</span><span class="o">)</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Try</span><span class="o">[</span><span class="kt">A</span><span class="o">]]</span>
+</code></pre></div></div>
+
+<p>Note that the return type is <code class="highlighter-rouge">UIO</code> indicating that there are no more expected errors to handle.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">error</span> <span class="k">=</span> <span class="s">"error"</span>
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="n">error</span><span class="o">)</span>
+<span class="k">val</span> <span class="nv">attempted</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Either</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">]]</span> <span class="k">=</span> <span class="nv">task</span><span class="o">.</span><span class="py">attempt</span>
+
+<span class="c1">// Left("error")</span>
+<span class="nv">attempted</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<p>It is common to use <code class="highlighter-rouge">attempt</code> before <code class="highlighter-rouge">runToFuture</code> or <code class="highlighter-rouge">runSyncUnsafe</code>. 
+The typed error will be exposed as a <code class="highlighter-rouge">Left</code> and the terminal error will result in a failed <code class="highlighter-rouge">Future</code> or an exception thrown (in <code class="highlighter-rouge">runSyncUnsafe</code>).</p>
+
+<p>Both methods have corresponding reverse operations:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">final</span> <span class="k">def</span> <span class="nf">rethrow</span><span class="o">[</span><span class="kt">E1</span> <span class="k">&gt;:</span> <span class="kt">E</span>, <span class="kt">B</span><span class="o">](</span><span class="k">implicit</span> <span class="n">ev</span><span class="k">:</span> <span class="kt">A</span> <span class="k">&lt;:</span><span class="kt">&lt;</span> <span class="kt">Either</span><span class="o">[</span><span class="kt">E1</span>, <span class="kt">B</span><span class="o">])</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">E1</span>, <span class="kt">B</span><span class="o">]</span>
+<span class="k">final</span> <span class="k">def</span> <span class="nf">dematerialize</span><span class="o">[</span><span class="kt">B</span><span class="o">](</span><span class="k">implicit</span> <span class="n">evE</span><span class="k">:</span> <span class="kt">E</span> <span class="k">&lt;:</span><span class="kt">&lt;</span> <span class="kt">Nothing</span><span class="o">,</span> <span class="n">evA</span><span class="k">:</span> <span class="kt">A</span> <span class="k">&lt;:</span><span class="kt">&lt;</span> <span class="kt">Try</span><span class="o">[</span><span class="kt">B</span><span class="o">])</span><span class="k">:</span> <span class="kt">Task</span><span class="o">[</span><span class="kt">B</span><span class="o">]</span>
+</code></pre></div></div>
+
+<p>Example:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+
+<span class="k">val</span> <span class="nv">error</span> <span class="k">=</span> <span class="s">"error"</span>
+<span class="c1">// same as BIO.raiseError</span>
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="n">error</span><span class="o">).</span><span class="py">attempt</span><span class="o">.</span><span class="py">rethrow</span> 
+</code></pre></div></div>
+
+<h4 id="onerrorhandle--onerrorhandlewith">onErrorHandle &amp; onErrorHandleWith</h4>
+
+<p><code class="highlighter-rouge">BIO.onErrorHandleWith</code> is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">TimeoutException</span><span class="o">()</span>
+
+<span class="k">val</span> <span class="nv">source</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">TimeoutException</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span>
+  <span class="nv">BIO</span><span class="o">.</span><span class="py">evalTotal</span><span class="o">(</span><span class="s">"Hello!"</span><span class="o">)</span>
+    <span class="o">.</span><span class="py">delayExecution</span><span class="o">(</span><span class="mf">10.</span><span class="n">seconds</span><span class="o">)</span>
+    <span class="o">.</span><span class="py">timeoutWith</span><span class="o">(</span><span class="mf">3.</span><span class="n">seconds</span><span class="o">,</span> <span class="nc">TimeoutException</span><span class="o">())</span>
+
+<span class="k">val</span> <span class="nv">recovered</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nv">source</span><span class="o">.</span><span class="py">onErrorHandleWith</span> <span class="o">{</span>
+  <span class="k">_:</span> <span class="kt">TimeoutException</span> <span class="o">=&gt;</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">now</span><span class="o">(</span><span class="s">"Recovered!"</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="nv">recovered</span><span class="o">.</span><span class="py">attempt</span><span class="o">.</span><span class="py">runToFuture</span><span class="o">.</span><span class="py">foreach</span><span class="o">(</span><span class="n">println</span><span class="o">)</span>
+<span class="c1">//=&gt; Recovered!</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">BIO.onErrorHandle</code> is a variant which takes a pure recovery function <code class="highlighter-rouge">E =&gt; B</code> instead of an effectful <code class="highlighter-rouge">E =&gt; BIO[E1, B]</code> which could also fail.</p>
+
+<h4 id="redeem--redeemwith">redeem &amp; redeemWith</h4>
+
+<p><code class="highlighter-rouge">BIO.redeem</code> and <code class="highlighter-rouge">BIO.redeemWith</code> are a combination of <code class="highlighter-rouge">map</code> + <code class="highlighter-rouge">onErrorHandle</code> and <code class="highlighter-rouge">flatMap</code> + <code class="highlighter-rouge">onErrorHandleWith</code> respectively.</p>
+
+<p>If <code class="highlighter-rouge">task</code> is successful then:</p>
+
+<p><code class="highlighter-rouge">task.redeemWith(fe, fb) &lt;-&gt; task.flatMap(fb)</code></p>
+
+<p>And when <code class="highlighter-rouge">task</code> is failed:</p>
+
+<p><code class="highlighter-rouge">task.redeemWith(fe, fb) &lt;-&gt; task.onErrorHandleWith(fe)</code></p>
+
+<p>Instead of:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">f1</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">f2</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="n">f1</span>
+  <span class="o">.</span><span class="py">flatMap</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">f2</span><span class="o">)</span>
+  <span class="o">.</span><span class="py">onErrorHandleWith</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"Recovered!"</span><span class="o">)))</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+<span class="c1">//=&gt; Recovered!</span>
+</code></pre></div></div>
+
+<p>You can do this:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">f1</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">f2</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="n">f1</span>
+  <span class="o">.</span><span class="py">redeemWith</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"Recovered!"</span><span class="o">)),</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="n">f2</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+<span class="c1">//=&gt; Recovered!</span>
+</code></pre></div></div>
+
+<p>The latter will be more efficient in terms of memory allocations.</p>
+
+<h3 id="terminal-errors">Terminal Errors</h3>
+
+<p>Terminal errors ignore all typed error handlers and can only be caught by more powerful methods.</p>
+
+<p>The example below shows how <code class="highlighter-rouge">redeemWith</code> does nothing to handle unexpected errors even if it uses the same type:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="c1">// Note BIO.termiante instead of BIO.raiseError</span>
+<span class="k">val</span> <span class="nv">f1</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">terminate</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">f2</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="n">f1</span>
+  <span class="o">.</span><span class="py">redeemWith</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"Recovered!"</span><span class="o">)),</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="n">f2</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<p>There are special variants of <code class="highlighter-rouge">redeem</code> and <code class="highlighter-rouge">redeemWith</code> which are called <code class="highlighter-rouge">redeemCause</code> and <code class="highlighter-rouge">redeemCauseWith</code> respectively.
+<code class="highlighter-rouge">BIO.redeemCause</code> takes a <code class="highlighter-rouge">Cause[E] =&gt; B</code> function instead of <code class="highlighter-rouge">E =&gt; B</code> to recover and
+<code class="highlighter-rouge">BIO.redeemCauseWith</code> uses a <code class="highlighter-rouge">Cause[E] =&gt; BIO[E1, B]</code>.</p>
+
+<p><code class="highlighter-rouge">Cause</code> is defined as follows:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">sealed</span> <span class="k">abstract</span> <span class="k">class</span> <span class="nc">Cause</span><span class="o">[</span><span class="kt">+E</span><span class="o">]</span> <span class="nc">extends</span> <span class="nc">Product</span> <span class="k">with</span> <span class="nc">Serializable</span> <span class="o">{</span>
+  <span class="c1">// few methods</span>
+<span class="o">}</span>
+
+<span class="k">object</span> <span class="nc">Cause</span> <span class="o">{</span>
+  <span class="k">final</span> <span class="k">case</span> <span class="k">class</span> <span class="nc">Error</span><span class="o">[</span><span class="kt">+E</span><span class="o">](</span><span class="n">value</span><span class="k">:</span> <span class="kt">E</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Cause</span><span class="o">[</span><span class="kt">E</span><span class="o">]</span>
+
+  <span class="k">final</span> <span class="k">case</span> <span class="k">class</span> <span class="nc">Termination</span><span class="o">(</span><span class="n">value</span><span class="k">:</span> <span class="kt">Throwable</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Cause</span><span class="o">[</span><span class="kt">Nothing</span><span class="o">]</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Let’s modify the previous example to use <code class="highlighter-rouge">redeemCause</code>:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="c1">// Note BIO.termiante instead of BIO.raiseError</span>
+<span class="k">val</span> <span class="nv">f1</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">terminate</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">f2</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="n">f1</span>
+  <span class="o">.</span><span class="py">redeemCauseWith</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"Recovered!"</span><span class="o">)),</span> <span class="k">_</span> <span class="k">=&gt;</span> <span class="n">f2</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+<span class="c1">//=&gt; Recovered!</span>
+</code></pre></div></div>
+
+<p>Basically it is a more powerful version which can access both error channels.
+In your actual application you might find yourself using typed error handlers (<code class="highlighter-rouge">onErrorHandle</code>, <code class="highlighter-rouge">redeem</code> etc.) almost all of the time 
+and only use <code class="highlighter-rouge">Cause</code> variants when absolutely necessary like at the edges of the application if you don’t want to pass failed <code class="highlighter-rouge">BIO</code> / <code class="highlighter-rouge">Future</code> to your HTTP library.</p>
+
+<h2 id="mapping-errors">Mapping Errors</h2>
+
+<h3 id="maperror">mapError</h3>
+
+<p><code class="highlighter-rouge">BIO.mapError</code> will not handle any error but it can transform it to something else.</p>
+
+<p>It can be useful to convert an error from a smaller type to a bigger type:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">java.time.Instant</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ErrorA</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+<span class="k">case</span> <span class="k">class</span> <span class="nc">ErrorB</span><span class="o">(</span><span class="n">errA</span><span class="k">:</span> <span class="kt">ErrorA</span><span class="o">,</span> <span class="n">createdAt</span><span class="k">:</span> <span class="kt">Instant</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="nv">task1</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">ErrorA</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">ErrorA</span><span class="o">(</span><span class="mi">10</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">task2</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">ErrorB</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="nv">task1</span><span class="o">.</span><span class="py">mapError</span><span class="o">(</span><span class="n">errA</span> <span class="k">=&gt;</span> <span class="nc">ErrorB</span><span class="o">(</span><span class="n">errA</span><span class="o">,</span> <span class="nv">Instant</span><span class="o">.</span><span class="py">now</span><span class="o">()))</span>
+</code></pre></div></div>
+
+<h3 id="taperror">tapError</h3>
+
+<p><code class="highlighter-rouge">BIO.tapError</code> can peek at the error value and execute provided <code class="highlighter-rouge">E =&gt; BIO[E1, B]</code> function without handling the original error.</p>
+
+<p>For instance, we might want to log the error without handling it:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">f1</span> <span class="k">=</span> <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom"</span><span class="o">))</span>
+<span class="k">val</span> <span class="nv">f2</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"A"</span><span class="o">))</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="n">f1</span>
+  <span class="o">.</span><span class="py">tapError</span><span class="o">(</span><span class="n">e</span> <span class="k">=&gt;</span> <span class="nc">BIO</span><span class="o">(</span><span class="nf">println</span><span class="o">(</span><span class="s">"Incoming error: "</span> <span class="o">+</span> <span class="n">e</span><span class="o">)))</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runSyncUnsafe</span><span class="o">()</span>
+</code></pre></div></div>
+
+<h3 id="moving-errors-from-the-typed-error-channel">Moving errors from the typed error channel</h3>
+
+<p>If you are sure that your <code class="highlighter-rouge">BIO</code> shouldn’t have any errors and if there are any they should shutdown the task as soon as possible
+there is <code class="highlighter-rouge">hideErrors</code> and <code class="highlighter-rouge">hideErrorsWith</code> which will hide the error from the type signature and raise it as a terminal error.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.execution.exceptions.DummyException</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+
+<span class="k">val</span> <span class="nv">task</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span> <span class="k">=</span> <span class="nc">BIO</span>
+  <span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="nc">DummyException</span><span class="o">(</span><span class="s">"boom!"</span><span class="o">))</span>
+  <span class="o">.</span><span class="py">hideErrors</span>
+  <span class="o">.</span><span class="py">map</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="mi">10</span><span class="o">)</span>
+
+<span class="c1">// Some(Failure(DummyException(boom!)))</span>
+<span class="nv">task</span><span class="o">.</span><span class="py">runToFuture</span><span class="o">.</span><span class="py">value</span>
+</code></pre></div></div>
+
+<p>If your <code class="highlighter-rouge">E</code> is not <code class="highlighter-rouge">Throwable</code> you can use <code class="highlighter-rouge">hideErrorsWith</code> which takes a <code class="highlighter-rouge">E =&gt; Throwable</code> function.</p>
+
+<p>This method is handy if you are using generic Cats-Effect based libraries, for example:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">BIO</span><span class="o">,</span> <span class="nc">Task</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.catnap.ConcurrentQueue</span>
+
+<span class="k">val</span> <span class="nv">queueExample</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">Throwable</span>, <span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="k">for</span> <span class="o">{</span>
+  <span class="n">queue</span> <span class="k">&lt;-</span> <span class="nc">ConcurrentQueue</span><span class="o">[</span><span class="kt">Task</span><span class="o">].</span><span class="py">bounded</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="mi">10</span><span class="o">)</span>
+  <span class="k">_</span> <span class="k">&lt;-</span> <span class="nv">queue</span><span class="o">.</span><span class="py">offer</span><span class="o">(</span><span class="s">"Message"</span><span class="o">)</span>
+  <span class="n">msg</span> <span class="k">&lt;-</span> <span class="nv">queue</span><span class="o">.</span><span class="py">poll</span>
+<span class="o">}</span> <span class="k">yield</span> <span class="n">msg</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">monix.catnap.ConcurrentQueue</code> works for a generic effect type (<code class="highlighter-rouge">cats.effect.IO</code>, <code class="highlighter-rouge">monix.eval.Task</code>, <code class="highlighter-rouge">zio.ZIO</code>) but it is written
+in terms of type classes which unfortunately don’t support two channels of errors and fix everything as <code class="highlighter-rouge">Throwable</code>.</p>
+
+<p>These methods don’t throw any errors so we can safely hide them and have our typed errors back:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.</span><span class="o">{</span><span class="nc">Task</span><span class="o">,</span> <span class="nc">UIO</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">monix.catnap.ConcurrentQueue</span>
+
+<span class="k">val</span> <span class="nv">queueExample</span><span class="k">:</span> <span class="kt">UIO</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span> <span class="k">=</span> <span class="o">(</span><span class="k">for</span> <span class="o">{</span>
+  <span class="n">queue</span> <span class="k">&lt;-</span> <span class="nc">ConcurrentQueue</span><span class="o">[</span><span class="kt">Task</span><span class="o">].</span><span class="py">bounded</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="mi">10</span><span class="o">)</span>
+  <span class="k">_</span> <span class="k">&lt;-</span> <span class="nv">queue</span><span class="o">.</span><span class="py">offer</span><span class="o">(</span><span class="s">"Message"</span><span class="o">)</span>
+  <span class="n">msg</span> <span class="k">&lt;-</span> <span class="nv">queue</span><span class="o">.</span><span class="py">poll</span>
+<span class="o">}</span> <span class="k">yield</span> <span class="n">msg</span><span class="o">).</span><span class="py">hideErrors</span>
+</code></pre></div></div>
+
+<h2 id="restarting-on-error">Restarting on Error</h2>
+
+<p><code class="highlighter-rouge">BIO</code> type represents a specification of a computation so it can be freely restarted if we wish to do so.</p>
+
+<p>There are few retry combinators available but in general it is quite simple to write a custom recursive function.
+For instance, retry with exponential backoff would look like as follows:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="k">def</span> <span class="nf">retryBackoff</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">](</span><span class="n">source</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">],</span>
+  <span class="n">maxRetries</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span> <span class="n">firstDelay</span><span class="k">:</span> <span class="kt">FiniteDuration</span><span class="o">)</span><span class="k">:</span> <span class="kt">BIO</span><span class="o">[</span><span class="kt">E</span>, <span class="kt">A</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+
+  <span class="nv">source</span><span class="o">.</span><span class="py">onErrorHandleWith</span> <span class="o">{</span> <span class="n">ex</span> <span class="k">=&gt;</span>
+      <span class="nf">if</span> <span class="o">(</span><span class="n">maxRetries</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="o">)</span>
+        <span class="c1">// Recursive call, it's OK as Monix is stack-safe</span>
+        <span class="nf">retryBackoff</span><span class="o">(</span><span class="n">source</span><span class="o">,</span> <span class="n">maxRetries</span> <span class="o">-</span> <span class="mi">1</span><span class="o">,</span> <span class="n">firstDelay</span> <span class="o">*</span> <span class="mi">2</span><span class="o">)</span>
+          <span class="o">.</span><span class="py">delayExecution</span><span class="o">(</span><span class="n">firstDelay</span><span class="o">)</span>
+      <span class="k">else</span>
+        <span class="nv">BIO</span><span class="o">.</span><span class="py">raiseError</span><span class="o">(</span><span class="n">ex</span><span class="o">)</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>In more complicated cases it’s worth taking a look at <a href="https://github.com/cb372/cats-retry">cats-retry</a> library and/or use a stream (e.g. <a href="https://github.com/functional-streams-for-scala/fs2">fs2</a>, <a href="https://monix.io/docs/3x/reactive/observable.html">Monix Observable</a>) instead of recursive functions.</p>
+
+<h2 id="reporting-uncaught-errors">Reporting Uncaught Errors</h2>
+
+<p>Losing errors is unacceptable.
+We can’t always return them as a <code class="highlighter-rouge">BIO</code> result because sometimes the failure could happen concurrently and <code class="highlighter-rouge">BIO</code> could already be finished with a different value. 
+In this case the error is reported with <code class="highlighter-rouge">Scheduler.reportFailure</code> which by default logs uncaught errors to <code class="highlighter-rouge">System.err</code>:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler.Implicits.global</span>
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="c1">// Ensures asynchronous execution, just to show</span>
+<span class="c1">// that the action doesn't happen on the</span>
+<span class="c1">// current thread</span>
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="mi">2</span><span class="o">).</span><span class="py">delayExecution</span><span class="o">(</span><span class="mf">1.</span><span class="n">second</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runAsync</span> <span class="o">{</span> <span class="n">r</span> <span class="k">=&gt;</span>
+  <span class="k">throw</span> <span class="k">new</span> <span class="nc">IllegalStateException</span><span class="o">(</span><span class="nv">r</span><span class="o">.</span><span class="py">toString</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="c1">// After 1 second, this will log the whole stack trace:</span>
+<span class="c1">//=&gt; java.lang.IllegalStateException: Right(2)</span>
+<span class="c1">//=&gt;    ...</span>
+<span class="c1">//=&gt; at monix.bio.BiCallback$$anon$3.tryApply(BiCallback.scala:359)</span>
+<span class="c1">//=&gt; at monix.bio.BiCallback$$anon$3.apply(BiCallback.scala:352)</span>
+<span class="c1">//=&gt; at monix.bio.BiCallback$$anon$3.onSuccess(BiCallback.scala:345)</span>
+<span class="c1">//=&gt; at monix.bio.internal.TaskRunLoop$.startFull(TaskRunLoop.scala:213)</span>
+<span class="c1">//=&gt; at monix.bio.internal.TaskRestartCallback.syncOnSuccess(TaskRestartCallback.scala:125)</span>
+<span class="c1">//=&gt; at monix.bio.internal.TaskRestartCallback.onSuccess(TaskRestartCallback.scala:83)</span>
+<span class="c1">//=&gt; ....</span>
+</code></pre></div></div>
+
+<p>We can customize the behavior to use anything we’d like:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">monix.bio.BIO</span>
+<span class="k">import</span> <span class="nn">monix.execution.Scheduler</span>
+<span class="k">import</span> <span class="nn">monix.execution.UncaughtExceptionReporter</span>
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="k">val</span> <span class="nv">reporter</span> <span class="k">=</span> <span class="nc">UncaughtExceptionReporter</span> <span class="o">{</span> <span class="n">ex</span> <span class="k">=&gt;</span>
+  <span class="c1">// our own fancy logger</span>
+  <span class="nf">println</span><span class="o">(</span><span class="s">"Customized printing of uncaught exception: "</span> <span class="o">+</span> <span class="n">ex</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="k">implicit</span> <span class="k">val</span> <span class="nv">s</span> <span class="k">=</span> <span class="nc">Scheduler</span><span class="o">(</span><span class="nv">Scheduler</span><span class="o">.</span><span class="py">global</span><span class="o">,</span> <span class="n">reporter</span><span class="o">)</span>
+
+<span class="k">val</span> <span class="nv">task</span> <span class="k">=</span> <span class="nc">BIO</span><span class="o">(</span><span class="mi">2</span><span class="o">).</span><span class="py">delayExecution</span><span class="o">(</span><span class="mf">1.</span><span class="n">second</span><span class="o">)</span>
+
+<span class="nv">task</span><span class="o">.</span><span class="py">runAsync</span> <span class="o">{</span> <span class="n">r</span> <span class="k">=&gt;</span>
+  <span class="k">throw</span> <span class="k">new</span> <span class="nc">IllegalStateException</span><span class="o">(</span><span class="nv">r</span><span class="o">.</span><span class="py">toString</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="c1">// After 1 second:</span>
+<span class="c1">//=&gt; Customized printing of uncaught exception: java.lang.IllegalStateException: Right(2)</span>
+</code></pre></div></div>
+
+<h2 id="cats-instances">Cats Instances</h2>
+
+<p>If you are a <a href="https://github.com/typelevel/cats">Cats</a> user then <code class="highlighter-rouge">BIO</code> provides <a href="https://typelevel.org/cats/api/cats/ApplicativeError.html"><code class="highlighter-rouge">ApplicativeError</code></a> and 
+<a href="https://typelevel.org/cats/api/cats/MonadError.html"><code class="highlighter-rouge">MonadError</code></a> instances.</p>
+
+<p>If you import <code class="highlighter-rouge">cats.syntax.monadError._</code>, <code class="highlighter-rouge">cats.syntax.applicativeError</code> or just <code class="highlighter-rouge">cats.syntax.all._</code> you will have access to all the methods provided by library.</p>
+
+<p>The main gotcha is that anything requiring <a href="https://typelevel.org/cats-effect/typeclasses/sync.html"><code class="highlighter-rouge">Sync</code></a> and above will only work for <code class="highlighter-rouge">BIO[Throwable, A]</code></p>
+</section></div></div></div></div><script src="/monix-bio/highlight/highlight.pack.js"></script><script>
+// For all code blocks, copy the language from the containing div
+// to the inner code tag (where hljs expects it to be)
+const langPrefix = 'language-';
+document.querySelectorAll(`div[class^='${langPrefix}']`).forEach(function(div) {
+  div.classList.forEach(function(cssClass) {
+    if (cssClass.startsWith(langPrefix)) {
+      const lang = cssClass.substring(langPrefix.length);
+      div.querySelectorAll('pre code').forEach(function(code) {
+        code.classList.add(lang);
+      });
+    }
+  });
+});
+
+hljs.configure({languages:['scala','java','bash']});
+hljs.initHighlightingOnLoad();
+      </script><script>console.info('\x57\x65\x62\x73\x69\x74\x65\x20\x62\x75\x69\x6c\x74\x20\x77\x69\x74\x68\x3a\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x5f\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x5f\x20\x5f\x5f\x0a\x20\x20\x20\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x5f\x20\x20\x2f\x20\x2f\x5f\x20\x20\x20\x20\x20\x20\x5f\x5f\x5f\x5f\x20\x5f\x5f\x5f\x20\x20\x28\x5f\x29\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x28\x5f\x29\x20\x2f\x5f\x5f\x5f\x5f\x20\x20\x5f\x5f\x5f\x5f\x5f\x0a\x20\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x60\x5f\x5f\x20\x5c\x2f\x20\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x5f\x2f\x20\x5f\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x20\x2f\x20\x5f\x5f\x2f\x20\x5f\x20\x5c\x2f\x20\x5f\x5f\x5f\x2f\x0a\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x5f\x2f\x20\x2f\x20\x2f\x5f\x2f\x5f\x5f\x5f\x5f\x5f\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x20\x2f\x5f\x5f\x2f\x20\x2f\x20\x20\x2f\x20\x2f\x5f\x2f\x20\x28\x5f\x5f\x20\x20\x29\x20\x2f\x20\x2f\x5f\x2f\x20\x20\x5f\x5f\x28\x5f\x5f\x20\x20\x29\x0a\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2e\x5f\x5f\x5f\x2f\x5c\x5f\x5f\x2f\x20\x20\x20\x20\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x20\x2f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x2f\x20\x20\x20\x5c\x5f\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x5f\x2f\x5c\x5f\x5f\x2f\x5c\x5f\x5f\x5f\x2f\x5f\x5f\x5f\x5f\x2f\x0a\x0a\x68\x74\x74\x70\x73\x3a\x2f\x2f\x34\x37\x64\x65\x67\x2e\x67\x69\x74\x68\x75\x62\x2e\x69\x6f\x2f\x73\x62\x74\x2d\x6d\x69\x63\x72\x6f\x73\x69\x74\x65\x73')</script><script>((window.gitter = {}).chat = {}).options = {
+room: 'monix/monix-bio'};</script><script src="https://sidecar.gitter.im/dist/sidecar.v1.js"></script><script src="/monix-bio/js/docs.js"></script></body></html>
