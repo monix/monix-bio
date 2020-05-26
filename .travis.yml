@@ -44,11 +44,11 @@ script:
   - sbt -J-Xmx6144m ++$TRAVIS_SCALA_VERSION $COMMAND
   - |
     if [[ "$COMMAND" = "ci-jvm-all" ]]; then
-      sbt ++$TRAVIS_SCALA_VERSION microsite/makeMicrosite
+      sbt ++$TRAVIS_SCALA_VERSION docs/docusaurusCreateSite
     fi
 
 after_success:
-  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" -a "$COMMAND" = "ci-jvm-all" ]; then sbt microsite/publishMicrosite; fi
+  - if [ "$TRAVIS_BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" -a "$COMMAND" = "ci-jvm-all" ]; then sbt docs/docusaurusPublishGhpages; fi
 
 cache:
   directories:
