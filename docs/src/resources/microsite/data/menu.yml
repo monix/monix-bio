@@ -1,9 +1,0 @@
-options:
-  - title: Overview
-    url: overview/
-    menu_section: core
-
-    nested_options:
-      - title: Getting Started
-        url: overview/gettingstarted.html
-        menu_section: gettingstarted

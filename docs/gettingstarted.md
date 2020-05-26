@@ -1,10 +1,7 @@
 ---
-layout: docs
-title:  "Getting Started"
-position: 2
+id: getting-started
+title: Getting Started
 ---
-
-# Getting started with sbt
 
 Add the following line to your `build.sbt`
 ```

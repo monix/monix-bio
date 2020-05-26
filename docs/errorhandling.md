@@ -1,10 +1,7 @@
 ---
-layout: docs
-title:  "Error Handling"
-position: 3
+id: error-handling
+title: Error Handling
 ---
-
-# Error Handling
 
 When `BIO` fails with an error it short-circuits the computation and returns the error as a result:
 

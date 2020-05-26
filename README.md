@@ -9,10 +9,10 @@ Alternative to [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Task.html) 
 
 ## Getting Started
 
-The latest stable version which is compatible with Monix 3.x, Cats 2.x and Cats-Effect 2.x:
+The latest stable version, compatible with Monix 3.x, Cats 2.x and Cats-Effect 2.x:
 
 ```scala
-libraryDependencies += "io.monix" %% "monix-bio" % "0.1.0"
+libraryDependencies += "io.monix" %% "monix-bio" % "0.1.1"
 ```
 
 ## Short introduction
