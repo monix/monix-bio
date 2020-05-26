@@ -1,7 +1,4 @@
 language: scala
-sudo: required
-dist: trusty
-group: edge
 
 matrix:
   include:
@@ -36,10 +33,6 @@ matrix:
         - COMMAND=ci-js
         - SCALAJS_VERSION=1.0.1
 
-install:
-  - rvm use 2.6.5 --install --fuzzy
-  - gem install jekyll -v 4
-
 script:
   - sbt -J-Xmx6144m ++$TRAVIS_SCALA_VERSION $COMMAND
   - |
@@ -52,10 +45,13 @@ after_success:
 
 cache:
   directories:
-    - $HOME/.ivy2/cache
-    - $HOME/.coursier/cache
     - $HOME/.sbt
+    - $HOME/.ivy2/cache
+    - $HOME/.coursier
 
 before_cache:
+  - du -h -d 1 $HOME/.ivy2/cache
+  - du -h -d 2 $HOME/.sbt/
   - find $HOME/.sbt -name "*.lock" -type f -delete
   - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
+  - rm -rf $HOME/.ivy2/local
