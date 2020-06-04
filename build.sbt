@@ -5,7 +5,7 @@ addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
 addCommandAlias("ci-jvm-mima", s";ci-jvm ;mimaReportBinaryIssues")
 addCommandAlias("ci-jvm-all",  s";ci-jvm-mima ;docs/docusaurusCreateSite")
 
-val monixVersion = "3.2.1"
+val monixVersion = "3.2.2"
 val minitestVersion = "2.8.2"
 val catsEffectVersion = "2.1.3"
 
