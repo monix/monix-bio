@@ -24,6 +24,9 @@ lazy val coreJVM = project.in(file("core/jvm"))
   .enablePlugins(AutomateHeaderPlugin)
   .settings(doctestTestSettings)
   .settings(mimaSettings)
+  .settings(
+    skip.in(publish) := Option(System.getenv("SCALAJS_VERSION")).isDefined
+  )
 
 lazy val coreJS = project.in(file("core/js"))
   .settings(crossSettings ++ crossVersionSharedSources)
@@ -251,8 +254,8 @@ lazy val sharedSettings = Seq(
   credentials += Credentials(
     "Sonatype Nexus Repository Manager",
     "oss.sonatype.org",
-    sys.env.getOrElse("SONATYPE_USER", ""),
-    sys.env.getOrElse("SONATYPE_PASS", "")
+    sys.env.getOrElse("SONATYPE_USERNAME", ""),
+    sys.env.getOrElse("SONATYPE_PASSWORD", "")
   ),
 
   publishMavenStyle := true,
