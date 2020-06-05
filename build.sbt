@@ -2,8 +2,7 @@ import sbt.url
 
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
 addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
-addCommandAlias("ci-jvm-mima", s";mimaReportBinaryIssues")
-addCommandAlias("ci-jvm-all",  s";ci-jvm-mima ;docs/docusaurusCreateSite")
+addCommandAlias("ci-jvm-mima", s";coreJVM/mimaReportBinaryIssues")
 
 val monixVersion = "3.2.2"
 val minitestVersion = "2.8.2"
