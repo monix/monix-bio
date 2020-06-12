@@ -255,13 +255,13 @@ object Task extends TaskDeprecated.Companion {
     fa.rethrow
 
   /**
-    * @see See [[[monix.bio.BIO$.shift:monix\.bio\.UIO*]]]
+    * @see See [[monix.bio.BIO.shift]]
     */
   val shift: Task[Unit] =
     BIO.shift
 
   /**
-    * @see See [[[monix.bio.BIO$.shift(ec:scala\.concurrent\.ExecutionContext*]]]
+    * @see See [[monix.bio.BIO.shift]]
     */
   def shift(ec: ExecutionContext): Task[Unit] =
     BIO.shift(ec)
