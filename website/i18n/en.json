@@ -5,6 +5,9 @@
     "previous": "Previous",
     "tagline": "Asynchronous Programming for Scala and Scala.js",
     "docs": {
+      "comparison": {
+        "title": "Other Effects"
+      },
       "error-handling": {
         "title": "Error Handling"
       },
