@@ -4,10 +4,11 @@ title: Other Effects
 ---
 
 In this section, I will share my thoughts on `BIO` in comparison to other similar solutions at the time of writing (June 2020).
+
 Keep in mind it can quickly become outdated. If you have any ideas for possible reasons for, or against Monix then please contribute them to this section.
 It's important to me to limit bias to the minimum, and it's hard without an outsider's perspective!
 
-### Cats-Effect IO
+## Cats-Effect IO
 
 Why Cats-Effect IO:
 - *Official Cats-Effect implementation.* Typelevel libraries use it in tests, so you are the least likely to encounter bugs.
@@ -30,12 +31,12 @@ For instance, compare `monixSequence` and `catsSequence` in [benchmark results](
 Choose for yourself:
 - *Typed errors.* Although there is still `Monix Task` if you like the rest.
 
-**Summary**
+### Summary
 
 Monix is `cats.effect.IO` with more stuff. 
 Considering the direction on CE3, `IO` gravitates closer towards the design of Monix.
 
-### Scala's Future
+## Scala's Future
 
 Why Future:
 - *It is in the standard library.* The safest bet in terms of stability and most Scala developers know it well.
@@ -53,7 +54,7 @@ Choose for yourself:
 Sometimes cancellation can be tricky, and many projects don't have any use case for it at all.
 - *Typed errors.*
 
-### Monix Task
+## Monix Task
 
 The only difference between Monix `Task` and `BIO` are typed errors - API and performance is very consistent.
 
@@ -61,7 +62,7 @@ If you use `Task[Either[E, A]]` or `EitherT` a lot - you might find `BIO` much m
 
 If you don't, `Task` might be simpler and closer to Scala's `Future`. It is also better integrated with `Observable`.
 
-### ZIO
+## ZIO
 
 Why ZIO:
 - *Bigger community and ZIO-specific ecosystem.*
@@ -88,7 +89,7 @@ Usually it's possible to do everything with other concurrency combinators.
 Monix wants to naturally interop with both FP and non-FP ecosystem but it might have less "batteries" included. 
 ZIO can be better at forcing you to follow their pattern of programming, while Monix can play nicer with your team's individual preferences and mixed (e.g. using both Monix and Future) codebases.
 
-**Summary**
+### Summary
 
 ZIO has more contributors, more features which you may or may not use, is more opinionated and develops a new ecosystem of libraries which is tailored to ZIO needs.
 Monix is more stable, faster and puts more focus on integrating with existing ecosystems, rather than trying to create a new one.

@@ -81,7 +81,7 @@ Few examples of Monix providing extra support for `Future` users:
 - Monix uses `Scheduler` which is also `ExecutionContext` and can be used with `Future` directly. 
 - `Local` works with both `Future` and Monix `Task/BIO`. 
 
-# Performance
+## Performance
 
 At the time of writing (Q1 2020) performance is as good as `monix.eval.Task` in most benchmarks and `BIO` can outperform it for error handling operators if the error type is not `Throwable`.
 It makes it the fastest effect type in today's Scala ecosystem.

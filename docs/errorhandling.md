@@ -45,7 +45,7 @@ task.runSyncUnsafe()
 //=> C
 ```
 
-# Error Channels
+## Error Channels
 
 Many applications divide errors into two types:
 - Recoverable errors which can be acted upon and often have a meaning in the business domain. 
@@ -177,11 +177,11 @@ def numberService(i: Int): IO[Either[NumberServiceErrors, Int]]
 
 I recommend [this article by John De Goes](https://degoes.net/articles/bifunctor-io) if you are interested in the original motivations behind the idea of embedding this pattern directly in the data type.
 
-# Producing a failed BIO
+## Producing a failed BIO
 
 An error can occur when an `Exception` is thrown or we can construct it ourselves with dedicated builder methods.
 
-## BIO.raiseError
+### BIO.raiseError
 
 Use `BIO.raiseError` if you already have an error value:
 
@@ -196,7 +196,7 @@ val task: BIO[String, Int] = BIO.raiseError(error)
 task.attempt.runSyncUnsafe()
 ```
 
-## BIO.terminate
+### BIO.terminate
 
 `BIO.terminate` can raise a terminal error (second channel with `Throwable`):
 
@@ -213,7 +213,7 @@ task.attempt.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: error
 ```
 
-## Catching errors in BIO.eval
+### Catching errors in BIO.eval
 
 `BIO.eval` (and `BIO.apply`) will catch any errors that are thrown in the method's body and expose them as typed errors:
 
@@ -229,7 +229,7 @@ val task: Task[Int] = BIO.eval { throw error }
 task.attempt.runSyncUnsafe()
 ```
 
-## Catching errors in BIO.evalTotal
+### Catching errors in BIO.evalTotal
 
 If we are sure that our side-effecting code won't have any surprises we can use `BIO.evalTotal` but if we are wrong, the error
 will be caught in the internal error channel:
@@ -248,7 +248,7 @@ task.attempt.runSyncUnsafe()
 
 Other methods which return `UIO` or use a generic `E` (not fixed to `Throwable`) like `map` / `flatMap` will behave in the same way when throwing an exception.
 
-# Recovering from Errors
+## Recovering from Errors
 
 When `BIO` fails, it will skip all subsequent operations until the error is handled.
 Typed and terminal errors are in different categories - handling typed errors will not do anything to unexpected errors but
@@ -256,9 +256,9 @@ error handling functions for terminal errors handle "normal" errors as well.
 
 The section only covers the main error handling operators, refer to [API Documentation](https://monix.github.io/monix-bio/api/monix/bio/BIO.html) for the full list.
 
-## Typed Errors
+### Typed Errors
 
-### Exposing Errors
+#### Exposing Errors
 
 `attempt` and `materialize` take the error away and return it as a normal value:
 
@@ -301,7 +301,7 @@ val error = "error"
 val task: BIO[String, Int] = BIO.raiseError(error).attempt.rethrow 
 ```
 
-### onErrorHandle & onErrorHandleWith
+#### onErrorHandle & onErrorHandleWith
 
 `BIO.onErrorHandleWith` is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:
 
@@ -328,7 +328,7 @@ recovered.attempt.runToFuture.foreach(println)
 
 `BIO.onErrorHandle` is a variant which takes a pure recovery function `E => B` instead of an effectful `E => BIO[E1, B]` which could also fail.
 
-### redeem & redeemWith
+#### redeem & redeemWith
 
 `BIO.redeem` and `BIO.redeemWith` are a combination of `map` + `onErrorHandle` and `flatMap` + `onErrorHandleWith` respectively.
 
@@ -377,7 +377,7 @@ task.runSyncUnsafe()
 
 The latter will be more efficient in terms of memory allocations.
 
-## Terminal Errors
+### Terminal Errors
 
 Terminal errors ignore all typed error handlers and can only be caught by more powerful methods.
 
@@ -439,9 +439,9 @@ Basically it is a more powerful version which can access both error channels.
 In your actual application you might find yourself using typed error handlers (`onErrorHandle`, `redeem` etc.) almost all of the time 
 and only use `Cause` variants when absolutely necessary like at the edges of the application if you don't want to pass failed `BIO` / `Future` to your HTTP library.
 
-# Mapping Errors
+## Mapping Errors
 
-## mapError
+### mapError
 
 `BIO.mapError` will not handle any error but it can transform it to something else.
 
@@ -458,7 +458,7 @@ val task1: BIO[ErrorA, String] = BIO.raiseError(ErrorA(10))
 val task2: BIO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
 ```
 
-## tapError
+### tapError
 
 `BIO.tapError` can peek at the error value and execute provided `E => BIO[E1, B]` function without handling the original error.
 
@@ -480,7 +480,7 @@ task.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: boom
 ```
 
-## Moving errors from the typed error channel
+### Moving errors from the typed error channel
 
 If you are sure that your `BIO` shouldn't have any errors and if there are any they should shutdown the task as soon as possible
 there is `hideErrors` and `hideErrorsWith` which will hide the error from the type signature and raise it as a terminal error.
@@ -530,7 +530,7 @@ val queueExample: UIO[String] = (for {
 } yield msg).hideErrors
 ```
 
-# Restarting on Error
+## Restarting on Error
 
 `BIO` type represents a specification of a computation so it can be freely restarted if we wish to do so.
 
@@ -557,7 +557,7 @@ def retryBackoff[E, A](source: BIO[E, A],
 
 In more complicated cases it's worth taking a look at [cats-retry](https://github.com/cb372/cats-retry) library and/or use a stream (e.g. [fs2](https://github.com/functional-streams-for-scala/fs2), [Monix Observable](https://monix.io/docs/3x/reactive/observable.html)) instead of recursive functions.
 
-# Reporting Uncaught Errors
+## Reporting Uncaught Errors
 
 Losing errors is unacceptable.
 We can't always return them as a `BIO` result because sometimes the failure could happen concurrently and `BIO` could already be finished with a different value. 
@@ -614,7 +614,7 @@ task.runAsync { r =>
 //=> Customized printing of uncaught exception: java.lang.IllegalStateException: Right(2)
 ```
 
-# Cats Instances
+## Cats Instances
 
 If you are a [Cats](https://github.com/typelevel/cats) user then `BIO` provides [`ApplicativeError`](https://typelevel.org/cats/api/cats/ApplicativeError.html) and 
 [`MonadError`](https://typelevel.org/cats/api/cats/MonadError.html) instances.
