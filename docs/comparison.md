@@ -17,7 +17,7 @@ Many maintainers also contribute to Cats-Effect (including us) so there is a big
 
 Why Monix:
 - *Richer API.* Monix has a larger, more discoverable API (no syntax imports).
-- *Fewer implicits.* Monix needs `Scheduler` only when executing the effect. Cats-Effect IO needs `ContextShift` (for any concurrent operator) or `Timer` (for sleeping) depending on the situation. It also depends on `Cats` syntax a lot which requires basic familiarity with this library and type class hierarchy.
+- *Fewer implicits.* Monix only needs a `Scheduler` when executing the effect. Cats-Effect IO needs a `ContextShift` (for any concurrent operator) or a `Timer` (for sleeping) depending on the situation. It also heavily depends on `Cats` syntax which requires basic familiarity with the library and type class hierarchy.
 - *Better Thread Management*. Cats IO is missing an operator like [executeOn](http://localhost:3000/monix-bio/api/monix/bio/BIO.html#executeOn(s:monix.execution.Scheduler,forceAsync:Boolean):monix.bio.BIO[E,A]) which
 ensures that the task will execute on a specified thread pool. 
 Cats IO can only guarantee it up to the first asynchronous boundary. 
