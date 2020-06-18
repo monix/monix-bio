@@ -110,7 +110,7 @@ Resource.make(acquire)(release).evalMap(addDogs).use(report).runSyncUnsafe()
 // Returns "It's raining cats and dogs"
 ```
 
-The main drawback is that `Resource.use` requires error type to be `Throwable` but we can work with typed errors for `acquire` and `release`.
+The main drawback is that `Resource.use` requires the error type to be `Throwable` but we can work with typed errors for `acquire` and `release`.
 
 ## Semantics
 
