@@ -44,7 +44,7 @@ Why Future:
 
 Why Monix:
 - *Easier concurrency.* Tons of extra operators and better composability due to laziness.
-- *Referential transparency.* Take a look at [the classic post](https://www.reddit.com/r/scala/comments/8ygjcq/can_someone_explain_to_me_the_benefits_of_io/e2jfp9b/).
+- *Referential transparency.* Take a look at [this classic post](https://www.reddit.com/r/scala/comments/8ygjcq/can_someone_explain_to_me_the_benefits_of_io/e2jfp9b/).
 - *No ExecutionContext being dragged everywhere.* Monix equivalent is needed at the execution only which drastically reduces the temptation to `import ExecutionContext.Implicits.global`.
 - *Resource Safety.* `Resource` and `Bracket` are very convenient tools to ensure your App does not leak any resources.
 - *Cats-Effect ecosystem.*
