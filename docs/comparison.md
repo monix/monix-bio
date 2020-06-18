@@ -45,29 +45,29 @@ Why Future:
 Why Monix:
 - *Easier concurrency.* Tons of extra operators and better composability due to laziness.
 - *Referential transparency.* Take a look at [this classic post](https://www.reddit.com/r/scala/comments/8ygjcq/can_someone_explain_to_me_the_benefits_of_io/e2jfp9b/).
-- *No ExecutionContext being dragged everywhere.* Monix equivalent is needed at the execution only which drastically reduces the temptation to `import ExecutionContext.Implicits.global`.
-- *Resource Safety.* `Resource` and `Bracket` are very convenient tools to ensure your App does not leak any resources.
+- *No ExecutionContext being dragged everywhere.* Monix only requires it's `Scheduler` (the equivalent of `ExecutionContext`) at the point of execution which drastically reduces the temptation to `import ExecutionContext.Implicits.global`.
+- *Resource Safety.* `Resource` and `Bracket` are convenient tools that ensure your application doesn't leak any resources.
 - *Cats-Effect ecosystem.*
 
 Choose for yourself:
-- *Cancellation.* Unlike `Future`, `BIO` can be cancelled. It sounds awesome, but it's no magic, and it's not possible to stop an effect immediately at an arbitrary point of time. 
+- *Cancellation.* Unlike `Future`, `BIO` can be cancelled. It sounds awesome, but it's no magic, and it's not possible to stop an effect immediately at an arbitrary point in time. 
 Sometimes cancellation can be tricky, and many projects don't have any use case for it at all.
 - *Typed errors.*
 
 ## Monix Task
 
-The only difference between Monix `Task` and `BIO` are typed errors - API and performance is very consistent.
+The only difference between Monix `Task` and `BIO` are typed errors - Both the API and performance are very consistent.
 
-If you use `Task[Either[E, A]]` or `EitherT` a lot - you might find `BIO` much more pleasant to use.
+If you use `Task[Either[E, A]]` or `EitherT` a lot - you might find `BIO` far more pleasant to use.
 
-If you don't, `Task` might be simpler and closer to Scala's `Future`. It is also better integrated with `Observable`.
+If you don't, then `Task` might be simpler as well as closer to Scala's `Future`. It also has better integration with `Observable`.
 
 ## ZIO
 
 Why ZIO:
 - *Bigger community and ZIO-specific ecosystem.*
 - *Better stack traces.* Killer feature. Hopefully it will come to Monix this year but until then it's a huge advantage for ZIO.
-- *More flexible with relation to cancellation.* Monix has `uncancelable` operator but unlike ZIO, it doesn't have the reverse.
+- *More flexible with relation to cancellation.* Monix has an `uncancelable` operator but unlike ZIO, it doesn't have the reverse.
 - *Less dependencies.* Monix depends on `Cats-Effect` which brings a ton of redundant syntax and instances from `Cats` which increases jar sizes and makes Monix slower to upgrade to new Scala versions.
 
 Why Monix:
@@ -79,8 +79,8 @@ We are also very consistent in the implementation, so it is rare to encounter a 
 This point is mostly about `Monix Task` because `BIO` is a new thing, but it shares like 90% of `Task` so I'd argue the point is still relevant.
 
 Choose for yourself:
-- *ZIO Environment.* ZIO adds extra type parameter (`R`) for dependency management. 
-Monix favors classic approach (passing dependencies as parameters, any DI library, or `F[_]`).
+- *ZIO Environment.* ZIO adds an extra type parameter (`R`) for dependency management. 
+Monix favors a classic approach (passing dependencies as parameters, any DI library, or `F[_]`).
 If you don't like `Zlayer`, you can pretend `R` doesn't exist, but you will encounter it a lot in type signatures and all `ZIO` libraries use it.
 - *Fiber management.* Monix treats `Fiber` as a low level construct and recommends staying away from it unless you know what you're doing. 
 `ZIO` embraces the concept and adds fiber supervision, structured concurrency etc. Cool feature, but it's an extra thing to learn about, and I don't see many use cases for it.
@@ -91,5 +91,5 @@ ZIO can be better at forcing you to follow their pattern of programming, while M
 
 ### Summary
 
-ZIO has more contributors, more features which you may or may not use, is more opinionated and develops a new ecosystem of libraries which is tailored to ZIO needs.
+ZIO has more contributors, more features (which you may or may not use), is more opinionated, and develops a new ecosystem of libraries which are tailored to ZIO needs.
 Monix is more stable, faster and puts more focus on integrating with existing ecosystems, rather than trying to create a new one.

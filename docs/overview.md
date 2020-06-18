@@ -7,7 +7,7 @@ title: Overview
 When executed, it will produce a successful value `A`, an error `E`, never terminate or complete with a terminal (untyped) error.
 
 `BIO` handles concurrency, cancellation, resource safety, context propagation, error handling, and can suspend effects.
-All of it makes it a good tool to write a simple, high-level code to solve problems related to any of these features in a safe and performant manner.
+All of this makes it simple to write good, high-level code that solve problems related to any of these features in a safe and performant manner.
 
 There are two type aliases:
 - `type UIO[A] = BIO[Nothing, A]` which represents an effect that can only fail with terminal errors due to abnormal circumstances.
@@ -72,13 +72,13 @@ The target audience of BIO are users of `IO`, `Task`, and `Future` who tend to u
 If you are already familiar with `Task` - learning `BIO` is straightforward because the only difference is in
 error handling - the rest of API is the same. In many cases, migration might be as simple as changing imports from `monix.eval.Task` to `monix.bio.Task`.
 
-To me, the big difference between Monix and other effect libraries is approach to impure code.
-Both `IO` and `ZIO` will push you to write 100% purely functional codebase, except for isolated cases where low-level imperative code is needed for performance.
-Monix favors purely functional programming too (the only impure method is `memoize`), but we also recognize and fully support users who would rather go for hybrid approach, or are allergic to pure FP.
+To me, the big difference between Monix and other effect libraries is it's approach to impure code.
+Both `IO` and `ZIO` will push you to write a 100% purely functional codebase, except for isolated cases where low-level imperative code is needed for performance.
+Monix favors purely functional programming too (the only impure method is `memoize`), but we also recognize and fully support users who would rather go for a hybrid approach, or are allergic to pure FP.
 I feel like it plays to Scala's unique strengths. 
-Few examples of Monix providing extra support for `Future` users:
-- `monix-execution` module provides many utilities to use with `Future` even if you're not interested in `Task` at all.
-- Monix uses `Scheduler` which is also `ExecutionContext` and can be used with `Future` directly. 
+Here are a few examples of Monix providing extra support for users of `Future`:
+- The `monix-execution` module provides many utilities to use with `Future` even if you're not interested in `Task` at all.
+- Monix uses a `Scheduler` which is also an `ExecutionContext` and can be used with `Future` directly. 
 - `Local` works with both `Future` and Monix `Task/BIO`. 
 
 ## Performance

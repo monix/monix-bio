@@ -6,7 +6,7 @@ title: Resource Safety
 Many tasks use some kind of resource, such as a connection pool, a file handle, or a socket. 
 It's crucial to close them when we finish using them, otherwise we end up with resource leaks.
 
-`BIO` provides ways to do it safely and goes beyond capabilities of `try-catch-finally` block.
+`BIO` provides ways to do it safely and goes beyond the capabilities of a `try-catch-finally` block.
 
 ## Running finalizer
 
@@ -31,11 +31,11 @@ BIO.race(slowerTask, fasterTask).runSyncUnsafe()
  //=> Task has been cancelled
 ```
 
-`BIO.race` cancels slower task which executes the corresponding finalizer.
+`BIO.race` cancels the slower task which executes the corresponding finalizer.
 
 ## Safe acquisition and release
 
-`bracket` is a more general operator for `try-with-resources` pattern, but it works for pure effect types like `BIO`,
+`bracket` is a more general operator for the `try-with-resources` pattern, but it works for pure effect types like `BIO`,
 and supports concurrency and cancellation.
 
 ```scala mdoc:compile-only
@@ -57,7 +57,7 @@ def readFirstLine(file: File): Task[String] = {
 
 If `Task` is successful, the result will be signaled in `use`.
 
-Note that `release` expects `UIO` - you can ignore any errors, or raise them as terminal errors but make sure to consider what should happen if finalizer fails.
+Note that `release` expects `UIO` - you can ignore any errors, or raise them as terminal errors but make sure to consider what should happen if the finalizer fails.
 Don't leak any resources!
 
 Similarly to `guarantee`, there is also a `bracketCase` variant.
