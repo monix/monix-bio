@@ -11,9 +11,14 @@ All of this makes it simple to write good, high-level code that solve problems r
 
 There are two type aliases:
 - `type UIO[A] = BIO[Nothing, A]` which represents an effect that can only fail with terminal errors due to abnormal circumstances.
-- `type Task[A] = BIO[Throwable, A]` - an effect that can fail with a `Throwable` and is analogous to Monix `Task`.
+- `type Task[A] = BIO[Throwable, A]` - an effect that can fail with a `Throwable` and is analogous to `monix.eval.Task`.
 
 [More about errors here.](error-handling)
+
+`Monix BIO` builds upon [Monix Task](https://monix.io/api/3.2/monix/eval/Task.html) and enhances it with typed error capabilities.
+If you are already familiar with `Task` - learning `BIO` is straightforward because the only difference is in
+error handling - the rest of API is the same. 
+In many cases, migration might be as simple as changing imports from `monix.eval.Task` to `monix.bio.Task`.
 
 ## Usage Example
 
@@ -25,7 +30,6 @@ import scala.concurrent.duration._
 // Needed to run BIO, it extends ExecutionContext
 // so it can be used with scala.concurrent.Future as well
 import monix.execution.Scheduler.Implicits.global
-
 
 case class TypedError(i: Int)
 
@@ -64,22 +68,28 @@ DISCLAIMER: The following sections are very subjective and biased opinions of th
 There are already many effect types in Scala, i.e. [cats.effect.IO](https://github.com/typelevel/cats-effect), [Monix Task](https://github.com/monix/monix), and [ZIO](https://github.com/zio/zio).
 It begs a question - why would anyone want another one?
 
-Well, it seems like built-in typed errors are in great demand, and the only other effect which has built-in typed errors is `ZIO`. 
-Not everyone wants to use `ZIO` and I feel like there are enough differences in `Monix` to make it a valuable alternative.
-The target audience of BIO are users of `IO`, `Task`, and `Future` who tend to use `EitherT` a lot and would like to have a smoother experience, with better type inference, no syntax imports, and without constant wrapping and unwrapping.
+It seems like built-in typed errors are in great demand, and the only other effect which has built-in typed errors is `ZIO`. 
+Not everyone likes everything about `ZIO` and I feel like there are enough differences in `Monix` to make it a valuable alternative.
 
-`Monix BIO` builds upon `Monix Task` and enhances it with typed error capabilities.
-If you are already familiar with `Task` - learning `BIO` is straightforward because the only difference is in
-error handling - the rest of API is the same. In many cases, migration might be as simple as changing imports from `monix.eval.Task` to `monix.bio.Task`.
-
-To me, the big difference between Monix and other effect libraries is it's approach to impure code.
-Both `IO` and `ZIO` will push you to write a 100% purely functional codebase, except for isolated cases where low-level imperative code is needed for performance.
-Monix favors purely functional programming too (the only impure method is `memoize`), but we also recognize and fully support users who would rather go for a hybrid approach, or are allergic to pure FP.
-I feel like it plays to Scala's unique strengths. 
-Here are a few examples of Monix providing extra support for users of `Future`:
+To me, the big difference between Monix and other effect libraries is its approach to impure code.
+Both `cats.effect.IO` and `zio.ZIO` will push you to write a 100% purely functional codebase, except for isolated cases where low-level imperative code is needed for performance.
+I would say Monix is as good as other effects for pure FP, but we go the extra mile to provide support for users who would rather go for a hybrid approach, or are allergic to purely functional programming.
+Here are few examples of Monix providing extra support for users of `Future`:
 - The `monix-execution` module provides many utilities to use with `Future` even if you're not interested in `Task` at all.
 - Monix uses a `Scheduler` which is also an `ExecutionContext` and can be used with `Future` directly. 
 - `Local` works with both `Future` and Monix `Task/BIO`. 
+
+In other words, Monix aims to help with impure code too (if you choose to do so), rather than treating it as a temporary nuisance which waits for a rewrite.
+
+## Target audience
+
+The target audience of `BIO` are users of `cats.effect.IO`, `monix.eval.Task`, and `Future` who tend to use `EitherT` a lot 
+and would like to have a smoother experience, with better type inference, no syntax imports, and without constant wrapping and unwrapping.
+
+If you are completely new to effect types, I'd recommend to start with `cats.effect.IO`, or `monix.eval.Task`, 
+but if you really like the concept of typed errors then there is nothing wrong to go for `monix.bio.BIO`, or `zio.ZIO` from the start.
+
+[More about other effects here.](comparison)
 
 ## Performance
 

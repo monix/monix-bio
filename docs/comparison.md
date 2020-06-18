@@ -45,7 +45,7 @@ Why Future:
 Why Monix:
 - *Easier concurrency.* Tons of extra operators and better composability due to laziness.
 - *Referential transparency.* Take a look at [this classic post](https://www.reddit.com/r/scala/comments/8ygjcq/can_someone_explain_to_me_the_benefits_of_io/e2jfp9b/).
-- *No ExecutionContext being dragged everywhere.* Monix only requires it's `Scheduler` (the equivalent of `ExecutionContext`) at the point of execution which drastically reduces the temptation to `import ExecutionContext.Implicits.global`.
+- *No ExecutionContext being dragged everywhere.* Monix only requires its `Scheduler` (the equivalent of `ExecutionContext`) at the point of execution which drastically reduces the temptation to `import ExecutionContext.Implicits.global`.
 - *Resource Safety.* `Resource` and `Bracket` are convenient tools that ensure your application doesn't leak any resources.
 - *Cats-Effect ecosystem.*
 
@@ -68,7 +68,7 @@ Why ZIO:
 - *Bigger community and ZIO-specific ecosystem.*
 - *Better stack traces.* Killer feature. Hopefully it will come to Monix this year but until then it's a huge advantage for ZIO.
 - *More flexible with relation to cancellation.* Monix has an `uncancelable` operator but unlike ZIO, it doesn't have the reverse.
-- *Less dependencies.* Monix depends on `Cats-Effect` which brings a ton of redundant syntax and instances from `Cats` which increases jar sizes and makes Monix slower to upgrade to new Scala versions.
+- *Fewer dependencies.* Monix depends on `Cats-Effect` which brings a ton of redundant syntax and instances from `Cats` which increases jar sizes and makes Monix slower to upgrade to new Scala versions.
 
 Why Monix:
 - *Better Cats-Effect integration.* Monix depends on Cats-Effect directly and its instances are available without any extra imports. 
@@ -88,8 +88,10 @@ Usually it's possible to do everything with other concurrency combinators.
 - *Framework experience vs pluggable library.* ZIO is more opinionated and pushes you to use `ZIO`-everything, otherwise you might have an underwhelming experience.
 Monix wants to naturally interop with both FP and non-FP ecosystem but it might have less "batteries" included. 
 ZIO can be better at forcing you to follow their pattern of programming, while Monix can play nicer with your team's individual preferences and mixed (e.g. using both Monix and Future) codebases.
+- *Innovation.* In the recent history, ZIO tends to bring many new ideas, and Monix is more conservative and puts more focus on stability.
+At the time of writing (18th June 2020), ZIO is yet to release a stable version, but it's ahead in features.
 
 ### Summary
 
-ZIO has more contributors, more features (which you may or may not use), is more opinionated, and develops a new ecosystem of libraries which are tailored to ZIO needs.
+ZIO has more contributors, more features (which you may or may not ever use), is more opinionated, and develops a new ecosystem of libraries which are tailored to ZIO needs.
 Monix is more stable, faster and puts more focus on integrating with existing ecosystems, rather than trying to create a new one.
