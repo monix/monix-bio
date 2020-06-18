@@ -88,7 +88,7 @@ def readFirstLine(file: File): Task[String] = {
 [Resource](https://typelevel.org/cats-effect/datatypes/resource.html) is compatible with `BIO`.
 It allows us to define a task which has already specified `acquire` and `release` logic and clearly informs the users that they are not responsible for closing the resource.
 
-Let's take a look at the example from Cats-Effect docs, but written in `BIO`:
+Let's take a look at the example from the Cats-Effect docs, but written in `BIO`:
 
 ```scala mdoc:silent:reset
 import cats.effect.Resource
