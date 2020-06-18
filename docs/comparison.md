@@ -13,7 +13,7 @@ It's important to me to limit bias to the minimum, and it's hard without an outs
 Why Cats-Effect IO:
 - *Official Cats-Effect implementation.* Typelevel libraries use it in tests, so you are the least likely to encounter bugs.
 Many maintainers also contribute to Cats-Effect (including us) so there is a big and diverse pool of potential contributors.
-- *Minimal API.* `cats.effect.IO` is missing many operators in the API and is missing few features but if you don't need them (e.g. you are a user of Tagless Final) then the smaller surface can be an advantage.
+- *Minimal API.* `cats.effect.IO` is missing many operators in the API as well as a number of features, however if you don't need them (e.g. you are a user of Tagless Final), then the smaller API surface can be an advantage.
 
 Why Monix:
 - *Richer API.* Monix has a bigger, more discoverable API (no syntax imports).
