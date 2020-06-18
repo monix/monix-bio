@@ -174,7 +174,7 @@ UIO(println("action"))
 //=> finalizer C
 ```
 
-All finalizers will be executed even if any of them fails:
+All finalizers will be executed even if any of them fail:
 
 ```scala
 import monix.bio.UIO
