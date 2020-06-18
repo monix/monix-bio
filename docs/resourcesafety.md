@@ -60,7 +60,7 @@ If `Task` is successful, the result will be signaled in `use`.
 Note that `release` expects `UIO` - you can ignore any errors, or raise them as terminal errors but make sure to consider what should happen if finalizer fails.
 Don't leak any resources!
 
-Similarly to `guarantee`, there is also `bracketCase` variant.
+Similarly to `guarantee`, there is also a `bracketCase` variant.
 Let's use it to only close the `BufferedReader` on cancelation:
 
 ```scala mdoc:compile-only
