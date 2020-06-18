@@ -22,7 +22,7 @@ Why Monix:
 ensures that the task will execute on a specified thread pool. 
 Cats IO can only guarantee it up to the first asynchronous boundary. 
 Monix is also safer when using Callback-based builders like `BIO.async` because it can guarantee that 
-the `BIO` will continue on the default `Scheduler` regardless of where callback is called.
+the `BIO` will continue on the default `Scheduler` regardless of where the callback is called.
 - *Local.* Monix has a way to transparently propagate context over asynchronous boundaries which is handy for tracing without polluting the business logic.
 - *Better integration with Scala's Future.* We can use the same `Scheduler` and tracing libraries for both.
 - *Slightly higher performance*. In a lot of cases, the performance is the same but Monix provides a lot of hand-optimized methods that are derived in Cats IO. 
