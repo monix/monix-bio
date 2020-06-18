@@ -133,7 +133,7 @@ val result: Either[String, String] = task.attempt.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: unexpected error
 ```
 
-If both `use` and `release` fails, the errors are merged via `Platform.composeErrors` and signalled as a terminal failure:
+If both `use` and `release` fail, the errors are merged via `Platform.composeErrors` and signalled as a terminal failure:
 
 ```scala
 import monix.bio.{BIO, UIO}
