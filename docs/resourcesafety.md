@@ -10,7 +10,7 @@ It's crucial to close them when we finish using them, otherwise we end up with r
 
 ## Running finalizer
 
-`guarantee` ensures that we run provided finalizer regardless of the exit condition, be it successful completion, failure, or cancellation.
+`guarantee` ensures that we run the provided finalizer regardless of the exit condition, be it successful completion, failure, or cancellation.
 
 `guaranteeCase` is a variant which takes `ExitCase[Cause[E]] => UIO[Unit]` and can distinguish between different exit conditions.
 
