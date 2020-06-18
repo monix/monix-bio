@@ -16,7 +16,7 @@ Many maintainers also contribute to Cats-Effect (including us) so there is a big
 - *Minimal API.* `cats.effect.IO` is missing many operators in the API as well as a number of features, however if you don't need them (e.g. you are a user of Tagless Final), then the smaller API surface can be an advantage.
 
 Why Monix:
-- *Richer API.* Monix has a bigger, more discoverable API (no syntax imports).
+- *Richer API.* Monix has a larger, more discoverable API (no syntax imports).
 - *Fewer implicits.* Monix needs `Scheduler` only when executing the effect. Cats-Effect IO needs `ContextShift` (for any concurrent operator) or `Timer` (for sleeping) depending on the situation. It also depends on `Cats` syntax a lot which requires basic familiarity with this library and type class hierarchy.
 - *Better Thread Management*. Cats IO is missing an operator like [executeOn](http://localhost:3000/monix-bio/api/monix/bio/BIO.html#executeOn(s:monix.execution.Scheduler,forceAsync:Boolean):monix.bio.BIO[E,A]) which
 ensures that the task will execute on a specified thread pool. 
