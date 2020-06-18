@@ -25,7 +25,7 @@ Monix is also safer when using Callback-based builders like `BIO.async` because 
 the `BIO` will continue on the default `Scheduler` regardless of where the callback is called.
 - *Local.* Monix has a way to transparently propagate context over asynchronous boundaries which is handy for tracing without polluting the business logic.
 - *Better integration with Scala's Future.* We can use the same `Scheduler` and tracing libraries for both.
-- *Slightly higher performance*. In a lot of cases, the performance is the same but Monix provides a lot of hand-optimized methods that are derived in Cats IO. 
+- *Slightly higher performance*. In a lot of cases, performance is the same, however Monix provides a lot of hand-optimized methods that are derived in Cats IO. 
 For instance, compare `monixSequence` and `catsSequence` in [benchmark results](https://github.com/monix/monix-bio/tree/master/benchmarks/results).
 
 Choose for yourself:
