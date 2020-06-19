@@ -95,19 +95,13 @@ class Index extends React.Component {
       </Container>
     );
 
-    const index = `[![Maven Central](https://img.shields.io/maven-central/v/io.monix/monix-bio_2.12.svg)](https://search.maven.org/search?q=g:io.monix%20AND%20a:monix-bio_2.12) [![Join the chat at https://gitter.im/monix/monix-bio](https://badges.gitter.im/monix/monix-bio.svg)](https://gitter.im/monix/monix-bio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+    const index = `[![Maven Central](https://img.shields.io/maven-central/v/io.monix/monix-bio_2.12.svg)](https://search.maven.org/search?q=g:io.monix%20AND%20a:monix-bio_2.12) [![Join the chat at https://gitter.im/monix/monix-bio](https://badges.gitter.im/monix/monix-bio.svg)](https://gitter.im/monix/monix-bio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)[![Snapshot](https://img.shields.io/nexus/s/https/oss.sonatype.org/io.monix/monix-bio_2.12.svg)](https://oss.sonatype.org/content/repositories/snapshots/io/monix/monix-bio_2.12/)
 
 Asynchronous data type with typed errors.
 Enhanced version of [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Task.html).
 
 ### Getting Started
 The latest stable version, compatible with Monix 3.x, Cats 2.x and Cats-Effect 2.x:
-
-\`\`\`scala
-libraryDependencies += "${organization}" %% "${coreModuleName}" % "0.1.1"
-\`\`\`
-
-The latest SNAPSHOT version (from the current master):
 
 \`\`\`scala
 libraryDependencies += "${organization}" %% "${coreModuleName}" % "${latestVersion}"

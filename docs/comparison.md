@@ -67,7 +67,7 @@ If you don't, then `Task` might be simpler as well as closer to Scala's `Future`
 Why ZIO:
 - *Bigger community and ZIO-specific ecosystem.*
 - *Better stack traces.* Killer feature. Hopefully it will come to Monix this year but until then it's a huge advantage for ZIO.
-- *More flexible with relation to cancellation.* Monix has an `uncancelable` operator but unlike ZIO, it doesn't have the reverse.
+- *More flexible with relation to cancellation.* Monix has an `uncancelable` operator but unlike ZIO, it doesn't have the reverse. ZIO has also implemented structured concurrency for fibers.
 - *Fewer dependencies.* Monix depends on `Cats-Effect` which brings a ton of redundant syntax and instances from `Cats` which increases jar sizes and makes Monix slower to upgrade to new Scala versions.
 
 Why Monix:
@@ -82,14 +82,11 @@ Choose for yourself:
 - *ZIO Environment.* ZIO adds an extra type parameter (`R`) for dependency management. 
 Monix favors a classic approach (passing dependencies as parameters, any DI library, or `F[_]`).
 If you don't like `Zlayer`, you can pretend `R` doesn't exist, but you will encounter it a lot in type signatures and all `ZIO` libraries use it.
-- *Fiber management.* Monix treats `Fiber` as a low level construct and recommends staying away from it unless you know what you're doing. 
-`ZIO` embraces the concept and adds fiber supervision, structured concurrency etc. Cool feature, but it's an extra thing to learn about, and I don't see many use cases for it.
-Usually it's possible to do everything with other concurrency combinators.
 - *Framework experience vs pluggable library.* ZIO is more opinionated and pushes you to use `ZIO`-everything, otherwise you might have an underwhelming experience.
 Monix wants to naturally interop with both FP and non-FP ecosystem but it might have less "batteries" included. 
-ZIO can be better at forcing you to follow their pattern of programming, while Monix can play nicer with your team's individual preferences and mixed (e.g. using both Monix and Future) codebases.
-- *Innovation.* In the recent history, ZIO tends to bring many new ideas, and Monix is more conservative and puts more focus on stability.
-At the time of writing (18th June 2020), ZIO is yet to release a stable version, but it's ahead in features.
+ZIO can be better at forcing you to follow a specific pattern of programming, while Monix can play nicer with your team's individual preferences and mixed (e.g. using both Monix and Future) codebases.
+- *Innovation.* In recent history, ZIO tends to bring many new ideas, and Monix is more conservative and puts more emphasis on stability.
+At the time of writing (19th June 2020), ZIO is yet to release a stable version, but it's ahead in features.
 
 ### Summary
 
