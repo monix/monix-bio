@@ -77,15 +77,15 @@ There are already many effect types in Scala, i.e. [cats.effect.IO](https://gith
 It begs a question - why would anyone want another one?
 
 It seems like built-in typed errors have warm reception, and the only other effect which has built-in typed errors is `ZIO`. 
-Not everyone likes everything about `ZIO` and I feel like there are enough differences in Monix` to make it a valuable alternative.
-For instance, if you are a happy user of Typelevel libraries (http4s, fs2, doobie etc.) you might find that `BIO` has a nicer integration and it is more consistent with the ecosystem.
+Not everyone likes everything about `ZIO` and I feel like there are enough differences in Monix to make it a valuable alternative.
+For instance, if you are a happy user of Typelevel libraries (http4s, fs2, doobie etc.) you might find that `BIO` has a nicer integration, and it is more consistent with the ecosystem.
 [More differences here.](comparison)
 
 ### Monix Niche
 
-To me, the big difference between Monix and other effect libraries is its approach to impure code.
+The big difference between Monix and other effect libraries is its approach to impure code.
 Both `cats.effect.IO` and `zio.ZIO` will push you to write a 100% purely functional codebase, except for isolated cases where low-level imperative code is needed for performance.
-I would say Monix is as good as other effects for pure FP, but we go the extra mile to provide support for users who would rather go for a hybrid approach, or are allergic to purely functional programming.
+Monix is as good as other effects for pure FP, but the library goes the extra mile to provide support for users who would rather go for a hybrid approach, or are allergic to purely functional programming.
 Here are few examples of Monix providing extra support for users of `Future`:
 - The `monix-execution` module provides many utilities to use with `Future` even if you're not interested in `Task` at all.
 - Monix uses a `Scheduler` which is also an `ExecutionContext` and can be used with `Future` directly. 
@@ -98,6 +98,6 @@ In other words, Monix aims to help with impure code too (if you choose to do so)
 At the time of writing (Q1 2020) performance is as good as `monix.eval.Task` in most benchmarks and `BIO` can outperform it for error handling operators if the error type is not `Throwable`.
 It makes it the fastest effect type in today's Scala ecosystem.
 
-Performance is a high priority for us, and we will greatly appreciate if you open an issue or write on [gitter](https://gitter.im/monix/monix) if you discover use cases where it performs badly.
+Performance is a high priority, and we will greatly appreciate if you open an issue or write on [gitter](https://gitter.im/monix/monix) if you discover use cases where it performs badly.
 
 You can find benchmarks and their results inside [benchmarks module](https://github.com/monix/monix-bio/tree/master/benchmarks).
