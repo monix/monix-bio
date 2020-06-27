@@ -5,7 +5,7 @@ title: Error Handling
 
 When `BIO` fails with an error it short-circuits the computation and returns the error as a result:
 
-```scala mdoc:compile-only
+```scala
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -200,7 +200,7 @@ task.attempt.runSyncUnsafe()
 
 `BIO.terminate` can raise a terminal error (second channel with `Throwable`):
 
-```scala mdoc:compile-only
+```scala
 import monix.bio.BIO
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
@@ -234,7 +234,7 @@ task.attempt.runSyncUnsafe()
 If we are sure that our side-effecting code won't have any surprises we can use `BIO.evalTotal` but if we are wrong, the error
 will be caught in the internal error channel:
 
-```scala mdoc:compile-only
+```scala
 import monix.bio.{BIO, UIO}
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
@@ -383,7 +383,7 @@ Terminal errors ignore all typed error handlers and can only be caught by more p
 
 The example below shows how `redeemWith` does nothing to handle unexpected errors even if it uses the same type:
 
-```scala mdoc:compile-only
+```scala
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
@@ -464,7 +464,7 @@ val task2: BIO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now
 
 For instance, we might want to log the error without handling it:
 
-```scala mdoc:compile-only
+```scala
 import monix.bio.BIO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global

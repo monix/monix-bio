@@ -41,7 +41,7 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .settings(crossSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC18-2",
+      "dev.zio" %% "zio" % "1.0.0-RC21",
       "io.monix" %% "monix-eval" % monixVersion
     ))
 
@@ -56,6 +56,12 @@ lazy val docs = project
   )
   .dependsOn(coreJVM)
   .enablePlugins(DocusaurusPlugin, MdocPlugin, ScalaUnidocPlugin)
+  .settings(
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "1.0.0-RC21",
+      "dev.zio" %% "zio-interop-cats" % "2.1.3.0-RC16",
+      "io.monix" %% "monix-eval" % monixVersion
+    ))
 
 lazy val mdocSettings = Seq(
   scalacOptions --= Seq("-Xfatal-warnings", "-Ywarn-unused"),

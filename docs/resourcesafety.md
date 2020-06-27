@@ -40,9 +40,7 @@ and supports concurrency and cancellation.
 
 ```scala mdoc:compile-only
 import java.io._
-import cats.effect.ExitCase
 import monix.bio.{Task, UIO}
-import monix.bio.Cause
 
 def readFirstLine(file: File): Task[String] = {
   val acquire = Task(new BufferedReader(new FileReader(file)))
@@ -159,7 +157,6 @@ It is allowed to nest, or install multiple finalizers:
 ```scala mdoc:silent:reset
 import monix.bio.UIO
 import monix.execution.Scheduler.Implicits.global
-import monix.execution.exceptions.DummyException
 
 UIO(println("action"))
   .guarantee(

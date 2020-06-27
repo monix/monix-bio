@@ -5,17 +5,26 @@
     "previous": "Previous",
     "tagline": "Asynchronous Programming for Scala and Scala.js",
     "docs": {
+      "cats-effect": {
+        "title": "Cats-Effect Integration"
+      },
       "comparison": {
         "title": "Other Effects"
+      },
+      "creating": {
+        "title": "Creating BIO"
       },
       "error-handling": {
         "title": "Error Handling"
       },
+      "execution": {
+        "title": "Executing BIO"
+      },
       "getting-started": {
         "title": "Getting Started"
       },
-      "overview": {
-        "title": "Overview"
+      "introduction": {
+        "title": "Introduction"
       },
       "resource-safety": {
         "title": "Resource Safety"
