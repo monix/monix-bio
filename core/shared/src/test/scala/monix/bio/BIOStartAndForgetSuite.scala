@@ -75,7 +75,7 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
   test("BIO#startAndForget is stack safe") { implicit sc =>
     val count = if (Platform.isJVM) 100000 else 5000
 
-    var bio: Task[Any] = BIO.evalAsync(1)
+    var bio: BIO.Unsafe[Any] = BIO.evalAsync(1)
     for (_ <- 0 until count) bio = bio.startAndForget
     for (_ <- 0 until count) bio = bio.flatMap(_ => BIO.unit)
 

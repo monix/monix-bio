@@ -76,7 +76,7 @@ object TaskExecutionModelSuite extends BaseTestSuite {
   test("BIO.eval.flatMap loops should work with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
-    def loop(count: Int): Task[Int] =
+    def loop(count: Int): BIO.Unsafe[Int] =
       BIO.eval(count).flatMap { nr =>
         if (nr > 0) loop(count - 1)
         else BIO.eval(nr)
@@ -93,7 +93,7 @@ object TaskExecutionModelSuite extends BaseTestSuite {
   test("BIO.flatMap loops should work with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
-    def loop(count: Int): Task[Int] =
+    def loop(count: Int): BIO.Unsafe[Int] =
       BIO.evalAsync(count).flatMap { nr =>
         if (nr > 0) loop(count - 1)
         else BIO.evalAsync(nr)

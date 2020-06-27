@@ -36,15 +36,15 @@ import cats.effect.CancelToken
   * Usage example:
   *
   * {{{
-  *   val launchMissiles = Task(println("Missiles launched!"))
-  *   val runToBunker = Task(println("Run Lola run!"))
+  *   val launchMissiles = BIO(println("Missiles launched!"))
+  *   val runToBunker = BIO(println("Run Lola run!"))
   *
   *   for {
   *     fiber <- launchMissiles.start
   *     _ <- runToBunker.onErrorHandleWith { error =>
   *       // Retreat failed, cancel launch (maybe we should
   *       // have retreated to our bunker before the launch?)
-  *       fiber.cancel.flatMap(_ => Task.raiseError(error))
+  *       fiber.cancel.flatMap(_ => BIO.raiseError(error))
   *     }
   *     aftermath <- fiber.join
   *   } yield {

@@ -29,7 +29,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
 
   test("finalizer is evaluated on success") { implicit sc =>
     var input = Option.empty[Int]
-    val task = Task
+    val task = BIO
       .evalAsync(1)
       .map(_ + 1)
       .guarantee(UIO.evalAsync {
@@ -80,7 +80,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
   test("if finalizer throws, report finalizer error and signal use error") { implicit sc =>
     val useError = DummyException("useError")
     val finalizerError = DummyException("finalizerError")
-    val task = Task.raiseError(useError).guarantee(BIO.terminate(finalizerError))
+    val task = BIO.raiseError(useError).guarantee(BIO.terminate(finalizerError))
 
     val result = task.runToFuture
     sc.tick()

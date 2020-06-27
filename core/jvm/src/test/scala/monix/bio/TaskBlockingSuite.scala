@@ -27,8 +27,8 @@ import scala.util.{Failure, Try}
 
 object TaskBlockingSuite extends SimpleTestSuite {
   test("blocking on future should work") {
-    val source1 = Task.evalAsync(100)
-    val source2 = Task.evalAsync(200).onErrorHandleWith { case e: Exception => Task.raiseError(e) }
+    val source1 = BIO.evalAsync(100)
+    val source2 = BIO.evalAsync(200).onErrorHandleWith { case e: Exception => BIO.raiseError(e) }
 
     val derived = source1.map { x =>
       val r = Await.result(source2.runToFuture, 10.seconds)
@@ -41,14 +41,14 @@ object TaskBlockingSuite extends SimpleTestSuite {
 
   test("blocking on async") {
     for (_ <- 0 until 1000) {
-      val task = Task.evalAsync(1)
+      val task = BIO.evalAsync(1)
       assertEquals(task.runSyncUnsafe(Duration.Inf), 1)
     }
   }
 
   test("blocking on async.flatMap") {
     for (_ <- 0 until 1000) {
-      val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2))
+      val task = BIO.evalAsync(1).flatMap(_ => BIO.evalAsync(2))
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
     }
   }
@@ -87,7 +87,7 @@ object TaskBlockingSuite extends SimpleTestSuite {
 
   test("blocking on memoize") {
     for (_ <- 0 until 1000) {
-      val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2)).memoize
+      val task = BIO.evalAsync(1).flatMap(_ => BIO.evalAsync(2)).memoize
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
     }
@@ -95,7 +95,7 @@ object TaskBlockingSuite extends SimpleTestSuite {
 
   test("timeout exception") {
     intercept[TimeoutException] {
-      Task.never.runSyncUnsafe(100.millis)
+      BIO.never.runSyncUnsafe(100.millis)
     }
     ()
   }

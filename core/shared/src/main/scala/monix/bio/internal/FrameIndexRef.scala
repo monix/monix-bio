@@ -27,10 +27,10 @@ import monix.execution.misc.ThreadLocal
   * using a thread-local.
   *
   * This definition is of interest only when creating
-  * tasks with `Task.unsafeCreate`, which exposes internals,
+  * tasks with `BIO.unsafeCreate`, which exposes internals,
   * is considered unsafe to use and is now deprecated.
   *
-  * In case the [[Task]] is executed with
+  * In case the [[BIO.Unsafe]] is executed with
   * [[monix.execution.ExecutionModel.BatchedExecution BatchedExecution]],
   * this class boxes a `FrameIndex` in order to transport it over
   * light async boundaries, possibly using a
@@ -46,8 +46,8 @@ import monix.execution.misc.ThreadLocal
   * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
   * instances executed by capable schedulers. This is why
   * [[FrameIndexRef]] is part of the `Context` of execution for
-  * [[Task]], available for asynchronous tasks that get created with
-  * `Task.unsafeCreate` (which is now deprecated).
+  * [[BIO.Unsafe]], available for asynchronous tasks that get created with
+  * `BIO.unsafeCreate` (which is now deprecated).
   *
   * Note that in case the execution model is not
   * [[monix.execution.ExecutionModel.BatchedExecution BatchedExecution]]

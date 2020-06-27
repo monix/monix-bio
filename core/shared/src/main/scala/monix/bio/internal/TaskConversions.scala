@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.{Async, Concurrent, ConcurrentEffect, Effect, IO}
 import monix.bio.BIO.Context
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.{BIO, BiCallback}
 import monix.execution.Scheduler
 import monix.execution.rstreams.SingleAssignSubscription
 import monix.execution.schedulers.TrampolinedRunnable
@@ -32,7 +32,7 @@ private[bio] object TaskConversions {
   /**
     * Implementation for `BIO.toIO`.
     */
-  def toIO[A](source: Task[A])(implicit eff: ConcurrentEffect[Task]): IO[A] =
+  def toIO[A](source: BIO.Unsafe[A])(implicit eff: ConcurrentEffect[BIO.Unsafe]): IO[A] =
     source match {
       case BIO.Now(value) => IO.pure(value)
       case BIO.Error(e) => IO.raiseError(e)
@@ -48,7 +48,7 @@ private[bio] object TaskConversions {
   /**
     * Implementation for `BIO.toConcurrent`.
     */
-  def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
+  def toConcurrent[F[_], A](source: BIO.Unsafe[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[BIO.Unsafe]): F[A] =
     source match {
       case BIO.Now(value) => F.pure(value)
       case BIO.Error(e) => F.raiseError(e)
@@ -65,7 +65,7 @@ private[bio] object TaskConversions {
   /**
     * Implementation for `BIO.toAsync`.
     */
-  def toAsync[F[_], A](source: Task[A])(implicit F: Async[F], eff: Effect[Task]): F[A] =
+  def toAsync[F[_], A](source: BIO.Unsafe[A])(implicit F: Async[F], eff: Effect[BIO.Unsafe]): F[A] =
     source match {
       case BIO.Now(value) => F.pure(value)
       case BIO.Error(e) => F.raiseError(e)
@@ -78,14 +78,14 @@ private[bio] object TaskConversions {
   /**
     * Implementation for `BIO.fromEffect`.
     */
-  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): BIO.Unsafe[A] =
     fa.asInstanceOf[AnyRef] match {
-      case task: Task[A] @unchecked => task
-      case io: IO[A] @unchecked => io.to[Task]
+      case task: BIO.Unsafe[A] @unchecked => task
+      case io: IO[A] @unchecked => io.to[BIO.Unsafe]
       case _ => fromEffect0(fa)
     }
 
-  private def fromEffect0[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] = {
+  private def fromEffect0[F[_], A](fa: F[A])(implicit F: Effect[F]): BIO.Unsafe[A] = {
     def start(ctx: Context[Throwable], cb: BiCallback[Throwable, A]): Unit = {
       try {
         implicit val sc: Scheduler = ctx.scheduler
@@ -102,18 +102,18 @@ private[bio] object TaskConversions {
   /**
     * Implementation for `BIO.fromConcurrentEffect`.
     */
-  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): BIO.Unsafe[A] =
     fa.asInstanceOf[AnyRef] match {
-      case task: Task[A] @unchecked => task
-      case io: IO[A] @unchecked => io.to[Task]
+      case task: BIO.Unsafe[A] @unchecked => task
+      case io: IO[A] @unchecked => io.to[BIO.Unsafe]
       case _ => fromConcurrentEffect0(fa)
     }
 
   /**
     * Implementation for `BIO.fromReactivePublisher`.
     */
-  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
-    Task.cancelable0 { (scheduler, cb) =>
+  def fromReactivePublisher[A](source: Publisher[A]): BIO.Unsafe[Option[A]] =
+    BIO.cancelable0[Throwable, Option[A]] { (scheduler, cb) =>
       val sub = SingleAssignSubscription()
 
       source.subscribe {
@@ -151,10 +151,10 @@ private[bio] object TaskConversions {
         }
       }
 
-      Task(sub.cancel())
+      BIO(sub.cancel())
     }
 
-  private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] = {
+  private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): BIO.Unsafe[A] = {
     def start(ctx: Context[Throwable], cb: BiCallback[Throwable, A]): Unit = {
       try {
         implicit val sc: Scheduler = ctx.scheduler

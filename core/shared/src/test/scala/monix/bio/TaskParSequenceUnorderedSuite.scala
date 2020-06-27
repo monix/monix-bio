@@ -115,8 +115,8 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
   }
 
   test("BIO.parSequenceUnordered should be stack safe on success") { implicit s =>
-    def fold[A, B](ta: Task[ListBuffer[A]], tb: Task[A]): Task[ListBuffer[A]] =
-      Task.parSequenceUnordered(List(ta, tb)).map {
+    def fold[A, B](ta: BIO.Unsafe[ListBuffer[A]], tb: BIO.Unsafe[A]): BIO.Unsafe[ListBuffer[A]] =
+      BIO.parSequenceUnordered(List(ta, tb)).map {
         case a :: b :: Nil =>
           val (accR, valueR) = if (a.isInstanceOf[ListBuffer[_]]) (a, b) else (b, a)
           val acc = accR.asInstanceOf[ListBuffer[A]]
@@ -126,14 +126,14 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
           throw new RuntimeException("Oops!")
       }
 
-    def gatherSpecial[A](in: Seq[Task[A]]): Task[List[A]] = {
-      val init = Task.eval(ListBuffer.empty[A])
+    def gatherSpecial[A](in: Seq[BIO.Unsafe[A]]): BIO.Unsafe[List[A]] = {
+      val init = BIO.eval(ListBuffer.empty[A])
       val r = in.foldLeft(init)(fold)
       r.map(_.result())
     }
 
     val count = if (Platform.isJVM) 100000 else 10000
-    val tasks = (0 until count).map(n => Task.eval(n))
+    val tasks = (0 until count).map(n => BIO.eval(n))
     var result = Option.empty[Try[Int]]
 
     gatherSpecial(tasks)

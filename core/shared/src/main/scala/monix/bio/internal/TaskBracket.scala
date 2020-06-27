@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 private[monix] object TaskBracket {
 
   // -----------------------------------------------------------------
-  // Task.guaranteeCase
+  // BIO.guaranteeCase
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
   def guaranteeCase[E, A](task: BIO[E, A], finalizer: ExitCase[Cause[E]] => UIO[Unit]): BIO[E, A] =
@@ -79,7 +79,7 @@ private[monix] object TaskBracket {
   }
 
   // -----------------------------------------------------------------
-  // Task.bracketE
+  // BIO.bracketE
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
   /**
@@ -126,7 +126,7 @@ private[monix] object TaskBracket {
   }
 
   // -----------------------------------------------------------------
-  // Task.bracketCase
+  // BIO.bracketCase
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
   /**
@@ -180,7 +180,7 @@ private[monix] object TaskBracket {
       // Placeholder for the future finalizer
       val deferredRelease = ForwardCancelable()
       ctx.connection.push(deferredRelease.cancel)(ctx.scheduler)
-      // Async boundary needed, but it is guaranteed via Task.Async below;
+      // Async boundary needed, but it is guaranteed via BIO.Async below;
       BIO.unsafeStartNow(
         acquire,
         ctx.withConnection(TaskConnection.uncancelable[E]),

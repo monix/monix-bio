@@ -53,7 +53,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     val local = Local(0)
     val test =
       for {
-        local <- BIOLocal.wrap(Task(local))
+        local <- BIOLocal.wrap(BIO(local))
         v1    <- local.read
         _     <- UIO.now(assertEquals(v1, 0))
         _     <- local.write(100)
@@ -90,7 +90,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
         local <- BIOLocal(0)
         _     <- local.write(100)
         _     <- UIO.shift
-        v1    <- local.bindL(Task.eval(200))(local.read.map(_ * 2))
+        v1    <- local.bindL(BIO.eval(200))(local.read.map(_ * 2))
         _     <- UIO.now(assertEquals(v1, 400))
         v2    <- local.read
         _     <- UIO.now(assertEquals(v2, 100))
@@ -239,9 +239,9 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
 
   testAsync("BIOLocal.bind scoping works") {
     val tl = BIOLocal(999)
-    val t = Task
+    val t = BIO
       .map3(tl, tl, tl) { (l1, l2, l3) =>
-        def setAll(x: Int) = Task.traverse(List(l1, l2, l3))(_.write(x))
+        def setAll(x: Int) = BIO.traverse(List(l1, l2, l3))(_.write(x))
         l1.bind(0) {
           setAll(0) >> l2.bind(1) {
             setAll(1)
@@ -273,16 +273,16 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
 
     class Test(
       l: BIOLocal[String],
-      ch: ConcurrentChannel[Task, Unit, Int]
+      ch: ConcurrentChannel[BIO.Unsafe, Unit, Int]
     ) {
-      private[this] def produceLoop(n: Int): Task[Unit] =
-        if (n == 0) Task.unit
+      private[this] def produceLoop(n: Int): BIO.Unsafe[Unit] =
+        if (n == 0) BIO.unit
         else
           ch.push(n) >> l.read.flatMap { s =>
-            Task(assertEquals(s, "producer"))
+            BIO(assertEquals(s, "producer"))
           } >> produceLoop(n - 1)
 
-      def produce: Task[Unit] =
+      def produce: BIO.Unsafe[Unit] =
         for {
           _ <- ch.awaitConsumers(1)
           _ <- l.write("producer")
@@ -290,7 +290,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
           _ <- ch.halt(())
         } yield ()
 
-      def consume: Task[Unit] = ch.consume.use { c =>
+      def consume: BIO.Unsafe[Unit] = ch.consume.use { c =>
         c.pull
           .delayResult(1.milli)
           .flatMap { x =>
@@ -303,7 +303,7 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
 
     val t = for {
       tl <- BIOLocal("undefined")
-      ch <- ConcurrentChannel[Task].withConfig[Unit, Int](
+      ch <- ConcurrentChannel[BIO.Unsafe].withConfig[Unit, Int](
         ConsumerF.Config(
           capacity = BufferCapacity.Bounded(bufferSize).some
         )

@@ -23,21 +23,19 @@ import monix.bio.BIO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.Scheduler
 
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
 private[bio] object TaskParSequence {
 
   /**
-    * Implementation for `Task.parSequence`
+    * Implementation for `BIO.parSequence`
     */
-  def apply[E, A, M[X] <: Iterable[X]](
-    in: Iterable[BIO[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]]
-  ): BIO[E, M[A]] = {
+  def apply[E, A](
+    in: Iterable[BIO[E, A]]
+  ): BIO[E, List[A]] = {
     Async(
-      new Register(in, makeBuilder),
+      new Register(in),
       trampolineBefore = true,
       trampolineAfter = true,
       restoreLocals = true
@@ -49,12 +47,11 @@ private[bio] object TaskParSequence {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A, M[X] <: Iterable[X]](
-    in: Iterable[BIO[E, A]],
-    makeBuilder: () => mutable.Builder[A, M[A]]
-  ) extends ForkedRegister[E, M[A]] {
+  private final class Register[E, A](
+    in: Iterable[BIO[E, A]]
+  ) extends ForkedRegister[E, List[A]] {
 
-    def apply(context: Context[E], finalCallback: BiCallback[E, M[A]]): Unit = {
+    def apply(context: Context[E], finalCallback: BiCallback[E, List[A]]): Unit = {
       // We need a monitor to synchronize on, per evaluation!
       val lock = new AnyRef
       val mainConn = context.connection
@@ -70,14 +67,14 @@ private[bio] object TaskParSequence {
 
       // MUST BE synchronized by `lock`!
       // MUST NOT BE called if isActive == false!
-      def maybeSignalFinal(mainConn: TaskConnection[E], finalCallback: BiCallback[E, M[A]]): Unit = {
+      def maybeSignalFinal(mainConn: TaskConnection[E], finalCallback: BiCallback[E, List[A]]): Unit = {
 
         completed += 1
         if (completed >= tasksCount) {
           isActive = false
           mainConn.pop()
 
-          val builder = makeBuilder()
+          val builder = List.newBuilder[A]
           var idx = 0
           while (idx < results.length) {
             builder += results(idx).asInstanceOf[A]
@@ -132,10 +129,10 @@ private[bio] object TaskParSequence {
         if (tasksCount == 0) {
           // With no tasks available, we need to return an empty sequence;
           // Needs to ensure full async delivery due to implementing ForkedStart!
-          context.scheduler.executeAsync(() => finalCallback.onSuccess(makeBuilder().result()))
+          context.scheduler.executeAsync(() => finalCallback.onSuccess(List.empty))
         } else if (tasksCount == 1) {
           // If it's a single task, then execute it directly
-          val source = tasks(0).map(r => (makeBuilder() += r).result())
+          val source = tasks(0).map(r => List(r))
           // Needs to ensure full async delivery due to implementing ForkedStart!
           BIO.unsafeStartEnsureAsync(source, context, finalCallback)
         } else {

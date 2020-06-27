@@ -63,7 +63,7 @@ object TaskToStringSuite extends SimpleTestSuite {
   }
 
   test("BIO.Suspend") {
-    val ref = Task.defer(BIO.now(1))
+    val ref = BIO.defer(BIO.now(1))
     assertContains(ref, "BIO.Suspend")
   }
 

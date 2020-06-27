@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.{BIO, BiCallback}
 import monix.execution.rstreams.Subscription
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
 import org.reactivestreams.{Publisher, Subscriber}
@@ -27,7 +27,7 @@ private[bio] object TaskToReactivePublisher {
   /**
     * Implementation for `BIO.toReactivePublisher`
     */
-  def apply[A](self: Task[A])(implicit s: Scheduler): Publisher[A] =
+  def apply[A](self: BIO.Unsafe[A])(implicit s: Scheduler): Publisher[A] =
     new Publisher[A] {
 
       def subscribe(out: Subscriber[_ >: A]): Unit = {

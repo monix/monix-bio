@@ -28,7 +28,7 @@ private[bio] object TaskRacePair {
   type RaceEither[E, A, B] = Either[(A, Fiber[E, B]), (Fiber[E, A], B)]
 
   /**
-    * Implementation for `Task.racePair`.
+    * Implementation for `BIO.racePair`.
     */
   def apply[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, RaceEither[E, A, B]] =
     BIO.Async(

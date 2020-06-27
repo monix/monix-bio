@@ -43,7 +43,7 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[BIO[E, *]] {
 
   @tailrec
   private def unsafeSet(
-    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
+    ref: AnyRef /* CancelToken[BIO.Unsafe] | CancelableF[BIO.Unsafe] | Cancelable */
   )(implicit s: Scheduler): Unit = {
 
     if (!state.compareAndSet(Empty, IsActive(ref))) {
@@ -107,7 +107,7 @@ private[bio] object TaskConnectionRef {
   private sealed trait State
   private case object Empty extends State
 
-  private final case class IsActive(token: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ )
+  private final case class IsActive(token: AnyRef /* CancelToken[BIO.Unsafe] | CancelableF[BIO.Unsafe] | Cancelable */ )
       extends State
   private case object IsCanceled extends State
   private case object IsEmptyCanceled extends State

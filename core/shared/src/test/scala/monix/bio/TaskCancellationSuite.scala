@@ -237,12 +237,12 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("onCancelRaiseError is stack safe in flatMap loop, take 1") { implicit ec =>
     val cancel = new RuntimeException
-    def loop(n: Int): Task[Int] =
-      Task.eval(n).flatMap { x =>
+    def loop(n: Int): BIO.Unsafe[Int] =
+      BIO.eval(n).flatMap { x =>
         if (x > 0)
-          Task.eval(x - 1).onCancelRaiseError(cancel).flatMap(loop)
+          BIO.eval(x - 1).onCancelRaiseError(cancel).flatMap(loop)
         else
-          Task.pure(0)
+          BIO.pure(0)
       }
 
     val f = loop(10000).runToFuture
@@ -252,12 +252,12 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("onCancelRaiseError is stack safe in flatMap loop, take 2") { implicit ec =>
     val cancel = new RuntimeException
-    def loop(n: Int): Task[Int] =
-      Task.eval(n).flatMap { x =>
+    def loop(n: Int): BIO.Unsafe[Int] =
+      BIO.eval(n).flatMap { x =>
         if (x > 0)
-          Task.eval(x - 1).flatMap(loop).onCancelRaiseError(cancel)
+          BIO.eval(x - 1).flatMap(loop).onCancelRaiseError(cancel)
         else
-          Task.pure(0)
+          BIO.pure(0)
       }
 
     val f = loop(10000).runToFuture
@@ -272,7 +272,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     val task = for {
       l <- BIOLocal(10)
       _ <- l.write(100).uncancelable
-      _ <- Task.shift
+      _ <- BIO.shift
       v <- l.read
     } yield v
 
@@ -289,7 +289,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     val task = for {
       l <- BIOLocal(10)
       _ <- l.write(100).onCancelRaiseError(error)
-      _ <- Task.shift
+      _ <- BIO.shift
       v <- l.read
     } yield v
 

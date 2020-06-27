@@ -30,7 +30,7 @@ import scala.util.control.NonFatal
 
 /**
   * A placeholder for a [[cats.effect.CancelToken]] that will be set at a later time,
-  * the equivalent of a `Deferred[Task, CancelToken]`.
+  * the equivalent of a `Deferred[BIO.Unsafe, CancelToken]`.
   *
   * Used in the implementation of `bracket`, see [[TaskBracket]].
   */

@@ -81,7 +81,7 @@ object TaskMapBothSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 10000 else 1000
 
     val tasks = (0 until count).map(_ => BIO.never[Int])
-    val all = tasks.foldLeft(Task.now(0))((acc, t) => BIO.mapBoth(acc, t)(_ + _))
+    val all = tasks.foldLeft(BIO.now(0))((acc, t) => BIO.mapBoth(acc, t)(_ + _))
     val f = all.runToFuture
 
     sc.tick()
@@ -94,23 +94,23 @@ object TaskMapBothSuite extends BaseTestSuite {
 
   test("sum random synchronous tasks") { implicit s =>
     check1 { numbers: List[Int] =>
-      val sum = numbers.foldLeft(Task.now(0))((acc, t) => BIO.mapBoth(acc, BIO.eval(t))(_ + _))
-      sum <-> Task.now(numbers.sum)
+      val sum = numbers.foldLeft(BIO.now(0))((acc, t) => BIO.mapBoth(acc, UIO.eval(t))(_ + _))
+      sum <-> BIO.now(numbers.sum)
     }
   }
 
   test("sum random asynchronous tasks") { implicit s =>
     check1 { numbers: List[Int] =>
-      val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => BIO.mapBoth(acc, BIO.evalAsync(t))(_ + _))
-      sum <-> Task.evalAsync(numbers.sum)
+      val sum = numbers.foldLeft(BIO.evalAsync(0))((acc, t) => BIO.mapBoth(acc, BIO.evalAsync(t))(_ + _))
+      sum <-> BIO.evalAsync(numbers.sum)
     }
   }
 
   test("both task can fail with error") { implicit s =>
     val err1 = new RuntimeException("Error 1")
-    val t1 = BIO.defer(Task.raiseError[Int](err1)).executeAsync
+    val t1 = BIO.defer[Int](BIO.raiseError(err1)).executeAsync
     val err2 = new RuntimeException("Error 2")
-    val t2 = BIO.defer(Task.raiseError[Int](err2)).executeAsync
+    val t2 = BIO.defer[Int](BIO.raiseError(err2)).executeAsync
 
     val fb = BIO
       .mapBoth(t1, t2)(_ + _)

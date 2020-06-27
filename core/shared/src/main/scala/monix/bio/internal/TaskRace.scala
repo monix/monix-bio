@@ -24,7 +24,7 @@ import monix.execution.atomic.Atomic
 private[bio] object TaskRace {
 
   /**
-    * Implementation for `Task.race`.
+    * Implementation for `BIO.race`.
     */
   def apply[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[A, B]] =
     BIO.Async(

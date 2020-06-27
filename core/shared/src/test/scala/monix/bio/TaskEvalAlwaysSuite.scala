@@ -101,7 +101,7 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
 
   test("BIO.eval.flatMap should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
-    val task: Task[Int] = BIO.eval(1).flatMap(_ => throw ex)
+    val task: BIO.Unsafe[Int] = BIO.eval(1).flatMap(_ => throw ex)
     assertEquals(task.redeemCause(ex => Left(ex.toThrowable), v => Right(v)).runSyncStep, Right(Left(ex)))
   }
 

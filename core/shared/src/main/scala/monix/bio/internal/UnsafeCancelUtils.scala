@@ -79,7 +79,7 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def getToken(
-    task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */
+    task: AnyRef /* Cancelable | BIO.Unsafe[Unit] | CancelableF[BIO.Unsafe] */
   ): CancelToken[UIO] =
     task match {
       case ref: UIO[Unit] @unchecked =>

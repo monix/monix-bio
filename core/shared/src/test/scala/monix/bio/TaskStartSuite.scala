@@ -60,7 +60,7 @@ object TaskStartSuite extends BaseTestSuite {
       local <- BIOLocal(0)
       _     <- local.write(100)
       v1    <- local.read
-      f     <- (Task.shift *> local.read <* local.write(200)).start
+      f     <- (BIO.shift *> local.read <* local.write(200)).start
       // Here, before joining, reads are nondeterministic
       v2 <- f.join
       v3 <- local.read

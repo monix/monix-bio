@@ -238,20 +238,20 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(p.future.value, Some(Success(Right(1))))
   }
 
-  test("Task.error.runAsync with Try-based callback") { implicit s =>
+  test("BIO.error.runAsync with Try-based callback") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.raiseError[Int](ex).runAsync {
+    BIO.raiseError(ex).runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
     assertEquals(p.future.value, Some(Success(Left(ex))))
   }
 
-  test("Task.terminate.runAsync with Try-based callback") { implicit s =>
+  test("BIO.terminate.runAsync with Try-based callback") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.terminate[Int](ex).runAsync {
+    BIO.terminate(ex).runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -271,7 +271,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("task.executeAsync.runAsync with Try-based callback for error") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.raiseError[Int](ex).executeAsync.runAsync {
+    BIO.raiseError(ex).executeAsync.runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -282,7 +282,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("task.executeAsync.runAsync with Try-based callback for terminal error") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.terminate[Int](ex).executeAsync.runAsync {
+    BIO.terminate(ex).executeAsync.runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -292,7 +292,7 @@ object TaskMiscSuite extends BaseTestSuite {
 
   test("task.executeWithOptions protects against user error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = Task.now(1).executeWithOptions(_ => throw ex)
+    val task = BIO.now(1).executeWithOptions(_ => throw ex)
     val f = task.runToFuture
     assertEquals(f.value, Some(Failure(ex)))
   }

@@ -39,7 +39,7 @@ import monix.execution.Scheduler
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options) extends CatsBaseForTask[Throwable] with Effect[Task] {
+class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options) extends CatsBaseForTask[Throwable] with Effect[BIO.Unsafe] {
 
   /** We need to mixin [[CatsAsyncForTask]], because if we
     * inherit directly from it, the implicits priorities don't
@@ -47,27 +47,27 @@ class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options) extends CatsBa
     */
   private[this] val F = CatsConcurrentForTask
 
-  override def runAsync[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[Unit] =
+  override def runAsync[A](fa: BIO.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[Unit] =
     TaskEffect.runAsync(fa)(cb)
 
-  override def delay[A](thunk: => A): Task[A] =
+  override def delay[A](thunk: => A): BIO.Unsafe[A] =
     F.delay(thunk)
 
-  override def suspend[A](fa: => Task[A]): Task[A] =
+  override def suspend[A](fa: => BIO.Unsafe[A]): BIO.Unsafe[A] =
     F.suspend(fa)
 
-  override def async[A](k: ((Either[Throwable, A]) => Unit) => Unit): Task[A] =
+  override def async[A](k: ((Either[Throwable, A]) => Unit) => Unit): BIO.Unsafe[A] =
     F.async(k)
 
-  override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
+  override def asyncF[A](k: (Either[Throwable, A] => Unit) => BIO.Unsafe[Unit]): BIO.Unsafe[A] =
     F.asyncF(k)
 
-  override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
+  override def bracket[A, B](acquire: BIO.Unsafe[A])(use: A => BIO.Unsafe[B])(release: A => BIO.Unsafe[Unit]): BIO.Unsafe[B] =
     F.bracket(acquire)(use)(release)
 
   override def bracketCase[A, B](
-    acquire: Task[A]
-  )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
+    acquire: BIO.Unsafe[A]
+  )(use: A => BIO.Unsafe[B])(release: (A, ExitCase[Throwable]) => BIO.Unsafe[Unit]): BIO.Unsafe[B] =
     F.bracketCase(acquire)(use)(release)
 }
 
@@ -87,7 +87,7 @@ class CatsEffectForTask(implicit s: Scheduler, opts: BIO.Options) extends CatsBa
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
 class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: BIO.Options)
-    extends CatsEffectForTask with ConcurrentEffect[Task] {
+    extends CatsEffectForTask with ConcurrentEffect[BIO.Unsafe] {
 
   /** We need to mixin [[CatsAsyncForTask]], because if we
     * inherit directly from it, the implicits priorities don't
@@ -95,24 +95,24 @@ class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: BIO.Options)
     */
   private[this] val F = CatsConcurrentForTask
 
-  override def runCancelable[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[CancelToken[Task]] =
+  override def runCancelable[A](fa: BIO.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[CancelToken[BIO.Unsafe]] =
     TaskEffect.runCancelable(fa)(cb)
 
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
+  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[BIO.Unsafe]): BIO.Unsafe[A] =
     F.cancelable(k)
 
-  override def uncancelable[A](fa: Task[A]): Task[A] =
+  override def uncancelable[A](fa: BIO.Unsafe[A]): BIO.Unsafe[A] =
     F.uncancelable(fa)
 
-  override def start[A](fa: Task[A]): Task[Fiber[Throwable, A]] =
+  override def start[A](fa: BIO.Unsafe[A]): BIO.Unsafe[Fiber[Throwable, A]] =
     F.start(fa)
 
   override def racePair[A, B](
-    fa: Task[A],
-    fb: Task[B]
-  ): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
+    fa: BIO.Unsafe[A],
+    fb: BIO.Unsafe[B]
+  ): BIO.Unsafe[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
     F.racePair(fa, fb)
 
-  override def race[A, B](fa: Task[A], fb: Task[B]): Task[Either[A, B]] =
+  override def race[A, B](fa: BIO.Unsafe[A], fb: BIO.Unsafe[B]): BIO.Unsafe[Either[A, B]] =
     F.race(fa, fb)
 }

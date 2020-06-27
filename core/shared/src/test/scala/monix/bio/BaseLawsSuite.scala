@@ -229,9 +229,9 @@ trait ArbitraryInstancesBase extends monix.execution.ArbitraryInstances {
       for (f <- fun.arbitrary) yield { case (t: Throwable) => f(t.hashCode()) }
     }
 
-  implicit def arbitraryTaskToLong[A, B](implicit A: Arbitrary[A], B: Arbitrary[B]): Arbitrary[Task[A] => B] =
+  implicit def arbitraryTaskToLong[A, B](implicit A: Arbitrary[A], B: Arbitrary[B]): Arbitrary[BIO.Unsafe[A] => B] =
     Arbitrary {
-      for (b <- B.arbitrary) yield (_: Task[A]) => b
+      for (b <- B.arbitrary) yield (_: BIO.Unsafe[A]) => b
     }
 
   implicit def arbitraryIOToLong[A, B](implicit A: Arbitrary[A], B: Arbitrary[B]): Arbitrary[IO[A] => B] =

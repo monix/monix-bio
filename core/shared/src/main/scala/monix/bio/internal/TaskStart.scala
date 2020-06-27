@@ -24,7 +24,7 @@ import monix.execution.CancelablePromise
 private[bio] object TaskStart {
 
   /**
-    * Implementation for `Task.fork`.
+    * Implementation for `BIO.fork`.
     */
   def forked[E, A](fa: BIO[E, A]): UIO[Fiber[E, A]] =
     fa match {
@@ -47,7 +47,7 @@ private[bio] object TaskStart {
       // Cancelable Promise gets used for storing or waiting
       // for the final result
       val p = CancelablePromise[Either[E, A]]()
-      // Building the Task to signal, linked to the above Promise.
+      // Building the BIO to signal, linked to the above Promise.
       // It needs its own context, its own cancelable
       val ctx2 = BIO.Context[E](ctx.scheduler, ctx.options)
       // Starting actual execution of our newly created task;

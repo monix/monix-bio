@@ -73,7 +73,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
 
   @tailrec
   private def addAny(
-    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
+    ref: AnyRef /* CancelToken[BIO.Unsafe] | CancelableF[BIO.Unsafe] | Cancelable */
   )(implicit s: Scheduler): Unit = {
 
     stateRef.get() match {

@@ -64,14 +64,14 @@ object BIOAppSuite extends SimpleTestSuite {
     }
   }
 
-  testAsync("ConcurrentEffect[Task]") {
+  testAsync("ConcurrentEffect[BIO.Unsafe]") {
     val wasExecuted = Promise[Boolean]()
     val app = new BIOApp {
       def run(args: List[String]): UIO[ExitCode] = {
-        Task
+        BIO
           .from(
-            Task
-              .async[ExitCode] { cb =>
+            BIO
+              .async[Throwable, ExitCode] { cb =>
                 wasExecuted.success(true)
                 cb.onSuccess(ExitCode.Success)
               }

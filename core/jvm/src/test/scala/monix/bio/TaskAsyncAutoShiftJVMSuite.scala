@@ -71,14 +71,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     else Future.successful(())
   }
 
-  testAsync("Task.fromFuture(async) should shift back to the main scheduler") { implicit s =>
+  testAsync("BIO.fromFuture(async) should shift back to the main scheduler") { implicit s =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val (f, latch) = createFuture(s2)(())
-      val r = Task
+      val r = BIO
         .fromFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -88,14 +88,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(completed) should not shift to the main scheduler") { s =>
+  testAsync("BIO.fromFuture(completed) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val f = Future.successful(())
-      val r = Task
+      val r = BIO
         .fromFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -104,17 +104,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(async error) should shift back to the main scheduler") { implicit ec =>
+  testAsync("BIO.fromFuture(async error) should shift back to the main scheduler") { implicit ec =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val (f, latch) = createFuture[Unit](s2)(throw dummy)
 
-      val r = Task
+      val r = BIO
         .fromFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -124,16 +124,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(completed error) should not shift to the main scheduler") { s =>
+  testAsync("BIO.fromFuture(completed error) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val f = Future.failed(dummy)
-      val r = Task
+      val r = BIO
         .fromFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -142,14 +142,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(async) should shift back to the main scheduler") { implicit s =>
+  testAsync("BIO.deferFuture(async) should shift back to the main scheduler") { implicit s =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val (f, latch) = createFuture(s2)(())
-      val r = Task
+      val r = BIO
         .deferFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -159,14 +159,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(completed) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFuture(completed) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val f = Future.successful(())
-      val r = Task
+      val r = BIO
         .deferFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -175,17 +175,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(async error) should shift back to the main scheduler") { implicit ec =>
+  testAsync("BIO.deferFuture(async error) should shift back to the main scheduler") { implicit ec =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val (f, latch) = createFuture[Unit](s2)(throw dummy)
 
-      val r = Task
+      val r = BIO
         .deferFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -195,16 +195,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(completed error) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFuture(completed error) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val f = Future.failed(dummy)
-      val r = Task
+      val r = BIO
         .deferFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -213,14 +213,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(async) should shift back to the main scheduler") { implicit s =>
+  testAsync("BIO.deferFutureAction(async) should shift back to the main scheduler") { implicit s =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val (f, latch) = createFuture(s2)(())
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -230,14 +230,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(completed) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFutureAction(completed) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val f = Future.successful(())
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -246,17 +246,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(async error) should shift back to the main scheduler") { implicit ec =>
+  testAsync("BIO.deferFutureAction(async error) should shift back to the main scheduler") { implicit ec =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val (f, latch) = createFuture[Unit](s2)(throw dummy)
 
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -266,16 +266,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(completed error) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFutureAction(completed error) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val f = Future.failed(dummy)
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -284,14 +284,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(async cancelable) should shift back to the main scheduler") { implicit s =>
+  testAsync("BIO.fromFuture(async cancelable) should shift back to the main scheduler") { implicit s =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val (f, latch) = createCancelableFuture(s2)(())
-      val r = Task
+      val r = BIO
         .fromFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -301,14 +301,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(completed cancelable) should not shift to the main scheduler") { s =>
+  testAsync("BIO.fromFuture(completed cancelable) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val f = CancelableFuture.successful(())
-      val r = Task
+      val r = BIO
         .fromFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -317,17 +317,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(async error cancelable) should shift back to the main scheduler") { implicit ec =>
+  testAsync("BIO.fromFuture(async error cancelable) should shift back to the main scheduler") { implicit ec =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val (f, latch) = createCancelableFuture[Unit](s2)(throw dummy)
 
-      val r = Task
+      val r = BIO
         .fromFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -337,16 +337,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.fromFuture(completed error cancelable) should not shift to the main scheduler") { s =>
+  testAsync("BIO.fromFuture(completed error cancelable) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val f = CancelableFuture.failed(dummy)
-      val r = Task
+      val r = BIO
         .fromFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -355,14 +355,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(async cancelable) should shift back to the main scheduler") { implicit s =>
+  testAsync("BIO.deferFuture(async cancelable) should shift back to the main scheduler") { implicit s =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val (f, latch) = createCancelableFuture(s2)(())
-      val r = Task
+      val r = BIO
         .deferFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -372,14 +372,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(completed cancelable) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFuture(completed cancelable) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val f = CancelableFuture.successful(())
-      val r = Task
+      val r = BIO
         .deferFuture(f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -388,17 +388,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(async error cancelable) should shift back to the main scheduler") { implicit ec =>
+  testAsync("BIO.deferFuture(async error cancelable) should shift back to the main scheduler") { implicit ec =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val (f, latch) = createCancelableFuture[Unit](s2)(throw dummy)
 
-      val r = Task
+      val r = BIO
         .deferFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -408,16 +408,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFuture(completed error cancelable) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFuture(completed error cancelable) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val f = CancelableFuture.failed(dummy)
-      val r = Task
+      val r = BIO
         .deferFuture(f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -426,14 +426,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(async cancelable) should shift back to the main scheduler") { implicit s =>
+  testAsync("BIO.deferFutureAction(async cancelable) should shift back to the main scheduler") { implicit s =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val (f, latch) = createCancelableFuture(s2)(())
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -443,14 +443,14 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(completed cancelable) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFutureAction(completed cancelable) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val f = CancelableFuture.successful(())
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -459,17 +459,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(async error cancelable) should shift back to the main scheduler") { implicit ec =>
+  testAsync("BIO.deferFutureAction(async error cancelable) should shift back to the main scheduler") { implicit ec =>
     val s2 = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val (f, latch) = createCancelableFuture[Unit](s2)(throw dummy)
 
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture
 
       latch.countDown()
@@ -479,16 +479,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.deferFutureAction(completed error cancelable) should not shift to the main scheduler") { s =>
+  testAsync("BIO.deferFutureAction(completed error cancelable) should not shift to the main scheduler") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
       val f = CancelableFuture.failed(dummy)
-      val r = Task
+      val r = BIO
         .deferFutureAction(_ => f)
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -497,15 +497,15 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async(register) should shift back if register forks") { s =>
+  testAsync("BIO.async(register) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .async[Unit] { cb =>
+      val r = BIO
+        .async[Throwable, Unit] { cb =>
           s2.executeAsync(() => cb.onSuccess(()))
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -515,13 +515,13 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async(register) should not shift back if register does not fork") { s =>
+  testAsync("BIO.async(register) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .async[Unit](_.onSuccess(()))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+      val r = BIO
+        .async[Throwable, Unit](_.onSuccess(()))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -530,17 +530,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async(register typed) should shift back if register forks") { s =>
+  testAsync("BIO.async(register typed) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .async[Unit] { cb =>
+      val r = BIO
+        .async[Throwable, Unit] { cb =>
           s2.executeAsync(() => cb.onError(dummy))
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -550,15 +550,15 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async(register error) should not shift back if register does not fork") { s =>
+  testAsync("BIO.async(register error) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .async[Unit](_.onError(dummy))
+      val r = BIO
+        .async[Throwable, Unit](_.onError(dummy))
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -567,15 +567,15 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async0(register) should shift back if register forks") { s =>
+  testAsync("BIO.async0(register) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .async0[Unit] { (_, cb) =>
+      val r = BIO
+        .async0[Throwable, Unit] { (_, cb) =>
           s2.executeAsync(() => cb.onSuccess(()))
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -585,13 +585,13 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async0(register) should not shift back if register does not fork") { s =>
+  testAsync("BIO.async0(register) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .async0[Unit]((_, cb) => cb.onSuccess(()))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+      val r = BIO
+        .async0[Throwable, Unit]((_, cb) => cb.onSuccess(()))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -600,17 +600,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async0(register error) should shift back if register forks") { s =>
+  testAsync("BIO.async0(register error) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .async0[Unit] { (_, cb) =>
+      val r = BIO
+        .async0[Throwable, Unit] { (_, cb) =>
           s2.executeAsync(() => cb.onError(dummy))
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -620,15 +620,15 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async0(register error) should not shift back if register does not fork") { s =>
+  testAsync("BIO.async0(register error) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .async0[Unit]((_, cb) => cb.onError(dummy))
+      val r = BIO
+        .async0[Throwable, Unit]((_, cb) => cb.onError(dummy))
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -637,16 +637,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.cancelable(register) should shift back if register forks") { s =>
+  testAsync("BIO.cancelable(register) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .cancelable[Unit] { cb =>
+      val r = BIO
+        .cancelable[Throwable, Unit] { cb =>
           s2.executeAsync(() => cb.onSuccess(()))
-          Task(())
+          BIO(())
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -656,16 +656,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.cancelable(register) should not shift back if register does not fork") { s =>
+  testAsync("BIO.cancelable(register) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .cancelable[Unit] { cb =>
+      val r = BIO
+        .cancelable[Throwable, Unit] { cb =>
           cb.onSuccess(())
-          Task(())
+          BIO(())
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -674,18 +674,18 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.cancelable(register error) should shift back if register forks") { s =>
+  testAsync("BIO.cancelable(register error) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .cancelable[Unit] { cb =>
+      val r = BIO
+        .cancelable[Throwable, Unit] { cb =>
           s2.executeAsync(() => cb.onError(dummy))
-          Task(())
+          BIO(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -695,18 +695,18 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.cancelable(register error) should not shift back if register does not fork") { s =>
+  testAsync("BIO.cancelable(register error) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .cancelable[Unit] { cb =>
+      val r = BIO
+        .cancelable[Throwable, Unit] { cb =>
           cb.onError(dummy)
-          Task(())
+          BIO(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -715,94 +715,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.cancelable0(register) should shift back if register forks") { s =>
-    implicit val s2: Scheduler = Scheduler.global
-
-    repeatTest(1000) {
-      val r = Task
-        .cancelable0[Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onSuccess(()))
-          Task(())
-        }
-        .flatMap(_ => Task(Thread.currentThread().getName))
-        .executeAsync
-        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
-
-      for (name <- r) yield {
-        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
-      }
-    }
-  }
-
-  testAsync("Task.cancelable0(register) should not shift back if register does not fork") { s =>
-    implicit val ec: Scheduler = Scheduler.global
-
-    repeatTest(1000) {
-      val r = Task
-        .cancelable0[Unit] { (_, cb) =>
-          cb.onSuccess(())
-          Task(())
-        }
-        .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
-
-      for (name <- r) yield {
-        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
-      }
-    }
-  }
-
-  testAsync("Task.cancelable0(register error) should shift back if register forks") { s =>
-    implicit val s2: Scheduler = Scheduler.global
-
-    repeatTest(1000) {
-      val dummy = DummyException("dummy")
-      val r = Task
-        .cancelable0[Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onError(dummy))
-          Task(())
-        }
-        .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
-        .executeAsync
-        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
-
-      for (name <- r) yield {
-        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
-      }
-    }
-  }
-
-  testAsync("Task.cancelable0(register error) should not shift back if register does not fork") { s =>
-    implicit val ec: Scheduler = Scheduler.global
-
-    repeatTest(1000) {
-      val dummy = DummyException("dummy")
-      val r = Task
-        .cancelable0[Unit] { (_, cb) =>
-          cb.onError(dummy)
-          Task(())
-        }
-        .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
-        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
-
-      for (name <- r) yield {
-        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
-      }
-    }
-  }
-
-  testAsync("Task.create(register) should shift back if register forks") { s =>
+  testAsync("BIO.cancelable0(register) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           s2.executeAsync(() => cb.onSuccess(()))
-          Task(())
+          BIO(())
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -812,16 +734,16 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.create(register) should not shift back if register does not fork") { s =>
+  testAsync("BIO.cancelable0(register) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           cb.onSuccess(())
-          Task(())
+          BIO(())
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -830,7 +752,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.create(register error) should shift back if register forks") { s =>
+  testAsync("BIO.cancelable0(register error) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
@@ -838,10 +760,10 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           s2.executeAsync(() => cb.onError(dummy))
-          Task(())
+          BIO(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -851,7 +773,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.create(register error) should not shift back if register does not fork") { s =>
+  testAsync("BIO.cancelable0(register error) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
@@ -859,10 +781,88 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val r = BIO
         .cancelable0[Throwable, Unit] { (_, cb) =>
           cb.onError(dummy)
-          Task(())
+          BIO(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
+
+      for (name <- r) yield {
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+      }
+    }
+  }
+
+  testAsync("BIO.create(register) should shift back if register forks") { s =>
+    implicit val s2: Scheduler = Scheduler.global
+
+    repeatTest(1000) {
+      val r = BIO
+        .cancelable0[Throwable, Unit] { (_, cb) =>
+          s2.executeAsync(() => cb.onSuccess(()))
+          BIO(())
+        }
+        .flatMap(_ => BIO(Thread.currentThread().getName))
+        .executeAsync
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
+
+      for (name <- r) yield {
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+      }
+    }
+  }
+
+  testAsync("BIO.create(register) should not shift back if register does not fork") { s =>
+    implicit val ec: Scheduler = Scheduler.global
+
+    repeatTest(1000) {
+      val r = BIO
+        .cancelable0[Throwable, Unit] { (_, cb) =>
+          cb.onSuccess(())
+          BIO(())
+        }
+        .flatMap(_ => BIO(Thread.currentThread().getName))
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
+
+      for (name <- r) yield {
+        assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
+      }
+    }
+  }
+
+  testAsync("BIO.create(register error) should shift back if register forks") { s =>
+    implicit val s2: Scheduler = Scheduler.global
+
+    repeatTest(1000) {
+      val dummy = DummyException("dummy")
+      val r = BIO
+        .cancelable0[Throwable, Unit] { (_, cb) =>
+          s2.executeAsync(() => cb.onError(dummy))
+          BIO(())
+        }
+        .onErrorHandle(e => assertEquals(e, dummy))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
+        .executeAsync
+        .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
+
+      for (name <- r) yield {
+        assert(name.startsWith(ThreadName), s"'$name' should start with '$ThreadName'")
+      }
+    }
+  }
+
+  testAsync("BIO.create(register error) should not shift back if register does not fork") { s =>
+    implicit val ec: Scheduler = Scheduler.global
+
+    repeatTest(1000) {
+      val dummy = DummyException("dummy")
+      val r = BIO
+        .cancelable0[Throwable, Unit] { (_, cb) =>
+          cb.onError(dummy)
+          BIO(())
+        }
+        .onErrorHandle(e => assertEquals(e, dummy))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -872,15 +872,15 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
   }
 
   ///...
-  testAsync("Task.asyncF(register) should shift back if register forks") { s =>
+  testAsync("BIO.asyncF(register) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .asyncF[Unit] { cb =>
-          Task(s2.executeAsync(() => cb.onSuccess(())))
+      val r = BIO
+        .asyncF[Throwable, Unit] { cb =>
+          BIO(s2.executeAsync(() => cb.onSuccess(())))
         }
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -890,13 +890,13 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.asyncF(register) should not shift back if register does not fork") { s =>
+  testAsync("BIO.asyncF(register) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
-      val r = Task
-        .asyncF[Unit](cb => Task(cb.onSuccess(())))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+      val r = BIO
+        .asyncF[Throwable, Unit](cb => BIO(cb.onSuccess(())))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -905,17 +905,17 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.asyncF(register error) should shift back if register forks") { s =>
+  testAsync("BIO.asyncF(register error) should shift back if register forks") { s =>
     implicit val s2: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .asyncF[Unit] { cb =>
-          Task(s2.executeAsync(() => cb.onError(dummy)))
+      val r = BIO
+        .asyncF[Throwable, Unit] { cb =>
+          BIO(s2.executeAsync(() => cb.onError(dummy)))
         }
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .executeAsync
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
@@ -925,15 +925,15 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.asyncF(register error) should not shift back if register does not fork") { s =>
+  testAsync("BIO.asyncF(register error) should not shift back if register does not fork") { s =>
     implicit val ec: Scheduler = Scheduler.global
 
     repeatTest(1000) {
       val dummy = DummyException("dummy")
-      val r = Task
-        .asyncF[Unit](cb => Task(cb.onError(dummy)))
+      val r = BIO
+        .asyncF[Throwable, Unit](cb => BIO(cb.onError(dummy)))
         .onErrorHandle(e => assertEquals(e, dummy))
-        .flatMap(_ => Task(Thread.currentThread().getName))
+        .flatMap(_ => BIO(Thread.currentThread().getName))
         .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
 
       for (name <- r) yield {
@@ -942,7 +942,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     }
   }
 
-  testAsync("Task.async should propagate RejectedExecutionException ") { implicit s =>
+  testAsync("BIO.async should propagate RejectedExecutionException ") { implicit s =>
     @volatile var shouldReject = false
 
     implicit val s2 = Scheduler(new ExecutionContext {

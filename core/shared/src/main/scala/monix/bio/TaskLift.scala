@@ -31,10 +31,10 @@ import scala.annotation.implicitNotFound
 @implicitNotFound("""Cannot find implicit value for TaskLift[${F}].
 Building this implicit value might depend on having an implicit
 s.c.ExecutionContext in scope, a Scheduler or some equivalent type.""")
-trait TaskLift[F[_]] extends (Task ~> F) {
+trait TaskLift[F[_]] extends (BIO.Unsafe ~> F) {
 
   /**
-    * Converts `Task[A]` into `F[A]`.
+    * Converts `BIO.Unsafe[A]` into `F[A]`.
     *
     * The operation should preserve referential transparency and if
     * possible runtime characteristics (e.g. the result should not
@@ -42,7 +42,7 @@ trait TaskLift[F[_]] extends (Task ~> F) {
     * (although this isn't possible for conversions to
     * `cats.effect.Async` data types that are not also `Concurrent`).
     */
-  def apply[A](task: Task[A]): F[A]
+  def apply[A](task: BIO.Unsafe[A]): F[A]
 
 }
 
@@ -56,18 +56,18 @@ object TaskLift extends TaskLiftImplicits0 {
   /**
     * Instance for converting into a `Task`, being the identity function.
     */
-  implicit val toTask: TaskLift[Task] =
-    new TaskLift[Task] {
-      def apply[A](task: Task[A]): Task[A] = task
+  implicit val toTask: TaskLift[BIO.Unsafe] =
+    new TaskLift[BIO.Unsafe] {
+      def apply[A](task: BIO.Unsafe[A]): BIO.Unsafe[A] = task
     }
 
   /**
     * Instance for converting to
     * [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]].
     */
-  implicit def toIO(implicit eff: ConcurrentEffect[Task]): TaskLift[IO] =
+  implicit def toIO(implicit eff: ConcurrentEffect[BIO.Unsafe]): TaskLift[IO] =
     new TaskLift[IO] {
-      def apply[A](task: Task[A]): IO[A] = TaskConversions.toIO(task)(eff)
+      def apply[A](task: BIO.Unsafe[A]): IO[A] = TaskConversions.toIO(task)(eff)
     }
 
 }
@@ -78,9 +78,9 @@ private[bio] abstract class TaskLiftImplicits0 extends TaskLiftImplicits1 {
     * Instance for converting to any type implementing
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html cats.effect.Concurrent]].
     */
-  implicit def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): TaskLift[F] =
+  implicit def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[BIO.Unsafe]): TaskLift[F] =
     new TaskLift[F] {
-      def apply[A](task: Task[A]): F[A] = task.toConcurrent(F, eff, null)
+      def apply[A](task: BIO.Unsafe[A]): F[A] = task.toConcurrent(F, eff, null)
     }
 
 }
@@ -91,9 +91,9 @@ private[bio] abstract class TaskLiftImplicits1 extends TaskLiftImplicits2 {
     * Instance for converting to any type implementing
     * [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]].
     */
-  implicit def toAsync[F[_]](implicit F: Async[F], eff: Effect[Task]): TaskLift[F] =
+  implicit def toAsync[F[_]](implicit F: Async[F], eff: Effect[BIO.Unsafe]): TaskLift[F] =
     new TaskLift[F] {
-      def apply[A](task: Task[A]): F[A] = task.toAsync(F, eff, null)
+      def apply[A](task: BIO.Unsafe[A]): F[A] = task.toAsync(F, eff, null)
     }
 
 }
@@ -104,9 +104,9 @@ private[bio] abstract class TaskLiftImplicits2 {
     * Instance for converting to any type implementing
     * [[https://typelevel.org/cats-effect/typeclasses/liftio.html cats.effect.LiftIO]].
     */
-  implicit def toAnyLiftIO[F[_]](implicit F: LiftIO[F], eff: ConcurrentEffect[Task]): TaskLift[F] =
+  implicit def toAnyLiftIO[F[_]](implicit F: LiftIO[F], eff: ConcurrentEffect[BIO.Unsafe]): TaskLift[F] =
     new TaskLift[F] {
-      def apply[A](task: Task[A]): F[A] = F.liftIO(TaskConversions.toIO(task)(eff))
+      def apply[A](task: BIO.Unsafe[A]): F[A] = F.liftIO(TaskConversions.toIO(task)(eff))
     }
 
 }

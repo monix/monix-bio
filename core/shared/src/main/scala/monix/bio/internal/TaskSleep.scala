@@ -24,7 +24,7 @@ import scala.concurrent.duration.Duration
 
 private[bio] object TaskSleep {
 
-  /** Implementation for `Task.sleep`. */
+  /** Implementation for `BIO.sleep`. */
   def apply(timespan: Duration): UIO[Unit] =
     Async[Nothing, Unit](
       new Register(timespan),

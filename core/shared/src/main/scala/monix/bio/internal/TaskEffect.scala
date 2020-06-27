@@ -27,7 +27,7 @@ import scala.util.control.NonFatal
 
 /** INTERNAL API
   *
-  * `Task` integration utilities for the `cats.effect.ConcurrentEffect`
+  * `BIO` integration utilities for the `cats.effect.ConcurrentEffect`
   * instance, provided in `monix.bio.instances`.
   */
 private[bio] object TaskEffect {
@@ -35,7 +35,7 @@ private[bio] object TaskEffect {
   /**
     * `cats.effect.Effect#runAsync`
     */
-  def runAsync[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit])(
+  def runAsync[A](fa: BIO.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit])(
     implicit s: Scheduler,
     opts: BIO.Options
   ): SyncIO[Unit] = SyncIO {
@@ -45,15 +45,15 @@ private[bio] object TaskEffect {
   /**
     * `cats.effect.ConcurrentEffect#runCancelable`
     */
-  def runCancelable[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit])(
+  def runCancelable[A](fa: BIO.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit])(
     implicit s: Scheduler,
     opts: BIO.Options
-  ): SyncIO[CancelToken[Task]] = SyncIO {
+  ): SyncIO[CancelToken[BIO.Unsafe]] = SyncIO {
     execute(fa, cb)
   }
 
   private def execute[A](
-    fa: Task[A],
+    fa: BIO.Unsafe[A],
     cb: Either[Throwable, A] => IO[Unit]
   )(implicit s: Scheduler, opts: BIO.Options) = {
 

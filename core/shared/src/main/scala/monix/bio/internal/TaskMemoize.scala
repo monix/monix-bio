@@ -52,7 +52,7 @@ private[bio] object TaskMemoize {
         )
     }
 
-  /** Registration function, used in `Task.Async`. */
+  /** Registration function, used in `BIO.Async`. */
   private final class Register[E, A](source: BIO[E, A], val cacheErrors: Boolean)
       extends ((BIO.Context[E], BiCallback[E, A]) => Unit) { self =>
 

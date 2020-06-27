@@ -368,7 +368,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("BIO#onErrorRecoverWith should emit error if not matches") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO[Int](throw dummy).onErrorRecoverWith { case _: TimeoutException => Task.now(10) }
+    val task = BIO[Int](throw dummy).onErrorRecoverWith { case _: TimeoutException => BIO.now(10) }
     val f = task.runToFuture; s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
@@ -423,10 +423,10 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(Right(count))))
   }
 
-  test("Task.onErrorRestartLoop works for success") { implicit s =>
+  test("BIO.onErrorRestartLoop works for success") { implicit s =>
     val dummy = DummyException("dummy1")
     var tries = 0
-    val source = Task.eval {
+    val source = BIO.eval {
       tries += 1
       if (tries < 5) throw dummy
       tries
@@ -436,7 +436,7 @@ object TaskErrorSuite extends BaseTestSuite {
       if (maxRetries > 0)
         retry(maxRetries - 1)
       else
-        Task.raiseError(err)
+        BIO.raiseError(err)
     }
 
     val f = task.runToFuture
@@ -444,31 +444,31 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(tries, 5)
   }
 
-  test("Task.onErrorRestartLoop can throw different error") { implicit s =>
+  test("BIO.onErrorRestartLoop can throw different error") { implicit s =>
     val dummy = DummyException("dummy")
     val timeout = new TimeoutException("timeout")
-    val source = Task.eval[Int] { throw dummy }
+    val source = BIO.eval[Int] { throw dummy }
 
     val task = source.onErrorRestartLoop(5) { (_, maxRetries, retry) =>
       if (maxRetries > 0)
         retry(maxRetries - 1)
       else
-        Task.raiseError(timeout)
+        BIO.raiseError(timeout)
     }
 
     val f = task.runToFuture
     assertEquals(f.value, Some(Failure(timeout)))
   }
 
-  test("Task.onErrorRestartLoop can rethrow") { implicit s =>
+  test("BIO.onErrorRestartLoop can rethrow") { implicit s =>
     val dummy = DummyException("dummy")
-    val source = Task.eval[Int] { throw dummy }
+    val source = BIO.eval[Int] { throw dummy }
 
     val task = source.onErrorRestartLoop(10) { (err, maxRetries, retry) =>
       if (maxRetries > 0)
         retry(maxRetries - 1)
       else
-        Task.raiseError(err)
+        BIO.raiseError(err)
     }
 
     val f = task.runToFuture

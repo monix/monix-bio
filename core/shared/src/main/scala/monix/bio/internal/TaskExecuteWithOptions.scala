@@ -23,7 +23,7 @@ import monix.bio.BIO.{Context, ContextSwitch, Options}
 private[bio] object TaskExecuteWithOptions {
 
   /**
-    * Implementation for `Task.executeWithOptions`
+    * Implementation for `BIO.executeWithOptions`
     */
   def apply[E, A](self: BIO[E, A], f: Options => Options): BIO[E, A] =
     ContextSwitch[E, A](self, enable(f), disable.asInstanceOf[(A, E, Context[E], Context[E]) => Context[E]])

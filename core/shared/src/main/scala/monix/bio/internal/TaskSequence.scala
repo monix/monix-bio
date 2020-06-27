@@ -18,17 +18,16 @@
 package monix.bio.internal
 
 import monix.bio.BIO
-import monix.execution.compat.BuildFrom
 import monix.execution.compat.internal._
 
 import scala.collection.mutable
 
 private[bio] object TaskSequence {
 
-  /** Implementation for `Task.sequence`. */
-  def list[E, A, M[X] <: Iterable[X]](in: M[BIO[E, A]])(implicit bf: BuildFrom[M[BIO[E, A]], A, M[A]]): BIO[E, M[A]] = {
+  /** Implementation for `BIO.sequence`. */
+  def list[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] = {
 
-    def loop(cursor: Iterator[BIO[E, A]], acc: mutable.Builder[A, M[A]]): BIO[E, M[A]] = {
+    def loop(cursor: Iterator[BIO[E, A]], acc: mutable.Builder[A, List[A]]): BIO[E, List[A]] = {
       if (cursor.hasNext) {
         val next = cursor.next()
         next.flatMap { a =>
@@ -41,16 +40,14 @@ private[bio] object TaskSequence {
 
     BIO.suspendTotal {
       val cursor: Iterator[BIO[E, A]] = toIterator(in)
-      loop(cursor, newBuilder(bf, in))
+      loop(cursor, List.newBuilder)
     }
   }
 
-  /** Implementation for `Task.traverse`. */
-  def traverse[E, A, B, M[X] <: Iterable[X]](in: M[A], f: A => BIO[E, B])(
-    implicit bf: BuildFrom[M[A], B, M[B]]
-  ): BIO[E, M[B]] = {
+  /** Implementation for `BIO.traverse`. */
+  def traverse[E, A, B](in: Iterable[A], f: A => BIO[E, B]): BIO[E, List[B]] = {
 
-    def loop(cursor: Iterator[A], acc: mutable.Builder[B, M[B]]): BIO[E, M[B]] = {
+    def loop(cursor: Iterator[A], acc: mutable.Builder[B, List[B]]): BIO[E, List[B]] = {
       if (cursor.hasNext) {
         val next = f(cursor.next())
         next.flatMap { a =>
@@ -62,7 +59,7 @@ private[bio] object TaskSequence {
     }
 
     BIO.suspendTotal {
-      loop(toIterator(in), newBuilder(bf, in))
+      loop(toIterator(in), List.newBuilder)
     }
   }
 }

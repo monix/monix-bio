@@ -39,16 +39,16 @@ object TypeClassLawsForTaskAutoCancelableSuite
 
 class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLawsSuite {
 
-  checkAllAsync("CoflatMap[Task]") { implicit ec =>
-    CoflatMapTests[Task].coflatMap[Int, Int, Int]
+  checkAllAsync("CoflatMap[BIO.Unsafe]") { implicit ec =>
+    CoflatMapTests[BIO.Unsafe].coflatMap[Int, Int, Int]
   }
 
-  checkAllAsync("Concurrent[Task]") { implicit ec =>
+  checkAllAsync("Concurrent[BIO.Unsafe]") { implicit ec =>
     ConcurrentTests[BIO[Throwable, *]].concurrent[Int, Int, Int]
   }
 
-  checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
-    ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int]
+  checkAllAsync("ConcurrentEffect[BIO.Unsafe]") { implicit ec =>
+    ConcurrentEffectTests[BIO.Unsafe].concurrentEffect[Int, Int, Int]
   }
 
   checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
@@ -56,15 +56,15 @@ class BaseTypeClassLawsForTaskSuite(implicit opts: BIO.Options) extends BaseLaws
   }
 
   checkAllAsync("Parallel[BIO, BIO.Par]") { implicit ec =>
-    ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int]
+    ParallelTests[BIO.Unsafe, BIO.Par[Throwable, *]].parallel[Int, Int]
   }
 
   checkAllAsync("Monoid[BIO[String, Int]]") { implicit ec =>
     MonoidTests[BIO[String, Int]].monoid
   }
 
-  checkAllAsync("SemigroupK[Task[Int]]") { implicit ec =>
-    SemigroupKTests[Task].semigroupK[Int]
+  checkAllAsync("SemigroupK[BIO.Unsafe[Int]]") { implicit ec =>
+    SemigroupKTests[BIO.Unsafe].semigroupK[Int]
   }
 
   checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>

@@ -277,11 +277,11 @@ private[bio] object TaskRunLoop {
     }
   }
 
-  /** A run-loop that attempts to evaluate a `Task` without
-    * initializing a `Task.Context`, falling back to
+  /** A run-loop that attempts to evaluate a `BIO` without
+    * initializing a `BIO.Context`, falling back to
     * [[startFull]] when the first `Async` boundary is hit.
     *
-    * Function gets invoked by `Task.runAsync(cb: Callback)`.
+    * Function gets invoked by `BIO.runAsync(cb: Callback)`.
     */
   def startLight[E, A](
     source: BIO[E, A],

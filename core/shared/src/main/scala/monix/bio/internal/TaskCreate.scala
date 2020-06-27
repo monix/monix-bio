@@ -22,7 +22,7 @@ import java.util.concurrent.RejectedExecutionException
 import cats.effect.{CancelToken, IO}
 import monix.bio.BIO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.{BIO, BiCallback}
 import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.internal.Platform
@@ -34,11 +34,11 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `cats.effect.Concurrent#cancelable`.
     */
-  def cancelableEffect[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
+  def cancelableEffect[A](k: (Either[Throwable, A] => Unit) => CancelToken[BIO.Unsafe]): BIO.Unsafe[A] =
     cancelable0[Throwable, A]((_, cb) => k(BiCallback.toEither(cb)))
 
   /**
-    * Implementation for `Task.cancelable`
+    * Implementation for `BIO.cancelable`
     */
   def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]): BIO[E, A] = {
     val start = new Cancelable0Start[E, A, CancelToken[BIO[E, *]]](fn) {
@@ -53,13 +53,13 @@ private[bio] object TaskCreate {
   }
 
   /**
-    * Implementation for `Task.create`, used via `TaskBuilder`.
+    * Implementation for `BIO.create`, used via `TaskBuilder`.
     */
   def cancelableIO[E, A](start: (Scheduler, BiCallback[E, A]) => CancelToken[IO]): BIO[E, A] =
-    cancelable0[E, A]((sc, cb) => Task.from(start(sc, cb)).hideErrors)
+    cancelable0[E, A]((sc, cb) => BIO.from(start(sc, cb)).hideErrors)
 
   /**
-    * Implementation for `Task.create`, used via `TaskBuilder`.
+    * Implementation for `BIO.create`, used via `TaskBuilder`.
     */
   def cancelableCancelable[E, A](fn: (Scheduler, BiCallback[E, A]) => Cancelable): BIO[E, A] = {
     val start = new Cancelable0Start[E, A, Cancelable](fn) {
@@ -70,7 +70,7 @@ private[bio] object TaskCreate {
   }
 
   /**
-    * Implementation for `Task.async0`
+    * Implementation for `BIO.async0`
     */
   def async0[E, A](fn: (Scheduler, BiCallback[E, A]) => Any): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
@@ -85,7 +85,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `cats.effect.Async#async`.
     *
-    * It duplicates the implementation of `Task.async0` with the purpose
+    * It duplicates the implementation of `BIO.async0` with the purpose
     * of avoiding extraneous callback allocations.
     */
   def async[E, A](k: BiCallback[E, A] => Unit): BIO[E, A] = {
@@ -97,7 +97,7 @@ private[bio] object TaskCreate {
   }
 
   /**
-    * Implementation for `Task.asyncF`.
+    * Implementation for `BIO.asyncF`.
     */
   def asyncF[E, A](k: BiCallback[E, A] => BIO[E, Unit]): BIO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {

@@ -33,7 +33,7 @@ import scala.util.control.NonFatal
 private[bio] object TaskParSequenceUnordered {
 
   /**
-    * Implementation for `Task.gatherUnordered`
+    * Implementation for `BIO.parSequenceUnordered`
     */
   def apply[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] = {
     Async(

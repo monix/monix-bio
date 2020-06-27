@@ -42,7 +42,7 @@ object TaskMaterializeSuite extends BaseTestSuite {
 //  }
 
   test("BIO.evalOnce.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task[Int] =
+    def loop(n: Int): BIO.Unsafe[Int] =
       if (n <= 0) BIO.evalOnce(n)
       else
         BIO.evalOnce(n).materialize.flatMap {
@@ -126,12 +126,12 @@ object TaskMaterializeSuite extends BaseTestSuite {
   }
 
   test("BIO.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task[Int] =
-      if (n <= 0) Task.evalAsync(n)
+    def loop(n: Int): BIO.Unsafe[Int] =
+      if (n <= 0) BIO.evalAsync(n)
       else
-        Task.evalAsync(n).materialize.flatMap {
+        BIO.evalAsync(n).materialize.flatMap {
           case Success(_) => loop(n - 1)
-          case Failure(e) => Task.raiseError(e)
+          case Failure(e) => BIO.raiseError(e)
         }
 
     val count = if (Platform.isJVM) 50000 else 5000
@@ -142,18 +142,18 @@ object TaskMaterializeSuite extends BaseTestSuite {
 
   test("BIO.eval.materialize should work for failure") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = Task.eval[Int](throw dummy).materialize
+    val task = BIO.eval[Int](throw dummy).materialize
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
   test("BIO.eval.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task[Int] =
-      if (n <= 0) Task.eval(n)
+    def loop(n: Int): BIO.Unsafe[Int] =
+      if (n <= 0) BIO.eval(n)
       else
-        Task.eval(n).materialize.flatMap {
+        BIO.eval(n).materialize.flatMap {
           case Success(_) => loop(n - 1)
-          case Failure(e) => Task.raiseError(e)
+          case Failure(e) => BIO.raiseError(e)
         }
 
     val count = if (Platform.isJVM) 50000 else 5000
@@ -169,8 +169,8 @@ object TaskMaterializeSuite extends BaseTestSuite {
 
   test("BIO.materialize on failing flatMap") { implicit s =>
     val ex = DummyException("dummy")
-    val task = Task.now(1).flatMap { _ =>
-      (throw ex): Task[Int]
+    val task = BIO.now(1).flatMap { _ =>
+      (throw ex): BIO.Unsafe[Int]
     }
     val materialized = task.materialize.runToFuture
     assertEquals(materialized.value, Some(Failure(ex)))

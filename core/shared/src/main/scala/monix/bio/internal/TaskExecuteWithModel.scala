@@ -25,7 +25,7 @@ import monix.execution.ExecutionModel.{AlwaysAsyncExecution, BatchedExecution, S
 private[bio] object TaskExecuteWithModel {
 
   /**
-    * Implementation for `Task.executeWithModel`
+    * Implementation for `BIO.executeWithModel`
     */
   def apply[E, A](self: BIO[E, A], em: ExecutionModel): BIO[E, A] = {
     val start = (context: Context[E], cb: BiCallback[E, A]) => {

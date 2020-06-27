@@ -24,7 +24,7 @@ import monix.execution.Scheduler
 
 private[bio] object TaskDeferAction {
 
-  /** Implementation for `Task.deferAction`. */
+  /** Implementation for `BIO.deferAction`. */
   def apply[E, A](f: Scheduler => BIO[E, A]): BIO[E, A] = {
     val start = (context: Context[E], callback: BiCallback[E, A]) => {
       val fa = f(context.scheduler)

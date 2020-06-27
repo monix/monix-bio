@@ -24,7 +24,7 @@ import scala.concurrent.duration.Duration
 
 private[bio] object TaskRunSyncUnsafe {
 
-  /** Implementation of `Task.runSyncUnsafe`, meant to throw an
+  /** Implementation of `BIO.runSyncUnsafe`, meant to throw an
     * "unsupported exception", since JavaScript cannot support it.
     */
   def apply[E, A](source: BIO[E, A], timeout: Duration, scheduler: Scheduler, opts: BIO.Options): A = {

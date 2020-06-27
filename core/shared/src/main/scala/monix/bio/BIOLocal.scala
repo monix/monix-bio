@@ -23,7 +23,7 @@ import monix.execution.misc.Local
 /** A `BIOLocal` is like a
   * [[monix.execution.misc.ThreadLocal ThreadLocal]]
   * that is pure and with a flexible scope, being processed in the
-  * context of the [[Task]] data type.
+  * context of the [[BIO.Unsafe]] data type.
   *
   * This data type wraps [[monix.execution.misc.Local]].
   *
@@ -40,7 +40,7 @@ import monix.execution.misc.Local
   * {{{
   *   import monix.execution.Scheduler.Implicits.global
   *
-  *   val t = Task(42)
+  *   val t = BIO(42)
   *   t.executeWithOptions(_.enableLocalContextPropagation)
   *     // triggers the actual execution
   *     .runToFuture
@@ -247,7 +247,7 @@ object BIOLocal {
     checkPropagation(local.map(new BIOLocal(_)))
 
   /** Wraps a provided `task`, such that any changes to any BIOLocal variable
-    * during its execution will not be observable outside of that Task.
+    * during its execution will not be observable outside of that BIO.
     */
   def isolate[E, A](task: BIO[E, A]): BIO[E, A] = checkPropagation {
     UIO {

@@ -31,33 +31,33 @@ import monix.bio.internal.TaskCreate
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
+class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[BIO.Unsafe] {
 
-  override def delay[A](thunk: => A): Task[A] =
-    Task.eval(thunk)
+  override def delay[A](thunk: => A): BIO.Unsafe[A] =
+    BIO.eval(thunk)
 
-  override def suspend[A](fa: => Task[A]): Task[A] =
-    Task.defer(fa)
+  override def suspend[A](fa: => BIO.Unsafe[A]): BIO.Unsafe[A] =
+    BIO.defer(fa)
 
-  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): Task[A] = {
+  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): BIO.Unsafe[A] = {
     TaskCreate.async(cb => k(BiCallback.toEither(cb)))
   }
 
-  override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
+  override def bracket[A, B](acquire: BIO.Unsafe[A])(use: A => BIO.Unsafe[B])(release: A => BIO.Unsafe[Unit]): BIO.Unsafe[B] =
     acquire.bracket(use)(release.andThen(_.onErrorHandleWith(BIO.terminate)))
 
   override def bracketCase[A, B](
-    acquire: Task[A]
-  )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
+    acquire: BIO.Unsafe[A]
+  )(use: A => BIO.Unsafe[B])(release: (A, ExitCase[Throwable]) => BIO.Unsafe[Unit]): BIO.Unsafe[B] =
     acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
 
-  override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
+  override def asyncF[A](k: (Either[Throwable, A] => Unit) => BIO.Unsafe[Unit]): BIO.Unsafe[A] =
     TaskCreate.asyncF(cb => k(BiCallback.toEither(cb)))
 
-  override def guarantee[A](acquire: Task[A])(finalizer: Task[Unit]): Task[A] =
+  override def guarantee[A](acquire: BIO.Unsafe[A])(finalizer: BIO.Unsafe[Unit]): BIO.Unsafe[A] =
     acquire.guarantee(finalizer.onErrorHandleWith(BIO.terminate))
 
-  override def guaranteeCase[A](acquire: Task[A])(finalizer: ExitCase[Throwable] => Task[Unit]): Task[A] =
+  override def guaranteeCase[A](acquire: BIO.Unsafe[A])(finalizer: ExitCase[Throwable] => BIO.Unsafe[Unit]): BIO.Unsafe[A] =
     acquire.guaranteeCase(exit => finalizer(exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
 }
 
@@ -69,25 +69,25 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task] {
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsConcurrentForTask extends CatsAsyncForTask with Concurrent[Task] {
+class CatsConcurrentForTask extends CatsAsyncForTask with Concurrent[BIO.Unsafe] {
 
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
+  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[BIO.Unsafe]): BIO.Unsafe[A] =
     TaskCreate.cancelableEffect(k)
 
-  override def uncancelable[A](fa: Task[A]): Task[A] =
+  override def uncancelable[A](fa: BIO.Unsafe[A]): BIO.Unsafe[A] =
     fa.uncancelable
 
-  override def start[A](fa: Task[A]): Task[Fiber[Throwable, A]] =
+  override def start[A](fa: BIO.Unsafe[A]): BIO.Unsafe[Fiber[Throwable, A]] =
     fa.start
 
   override def racePair[A, B](
-    fa: Task[A],
-    fb: Task[B]
-  ): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
-    Task.racePair(fa, fb)
+    fa: BIO.Unsafe[A],
+    fb: BIO.Unsafe[B]
+  ): BIO.Unsafe[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
+    BIO.racePair(fa, fb)
 
-  override def race[A, B](fa: Task[A], fb: Task[B]): Task[Either[A, B]] =
-    Task.race(fa, fb)
+  override def race[A, B](fa: BIO.Unsafe[A], fb: BIO.Unsafe[B]): BIO.Unsafe[Either[A, B]] =
+    BIO.race(fa, fb)
 }
 
 /** Default and reusable instance for [[CatsConcurrentForTask]].

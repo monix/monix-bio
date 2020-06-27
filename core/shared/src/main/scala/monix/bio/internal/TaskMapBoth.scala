@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 private[bio] object TaskMapBoth {
 
   /**
-    * Implementation for `Task.mapBoth`.
+    * Implementation for `BIO.mapBoth`.
     */
   def apply[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] = {
     Async(new Register(fa1, fa2, f), trampolineBefore = true, trampolineAfter = true, restoreLocals = true)

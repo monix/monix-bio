@@ -148,10 +148,10 @@ object TaskBracketSuite extends BaseTestSuite {
     val useError = new DummyException("use")
     val releaseError = new DummyException("release")
 
-    val task = Task
+    val task = BIO
       .evalAsync(1)
       .bracket { _ =>
-        Task.raiseError[Int](useError)
+        BIO.raiseError(useError)
       } { _ =>
         BIO.terminate(releaseError)
       }
@@ -186,8 +186,8 @@ object TaskBracketSuite extends BaseTestSuite {
     import concurrent.duration._
 
     var effect = 0
-    val task = Task(1)
-      .bracket(_ => Task.sleep(1.second))(_ => UIO(effect += 1))
+    val task = BIO(1)
+      .bracket(_ => BIO.sleep(1.second))(_ => UIO(effect += 1))
       .executeWithOptions(_.enableAutoCancelableRunLoops)
 
     val f = task.runToFuture
@@ -200,11 +200,11 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("bracket is stack safe (1)") { implicit sc =>
-    def loop(n: Int): Task[Unit] =
+    def loop(n: Int): BIO.Unsafe[Unit] =
       if (n > 0)
-        Task(n).bracket(n => Task(n - 1))(_ => UIO.unit).flatMap(loop)
+        BIO(n).bracket(n => BIO(n - 1))(_ => UIO.unit).flatMap(loop)
       else
-        Task.unit
+        BIO.unit
 
     val cycles = if (Platform.isJVM) 100000 else 1000
     val f = loop(cycles).runToFuture
@@ -215,8 +215,8 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("bracket is stack safe (2)") { implicit sc =>
     val cycles = if (Platform.isJVM) 100000 else 1000
-    val bracket = Task.unit.bracket(_ => Task.unit)(_ => UIO.unit)
-    val task = (0 until cycles).foldLeft(Task.unit) { (acc, _) =>
+    val bracket = BIO.unit.bracket(_ => BIO.unit)(_ => UIO.unit)
+    val task = (0 until cycles).foldLeft(BIO.unit) { (acc, _) =>
       acc.flatMap(_ => bracket)
     }
 
@@ -227,8 +227,8 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("bracket is stack safe (3)") { implicit sc =>
     val cycles = if (Platform.isJVM) 100000 else 1000
-    val task = (0 until cycles).foldLeft(Task.unit) { (acc, _) =>
-      acc.bracket(_ => Task.unit)(_ => UIO.unit)
+    val task = (0 until cycles).foldLeft(BIO.unit) { (acc, _) =>
+      acc.bracket(_ => BIO.unit)(_ => UIO.unit)
     }
 
     val f = task.runToFuture
@@ -238,8 +238,8 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("bracket is stack safe (4)") { implicit sc =>
     val cycles = if (Platform.isJVM) 100000 else 1000
-    val task = (0 until cycles).foldLeft(Task.unit) { (acc, _) =>
-      Task.unit.bracket(_ => acc)(_ => UIO.unit)
+    val task = (0 until cycles).foldLeft(BIO.unit) { (acc, _) =>
+      BIO.unit.bracket(_ => acc)(_ => UIO.unit)
     }
 
     val f = task.runToFuture
@@ -252,9 +252,9 @@ object TaskBracketSuite extends BaseTestSuite {
     var use = false
     var release = false
 
-    val task = Task
+    val task = BIO
       .sleep(2.second)
-      .bracket(_ => Task { use = true })(_ => UIO { release = true })
+      .bracket(_ => BIO { use = true })(_ => UIO { release = true })
 
     val f = task.runToFuture
     sc.tick()
@@ -270,7 +270,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("cancel should wait for already started finalizers on success") { implicit sc =>
     val fa = for {
-      pa    <- Deferred[Task, Unit]
+      pa    <- Deferred[BIO.Unsafe, Unit]
       fiber <- BIO.unit.guarantee(pa.complete(()).hideErrors >> BIO.sleep(1.second)).start
       _     <- pa.get
       _     <- fiber.cancel
@@ -289,7 +289,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val dummy = new RuntimeException("dummy")
 
     val fa = for {
-      pa    <- Deferred[Task, Unit]
+      pa    <- Deferred[BIO.Unsafe, Unit]
       fiber <- BIO.unit.guarantee(pa.complete(()).hideErrors >> BIO.sleep(1.second) >> BIO.terminate(dummy)).start
       _     <- pa.get
       _     <- fiber.cancel
@@ -306,7 +306,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("cancel should wait for already started use finalizers") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task, Unit]
+      pa <- Deferred[BIO.Unsafe, Unit]
       fibA <- BIO.unit
         .bracket(_ => BIO.unit.guarantee(pa.complete(()).hideErrors >> BIO.sleep(2.second)))(_ => BIO.unit)
         .start
@@ -325,7 +325,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("second cancel should wait for use finalizers") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task, Unit]
+      pa <- Deferred[BIO.Unsafe, Unit]
       fiber <- BIO.unit
         .bracket(_ => (pa.complete(()).hideErrors >> BIO.never).guarantee(BIO.sleep(2.second)))(_ => BIO.unit)
         .start
@@ -344,7 +344,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("second cancel during acquire should wait for it and finalizers to complete") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task, Unit]
+      pa <- Deferred[BIO.Unsafe, Unit]
       fiber <- (pa.complete(()).hideErrors >> BIO.sleep(1.second))
         .bracket(_ => BIO.unit)(_ => BIO.sleep(1.second))
         .start
@@ -366,7 +366,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("second cancel during acquire should wait for it and finalizers to complete (non-terminating)") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task, Unit]
+      pa <- Deferred[BIO.Unsafe, Unit]
       fiber <- (pa.complete(()).hideErrors >> BIO.sleep(1.second))
         .bracket(_ => BIO.unit)(_ => BIO.never)
         .start
@@ -399,7 +399,7 @@ object TaskBracketSuite extends BaseTestSuite {
   test("bracket can be canceled while failing to acquire") { implicit sc =>
 
     val task = (BIO.sleep(2.second) >> BIO.raiseError[Unit](DummyException("BOOM")))
-      .bracket(_ => Task.unit)(_ => BIO.unit)
+      .bracket(_ => BIO.unit)(_ => BIO.unit)
 
     val cancelToken = task.runAsyncF(_ => ())
 
@@ -413,7 +413,7 @@ object TaskBracketSuite extends BaseTestSuite {
   test("bracket can be canceled while terminating") { implicit sc =>
 
     val task = (BIO.sleep(2.second) >> BIO.terminate(DummyException("BOOM")))
-      .bracket(_ => Task.unit)(_ => BIO.unit)
+      .bracket(_ => BIO.unit)(_ => BIO.unit)
 
     val cancelToken = task.runAsyncF(_ => ())
 

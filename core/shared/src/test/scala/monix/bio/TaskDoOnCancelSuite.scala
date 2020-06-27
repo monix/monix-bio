@@ -232,7 +232,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
     val task = for {
       l <- BIOLocal(10)
       _ <- l.write(100).doOnCancel(onCancel)
-      _ <- Task.shift
+      _ <- BIO.shift
       v <- l.read
     } yield v
 

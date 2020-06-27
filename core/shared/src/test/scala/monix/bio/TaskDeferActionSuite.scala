@@ -68,12 +68,12 @@ object TaskDeferActionSuite extends BaseTestSuite {
   }
 
   test("BIO.deferAction is stack safe") { implicit sc =>
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): BIO.Unsafe[Int] =
       BIO.deferAction { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          BIO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()

@@ -98,24 +98,24 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: BIO.Options) exte
     }
   }
 
-  checkAllAsync("CoflatMap[Task]") { implicit ec =>
-    CoflatMapTests[Task].coflatMap[Int, Int, Int]
+  checkAllAsync("CoflatMap[BIO.Unsafe]") { implicit ec =>
+    CoflatMapTests[BIO.Unsafe].coflatMap[Int, Int, Int]
   }
 
-  checkAllAsync("Concurrent[Task]") { implicit ec =>
-    ConcurrentTests[Task].async[Int, Int, Int]
+  checkAllAsync("Concurrent[BIO.Unsafe]") { implicit ec =>
+    ConcurrentTests[BIO.Unsafe].async[Int, Int, Int]
   }
 
-  checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
-    ConcurrentEffectTests[Task].effect[Int, Int, Int]
+  checkAllAsync("ConcurrentEffect[BIO.Unsafe]") { implicit ec =>
+    ConcurrentEffectTests[BIO.Unsafe].effect[Int, Int, Int]
   }
 
   checkAllAsync("CommutativeApplicative[BIO.Par]") { implicit ec =>
     CommutativeApplicativeTests[BIO.Par[String, *]].commutativeApplicative[Int, Int, Int]
   }
 
-  checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
-    ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int]
+  checkAllAsync("Parallel[BIO.Unsafe, BIO.Par]") { implicit ec =>
+    ParallelTests[BIO.Unsafe, BIO.Par[Throwable, *]].parallel[Int, Int]
   }
 
   checkAllAsync("Monoid[BIO[Throwable, Int]]") { implicit ec =>

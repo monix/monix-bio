@@ -59,7 +59,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     } else {
       try task.register(context, this)
       catch {
-        // Due to C-E law: ConcurrentEffect[Task].concurrentEffect.repeated callback ignored
+        // Due to C-E law: ConcurrentEffect[BIO.Unsafe].concurrentEffect.repeated callback ignored
         // but we don't want to lose any errors
         case cbError: CallbackCalledMultipleTimesException => context.scheduler.reportFailure(cbError)
         case NonFatal(e) => onTermination(e)
@@ -186,7 +186,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
 private[internal] object TaskRestartCallback {
 
   /** Builder for [[TaskRestartCallback]], returning a specific instance
-    * optimized for the passed in `Task.Options`.
+    * optimized for the passed in `BIO.Options`.
     */
   def apply(context: Context[Any], callback: BiCallback[Any, Any]): TaskRestartCallback = {
     if (context.options.localContextPropagation)

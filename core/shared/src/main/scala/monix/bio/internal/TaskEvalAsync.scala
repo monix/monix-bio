@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.{BIO, BiCallback}
 
 import scala.util.control.NonFatal
 
@@ -26,7 +26,7 @@ private[bio] object TaskEvalAsync {
   /**
     * Implementation for `BIO.evalAsync`.
     */
-  def apply[A](a: () => A): Task[A] =
+  def apply[A](a: () => A): BIO.Unsafe[A] =
     BIO.Async(
       new EvalAsyncRegister[A](a),
       trampolineAfter = false,

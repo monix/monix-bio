@@ -26,8 +26,8 @@ object TaskSuspendSuite extends BaseTestSuite {
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
-    val task = Task.suspend {
-      Task.now(trigger())
+    val task = BIO.suspend {
+      BIO.now(trigger())
     }
     assert(!wasTriggered, "!wasTriggered")
 

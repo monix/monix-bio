@@ -17,9 +17,7 @@
 
 package monix.bio
 
-import monix.bio.compat.internal.newBuilder
 import monix.bio.internal._
-import monix.execution.compat.BuildFrom
 import monix.execution.{CancelablePromise, Scheduler}
 
 import scala.concurrent.ExecutionContext
@@ -183,27 +181,27 @@ object UIO extends UIODeprecated.Companion {
   /**
     * @see See [[monix.bio.BIO.sequence]]
     */
-  def sequence[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
-    TaskSequence.list[Nothing, A, M](in)(bf)
+  def sequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskSequence.list[Nothing, A](in)
 
   /**
     * @see See [[monix.bio.BIO.traverse]]
     */
-  def traverse[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
-    TaskSequence.traverse(in, f)(bf)
+  def traverse[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
+    TaskSequence.traverse(in, f)
 
   /**
     * @see See [[monix.bio.BIO.parSequence]]
     */
-  def parSequence[A, M[X] <: Iterable[X]](in: M[UIO[A]])(implicit bf: BuildFrom[M[UIO[A]], A, M[A]]): UIO[M[A]] =
-    TaskParSequence[Nothing, A, M](in, () => newBuilder(bf, in))
+  def parSequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
+    TaskParSequence[Nothing, A](in)
 
   /**
     * @see [[monix.bio.BIO.parTraverse]]
     */
-  def parTraverse[A, B, M[X] <: Iterable[X]](
-    in: M[A]
-  )(f: A => UIO[B])(implicit bf: BuildFrom[M[A], B, M[B]]): UIO[M[B]] =
+  def parTraverse[A, B](
+    in: Iterable[A]
+  )(f: A => UIO[B]): UIO[List[B]] =
     BIO.parTraverse(in)(f)
 
   /**

@@ -62,8 +62,8 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
   }
 
   implicit val params = Parameters(
-    // Disabling non-terminating tests (that test equivalence with Task.never)
-    // because they'd behave really badly with an Eq[Task] that depends on
+    // Disabling non-terminating tests (that test equivalence with BIO.never)
+    // because they'd behave really badly with an Eq[BIO.Unsafe] that depends on
     // blocking threads
     allowNonTerminationLaws = false,
     stackSafeIterationsCount = 10000
@@ -77,7 +77,7 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
       equalityTry[Either[E, A]].eqv(ta, tb)
     }
 
-  implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task[A]] =
+  implicit def equalityTask[A](implicit A: Eq[A]): Eq[BIO.Unsafe[A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.runSyncUnsafeOpt(timeout))
       val tb = Try(b.runSyncUnsafeOpt(timeout))
@@ -99,15 +99,15 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
       equalityTry[A].eqv(ta, tb)
     }
 
-  checkAll("CoflatMap[Task]", CoflatMapTests[Task].coflatMap[Int, Int, Int])
+  checkAll("CoflatMap[BIO.Unsafe]", CoflatMapTests[BIO.Unsafe].coflatMap[Int, Int, Int])
 
-  checkAll("Concurrent[Task]", ConcurrentTests[Task].concurrent[Int, Int, Int])
+  checkAll("Concurrent[BIO.Unsafe]", ConcurrentTests[BIO.Unsafe].concurrent[Int, Int, Int])
 
-  checkAll("ConcurrentEffect[Task]", ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int])
+  checkAll("ConcurrentEffect[BIO.Unsafe]", ConcurrentEffectTests[BIO.Unsafe].concurrentEffect[Int, Int, Int])
 
-  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, *]].applicative[Int, Int, Int])
+  checkAll("Applicative[BIO.Par]", ApplicativeTests[BIO.Par[Throwable, *]].applicative[Int, Int, Int])
 
-  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int])
+  checkAll("Parallel[BIO.Unsafe, BIO.Par]", ParallelTests[BIO.Unsafe, BIO.Par[Throwable, *]].parallel[Int, Int])
 
   checkAll("Monoid[BIO[Throwable, Int]]", MonoidTests[BIO[Throwable, Int]].monoid)
 

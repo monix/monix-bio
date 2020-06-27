@@ -38,7 +38,7 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
 
     var received: BIO.Options = null
 
-    val io = Effect[Task].runAsync(readOptions) {
+    val io = Effect[BIO.Unsafe].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
         IO.unit
@@ -52,9 +52,9 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
     assertEquals(received, customOptions)
   }
 
-  test("Effect instance should use Task.defaultOptions with default TestScheduler") { implicit sc =>
+  test("Effect instance should use BIO.defaultOptions with default TestScheduler") { implicit sc =>
     var received: BIO.Options = null
-    val io = Effect[Task].runAsync(readOptions) {
+    val io = Effect[BIO.Unsafe].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
         IO.unit
@@ -69,11 +69,11 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
     assert(!received.localContextPropagation)
   }
 
-  test("Effect instance should use Task.defaultOptions.withSchedulerFeatures") { sc =>
+  test("Effect instance should use BIO.defaultOptions.withSchedulerFeatures") { sc =>
     implicit val tracing = TracingScheduler(sc)
 
     var received: BIO.Options = null
-    val io = Effect[Task].runAsync(readOptions) {
+    val io = Effect[BIO.Unsafe].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
         IO.unit

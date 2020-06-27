@@ -186,7 +186,7 @@ private[bio] object TaskRunSyncUnsafe {
     if (isFinished)
       cb.value.asInstanceOf[A]
     else
-      throw new TimeoutException(s"Task.runSyncUnsafe($limit)")
+      throw new TimeoutException(s"BIO.runSyncUnsafe($limit)")
   }
 
   private final class BlockingCallback[E, A](latch: OneShotLatch) extends BiCallback[E, A] {

@@ -193,7 +193,7 @@ object TaskRaceSuite extends BaseTestSuite {
     val p = Promise[Int]()
     val tasks = (0 until count).map(_ => BIO.never[Int])
     val all = tasks.foldLeft(BIO.never[Int])((acc, bio) => BIO.raceMany(List(acc, bio)))
-    val f = Task.raceMany(List(BIO.fromFuture(p.future), all)).runToFuture
+    val f = BIO.raceMany(List(BIO.fromFuture(p.future), all)).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -412,7 +412,7 @@ object TaskRaceSuite extends BaseTestSuite {
 
   test("BIO#timeoutL: evaluation time took > timeout => timeout is immediately completed") { implicit s =>
     val timeout = UIO(2.seconds).delayExecution(3.seconds)
-    val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
+    val f = BIO(10).delayExecution(4.seconds).timeoutToL(timeout, BIO(-10)).runToFuture
 
     s.tick(3.seconds)
     assertEquals(f.value, Some(Success(-10)))
@@ -872,7 +872,7 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick()
   }
 
-  test("Task.race has a stack safe cancelable") { implicit sc =>
+  test("BIO.race has a stack safe cancelable") { implicit sc =>
     val count = if (Platform.isJVM) 10000 else 1000
     val p = Promise[Int]()
 

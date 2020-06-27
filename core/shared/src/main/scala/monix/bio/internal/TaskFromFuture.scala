@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.BIO.Context
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.{BIO, BiCallback}
 import monix.execution._
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.schedulers.TrampolinedRunnable
@@ -29,8 +29,8 @@ import scala.util.control.NonFatal
 
 private[bio] object TaskFromFuture {
 
-  /** Implementation for `Task.fromFuture`. */
-  def strict[A](f: Future[A]): Task[A] = {
+  /** Implementation for `BIO.fromFuture`. */
+  def strict[A](f: Future[A]): BIO.Unsafe[A] = {
     f.value match {
       case None =>
         f match {
@@ -43,12 +43,12 @@ private[bio] object TaskFromFuture {
             rawAsync(startSimple(_, _, f))
         }
       case Some(value) =>
-        Task.fromTry(value)
+        BIO.fromTry(value)
     }
   }
 
-  /** Implementation for `Task.deferFutureAction`. */
-  def deferAction[A](f: Scheduler => Future[A]): Task[A] =
+  /** Implementation for `BIO.deferFutureAction`. */
+  def deferAction[A](f: Scheduler => Future[A]): BIO.Unsafe[A] =
     rawAsync[A] { (ctx, cb) =>
       implicit val sc = ctx.scheduler
       // Prevents violations of the Callback contract
@@ -75,7 +75,7 @@ private[bio] object TaskFromFuture {
       }
     }
 
-  def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] = {
+  def fromCancelablePromise[A](p: CancelablePromise[A]): BIO.Unsafe[A] = {
     val start: Start[Throwable, A] = (ctx, cb) => {
       implicit val ec = ctx.scheduler
       if (p.isCompleted) {
@@ -96,7 +96,7 @@ private[bio] object TaskFromFuture {
     )
   }
 
-  private def rawAsync[A](start: (Context[Throwable], BiCallback[Throwable, A]) => Unit): Task[A] =
+  private def rawAsync[A](start: (Context[Throwable], BiCallback[Throwable, A]) => Unit): BIO.Unsafe[A] =
     BIO.Async(
       start,
       trampolineBefore = true,

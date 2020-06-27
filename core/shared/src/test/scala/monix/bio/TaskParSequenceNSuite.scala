@@ -60,7 +60,7 @@ object TaskParSequenceNSuite extends BaseTestSuite {
   }
 
   test("BIO.parSequenceN should handle single item") { implicit s =>
-    val task = List(Task.eval(1))
+    val task = List(BIO.eval(1))
     val res = BIO.parSequenceN(2)(task).runToFuture
 
     s.tick()
@@ -131,7 +131,7 @@ object TaskParSequenceNSuite extends BaseTestSuite {
 
   test("BIO.parSequenceN should be stack safe for synchronous tasks") { implicit s =>
     val count = if (Platform.isJVM) 200000 else 5000
-    val tasks = for (_ <- 0 until count) yield Task.now(1)
+    val tasks = for (_ <- 0 until count) yield BIO.now(1)
     val composite = BIO.parSequenceN(count)(tasks).map(_.sum)
     val result = composite.runToFuture
     s.tick()

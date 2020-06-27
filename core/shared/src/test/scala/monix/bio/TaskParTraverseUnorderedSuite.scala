@@ -27,10 +27,10 @@ import scala.util.{Failure, Success, Try}
 object TaskParTraverseUnorderedSuite extends BaseTestSuite {
   test("BIO.parTraverseUnordered should execute in parallel") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = Task
+    val f = BIO
       .parTraverseUnordered(seq) {
         case (i, d) =>
-          Task.evalAsync(i + 1).delayExecution(d.seconds)
+          BIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -45,10 +45,10 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
   test("BIO.parTraverseUnordered should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
-    val f = Task
+    val f = BIO
       .parTraverseUnordered(seq) {
         case (i, d) =>
-          Task
+          BIO
             .evalAsync(if (i < 0) throw ex else i + 1)
             .delayExecution(d.seconds)
       }
@@ -62,9 +62,9 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
 
   test("BIO.parTraverseUnordered should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = Task
+    val f = BIO
       .parTraverseUnordered(seq) {
-        case (i, d) => Task.evalAsync(i + 1).delayExecution(d.seconds)
+        case (i, d) => BIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -81,7 +81,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
   test("BIO.parTraverseUnordered should run over an iterable") { implicit s =>
     val count = 10
     val seq = 0 until count
-    val sum = Task.parTraverseUnordered(seq)(x => Task.eval(x + 1)).map(_.sum)
+    val sum = BIO.parTraverseUnordered(seq)(x => BIO.eval(x + 1)).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
     assertEquals(result.value.get, Success((count + 1) * count / 2))
@@ -90,17 +90,17 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
   test("BIO.parTraverseUnordered should be stack-safe on handling many tasks") { implicit s =>
     val count = 10000
     val seq = for (i <- 0 until count) yield i
-    val sum = Task.parTraverseUnordered(seq)(x => Task.eval(x)).map(_.sum)
+    val sum = BIO.parTraverseUnordered(seq)(x => BIO.eval(x)).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
     assertEquals(result.value.get, Success(count * (count - 1) / 2))
   }
 
   test("BIO.parTraverseUnordered should be stack safe on success") { implicit s =>
-    def fold[A](ta: Task[ListBuffer[A]], next: A): Task[ListBuffer[A]] =
+    def fold[A](ta: BIO.Unsafe[ListBuffer[A]], next: A): BIO.Unsafe[ListBuffer[A]] =
       ta flatMap { acc =>
-        Task.parTraverseUnordered(Seq(acc, next)) { v =>
-          Task.eval(v)
+        BIO.parTraverseUnordered(Seq(acc, next)) { v =>
+          BIO.eval(v)
         }
       } map {
         case a :: b :: Nil =>
@@ -112,8 +112,8 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
           throw new RuntimeException("Oops!")
       }
 
-    def wanderSpecial[A](in: Seq[A]): Task[List[A]] = {
-      val init = Task.eval(ListBuffer.empty[A])
+    def wanderSpecial[A](in: Seq[A]): BIO.Unsafe[List[A]] = {
+      val init = BIO.eval(ListBuffer.empty[A])
       val r = in.foldLeft(init)(fold)
       r.map(_.result())
     }
@@ -144,9 +144,9 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
 
     val ex = DummyException("dummy1")
     var errorsThrow = 0
-    val sequence = Task.parTraverseUnordered(Seq(0, 0)) { _ =>
-      Task
-        .raiseError[Int](ex)
+    val sequence = BIO.parTraverseUnordered(Seq(0, 0)) { _ =>
+      BIO
+        .raiseError(ex)
         .executeAsync
         .doOnFinish { x =>
           if (x.isDefined) errorsThrow += 1
@@ -165,7 +165,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
 
   test("BIO.parTraverseUnordered runAsync multiple times") { implicit s =>
     var effect = 0
-    val task1 = Task.evalAsync {
+    val task1 = BIO.evalAsync {
       effect += 1; 3
     }.memoize
 
@@ -173,7 +173,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
       effect += 1; x + 1
     }
 
-    val task3 = Task.parTraverseUnordered(List(0, 0, 0)) { _ =>
+    val task3 = BIO.parTraverseUnordered(List(0, 0, 0)) { _ =>
       task2
     }
 
@@ -188,7 +188,7 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
 
   test("BIO.parTraverseUnordered should wrap exceptions in the function") { implicit s =>
     val ex = DummyException("dummy")
-    val task1 = Task.parTraverseUnordered(Seq(0)) { _ =>
+    val task1 = BIO.parTraverseUnordered(Seq(0)) { _ =>
       throw ex
     }
 

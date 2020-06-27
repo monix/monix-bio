@@ -64,13 +64,13 @@ trait BIOApp {
   // To implement ...
   def run(args: List[String]): UIO[ExitCode]
 
-  /** Scheduler for executing the [[Task]] action.
+  /** Scheduler for executing the [[BIO.Unsafe]] action.
     * Defaults to `global`, but can be overridden.
     */
   protected def scheduler: Scheduler = Scheduler.global
 
   /** [[monix.bio.BIO.Options Options]] for executing the
-    * [[Task]] action. The default value is defined in
+    * [[BIO.Unsafe]] action. The default value is defined in
     * [[monix.bio.BIO.defaultOptions defaultOptions]],
     * but can be overridden.
     */
@@ -80,7 +80,7 @@ trait BIOApp {
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
     * instance of this runtime environment.
     */
-  protected implicit lazy val catsEffect: ConcurrentEffect[Task] =
+  protected implicit lazy val catsEffect: ConcurrentEffect[BIO.Unsafe] =
     new CatsConcurrentEffectForTask()(scheduler, options)
 
   final def main(args: Array[String]): Unit = {

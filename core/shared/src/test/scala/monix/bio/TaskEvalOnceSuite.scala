@@ -29,10 +29,10 @@ object TaskEvalOnceSuite extends BaseTestSuite {
 //    var wasTriggered = false
 //    def trigger(): String = { wasTriggered = true; "result" }
 //
-//    val task = Task.evalOnce(trigger())
+//    val task = BIO.evalOnce(trigger())
 //    assert(!wasTriggered, "!wasTriggered")
 //
-//    val f = task.runToFuture
+//    val f = BIO.runToFuture
 //    assert(wasTriggered, "wasTriggered")
 //    assertEquals(f.value, Some(Success("result")))
 //  }
@@ -46,7 +46,7 @@ object TaskEvalOnceSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, null)
   }
 
-  test("BIO.evalOnce.flatMap should be equivalent with Task.evalOnce") { implicit s =>
+  test("BIO.evalOnce.flatMap should be equivalent with BIO.evalOnce") { implicit s =>
     val ex = DummyException("dummy")
     val t = BIO.evalOnce[Int](if (1 == 1) throw ex else 1).flatMap(BIO.now)
     check(t <-> BIO.raiseError(ex))
@@ -65,7 +65,7 @@ object TaskEvalOnceSuite extends BaseTestSuite {
   }
 
   test("BIO.evalOnce.flatMap should be tail recursive") { implicit s =>
-    def loop(n: Int, idx: Int): Task[Int] =
+    def loop(n: Int, idx: Int): BIO.Unsafe[Int] =
       BIO.evalOnce(idx).flatMap { _ =>
         if (idx < n) loop(n, idx + 1).map(_ + 1)
         else

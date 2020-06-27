@@ -156,19 +156,19 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("BIO.fromEffect(task)) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromEffect(task) <-> task
     }
   }
 
-  test("BIO.fromEffect(task.toAsync[Task]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromEffect(task.toAsync[Task]) <-> task
+  test("BIO.fromEffect(task.toAsync[BIO.Unsafe]) <-> task") { implicit s =>
+    check1 { task: BIO.Unsafe[Int] =>
+      BIO.fromEffect(task.toAsync[BIO.Unsafe]) <-> task
     }
   }
 
   test("BIO.fromEffect(task.toAsync[IO]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromEffect(task.toAsync[IO]) <-> task
     }
   }
@@ -177,7 +177,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: CustomEffect = new CustomEffect
 
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromEffect(task.toAsync[CIO]) <-> task
     }
   }
@@ -254,21 +254,21 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("BIO.fromConcurrentEffect(task) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromConcurrentEffect(task) <-> task
     }
   }
 
-  test("BIO.fromConcurrentEffect(task.toConcurrent[Task]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromConcurrentEffect(task.toConcurrent[Task]) <-> task
+  test("BIO.fromConcurrentEffect(task.toConcurrent[BIO.Unsafe]) <-> task") { implicit s =>
+    check1 { task: BIO.Unsafe[Int] =>
+      BIO.fromConcurrentEffect(task.toConcurrent[BIO.Unsafe]) <-> task
     }
   }
 
   test("BIO.fromConcurrentEffect(task.toConcurrent[IO]) <-> task") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromConcurrentEffect(task.toConcurrent[IO]) <-> task
     }
   }
@@ -277,7 +277,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: CustomConcurrentEffect = new CustomConcurrentEffect
 
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromConcurrentEffect(task.toConcurrent[CIO]) <-> task
     }
   }
@@ -379,7 +379,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   test("BIO.fromConcurrentEffect(task.toConcurrent[IO]) preserves cancellability") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    val task0 = Task(123).delayExecution(10.seconds)
+    val task0 = BIO(123).delayExecution(10.seconds)
     val task = BIO.fromConcurrentEffect(task0.toConcurrent[IO])
 
     val f = task.runToFuture
@@ -400,7 +400,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: ConcurrentEffect[CIO] = new CustomConcurrentEffect
 
-    val task0 = Task(123).delayExecution(10.seconds)
+    val task0 = BIO(123).delayExecution(10.seconds)
     val task = BIO.fromConcurrentEffect(task0.toConcurrent[CIO])
 
     val f = task.runToFuture
@@ -543,7 +543,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("BIO.fromReactivePublisher <-> Task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { task: BIO.Unsafe[Int] =>
       BIO.fromReactivePublisher(task.toReactivePublisher) <-> task.map(Some(_))
     }
   }

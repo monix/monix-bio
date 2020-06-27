@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.ExitCase
 import cats.effect.concurrent.Deferred
-import monix.bio.{BIO, Cause, Task, UIO}
+import monix.bio.{BIO, Cause, UIO}
 import monix.catnap.ConcurrentQueue
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{BufferCapacity, ChannelType}
@@ -38,11 +38,11 @@ private[bio] object TaskParSequenceN {
       in.head.map(List(_))
     } else {
       for {
-        error <- Deferred[Task, Cause[E]].hideErrors
+        error <- Deferred[BIO.Unsafe, Cause[E]].hideErrors
         queue <- ConcurrentQueue
-          .withConfig[Task, (Deferred[Task, A], BIO[E, A])](BufferCapacity.Bounded(itemSize), ChannelType.SPMC)
+          .withConfig[BIO.Unsafe, (Deferred[BIO.Unsafe, A], BIO[E, A])](BufferCapacity.Bounded(itemSize), ChannelType.SPMC)
           .hideErrors
-        pairs <- BIO.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
+        pairs <- BIO.traverse(in.toList)(task => Deferred[BIO.Unsafe, A].map(p => (p, task)).hideErrors)
         _     <- queue.offerMany(pairs).hideErrors
         workers = UIO.parSequence(List.fill(parallelism.min(itemSize)) {
           queue.poll.hideErrors.flatMap {
