@@ -1,0 +1,150 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Cats-Effect Integration · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="`BIO` provides [Cats-Effect](https://github.com/typelevel/cats-effect/) integration out of the box."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Cats-Effect Integration · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="`BIO` provides [Cats-Effect](https://github.com/typelevel/cats-effect/) integration out of the box."/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/creating">Creating BIO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/execution">Executing BIO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Cats-Effect Integration</h1></header><article><div><span><p><code>BIO</code> provides <a href="https://github.com/typelevel/cats-effect/">Cats-Effect</a> integration out of the box.
+In practice, it means that integration with Typelevel libraries, such as <a href="https://github.com/http4s/http4s">http4s</a>, or <a href="https://github.com/tpolecat/doobie">doobie</a> should work without much hassle.</p>
+<h2><a class="anchor" aria-hidden="true" id="getting-instances-in-scope"></a><a href="#getting-instances-in-scope" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Getting instances in scope</h2>
+<p>All Cats instances up until <a href="https://typelevel.org/cats-effect/typeclasses/effect.html">Effect</a> and <a href="https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html">ConcurrentEffect</a> (excluded) are available automatically, without any imports.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> cats.syntax.parallel._
+<span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+
+<span class="hljs-keyword">val</span> taskA = <span class="hljs-type">BIO</span>(<span class="hljs-number">20</span>)
+<span class="hljs-keyword">val</span> taskB = <span class="hljs-type">BIO</span>(<span class="hljs-number">22</span>)
+
+<span class="hljs-comment">// evaluates taskA and taskB in parallel, then sums the results</span>
+<span class="hljs-keyword">val</span> taskAplusB = (taskA, taskB).parMapN(_ + _)
+</code></pre>
+<p><code>ConcurrentEffect</code> and <code>Effect</code> can be derived if there is <code>Scheduler</code> in scope.</p>
+<h3><a class="anchor" aria-hidden="true" id="sync-and-above"></a><a href="#sync-and-above" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sync and above</h3>
+<p>Infamous <a href="https://typelevel.org/cats-effect/typeclasses/sync.html">Sync type class</a> extends <code>Bracket[F, Throwable]</code>.
+<code>Throwable</code> is the error type and as an unfortunate consequence - any type class from <code>Sync</code> and above will only work with <code>BIO[Throwable, A]</code>.</p>
+<p>For instance, let's say we want to use <a href="https://monix.io/api/current/monix/catnap/ConcurrentQueue.html">monix.catnap.ConcurrentQueue</a>
+which exposes an interface built on Cats-Effect type classes so it can be used with any effect:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">BIO</span>, <span class="hljs-type">Task</span>}
+<span class="hljs-keyword">import</span> monix.catnap.<span class="hljs-type">ConcurrentQueue</span>
+
+<span class="hljs-keyword">val</span> queueExample: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">String</span>] = <span class="hljs-keyword">for</span> {
+  queue &lt;- <span class="hljs-type">ConcurrentQueue</span>[<span class="hljs-type">Task</span>].bounded[<span class="hljs-type">String</span>](<span class="hljs-number">10</span>)
+  _ &lt;- queue.offer(<span class="hljs-string">"Message"</span>)
+  msg &lt;- queue.poll
+} <span class="hljs-keyword">yield</span> msg
+</code></pre>
+<p>The <code>bounded</code> constructor requires <code>Concurrent[F]</code> and <code>ContextShift[F]</code> in scope.
+Both requirements are automatically derived by <code>BIO</code>, but <code>Concurrent</code> extends <code>Sync</code>, so we need to settle on <code>Throwable</code> error type.
+Since our <code>F</code> is <code>BIO[Throwable, *]</code>, all operations on <code>ConcurrentQueue</code> will return <code>BIO[Throwable, *]</code>.</p>
+<p>A workaround is to use <code>hideErrors</code> because these methods don't throw any errors, and even if they did - how would we handle them?</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<span class="hljs-keyword">import</span> monix.catnap.<span class="hljs-type">ConcurrentQueue</span>
+
+<span class="hljs-keyword">val</span> queueExample: <span class="hljs-type">UIO</span>[<span class="hljs-type">String</span>] = (<span class="hljs-keyword">for</span> {
+  queue &lt;- <span class="hljs-type">ConcurrentQueue</span>[<span class="hljs-type">Task</span>].bounded[<span class="hljs-type">String</span>](<span class="hljs-number">10</span>)
+  _ &lt;- queue.offer(<span class="hljs-string">"Message"</span>)
+  msg &lt;- queue.poll
+} <span class="hljs-keyword">yield</span> msg).hideErrors
+</code></pre>
+<p>If typed errors prove to be a great idea in the long term, and not just a temporary fashion, new editions of Cats will likely support it more naturally.</p>
+<h2><a class="anchor" aria-hidden="true" id="converting-fromto-other-effects"></a><a href="#converting-fromto-other-effects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Converting from/to other effects</h2>
+<p>Cats-Effect provides a hierarchy of type classes that open the door to conversion between effects.</p>
+<p>Monix BIO provides:</p>
+<ul>
+<li><code>monix.bio.TaskLike</code> to convert other effects to <code>BIO</code> with nice <code>BIO.from</code> syntax.</li>
+<li><code>monix.bio.TaskLift</code> to convert <code>BIO</code> to a different type with <code>bio.to[F]</code> syntax.</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="catseffectio"></a><a href="#catseffectio" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>cats.effect.IO</h3>
+<p>Going from <code>cats.effect.IO</code> to <code>BIO</code> is very simple because <code>IO</code> does not need any runtime to execute:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+
+<span class="hljs-keyword">val</span> io = cats.effect.<span class="hljs-type">IO</span>(<span class="hljs-number">20</span>)
+<span class="hljs-keyword">val</span> bio: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">BIO</span>.from(io)
+</code></pre>
+<p>Unfortunately, we need <code>Scheduler</code> in scope to go the other way:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
+
+<span class="hljs-keyword">val</span> bio: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">BIO</span>(<span class="hljs-number">20</span>)
+<span class="hljs-keyword">val</span> ioAgain: cats.effect.<span class="hljs-type">IO</span>[<span class="hljs-type">Int</span>] = bio.to[cats.effect.<span class="hljs-type">IO</span>]
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="monixevaltask"></a><a href="#monixevaltask" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>monix.eval.Task</h3>
+<p><code>BIO</code> does not have <code>monix.eval.Task</code> in dependencies, but since they both use <code>Scheduler</code> to run, we can do it
+without requiring any implicit in scope, if we use <code>deferAction</code>:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+
+<span class="hljs-keyword">val</span> task = monix.eval.<span class="hljs-type">Task</span>(<span class="hljs-number">20</span>)
+<span class="hljs-keyword">val</span> bio: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">BIO</span>.deferAction(<span class="hljs-keyword">implicit</span> s =&gt; <span class="hljs-type">BIO</span>.from(task))
+<span class="hljs-keyword">val</span> taskAgain: monix.eval.<span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] = monix.eval.<span class="hljs-type">Task</span>.deferAction(<span class="hljs-keyword">implicit</span> s =&gt; bio.to[monix.eval.<span class="hljs-type">Task</span>])
+</code></pre>
+<p>In the future, we might introduce a type class in <code>monix-execution</code>, which will allow this conversion without any tricks with <code>deferAction</code>.</p>
+<h3><a class="anchor" aria-hidden="true" id="ziozio"></a><a href="#ziozio" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>zio.ZIO</h3>
+<p>To convert from <code>ZIO</code>, you will need <code>ConcurrentEffect[zio.Task]</code> instance.
+It can be derived with <a href="https://github.com/zio/interop-cats">zio-interop-cats</a> if you have <code>zio.Runtime</code> in scope:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<span class="hljs-keyword">import</span> zio.interop.catz._
+
+<span class="hljs-keyword">implicit</span> <span class="hljs-keyword">val</span> rts = zio.<span class="hljs-type">Runtime</span>.<span class="hljs-keyword">default</span>
+
+<span class="hljs-keyword">val</span> z = zio.<span class="hljs-type">ZIO</span>.effect(<span class="hljs-number">20</span>)
+<span class="hljs-keyword">val</span> bio: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">BIO</span>.from(z)
+</code></pre>
+<p>The other direction requires <code>Scheduler</code> in scope:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<span class="hljs-keyword">import</span> zio.interop.catz._
+
+<span class="hljs-keyword">implicit</span> <span class="hljs-keyword">val</span> s = monix.execution.<span class="hljs-type">Scheduler</span>.global
+
+<span class="hljs-keyword">val</span> bio: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">BIO</span>(<span class="hljs-number">20</span>)
+<span class="hljs-keyword">val</span> zioAgain: zio.<span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] = bio.to[zio.<span class="hljs-type">Task</span>]
+</code></pre>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/resource-safety"><span class="arrow-prev">← </span><span>Resource Safety</span></a><a class="docs-next button" href="/monix-bio/docs/comparison"><span>Other Effects</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#getting-instances-in-scope">Getting instances in scope</a><ul class="toc-headings"><li><a href="#sync-and-above">Sync and above</a></li></ul></li><li><a href="#converting-fromto-other-effects">Converting from/to other effects</a><ul class="toc-headings"><li><a href="#catseffectio">cats.effect.IO</a></li><li><a href="#monixevaltask">monix.eval.Task</a></li><li><a href="#ziozio">zio.ZIO</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>

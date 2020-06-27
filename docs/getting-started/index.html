@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Getting Started · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Add the following line to your `build.sbt`"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Getting Started · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="Add the following line to your `build.sbt`"/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/overview" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/overview">Overview</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Getting Started · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="This section briefly covers how to use the essential features of `BIO` and should get you started quickly."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Getting Started · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="This section briefly covers how to use the essential features of `BIO` and should get you started quickly."/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/introduction">Introduction</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/creating">Creating BIO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/execution">Executing BIO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -54,113 +54,142 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Getting Started</h1></header><article><div><span><p>Add the following line to your <code>build.sbt</code></p>
-<pre><code class="hljs">libraryDependencies += <span class="hljs-string">"io.monix"</span> %% <span class="hljs-string">"monix-bio"</span> % <span class="hljs-string">"0.1.0"</span>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Getting Started</h1></header><article><div><span><p>This section briefly covers how to use the essential features of <code>BIO</code> and should get you started quickly.
+Refer to the rest of the documentation for a more in-depth description.</p>
+<h2><a class="anchor" aria-hidden="true" id="hello-world"></a><a href="#hello-world" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello World</h2>
+<p>Let's start with a simple example.
+Add the following line to your <code>build.sbt</code>:</p>
+<pre><code class="hljs">libraryDependencies += <span class="hljs-string">"io.monix"</span> %% <span class="hljs-string">"monix-bio"</span> % <span class="hljs-string">"0.1.1"</span>
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="hello-world"></a><a href="#hello-world" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hello world</h2>
-<p>Let's start with a simple example. Copy and paste it to your favorite
-editor and try it yourself.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
-<span class="hljs-comment">// Monix uses scheduler instead of execution context</span>
+<p>Copy and paste it to your favorite editor and try it yourself:</p>
+<pre><code class="hljs css language-mdoc scala:silent"><span class="hljs-keyword">import</span> monix.bio.BIO
+<span class="hljs-comment">// Monix uses scheduler instead of the execution context</span>
 <span class="hljs-comment">// from scala standard library, to learn more check</span>
 <span class="hljs-comment">// https://monix.io/docs/3x/execution/scheduler.html</span>
-<span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
+<span class="hljs-keyword">import</span> monix.execution.<span class="hljs-built_in">Scheduler</span>.Implicits.global
 
-<span class="hljs-comment">// used for demonstration at the end</span>
-<span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Await</span>
+<span class="hljs-comment">// Used for demonstration at the end</span>
+<span class="hljs-keyword">import</span> scala.concurrent.Await
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
-<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">HelloWorld</span> </span>{
+object HelloWorld {
 
-  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">main</span></span>(args: <span class="hljs-type">Array</span>[<span class="hljs-type">String</span>]): <span class="hljs-type">Unit</span> = {
-    <span class="hljs-comment">// BIO, similarly to Monix's Task is lazy</span>
-    <span class="hljs-comment">// nothing gets executed at this point</span>
-    <span class="hljs-keyword">val</span> bio = <span class="hljs-type">BIO</span> { <span class="hljs-string">"Hello"</span> + <span class="hljs-string">" world!"</span> }
+  <span class="hljs-function">def <span class="hljs-title">main</span><span class="hljs-params">(args: Array[<span class="hljs-keyword">String</span>])</span>: Unit </span>= {
+    <span class="hljs-comment">// Unlike Future, BIO is lazy and nothing gets executed at this point</span>
+    val bio = BIO { <span class="hljs-built_in">println</span>(<span class="hljs-string">"Hello, World!"</span>); <span class="hljs-string">"Hi"</span> }
+    
+    <span class="hljs-comment">// We can run it as a Scala's Future</span>
+    val scalaFuture: Future[<span class="hljs-keyword">String</span>] = bio.runToFuture
 
-    <span class="hljs-comment">// we can convert it to execute our bio</span>
-    <span class="hljs-comment">// the execution starts here</span>
-    <span class="hljs-keyword">val</span> normalScalaFuture = bio.runToFuture
+    <span class="hljs-comment">// Used only for demonstration, </span>
+    <span class="hljs-comment">// think three times before you use `Await` in production code!</span>
+    val result: <span class="hljs-keyword">String</span> = Await.result(scalaFuture, <span class="hljs-number">5.</span>seconds)
 
-    <span class="hljs-comment">// used only for demonstration, never block</span>
-    <span class="hljs-comment">// your threads in production code</span>
-    <span class="hljs-keyword">val</span> result = <span class="hljs-type">Await</span>.result(normalScalaFuture, <span class="hljs-number">5.</span>seconds)
-    println(result)
+    <span class="hljs-built_in">println</span>(result) <span class="hljs-comment">// Hi is printed</span>
   }
 }
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="error-channels"></a><a href="#error-channels" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Error channels</h2>
-<p>At this point <code>BIO</code> is not much different from <code>Task</code> from <a href="https://monix.io/docs/3x/eval/task.html">Monix library</a>.
-What makes <code>BIO</code> different is the bifunctor concept.
-When you take a look at, how is it implemented <code>sealed abstract class BIO[+E, +A]</code> you will
-see that <code>BIO</code> takes two type parameters:</p>
-<ul>
-<li><code>E</code> - our expected error type, indicates what kind of errors are expected when
-<code>BIO</code> is evaluated</li>
-<li><code>A</code> - it is the result type, it shows what type will be returned
-when the computation finishes.</li>
-</ul>
-<p>There are two convenience type aliases:</p>
-<ul>
-<li><code>type Task[+A] = BIO[Throwable, A]</code> - represents a <code>BIO</code> which uses <code>Throwable</code> as the error chanel</li>
-<li><code>type UIO[+A] = BIO[Nothing, A]</code> - represents <code>BIO</code> which is not expected to fail</li>
-</ul>
-<p><code>BIO</code> has two error channels, one is <code>E</code> from the type signature, which indicates an expected error, and the second
-one is <code>Throwable</code> which is an unexpected error channel. To fail with an unexpected error you can use <code>BIO.terminate</code>,
-which accepts a <code>Throwable</code> and fails the <code>BIO</code>. Unexpected error skips
-all expected error handlers, except for <code>BIO.redeemCause</code> and <code>BIO.redeemCauseWith</code>. Even though <code>UIO</code> indicates
-no expected errors, every <code>BIO</code> instance can fail with an unexpected error.</p>
-<p>Similarly to <code>Either</code>, in <code>BIO</code> you can transform both: error
-and value channel. Please take a look at the example below:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">BIO</span>, <span class="hljs-type">UIO</span>}
+<h2><a class="anchor" aria-hidden="true" id="composing-tasks"></a><a href="#composing-tasks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Composing Tasks</h2>
+<p>We can combine multiple <code>BIO</code> with a variety of functions, the most basic ones being <code>flatMap</code> and <code>map</code>.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
 
-<span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
+<span class="hljs-keyword">val</span> hello = <span class="hljs-type">BIO</span>(<span class="hljs-string">"Hello "</span>)
+<span class="hljs-keyword">val</span> world = <span class="hljs-type">BIO</span>(<span class="hljs-string">"World!"</span>)
 
-<span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Await</span>
+<span class="hljs-comment">// Will return "Hello World!" after execution</span>
+<span class="hljs-keyword">val</span> sayHello = hello
+  .flatMap(h =&gt; world.map(w =&gt; h + w))
+</code></pre>
+<p><code>fa.flatMap(a =&gt; f(a))</code> says &quot;execute fa, and if it is successful, map the result to f(a) and execute it&quot;.</p>
+<p><code>fa.map(a =&gt; f(a))</code> says &quot;execute fa, and if it is successful, map the result to f(a)&quot;.</p>
+<p>The difference is that <code>flatMap</code> expects <code>A =&gt; BIO[E, B]</code> function, while <code>map</code> requires <code>A =&gt; B</code> so it can return anything.
+If we pass <code>A =&gt; BIO[E, B]</code> to <code>map</code>, we will end up with <code>BIO[E, BIO[E, B]]</code> which needs to be &quot;flattened&quot; if we want to run the inner <code>BIO</code>.</p>
+<p><code>BIO</code> can also return with an error, in which case the computation will short circuit:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
+
+<span class="hljs-keyword">val</span> fa = <span class="hljs-type">BIO</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> fb = <span class="hljs-type">BIO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> fc = <span class="hljs-type">BIO</span>(println(<span class="hljs-string">"C"</span>))
+
+<span class="hljs-comment">// Will print A, then throw DummyException after execution</span>
+<span class="hljs-keyword">val</span> task = fa.flatMap(_ =&gt; fb).flatMap(_ =&gt; fc)
+</code></pre>
+<p>In the above example, <code>fc</code> is never executed.
+We can recover from errors using functions such as <code>onErrorHandleWith</code>.
+<a href="error-handling">Check Error Handling section for an in-depth overview.</a></p>
+<h2><a class="anchor" aria-hidden="true" id="lazy-evaluation"></a><a href="#lazy-evaluation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Lazy evaluation</h2>
+<p><code>BIO</code> is just a description or a factory of an effect.
+It won't do anything until it is executed through <code>runXYZ</code> methods.
+In more functional terms, it means that <code>BIO</code> instances are <em>values</em>.
+<a href="https://www.reddit.com/r/scala/comments/8ygjcq/can_someone_explain_to_me_the_benefits_of_io/e2jfp9b/">Here's an explanation why is it cool.</a></p>
+<p>Programming with values helps with composition.
+For instance, it is trivial to write a custom retry function:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
-<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">Bifunctor</span> </span>{
-  <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Error</span>(<span class="hljs-params">description: <span class="hljs-type">String</span></span>)</span>
-  <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">OtherError</span>(<span class="hljs-params">description: <span class="hljs-type">String</span></span>)</span>
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">retryBackoff</span></span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>](source: <span class="hljs-type">BIO</span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>],
+  maxRetries: <span class="hljs-type">Int</span>, firstDelay: <span class="hljs-type">FiniteDuration</span>): <span class="hljs-type">BIO</span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>] = {
 
-  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">main</span></span>(args: <span class="hljs-type">Array</span>[<span class="hljs-type">String</span>]): <span class="hljs-type">Unit</span> = {
-
-    <span class="hljs-comment">// BIO.now is a builder from already evaluated value, don't put there anything that can throw</span>
-    <span class="hljs-comment">// its similar to Future.successful</span>
-    <span class="hljs-keyword">val</span> successfulBIO: <span class="hljs-type">BIO</span>[<span class="hljs-type">Error</span>, <span class="hljs-type">String</span>] = <span class="hljs-type">BIO</span>.now(<span class="hljs-string">"Hello world!"</span>)
-
-    <span class="hljs-comment">// You can transform the result value with map and flatMap</span>
-    <span class="hljs-keyword">val</span> stringLength: <span class="hljs-type">BIO</span>[<span class="hljs-type">Error</span>, <span class="hljs-type">Int</span>] = successfulBIO.map(_.length)
-
-    <span class="hljs-comment">// BIO.raiseError creates new instance from already evaluated error, again don't put there anything that can throw</span>
-    <span class="hljs-comment">// its similar to Future.failed</span>
-    <span class="hljs-keyword">val</span> failedBIO: <span class="hljs-type">BIO</span>[<span class="hljs-type">Error</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">BIO</span>.raiseError(<span class="hljs-keyword">new</span> <span class="hljs-type">Error</span>(<span class="hljs-string">"Error!"</span>))
-
-    <span class="hljs-keyword">val</span> remappedError: <span class="hljs-type">BIO</span>[<span class="hljs-type">OtherError</span>, <span class="hljs-type">Unit</span>] = failedBIO
-    <span class="hljs-comment">// you can map on error, just like on result value</span>
-      .mapError(err =&gt; <span class="hljs-type">OtherError</span>(err.description))
-    <span class="hljs-comment">// but if BIO is failed, normal maps wont be executed</span>
-    <span class="hljs-comment">// this is the same as with running `mapError` on successful BIO</span>
-      .map(_ =&gt; println(<span class="hljs-string">"Im never executed!"</span>))
-
-    <span class="hljs-comment">// sometimes we are not able to handle all the possible cases</span>
-    <span class="hljs-comment">// we can terminate our BIO with a fatal, non expected exception</span>
-    <span class="hljs-keyword">val</span> unexpectedError: <span class="hljs-type">UIO</span>[<span class="hljs-type">Unit</span>] = <span class="hljs-type">BIO</span>.terminate(<span class="hljs-keyword">new</span> <span class="hljs-type">Exception</span>(<span class="hljs-string">"unexpected error"</span>))
-
-    <span class="hljs-comment">// if we want to run our BIO we need to convert it somehow - we cannot `throw` classes,</span>
-    <span class="hljs-comment">// which are not subtypes of throwable. Future, form scala standard library uses Throwable as the error channel,</span>
-    <span class="hljs-comment">// so we either need to handle all of our errors or convert them to Throwable.</span>
-    <span class="hljs-comment">// We can use attempt which converts our BIO[E, A] into UIO[Either[E, A]] (which means it handles all BIO errors)</span>
-    <span class="hljs-keyword">val</span> attemptStringLength = stringLength.attempt
-    println(<span class="hljs-type">Await</span>.result(attemptStringLength.runToFuture, <span class="hljs-number">1.</span>second))
-
-    println(<span class="hljs-type">Await</span>.result(remappedError.attempt.runToFuture, <span class="hljs-number">1.</span>second))
-
-    <span class="hljs-comment">// as opposed to the example above, the exception is thrown here</span>
-    <span class="hljs-comment">// unexpectedError is of type UIO, which indicated that we are not expecting any error,</span>
-    <span class="hljs-comment">// but terminate method is used to fail with *unexpected* error</span>
-    println(<span class="hljs-type">Await</span>.result(unexpectedError.attempt.runToFuture, <span class="hljs-number">1.</span>second)) 
+  source.onErrorHandleWith { ex =&gt;
+      <span class="hljs-keyword">if</span> (maxRetries &gt; <span class="hljs-number">0</span>)
+        <span class="hljs-comment">// Recursive call, it's OK as Monix is stack-safe</span>
+        retryBackoff(source, maxRetries - <span class="hljs-number">1</span>, firstDelay * <span class="hljs-number">2</span>)
+          .delayExecution(firstDelay)
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-type">BIO</span>.raiseError(ex)
   }
-
 }
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/overview"><span class="arrow-prev">← </span><span>Overview</span></a><a class="docs-next button" href="/monix-bio/docs/error-handling"><span>Error Handling</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#hello-world">Hello world</a></li><li><a href="#error-channels">Error channels</a></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
+<p>If <code>BIO</code> had an eager execution model, it wouldn't be simple to take an arbitrary <code>BIO</code> and then enhance it with new behavior.
+We would have to be extra careful not to pass an already running task, which is error-prone.</p>
+<h2><a class="anchor" aria-hidden="true" id="concurrency"></a><a href="#concurrency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Concurrency</h2>
+<p>Running two tasks concurrently, or in parallel (learn the difference in <a href="concurrency">concurrency section</a>) is as simple as calling one of many concurrent operators:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+
+<span class="hljs-keyword">val</span> fa = <span class="hljs-type">BIO</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> fb = <span class="hljs-type">BIO</span>(println(<span class="hljs-string">"B"</span>))
+
+<span class="hljs-comment">// When task is executed, the code </span>
+<span class="hljs-comment">// will print "A" and "B" in non-deterministic order</span>
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.parZip2(fa, fb)
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="cancelation"></a><a href="#cancelation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cancelation</h2>
+<p><code>BIO</code> supports cancelation, which means that it will be stopped at the nearest possible opportunity.
+Canceled tasks turn into non-terminating, which means they will never signal any result.
+You can signal an error instead if you use <code>onCancelRaiseError</code>.</p>
+<p>One of the use cases for cancelation is a timeout:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
+<span class="hljs-keyword">import</span> scala.concurrent.duration._
+
+<span class="hljs-keyword">val</span> longRunningTask = <span class="hljs-type">BIO</span>.sleep(<span class="hljs-number">200.</span>millis)
+
+longRunningTask.timeoutWith(<span class="hljs-number">100.</span>millis, <span class="hljs-type">DummyException</span>(<span class="hljs-string">"Timed out!"</span>))
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="combining-high-level-blocks"></a><a href="#combining-high-level-blocks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Combining high-level blocks</h2>
+<p>We can combine different pieces to create more complex behavior.
+Let's develop a simple dynamic timeout:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> cats.effect.concurrent.<span class="hljs-type">Deferred</span>
+<span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">BIO</span>, <span class="hljs-type">Task</span>}
+<span class="hljs-keyword">import</span> scala.concurrent.duration._
+
+<span class="hljs-keyword">val</span> longRunningTask = <span class="hljs-type">BIO</span>.sleep(<span class="hljs-number">200.</span>millis)
+
+<span class="hljs-keyword">val</span> task =
+  <span class="hljs-keyword">for</span> {
+    timeoutSignal &lt;- <span class="hljs-type">Deferred</span>[<span class="hljs-type">Task</span>, <span class="hljs-type">Unit</span>]
+    timeoutCaller = <span class="hljs-type">BIO</span>.sleep(<span class="hljs-number">50.</span>millis).flatMap(_ =&gt; timeoutSignal.complete(()))
+    _ &lt;- timeoutCaller.startAndForget
+    _ &lt;- <span class="hljs-type">BIO</span>.race(longRunningTask, timeoutSignal.get)
+  } <span class="hljs-keyword">yield</span> ()
+</code></pre>
+<p>We create <a href="https://typelevel.org/cats-effect/concurrency/deferred.html">Deferred</a> which is an equivalent of <a href="https://www.scala-lang.org/api/current/scala/concurrent/Promise.html">scala.concurrent.Promise</a>.
+It can be completed at most once with <code>complete()</code>, but it can be read many times with <code>get</code>.
+If the value is not yet available, <code>get</code> will <em>block asynchronously</em> (without blocking any underlying thread, it will just suspend <code>BIO</code>, which is extremely cheap in comparison) until it is there.
+<code>timeoutCaller</code> represents a task which signals a timeout from a different part of the program.</p>
+<p>We can use <code>startAndForget</code> to run it concurrently with subsequent operations.
+This method starts the computation in the background and then returns without waiting for the result.</p>
+<p><code>BIO.race</code> runs two tasks concurrently, and once any of them completes, the other one is canceled.
+If we race <code>longRunningTask</code> against <code>timeoutSignal.get</code>, it will be canceled once the signal is sent.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/introduction"><span class="arrow-prev">← </span><span>Introduction</span></a><a class="docs-next button" href="/monix-bio/docs/creating"><span>Creating BIO</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#hello-world">Hello World</a></li><li><a href="#composing-tasks">Composing Tasks</a></li><li><a href="#lazy-evaluation">Lazy evaluation</a></li><li><a href="#concurrency">Concurrency</a></li><li><a href="#cancelation">Cancelation</a></li><li><a href="#combining-high-level-blocks">Combining high-level blocks</a></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
