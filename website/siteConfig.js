@@ -15,7 +15,7 @@ const siteConfig = {
 
   headerLinks: [
     { href: apiUrl, label: "API Docs" },
-    { doc: "overview", label: "Documentation" },
+    { doc: "introduction", label: "Documentation" },
     { href: repoUrl, label: "GitHub" }
   ],
 

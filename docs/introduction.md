@@ -1,6 +1,6 @@
 ---
-id: overview
-title: Overview
+id: introduction
+title: Introduction
 ---
 
 `BIO[E, A]` represents a specification for a possibly lazy or asynchronous computation. 
@@ -13,16 +13,16 @@ There are two type aliases:
 - `type UIO[A] = BIO[Nothing, A]` which represents an effect that can only fail with terminal errors due to abnormal circumstances.
 - `type Task[A] = BIO[Throwable, A]` - an effect that can fail with a `Throwable` and is analogous to `monix.eval.Task`.
 
-[More about errors here.](error-handling)
-
 `Monix BIO` builds upon [Monix Task](https://monix.io/api/3.2/monix/eval/Task.html) and enhances it with typed error capabilities.
 If you are already familiar with `Task` - learning `BIO` is straightforward because the only difference is in
 error handling - the rest of API is the same. 
 In many cases, migration might be as simple as changing imports from `monix.eval.Task` to `monix.bio.Task`.
 
+[Go here if you're looking to get started as quickly as possible.](getting-started)
+
 ## Usage Example
 
-```scala mdoc:compile-only
+```scala mdoc:silent
 import monix.bio.{BIO, UIO}
 import monix.execution.CancelableFuture
 import scala.concurrent.duration._
