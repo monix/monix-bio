@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback}
-import monix.bio.BIO.{Context, Error, Now, Termination}
+import monix.bio.{BiCallback, Task}
+import monix.bio.Task.{Context, Error, Now, Termination}
 import monix.bio.internal.TaskRunLoop.{startFull, Bind, CallStack}
 import monix.execution.exceptions.{CallbackCalledMultipleTimesException, UncaughtErrorException}
 import monix.execution.misc.Local
@@ -47,7 +47,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     this.context = other
   }
 
-  final def start(task: BIO.Async[Any, Any], bindCurrent: Bind, bindRest: CallStack): Unit = {
+  final def start(task: Task.Async[Any, Any], bindCurrent: Bind, bindRest: CallStack): Unit = {
     this.bFirst = bindCurrent
     this.bRest = bindRest
     this.trampolineAfter = task.trampolineAfter
@@ -59,7 +59,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     } else {
       try task.register(context, this)
       catch {
-        // Due to C-E law: ConcurrentEffect[Task].concurrentEffect.repeated callback ignored
+        // Due to C-E law: ConcurrentEffect[Task.Unsafe].concurrentEffect.repeated callback ignored
         // but we don't want to lose any errors
         case cbError: CallbackCalledMultipleTimesException => context.scheduler.reportFailure(cbError)
         case NonFatal(e) => onTermination(e)
@@ -113,7 +113,7 @@ private[internal] abstract class TaskRestartCallback(contextInit: Context[Any], 
     }
   }
 
-  protected def prepareStart(task: BIO.Async[_, _]): Unit = ()
+  protected def prepareStart(task: Task.Async[_, _]): Unit = ()
   protected def prepareCallback: BiCallback[Any, Any] = callback
   private[this] val wrappedCallback = prepareCallback
 
@@ -206,7 +206,7 @@ private[internal] object TaskRestartCallback {
     private[this] var preparedLocals: Local.Context = _
     private[this] var previousLocals: Local.Context = _
 
-    override protected def prepareStart(task: BIO.Async[_, _]): Unit = {
+    override protected def prepareStart(task: Task.Async[_, _]): Unit = {
       preparedLocals = if (task.restoreLocals) Local.getContext() else null
     }
 

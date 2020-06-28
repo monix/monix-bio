@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.{BiCallback, Task}
 import monix.execution.rstreams.Subscription
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
 import org.reactivestreams.{Publisher, Subscriber}
@@ -25,9 +25,9 @@ import org.reactivestreams.{Publisher, Subscriber}
 private[bio] object TaskToReactivePublisher {
 
   /**
-    * Implementation for `BIO.toReactivePublisher`
+    * Implementation for `Task.toReactivePublisher`
     */
-  def apply[A](self: Task[A])(implicit s: Scheduler): Publisher[A] =
+  def apply[A](self: Task.Unsafe[A])(implicit s: Scheduler): Publisher[A] =
     new Publisher[A] {
 
       def subscribe(out: Subscriber[_ >: A]): Unit = {
@@ -35,12 +35,12 @@ private[bio] object TaskToReactivePublisher {
           new Subscription {
             private[this] var isActive = true
             private[this] val conn = TaskConnection[Throwable]()
-            private[this] val context = BIO.Context(s, BIO.defaultOptions.withSchedulerFeatures, conn)
+            private[this] val context = Task.Context(s, Task.defaultOptions.withSchedulerFeatures, conn)
 
             def request(n: Long): Unit = {
               require(n > 0, "n must be strictly positive, according to the Reactive Streams contract, rule 3.9")
               if (isActive) {
-                BIO.unsafeStartEnsureAsync(self, context, new PublisherCallback[A](out))
+                Task.unsafeStartEnsureAsync(self, context, new PublisherCallback[A](out))
               }
             }
 

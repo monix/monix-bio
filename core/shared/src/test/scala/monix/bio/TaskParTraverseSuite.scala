@@ -24,12 +24,12 @@ import concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskParTraverseSuite extends BaseTestSuite {
-  test("BIO.parTraverse should execute in parallel for async tasks") { implicit s =>
+  test("Task.parTraverse should execute in parallel for async tasks") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = BIO
+    val f = Task
       .parTraverse(seq) {
         case (i, d) =>
-          BIO.evalAsync(i + 1).delayExecution(d.seconds)
+          Task.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -41,14 +41,14 @@ object TaskParTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Seq(2, 3, 4))))
   }
 
-  test("BIO.parTraverse should onError if one of the tasks terminates in error") { implicit s =>
+  test("Task.parTraverse should onError if one of the tasks terminates in error") { implicit s =>
     val ex = 1000L
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
-    val f = BIO
+    val f = Task
       .parTraverse(seq) {
         case (i, d) =>
-          BIO
-            .suspendTotal(if (i < 0) BIO.raiseError(ex) else BIO.now(i + 1))
+          Task
+            .suspendTotal(if (i < 0) Task.raiseError(ex) else Task.now(i + 1))
             .delayExecution(d.seconds)
       }
       .attempt
@@ -60,10 +60,10 @@ object TaskParTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("BIO.parTraverse should onTerminate if one of the tasks terminates in unexpected error") { implicit s =>
+  test("Task.parTraverse should onTerminate if one of the tasks terminates in unexpected error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
-    val f = BIO
+    val f = Task
       .parTraverse(seq) {
         case (i, d) =>
           UIO
@@ -78,11 +78,11 @@ object TaskParTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parTraverse should be canceled") { implicit s =>
+  test("Task.parTraverse should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = BIO
+    val f = Task
       .parTraverse(seq) {
-        case (i, d) => BIO.evalAsync(i + 1).delayExecution(d.seconds)
+        case (i, d) => Task.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -96,21 +96,21 @@ object TaskParTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.parTraverse should be stack safe for synchronous tasks") { implicit s =>
+  test("Task.parTraverse should be stack safe for synchronous tasks") { implicit s =>
     val count = if (Platform.isJVM) 200000 else 5000
     val seq = for (i <- 0 until count) yield 1
-    val composite = BIO.parTraverse(seq)(BIO.now).map(_.sum)
+    val composite = Task.parTraverse(seq)(Task.now).map(_.sum)
     val result = composite.runToFuture
     s.tick()
     assertEquals(result.value, Some(Success(count)))
   }
 
-  test("BIO.parTraverse runAsync multiple times") { implicit s =>
+  test("Task.parTraverse runAsync multiple times") { implicit s =>
     var effect = 0
 
     val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
 
-    val task2 = BIO.parTraverse(Seq(0, 0, 0)) { _ =>
+    val task2 = Task.parTraverse(Seq(0, 0, 0)) { _ =>
       task1 map { x =>
         effect += 1; x + 1
       }
@@ -125,11 +125,11 @@ object TaskParTraverseSuite extends BaseTestSuite {
     assertEquals(effect, 1 + 3 + 3)
   }
 
-  test("BIO.parTraverse should wrap exceptions in the function") { implicit s =>
+  test("Task.parTraverse should wrap exceptions in the function") { implicit s =>
     val ex = DummyException("dummy")
-    val task1 = BIO.parTraverse(Seq(0)) { i =>
+    val task1 = Task.parTraverse(Seq(0)) { i =>
       throw ex
-      BIO.now(i)
+      Task.now(i)
     }
 
     val result1 = task1.runToFuture; s.tick()

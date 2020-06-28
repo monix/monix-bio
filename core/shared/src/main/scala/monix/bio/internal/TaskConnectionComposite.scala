@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, UIO}
+import monix.bio.{Task, UIO}
 import monix.bio.internal.TaskConnectionComposite.{Active, Cancelled, State}
 import monix.catnap.CancelableF
 import monix.execution.atomic.PaddingStrategy.LeftRight128
@@ -30,9 +30,9 @@ import scala.annotation.tailrec
 private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny[State]) {
 
   val cancel: CancelToken[UIO] =
-    BIO.suspendTotal {
+    Task.suspendTotal {
       stateRef.getAndSet(Cancelled) match {
-        case Cancelled => BIO.unit
+        case Cancelled => Task.unit
         case Active(set) =>
           UnsafeCancelUtils.cancelAllUnsafe(set)
       }
@@ -73,7 +73,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
 
   @tailrec
   private def addAny(
-    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
+    ref: AnyRef /* CancelToken[Task.Unsafe] | CancelableF[Task.Unsafe] | Cancelable */
   )(implicit s: Scheduler): Unit = {
 
     stateRef.get() match {

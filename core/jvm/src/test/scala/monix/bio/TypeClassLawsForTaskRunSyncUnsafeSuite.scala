@@ -34,7 +34,7 @@ import scala.util.Try
   */
 object TypeClassLawsForTaskRunSyncUnsafeSuite
     extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-      BIO.defaultOptions.disableAutoCancelableRunLoops
+      Task.defaultOptions.disableAutoCancelableRunLoops
     )
 
 /**
@@ -44,15 +44,15 @@ object TypeClassLawsForTaskRunSyncUnsafeSuite
   */
 object TypeClassLawsForTaskAutoCancelableRunSyncUnsafeSuite
     extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-      BIO.defaultOptions.enableAutoCancelableRunLoops
+      Task.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
+class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: Task.Options)
     extends monix.execution.BaseLawsSuite with ArbitraryInstancesBase {
 
   implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
   implicit val cs = IO.contextShift(sc)
-  implicit val ap: Applicative[BIO.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[Task.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
 
   val timeout = {
     if (System.getenv("TRAVIS") == "true" || System.getenv("CI") == "true")
@@ -63,13 +63,13 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
 
   implicit val params = Parameters(
     // Disabling non-terminating tests (that test equivalence with Task.never)
-    // because they'd behave really badly with an Eq[Task] that depends on
+    // because they'd behave really badly with an Eq[Task.Unsafe] that depends on
     // blocking threads
     allowNonTerminationLaws = false,
     stackSafeIterationsCount = 10000
   )
 
-  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E]): Eq[BIO[E, A]] =
+  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E]): Eq[Task[E, A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.attempt.runSyncUnsafeOpt(timeout))
       val tb = Try(b.attempt.runSyncUnsafeOpt(timeout))
@@ -77,16 +77,16 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
       equalityTry[Either[E, A]].eqv(ta, tb)
     }
 
-  implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task[A]] =
+  implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task.Unsafe[A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.runSyncUnsafeOpt(timeout))
       val tb = Try(b.runSyncUnsafeOpt(timeout))
       equalityTry[A].eqv(ta, tb)
     }
 
-  implicit def equalityTaskPar[A](implicit A: Eq[A]): Eq[BIO.Par[Throwable, A]] =
+  implicit def equalityTaskPar[A](implicit A: Eq[A]): Eq[Task.Par[Throwable, A]] =
     Eq.instance { (a, b) =>
-      import BIO.Par.unwrap
+      import Task.Par.unwrap
       val ta = Try(unwrap(a).runSyncUnsafeOpt(timeout))
       val tb = Try(unwrap(b).runSyncUnsafeOpt(timeout))
       equalityTry[A].eqv(ta, tb)
@@ -99,19 +99,19 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: BIO.Options)
       equalityTry[A].eqv(ta, tb)
     }
 
-  checkAll("CoflatMap[Task]", CoflatMapTests[Task].coflatMap[Int, Int, Int])
+  checkAll("CoflatMap[Task.Unsafe]", CoflatMapTests[Task.Unsafe].coflatMap[Int, Int, Int])
 
-  checkAll("Concurrent[Task]", ConcurrentTests[Task].concurrent[Int, Int, Int])
+  checkAll("Concurrent[Task.Unsafe]", ConcurrentTests[Task.Unsafe].concurrent[Int, Int, Int])
 
-  checkAll("ConcurrentEffect[Task]", ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int])
+  checkAll("ConcurrentEffect[Task.Unsafe]", ConcurrentEffectTests[Task.Unsafe].concurrentEffect[Int, Int, Int])
 
-  checkAll("Applicative[Task.Par]", ApplicativeTests[BIO.Par[Throwable, *]].applicative[Int, Int, Int])
+  checkAll("Applicative[Task.Par]", ApplicativeTests[Task.Par[Throwable, *]].applicative[Int, Int, Int])
 
-  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, BIO.Par[Throwable, *]].parallel[Int, Int])
+  checkAll("Parallel[Task.Unsafe, Task.Par]", ParallelTests[Task.Unsafe, Task.Par[Throwable, *]].parallel[Int, Int])
 
-  checkAll("Monoid[BIO[Throwable, Int]]", MonoidTests[BIO[Throwable, Int]].monoid)
+  checkAll("Monoid[Task[Throwable, Int]]", MonoidTests[Task[Throwable, Int]].monoid)
 
-  checkAllAsync("Bifunctor[BIO[String, Int]]") { implicit ec =>
-    BifunctorTests[BIO].bifunctor[String, String, String, Int, Int, Int]
+  checkAllAsync("Bifunctor[Task[String, Int]]") { implicit ec =>
+    BifunctorTests[Task].bifunctor[String, String, String, Int, Int, Int]
   }
 }

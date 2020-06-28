@@ -81,13 +81,17 @@ object TaskCallbackSuite extends TestSuite[TestScheduler] {
 
   test("contramap should pipe onError") { implicit s =>
     var result = Option.empty[Try[Either[String, Int]]]
-    val callback = TestCallback({ v =>
-      result = Some(Success(Right(v)))
-    }, { e =>
-      result = Some(Success(Left(e)))
-    }, { e =>
-      result = Some(Failure(e))
-    })
+    val callback = TestCallback(
+      { v =>
+        result = Some(Success(Right(v)))
+      },
+      { e =>
+        result = Some(Success(Left(e)))
+      },
+      { e =>
+        result = Some(Failure(e))
+      }
+    )
 
     val stringCallback = callback.contramap[String](_.toInt)
     val dummy = DummyException("dummy")

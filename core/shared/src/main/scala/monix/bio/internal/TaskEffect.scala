@@ -35,27 +35,29 @@ private[bio] object TaskEffect {
   /**
     * `cats.effect.Effect#runAsync`
     */
-  def runAsync[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit])(
-    implicit s: Scheduler,
-    opts: BIO.Options
-  ): SyncIO[Unit] = SyncIO {
-    execute(fa, cb); ()
-  }
+  def runAsync[A](fa: Task.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit])(implicit
+    s: Scheduler,
+    opts: Task.Options
+  ): SyncIO[Unit] =
+    SyncIO {
+      execute(fa, cb); ()
+    }
 
   /**
     * `cats.effect.ConcurrentEffect#runCancelable`
     */
-  def runCancelable[A](fa: Task[A])(cb: Either[Throwable, A] => IO[Unit])(
-    implicit s: Scheduler,
-    opts: BIO.Options
-  ): SyncIO[CancelToken[Task]] = SyncIO {
-    execute(fa, cb)
-  }
+  def runCancelable[A](fa: Task.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit])(implicit
+    s: Scheduler,
+    opts: Task.Options
+  ): SyncIO[CancelToken[Task.Unsafe]] =
+    SyncIO {
+      execute(fa, cb)
+    }
 
   private def execute[A](
-    fa: Task[A],
+    fa: Task.Unsafe[A],
     cb: Either[Throwable, A] => IO[Unit]
-  )(implicit s: Scheduler, opts: BIO.Options) = {
+  )(implicit s: Scheduler, opts: Task.Options) = {
 
     fa.runAsyncOptF(new Callback[Cause[Throwable], A] {
       private def signal(value: Either[Throwable, A]): Unit =

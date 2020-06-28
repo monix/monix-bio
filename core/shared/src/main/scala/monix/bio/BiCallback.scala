@@ -180,10 +180,11 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
     *
     * $tryMethodDescription
     */
-  def tryApply(result: Try[A])(implicit ev: Throwable <:< E): Boolean = result match {
-    case Success(a) => tryOnSuccess(a)
-    case Failure(e) => tryOnError(e)
-  }
+  def tryApply(result: Try[A])(implicit ev: Throwable <:< E): Boolean =
+    result match {
+      case Success(a) => tryOnSuccess(a)
+      case Failure(e) => tryOnError(e)
+    }
 }
 
 /**

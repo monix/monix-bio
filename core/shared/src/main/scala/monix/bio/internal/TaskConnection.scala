@@ -132,9 +132,9 @@ private[bio] object TaskConnection {
   def uncancelable[E]: TaskConnection[E] = Uncancelable.asInstanceOf[TaskConnection[E]]
 
   private object Uncancelable extends TaskConnection[Any] {
-    def cancel = BIO.unit
+    def cancel = Task.unit
     def isCanceled: Boolean = false
-    def pop(): CancelToken[UIO] = BIO.unit
+    def pop(): CancelToken[UIO] = Task.unit
     def tryReactivate(): Boolean = true
     def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit = ()
     def push(cancelable: Cancelable)(implicit s: Scheduler): Unit = ()
@@ -163,7 +163,7 @@ private[bio] object TaskConnection {
           val task = UnsafeCancelUtils
             .cancelAllUnsafe(list)
             .redeemCauseWith[Nothing, Unit](
-              cause => UIO.suspend { p.success(()); cause.fold(BIO.terminate, _ => BIO.unit) },
+              cause => UIO.suspend { p.success(()); cause.fold(Task.terminate, _ => Task.unit) },
               _ => UIO(p.success(()))
             )
 
@@ -203,7 +203,7 @@ private[bio] object TaskConnection {
 
     @tailrec def pop(): CancelToken[UIO] =
       state.get() match {
-        case (null, _) | (Nil, _) => BIO.unit
+        case (null, _) | (Nil, _) => Task.unit
         case current @ (x :: xs, p) =>
           if (state.compareAndSet(current, (xs, p)))
             UnsafeCancelUtils.getToken(x)

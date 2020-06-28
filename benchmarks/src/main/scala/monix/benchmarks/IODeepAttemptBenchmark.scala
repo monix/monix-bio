@@ -30,7 +30,7 @@ import org.openjdk.jmh.annotations._
   *
   *     Or to specify custom values use below format:
   *
-  *     benchmarks/jmh:run -i 20 -wi 20 -f 4 -t 2 *.IODeepAttemptBenchmark
+  *     benchmarks/jmh:run -i 20 -wi 20 -f 4 -t 2 .*IODeepAttemptBenchmark
   *
   * Please note that benchmarks should be usually executed at least in
   * 10 iterations (as a rule of thumb), but more is better.
@@ -77,10 +77,10 @@ class IODeepAttemptBenchmark {
 
   @Benchmark
   def monixBioDeepAttemptTyped(): BigInt = {
-    import monix.bio.BIO
+    import monix.bio.Task
 
-    def descend(n: Int): BIO[TypedError, BigInt] =
-      if (n == depth) BIO.raiseError(TypedError("Oh noes!"))
+    def descend(n: Int): Task[TypedError, BigInt] =
+      if (n == depth) Task.raiseError(TypedError("Oh noes!"))
       else if (n == halfway) descend(n + 1).redeem(_ => 50, identity)
       else descend(n + 1).map(_ + n)
 
@@ -91,8 +91,8 @@ class IODeepAttemptBenchmark {
   def monixBioDeepAttempt(): BigInt = {
     import monix.bio.Task
 
-    def descend(n: Int): Task[BigInt] =
-      if (n == depth) Task.raiseError(new Error("Oh noes!"))
+    def descend(n: Int): Task[Error, BigInt] =
+      if (n == depth) Task.suspendTotal(Task.raiseError(new Error("Oh noes!")))
       else if (n == halfway) descend(n + 1).redeem(_ => 50, identity)
       else descend(n + 1).map(_ + n)
 

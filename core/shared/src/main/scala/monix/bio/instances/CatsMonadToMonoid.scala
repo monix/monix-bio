@@ -23,7 +23,7 @@ import cats.{Monad, Monoid, Semigroup}
   * builds a `Semigroup[F[A]]` instance for any `F[_]` data type
   * that implements `cats.Monad`.
   *
-  * Used for [[monix.bio.BIO BIO]].
+  * Used for [[monix.bio.Task Task]].
   *
   * NOTE: nothing in this implementation is specific to Monix or to
   * `cats-effect`, but these instances are not provided by default
@@ -41,7 +41,7 @@ class CatsMonadToMonoid[F[_], A](implicit F: Monad[F], A: Monoid[A])
   * a `Semigroup[F[A]]` instance for any `F[_]` data type that
   * implements `cats.effect.Sync`.
   *
-  * Used for [[monix.bio.BIO BIO]].
+  * Used for [[monix.bio.Task Task]].
   *
   * NOTE: nothing in this implementation is specific to Monix or to
   * `cats-effect`, but these instances are not provided by default

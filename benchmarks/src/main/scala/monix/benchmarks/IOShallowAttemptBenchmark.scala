@@ -81,24 +81,24 @@ class IOShallowAttemptBenchmark {
 
   @Benchmark
   def monixBioShallowAttemptTyped(): BigInt = {
-    import monix.bio.BIO
+    import monix.bio.Task
 
-    def throwup(n: Int): BIO[TypedError, BigInt] =
+    def throwup(n: Int): Task[TypedError, BigInt] =
       if (n == 0) throwup(n + 1).redeem(_ => 50, identity)
       else if (n == depth) monix.bio.UIO(1)
-      else throwup(n + 1).redeemWith(_ => BIO.now(0), _ => BIO.raiseError(TypedError("Oh noes!")))
+      else throwup(n + 1).redeemWith(_ => Task.now(0), _ => Task.raiseError(TypedError("Oh noes!")))
 
     throwup(0).mapError(UncaughtErrorException.wrap).runSyncUnsafe()
   }
 
   @Benchmark
   def monixBioShallowAttempt(): BigInt = {
-    import monix.bio.BIO
+    import monix.bio.Task
 
-    def throwup(n: Int): BIO[Error, BigInt] =
+    def throwup(n: Int): Task[Error, BigInt] =
       if (n == 0) throwup(n + 1).redeem(_ => 50, identity)
       else if (n == depth) monix.bio.UIO(1)
-      else throwup(n + 1).redeemWith(_ => BIO.now(0), _ => BIO.raiseError(new Error("Oh noes!")))
+      else throwup(n + 1).redeemWith(_ => Task.now(0), _ => Task.raiseError(new Error("Oh noes!")))
 
     throwup(0).runSyncUnsafe()
   }

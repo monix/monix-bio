@@ -18,8 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.{Async, Concurrent, ConcurrentEffect, Effect, IO}
-import monix.bio.BIO.Context
-import monix.bio.{BIO, BiCallback, Task}
+import monix.bio.Task.Context
+import monix.bio.{BiCallback, Task}
 import monix.execution.Scheduler
 import monix.execution.rstreams.SingleAssignSubscription
 import monix.execution.schedulers.TrampolinedRunnable
@@ -30,15 +30,15 @@ import scala.util.control.NonFatal
 private[bio] object TaskConversions {
 
   /**
-    * Implementation for `BIO.toIO`.
+    * Implementation for `Task.toIO`.
     */
-  def toIO[A](source: Task[A])(implicit eff: ConcurrentEffect[Task]): IO[A] =
+  def toIO[A](source: Task.Unsafe[A])(implicit eff: ConcurrentEffect[Task.Unsafe]): IO[A] =
     source match {
-      case BIO.Now(value) => IO.pure(value)
-      case BIO.Error(e) => IO.raiseError(e)
-      case BIO.Termination(e) => IO.raiseError(e)
-      case BIO.Eval(thunk) => IO(thunk())
-      case BIO.EvalTotal(thunk) => IO(thunk())
+      case Task.Now(value) => IO.pure(value)
+      case Task.Error(e) => IO.raiseError(e)
+      case Task.Termination(e) => IO.raiseError(e)
+      case Task.Eval(thunk) => IO(thunk())
+      case Task.EvalTotal(thunk) => IO(thunk())
       case _ =>
         IO.cancelable { cb =>
           toIO(eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync())
@@ -46,15 +46,17 @@ private[bio] object TaskConversions {
     }
 
   /**
-    * Implementation for `BIO.toConcurrent`.
+    * Implementation for `Task.toConcurrent`.
     */
-  def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
+  def toConcurrent[F[_], A](
+    source: Task.Unsafe[A]
+  )(implicit F: Concurrent[F], eff: ConcurrentEffect[Task.Unsafe]): F[A] =
     source match {
-      case BIO.Now(value) => F.pure(value)
-      case BIO.Error(e) => F.raiseError(e)
-      case BIO.Termination(e) => F.raiseError(e)
-      case BIO.Eval(thunk) => F.delay(thunk())
-      case BIO.EvalTotal(thunk) => F.delay(thunk())
+      case Task.Now(value) => F.pure(value)
+      case Task.Error(e) => F.raiseError(e)
+      case Task.Termination(e) => F.raiseError(e)
+      case Task.Eval(thunk) => F.delay(thunk())
+      case Task.EvalTotal(thunk) => F.delay(thunk())
       case _ =>
         F.cancelable { cb =>
           val token = eff.runCancelable(source)(r => { cb(r); IO.unit }).unsafeRunSync()
@@ -63,29 +65,29 @@ private[bio] object TaskConversions {
     }
 
   /**
-    * Implementation for `BIO.toAsync`.
+    * Implementation for `Task.toAsync`.
     */
-  def toAsync[F[_], A](source: Task[A])(implicit F: Async[F], eff: Effect[Task]): F[A] =
+  def toAsync[F[_], A](source: Task.Unsafe[A])(implicit F: Async[F], eff: Effect[Task.Unsafe]): F[A] =
     source match {
-      case BIO.Now(value) => F.pure(value)
-      case BIO.Error(e) => F.raiseError(e)
-      case BIO.Termination(e) => F.raiseError(e)
-      case BIO.Eval(thunk) => F.delay(thunk())
-      case BIO.EvalTotal(thunk) => F.delay(thunk())
+      case Task.Now(value) => F.pure(value)
+      case Task.Error(e) => F.raiseError(e)
+      case Task.Termination(e) => F.raiseError(e)
+      case Task.Eval(thunk) => F.delay(thunk())
+      case Task.EvalTotal(thunk) => F.delay(thunk())
       case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); IO.unit }).unsafeRunSync())
     }
 
   /**
-    * Implementation for `BIO.fromEffect`.
+    * Implementation for `Task.fromEffect`.
     */
-  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task.Unsafe[A] =
     fa.asInstanceOf[AnyRef] match {
-      case task: Task[A] @unchecked => task
-      case io: IO[A] @unchecked => io.to[Task]
+      case task: Task.Unsafe[A] @unchecked => task
+      case io: IO[A] @unchecked => io.to[Task.Unsafe]
       case _ => fromEffect0(fa)
     }
 
-  private def fromEffect0[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] = {
+  private def fromEffect0[F[_], A](fa: F[A])(implicit F: Effect[F]): Task.Unsafe[A] = {
     def start(ctx: Context[Throwable], cb: BiCallback[Throwable, A]): Unit = {
       try {
         implicit val sc: Scheduler = ctx.scheduler
@@ -96,24 +98,24 @@ private[bio] object TaskConversions {
       }
     }
 
-    BIO.Async(start, trampolineBefore = false, trampolineAfter = false)
+    Task.Async(start, trampolineBefore = false, trampolineAfter = false)
   }
 
   /**
-    * Implementation for `BIO.fromConcurrentEffect`.
+    * Implementation for `Task.fromConcurrentEffect`.
     */
-  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task.Unsafe[A] =
     fa.asInstanceOf[AnyRef] match {
-      case task: Task[A] @unchecked => task
-      case io: IO[A] @unchecked => io.to[Task]
+      case task: Task.Unsafe[A] @unchecked => task
+      case io: IO[A] @unchecked => io.to[Task.Unsafe]
       case _ => fromConcurrentEffect0(fa)
     }
 
   /**
-    * Implementation for `BIO.fromReactivePublisher`.
+    * Implementation for `Task.fromReactivePublisher`.
     */
-  def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
-    Task.cancelable0 { (scheduler, cb) =>
+  def fromReactivePublisher[A](source: Publisher[A]): Task.Unsafe[Option[A]] =
+    Task.cancelable0[Throwable, Option[A]] { (scheduler, cb) =>
       val sub = SingleAssignSubscription()
 
       source.subscribe {
@@ -154,7 +156,7 @@ private[bio] object TaskConversions {
       Task(sub.cancel())
     }
 
-  private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] = {
+  private def fromConcurrentEffect0[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task.Unsafe[A] = {
     def start(ctx: Context[Throwable], cb: BiCallback[Throwable, A]): Unit = {
       try {
         implicit val sc: Scheduler = ctx.scheduler
@@ -170,7 +172,7 @@ private[bio] object TaskConversions {
       }
     }
 
-    BIO.Async(start, trampolineBefore = false, trampolineAfter = false)
+    Task.Async(start, trampolineBefore = false, trampolineAfter = false)
   }
 
   private final class CreateCallback[A](

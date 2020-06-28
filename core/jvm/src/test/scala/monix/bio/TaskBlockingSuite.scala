@@ -53,34 +53,34 @@ object TaskBlockingSuite extends SimpleTestSuite {
     }
   }
 
-  test("BIO.eval(throw ex).attempt.runSyncUnsafe") {
+  test("Task.eval(throw ex).attempt.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task = BIO.eval(throw dummy)
+      val task = Task.eval(throw dummy)
       assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
     }
   }
 
-  test("BIO.evalTotal(throw ex).onErrorHandle.runSyncUnsafe") {
+  test("Task.evalTotal(throw ex).onErrorHandle.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task: BIO[Int, Int] = BIO.evalTotal(throw dummy)
+      val task: Task[Int, Int] = Task.evalTotal(throw dummy)
       assertEquals(Try(task.onErrorHandle(_ => 10).runSyncUnsafe(Duration.Inf)), Failure(dummy))
     }
   }
 
-  test("BIO.suspend(throw ex).attempt.runSyncUnsafe") {
+  test("Task.suspend(throw ex).attempt.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task = BIO.suspend(throw dummy)
+      val task = Task.suspend(throw dummy)
       assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
     }
   }
 
-  test("BIO.suspendTotal(throw ex).onErrorHandle.runSyncUnsafe") {
+  test("Task.suspendTotal(throw ex).onErrorHandle.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task: BIO[Int, Int] = BIO.suspendTotal(throw dummy)
+      val task: Task[Int, Int] = Task.suspendTotal(throw dummy)
       assertEquals(Try(task.onErrorHandle(_ => 10).runSyncUnsafe(Duration.Inf)), Failure(dummy))
     }
   }
@@ -100,11 +100,11 @@ object TaskBlockingSuite extends SimpleTestSuite {
     ()
   }
 
-  test("BIO.attempt.runSyncUnsafe works") {
+  test("Task.attempt.runSyncUnsafe works") {
     val dummy = "boom"
     val dummyEx = DummyException(dummy)
-    val task: BIO[String, Int] = BIO.raiseError(dummy)
-    val task2: BIO[String, Int] = BIO.terminate(dummyEx)
+    val task: Task[String, Int] = Task.raiseError(dummy)
+    val task2: Task[String, Int] = Task.terminate(dummyEx)
 
     assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
 

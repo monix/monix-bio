@@ -25,49 +25,49 @@ import monix.execution.exceptions.DummyException
 import scala.util.{Failure, Success, Try}
 
 object TaskNowSuite extends BaseTestSuite {
-  test("BIO.now should work synchronously") { implicit s =>
+  test("Task.now should work synchronously") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
-    val task = BIO.now(trigger())
+    val task = Task.now(trigger())
     assert(wasTriggered, "wasTriggered")
     val f = task.runToFuture
     assertEquals(f.value, Some(Success("result")))
   }
 
-  test("BIO.now.runAsync: CancelableFuture should be synchronous for AlwaysAsyncExecution") { s =>
+  test("Task.now.runAsync: CancelableFuture should be synchronous for AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
-    val task = BIO.now(trigger())
+    val task = Task.now(trigger())
     assert(wasTriggered, "wasTriggered")
 
     val f = task.runToFuture
     assertEquals(f.value, Some(Success("result")))
   }
 
-  test("BIO.now.runAsync(callback) should work synchronously") { implicit s =>
+  test("Task.now.runAsync(callback) should work synchronously") { implicit s =>
     var result = Option.empty[Try[String]]
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
-    val task = BIO.now(trigger())
+    val task = Task.now(trigger())
     assert(wasTriggered, "wasTriggered")
 
     task.runAsync(r => result = Some(r.left.map(_.fold(identity, identity)).toTry))
     assertEquals(result, Some(Success("result")))
   }
 
-  test("BIO.now.runAsync(callback) should be asynchronous for AlwaysAsyncExecution") { s =>
+  test("Task.now.runAsync(callback) should be asynchronous for AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
     var result = Option.empty[Try[String]]
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
-    val task = BIO.now(trigger())
+    val task = Task.now(trigger())
     assert(wasTriggered, "wasTriggered")
 
     task.runAsync(r => result = Some(r.left.map(_.fold(identity, identity)).toTry))
@@ -76,56 +76,56 @@ object TaskNowSuite extends BaseTestSuite {
     assertEquals(result, Some(Success("result")))
   }
 
-  test("BIO.raiseError should work synchronously") { implicit s =>
+  test("Task.raiseError should work synchronously") { implicit s =>
     var wasTriggered = false
     val dummy = 1204
     def trigger(): Int = { wasTriggered = true; dummy }
 
-    val task = BIO.raiseError(trigger())
+    val task = Task.raiseError(trigger())
     assert(wasTriggered, "wasTriggered")
     val f = task.attempt.runToFuture
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.terminate should work synchronously") { implicit s =>
+  test("Task.terminate should work synchronously") { implicit s =>
     var wasTriggered = false
     val dummy = DummyException("dummy")
     def trigger(): Throwable = { wasTriggered = true; dummy }
 
-    val task = BIO.terminate(trigger())
+    val task = Task.terminate(trigger())
     assert(wasTriggered, "wasTriggered")
     val f = task.runToFuture
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.raiseError.runAsync: CancelableFuture should be synchronous for AlwaysAsyncExecution") { s =>
+  test("Task.raiseError.runAsync: CancelableFuture should be synchronous for AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
     val dummy = DummyException("1204")
     var wasTriggered = false
     def trigger() = { wasTriggered = true; dummy }
 
-    val task = BIO.raiseError(trigger())
+    val task = Task.raiseError(trigger())
     assert(wasTriggered, "wasTriggered")
 
     val f = task.runToFuture
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.raiseError.runAsync(callback) should work synchronously") { implicit s =>
+  test("Task.raiseError.runAsync(callback) should work synchronously") { implicit s =>
     var result = Option.empty[Try[String]]
     val dummy = DummyException("dummy")
     var wasTriggered = false
     def trigger(): Throwable = { wasTriggered = true; dummy }
 
-    val task = BIO.raiseError(trigger())
+    val task = Task.raiseError(trigger())
     assert(wasTriggered, "wasTriggered")
 
     task.runAsync(r => result = Some(r.left.map(_.fold(identity, identity)).toTry))
     assertEquals(result, Some(Failure(dummy)))
   }
 
-  test("BIO.raiseError.runAsync(callback) should be asynchronous for AlwaysAsyncExecution") { s =>
+  test("Task.raiseError.runAsync(callback) should be asynchronous for AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
     val dummy = DummyException("dummy")
@@ -133,7 +133,7 @@ object TaskNowSuite extends BaseTestSuite {
     var wasTriggered = false
     def trigger(): Throwable = { wasTriggered = true; dummy }
 
-    val task = BIO.raiseError(trigger())
+    val task = Task.raiseError(trigger())
     assert(wasTriggered, "wasTriggered")
 
     task.runAsync(r => result = Some(r.left.map(_.fold(identity, identity)).toTry))
@@ -142,46 +142,46 @@ object TaskNowSuite extends BaseTestSuite {
     assertEquals(result, Some(Failure(dummy)))
   }
 
-  test("BIO.now.map should work") { implicit s =>
+  test("Task.now.map should work") { implicit s =>
     check1 { a: Int =>
-      BIO.now(a).map(_ + 1) <-> BIO.now(a + 1)
+      Task.now(a).map(_ + 1) <-> Task.now(a + 1)
     }
   }
 
-  test("BIO.raiseError.map should be the same as BIO.raiseError") { implicit s =>
+  test("Task.raiseError.map should be the same as Task.raiseError") { implicit s =>
     check {
       val dummy = DummyException("dummy")
-      (BIO.raiseError(dummy): BIO[Throwable, Int]).map(_ + 1) <-> BIO.raiseError(dummy)
+      (Task.raiseError(dummy): Task[Throwable, Int]).map(_ + 1) <-> Task.raiseError(dummy)
     }
   }
 
-  test("BIO.raiseError.flatMap should be the same as BIO.flatMap") { implicit s =>
+  test("Task.raiseError.flatMap should be the same as Task.flatMap") { implicit s =>
     check {
       val dummy = DummyException("dummy")
-      (BIO.raiseError(dummy): BIO[Throwable, Int]).flatMap(BIO.now) <-> BIO.raiseError(dummy)
+      (Task.raiseError(dummy): Task[Throwable, Int]).flatMap(Task.now) <-> Task.raiseError(dummy)
     }
   }
 
-  test("BIO.raiseError.flatMap should be protected") { implicit s =>
+  test("Task.raiseError.flatMap should be protected") { implicit s =>
     check {
       val dummy = DummyException("dummy")
       val err = DummyException("err")
-      BIO.raiseError(dummy).flatMap[Throwable, Int](_ => throw err) <-> BIO.raiseError(dummy)
+      Task.raiseError(dummy).flatMap[Throwable, Int](_ => throw err) <-> Task.raiseError(dummy)
     }
   }
 
-  test("BIO.now.flatMap should protect against user code") { implicit s =>
+  test("Task.now.flatMap should protect against user code") { implicit s =>
     val ex = DummyException("dummy")
-    val t = BIO.now(1).flatMap[String, Int](_ => throw ex)
-    check(t <-> BIO.terminate(ex))
+    val t = Task.now(1).flatMap[String, Int](_ => throw ex)
+    check(t <-> Task.terminate(ex))
   }
 
-  test("BIO.now.flatMap should be tail recursive") { implicit s =>
+  test("Task.now.flatMap should be tail recursive") { implicit s =>
     def loop(n: Int, idx: Int): UIO[Int] =
-      BIO.now(idx).flatMap { _ =>
+      Task.now(idx).flatMap { _ =>
         if (idx < n) loop(n, idx + 1).map(_ + 1)
         else
-          BIO.now(idx)
+          Task.now(idx)
       }
 
     val iterations = s.executionModel.recommendedBatchSize * 20
@@ -193,40 +193,40 @@ object TaskNowSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(iterations * 2)))
   }
 
-  test("BIO.now should not be cancelable") { implicit s =>
-    val t = BIO.now(10)
+  test("Task.now should not be cancelable") { implicit s =>
+    val t = Task.now(10)
     val f = t.runToFuture
     f.cancel()
     s.tick()
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("BIO.raiseError should not be cancelable") { implicit s =>
+  test("Task.raiseError should not be cancelable") { implicit s =>
     val dummy = 1453
-    val t = BIO.raiseError(dummy)
+    val t = Task.raiseError(dummy)
     val f = t.attempt.runToFuture
     f.cancel()
     s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.terminate should not be cancelable") { implicit s =>
+  test("Task.terminate should not be cancelable") { implicit s =>
     val dummy = DummyException("dummy")
-    val t = BIO.terminate(dummy)
+    val t = Task.terminate(dummy)
     val f = t.runToFuture
     f.cancel()
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.now.runSyncStep") { implicit s =>
-    val result = BIO.now(100).runSyncStep
+  test("Task.now.runSyncStep") { implicit s =>
+    val result = Task.now(100).runSyncStep
     assertEquals(result, Right(100))
   }
 
-  test("BIO.raiseError.runSyncStep") { implicit s =>
+  test("Task.raiseError.runSyncStep") { implicit s =>
     val dummy = 10000
-    val result = BIO.raiseError(dummy).attempt.runSyncStep
+    val result = Task.raiseError(dummy).attempt.runSyncStep
     assertEquals(result, Right(Left(dummy)))
   }
 }

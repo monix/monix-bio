@@ -29,11 +29,11 @@ import scala.util.{Failure, Success}
 
 object TaskRaceSuite extends BaseTestSuite {
 
-  test("BIO.raceMany returns fastest success") { implicit s =>
-    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
-    val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
-    val third = BIO.fromEither(789.asRight[String]).delayExecution(5.second)
-    val race = BIO.raceMany(List(first, second, third))
+  test("Task.raceMany returns fastest success") { implicit s =>
+    val first = Task.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = Task.fromEither(456.asRight[String]).delayExecution(1.second)
+    val third = Task.fromEither(789.asRight[String]).delayExecution(5.second)
+    val race = Task.raceMany(List(first, second, third))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -43,11 +43,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns fastest typed error") { implicit s =>
-    val first = BIO.fromEither("first error".asLeft[Int]).delayExecution(10.seconds)
-    val second = BIO.fromEither("second error".asLeft[Int]).delayExecution(1.second)
-    val third = BIO.fromEither("third error".asLeft[Int]).delayExecution(5.second)
-    val race = BIO.raceMany(List(first, second, third))
+  test("Task.raceMany returns fastest typed error") { implicit s =>
+    val first = Task.fromEither("first error".asLeft[Int]).delayExecution(10.seconds)
+    val second = Task.fromEither("second error".asLeft[Int]).delayExecution(1.second)
+    val third = Task.fromEither("third error".asLeft[Int]).delayExecution(5.second)
+    val race = Task.raceMany(List(first, second, third))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -57,11 +57,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns fastest terminal error") { implicit s =>
-    val first = BIO.terminate(DummyException("first exception")).delayExecution(10.seconds)
-    val second = BIO.terminate(DummyException("second exception")).delayExecution(1.second)
-    val third = BIO.terminate(DummyException("third exception")).delayExecution(5.second)
-    val race = BIO.raceMany(List(first, second, third))
+  test("Task.raceMany returns fastest terminal error") { implicit s =>
+    val first = Task.terminate(DummyException("first exception")).delayExecution(10.seconds)
+    val second = Task.terminate(DummyException("second exception")).delayExecution(1.second)
+    val third = Task.terminate(DummyException("third exception")).delayExecution(5.second)
+    val race = Task.raceMany(List(first, second, third))
     val f = race.runToFuture
 
     s.tick()
@@ -71,10 +71,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns success that is faster than typed error") { implicit s =>
-    val first = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(10.seconds)
-    val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
-    val race = BIO.raceMany(List(first, second))
+  test("Task.raceMany returns success that is faster than typed error") { implicit s =>
+    val first = Task.fromEither("dummy error".asLeft[Int]).delayExecution(10.seconds)
+    val second = Task.fromEither(456.asRight[String]).delayExecution(1.second)
+    val race = Task.raceMany(List(first, second))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -84,10 +84,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns success that is faster than terminal error") { implicit s =>
-    val first = BIO.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
-    val second = BIO.fromEither(456.asRight[String]).delayExecution(1.second)
-    val race = BIO.raceMany(List(first, second))
+  test("Task.raceMany returns success that is faster than terminal error") { implicit s =>
+    val first = Task.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
+    val second = Task.fromEither(456.asRight[String]).delayExecution(1.second)
+    val race = Task.raceMany(List(first, second))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -97,10 +97,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns typed error that is faster than success") { implicit s =>
-    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
-    val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
-    val race = BIO.raceMany(List(first, second))
+  test("Task.raceMany returns typed error that is faster than success") { implicit s =>
+    val first = Task.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = Task.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
+    val race = Task.raceMany(List(first, second))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -110,10 +110,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns typed error that is faster than fatal error") { implicit s =>
-    val first = BIO.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
-    val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
-    val race = BIO.raceMany(List(first, second))
+  test("Task.raceMany returns typed error that is faster than fatal error") { implicit s =>
+    val first = Task.terminate(DummyException("dummy exception")).delayExecution(10.seconds)
+    val second = Task.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
+    val race = Task.raceMany(List(first, second))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -123,10 +123,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns fatal error that is faster than success") { implicit s =>
-    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
-    val second = BIO.terminate(DummyException("dummy exception")).delayExecution(1.second)
-    val race = BIO.raceMany(List(first, second))
+  test("Task.raceMany returns fatal error that is faster than success") { implicit s =>
+    val first = Task.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = Task.terminate(DummyException("dummy exception")).delayExecution(1.second)
+    val race = Task.raceMany(List(first, second))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -136,10 +136,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany returns fatal error that is faster than typed error") { implicit s =>
-    val first = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(10.second)
-    val second = BIO.terminate(DummyException("dummy exception")).delayExecution(1.second)
-    val race = BIO.raceMany(List(first, second))
+  test("Task.raceMany returns fatal error that is faster than typed error") { implicit s =>
+    val first = Task.fromEither("dummy error".asLeft[Int]).delayExecution(10.second)
+    val second = Task.terminate(DummyException("dummy exception")).delayExecution(1.second)
+    val race = Task.raceMany(List(first, second))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -149,11 +149,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany should allow cancelling all tasks") { implicit s =>
-    val first = BIO.fromEither(123.asRight[String]).delayExecution(10.seconds)
-    val second = BIO.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
-    val third = BIO.terminate(DummyException("dummy exception")).delayExecution(5.second)
-    val race = BIO.raceMany(List(first, second, third))
+  test("Task.raceMany should allow cancelling all tasks") { implicit s =>
+    val first = Task.fromEither(123.asRight[String]).delayExecution(10.seconds)
+    val second = Task.fromEither("dummy error".asLeft[Int]).delayExecution(1.second)
+    val third = Task.terminate(DummyException("dummy exception")).delayExecution(5.second)
+    val race = Task.raceMany(List(first, second, third))
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -166,10 +166,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "every task should be canceled")
   }
 
-  test("BIO.raceMany should be stack safe for sync values") { implicit s =>
+  test("Task.raceMany should be stack safe for sync values") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
-    val tasks = (0 until count).map(idx => BIO.fromEither(idx.asRight[String]))
-    val race = BIO.raceMany(tasks)
+    val tasks = (0 until count).map(idx => Task.fromEither(idx.asRight[String]))
+    val race = Task.raceMany(tasks)
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -177,10 +177,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany should be stack safe for async values") { implicit s =>
+  test("Task.raceMany should be stack safe for async values") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
-    val tasks = (0 until count).map(idx => BIO.fromEither(idx.asRight[String]).executeAsync)
-    val race = BIO.raceMany(tasks)
+    val tasks = (0 until count).map(idx => Task.fromEither(idx.asRight[String]).executeAsync)
+    val race = Task.raceMany(tasks)
     val f = race.attempt.runToFuture
 
     s.tick()
@@ -188,12 +188,12 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO.raceMany has a stack safe cancelable") { implicit s =>
+  test("Task.raceMany has a stack safe cancelable") { implicit s =>
     val count = if (Platform.isJVM) 10000 else 1000
     val p = Promise[Int]()
-    val tasks = (0 until count).map(_ => BIO.never[Int])
-    val all = tasks.foldLeft(BIO.never[Int])((acc, bio) => BIO.raceMany(List(acc, bio)))
-    val f = Task.raceMany(List(BIO.fromFuture(p.future), all)).runToFuture
+    val tasks = (0 until count).map(_ => Task.never[Int])
+    val all = tasks.foldLeft(Task.never[Int])((acc, bio) => Task.raceMany(List(acc, bio)))
+    val f = Task.raceMany(List(Task.fromFuture(p.future), all)).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -204,8 +204,8 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "slower tasks should be canceled")
   }
 
-  test("BIO#timeout should timeout") { implicit s =>
-    val task = BIO.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
+  test("Task#timeout should timeout") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
     val f = task.runToFuture
 
     s.tick()
@@ -216,8 +216,8 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "Main task was not canceled!")
   }
 
-  test("BIO#timeout should mirror the source in case of success") { implicit s =>
-    val task = BIO.evalAsync(1).delayExecution(1.seconds).timeout(10.second)
+  test("Task#timeout should mirror the source in case of success") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(1.seconds).timeout(10.second)
     val f = task.runToFuture
 
     s.tick()
@@ -227,9 +227,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("BIO#timeout should mirror the source in case of error") { implicit s =>
+  test("Task#timeout should mirror the source in case of error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = BIO.evalAsync(throw ex).delayExecution(1.seconds).timeout(10.second)
+    val task = Task.evalAsync(throw ex).delayExecution(1.seconds).timeout(10.second)
     val f = task.attempt.runToFuture
 
     s.tick()
@@ -239,7 +239,7 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("BIO#timeout should mirror the source in case of terminal error") { implicit s =>
+  test("Task#timeout should mirror the source in case of terminal error") { implicit s =>
     val ex = DummyException("dummy")
     val task = UIO.evalAsync(throw ex).delayExecution(1.seconds).timeout(10.second)
     val f = task.runToFuture
@@ -251,8 +251,8 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("BIO#timeout should cancel both the source and the timer") { implicit s =>
-    val task = BIO.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
+  test("Task#timeout should cancel both the source and the timer") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeout(1.second)
     val f = task.runToFuture
 
     s.tick()
@@ -263,8 +263,8 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO#timeout with backup should timeout") { implicit s =>
-    val task = BIO.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, BIO.evalAsync(99))
+  test("Task#timeout with backup should timeout") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99))
     val f = task.runToFuture
 
     s.tick()
@@ -273,9 +273,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(99)))
   }
 
-  test("BIO#timeout with backup should timeout with error") { implicit s =>
+  test("Task#timeout with backup should timeout with error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = BIO.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, BIO.raiseError(ex))
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.raiseError(ex))
     val f = task.attempt.runToFuture
 
     s.tick()
@@ -284,8 +284,8 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("BIO#timeout with backup should mirror the source in case of success") { implicit s =>
-    val task = BIO.evalAsync(1).delayExecution(1.seconds).timeoutTo(10.second, BIO.evalAsync(99))
+  test("Task#timeout with backup should mirror the source in case of success") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(1.seconds).timeoutTo(10.second, Task.evalAsync(99))
     val f = task.runToFuture
 
     s.tick()
@@ -295,9 +295,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("BIO#timeout with backup should mirror the source in case of error") { implicit s =>
+  test("Task#timeout with backup should mirror the source in case of error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = BIO.evalAsync(throw ex).delayExecution(1.seconds).timeoutTo(10.second, BIO.evalAsync(99))
+    val task = Task.evalAsync(throw ex).delayExecution(1.seconds).timeoutTo(10.second, Task.evalAsync(99))
     val f = task.attempt.runToFuture
 
     s.tick()
@@ -307,8 +307,8 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("BIO#timeout should cancel both the source and the timer") { implicit s =>
-    val task = BIO.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, BIO.evalAsync(99))
+  test("Task#timeout should cancel both the source and the timer") { implicit s =>
+    val task = Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99))
     val f = task.runToFuture
 
     s.tick()
@@ -320,9 +320,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "timer should be canceled")
   }
 
-  test("BIO#timeout should cancel the backup") { implicit s =>
+  test("Task#timeout should cancel the backup") { implicit s =>
     val task =
-      BIO.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, BIO.evalAsync(99).delayExecution(2.seconds))
+      Task.evalAsync(1).delayExecution(10.seconds).timeoutTo(1.second, Task.evalAsync(99).delayExecution(2.seconds))
     val f = task.runToFuture
 
     s.tick()
@@ -335,9 +335,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "backup should be canceled")
   }
 
-  test("BIO#timeout should not return the source after timeout") { implicit s =>
+  test("Task#timeout should not return the source after timeout") { implicit s =>
     val task =
-      BIO.evalAsync(1).delayExecution(2.seconds).timeoutTo(1.second, BIO.evalAsync(99).delayExecution(2.seconds))
+      Task.evalAsync(1).delayExecution(2.seconds).timeoutTo(1.second, Task.evalAsync(99).delayExecution(2.seconds))
     val f = task.runToFuture
 
     s.tick()
@@ -347,9 +347,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(99)))
   }
 
-  test("BIO#timeout should cancel the source after timeout") { implicit s =>
-    val backup = BIO.evalAsync(99).delayExecution(1.seconds)
-    val task = BIO.evalAsync(1).delayExecution(5.seconds).timeoutTo(1.second, backup)
+  test("Task#timeout should cancel the source after timeout") { implicit s =>
+    val backup = Task.evalAsync(99).delayExecution(1.seconds)
+    val task = Task.evalAsync(1).delayExecution(5.seconds).timeoutTo(1.second, backup)
     val f = task.runToFuture
 
     s.tick()
@@ -362,11 +362,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "all task should be completed")
   }
 
-  test("BIO#timeoutToL should evaluate as specified: lazy, no memoization") { implicit s =>
+  test("Task#timeoutToL should evaluate as specified: lazy, no memoization") { implicit s =>
     val cnt = Atomic(0L)
     val timeout = UIO(cnt.incrementAndGet().seconds)
-    val error = BIO.raiseError(DummyException("dummy"))
-    val loop = BIO(10).delayExecution(2.9.seconds).timeoutToL(timeout, error).onErrorRestart(3)
+    val error = Task.raiseError(DummyException("dummy"))
+    val loop = Task(10).delayExecution(2.9.seconds).timeoutToL(timeout, error).onErrorRestart(3)
     val f = loop.runToFuture
 
     s.tick(1.second)
@@ -377,11 +377,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("BIO#timeoutL should evaluate as specified: lazy, with memoization") { implicit s =>
+  test("Task#timeoutL should evaluate as specified: lazy, with memoization") { implicit s =>
     val cnt = Atomic(0L)
     val timeoutError = new TimeoutException("Task timed-out")
     val timeout = UIO.eval(cnt.incrementAndGet().seconds).memoize
-    val loop = BIO(10).delayExecution(10.seconds).timeoutToL(timeout, BIO.raiseError(timeoutError)).onErrorRestart(3)
+    val loop = Task(10).delayExecution(10.seconds).timeoutToL(timeout, Task.raiseError(timeoutError)).onErrorRestart(3)
     val f = loop.attempt.runToFuture
 
     s.tick(1.second)
@@ -399,9 +399,9 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value.get.get, Left(timeoutError))
   }
 
-  test("BIO#timeoutL considers time taken to evaluate the duration task") { implicit s =>
+  test("Task#timeoutL considers time taken to evaluate the duration task") { implicit s =>
     val timeout = UIO(3.seconds).delayExecution(2.seconds)
-    val f = BIO(10).delayExecution(4.seconds).timeoutToL(timeout, BIO(-10)).runToFuture
+    val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
 
     s.tick(2.seconds)
     assertEquals(f.value, None)
@@ -410,7 +410,7 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(-10)))
   }
 
-  test("BIO#timeoutL: evaluation time took > timeout => timeout is immediately completed") { implicit s =>
+  test("Task#timeoutL: evaluation time took > timeout => timeout is immediately completed") { implicit s =>
     val timeout = UIO(2.seconds).delayExecution(3.seconds)
     val f = Task(10).delayExecution(4.seconds).timeoutToL(timeout, Task(-10)).runToFuture
 
@@ -418,11 +418,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(-10)))
   }
 
-  test("BIO.racePair(a,b) should work if a completes first") { implicit s =>
-    val ta: BIO[Long, Int] = BIO.now(10).delayExecution(1.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(2.seconds)
+  test("Task.racePair(a,b) should work if a completes first") { implicit s =>
+    val ta: Task[Long, Int] = Task.now(10).delayExecution(1.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(2.seconds)
 
-    val t = BIO.racePair(ta, tb).flatMap {
+    val t = Task.racePair(ta, tb).flatMap {
       case Left((a, taskB)) =>
         taskB.join.map(b => a + b)
       case Right((taskA, b)) =>
@@ -436,11 +436,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(30))))
   }
 
-  test("BIO.racePair(a,b) should cancel both") { implicit s =>
-    val ta: BIO[Long, Int] = BIO.now(10).delayExecution(2.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(1.seconds)
+  test("Task.racePair(a,b) should cancel both") { implicit s =>
+    val ta: Task[Long, Int] = Task.now(10).delayExecution(2.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(1.seconds)
 
-    val t = BIO.racePair(ta, tb)
+    val t = Task.racePair(ta, tb)
     val f = t.attempt.runToFuture
     s.tick()
     f.cancel()
@@ -448,12 +448,12 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.racePair(A,B) should not cancel B if A completes first") { implicit s =>
-    val ta: BIO[Long, Int] = BIO.now(10).delayExecution(1.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(2.seconds)
+  test("Task.racePair(A,B) should not cancel B if A completes first") { implicit s =>
+    val ta: Task[Long, Int] = Task.now(10).delayExecution(1.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(2.seconds)
     var future = Option.empty[CancelableFuture[Either[Long, Int]]]
 
-    val t = BIO.racePair(ta, tb).map {
+    val t = Task.racePair(ta, tb).map {
       case Left((a, taskB)) =>
         future = Some(taskB.join.attempt.runToFuture)
         a
@@ -474,12 +474,12 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(future.flatMap(_.value), Some(Success(Right(20))))
   }
 
-  test("BIO.racePair(A,B) should not cancel A if B completes first") { implicit s =>
-    val ta: BIO[Long, Int] = BIO.now(10).delayExecution(2.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(1.seconds)
+  test("Task.racePair(A,B) should not cancel A if B completes first") { implicit s =>
+    val ta: Task[Long, Int] = Task.now(10).delayExecution(2.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(1.seconds)
     var future = Option.empty[CancelableFuture[Either[Long, Int]]]
 
-    val t = BIO.racePair(ta, tb).map {
+    val t = Task.racePair(ta, tb).map {
       case Left((a, taskB)) =>
         future = Some(taskB.join.attempt.runToFuture)
         a
@@ -500,67 +500,67 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(future.flatMap(_.value), Some(Success(Right(10))))
   }
 
-  test("BIO.racePair(A,B) should end both in error if A completes first in error") { implicit s =>
+  test("Task.racePair(A,B) should end both in error if A completes first in error") { implicit s =>
     val dummy = 1204L
-    val ta: BIO[Long, Int] = BIO.raiseError(dummy).delayExecution(1.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(2.seconds)
+    val ta: Task[Long, Int] = Task.raiseError(dummy).delayExecution(1.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(2.seconds)
 
-    val t = BIO.racePair(ta, tb)
+    val t = Task.racePair(ta, tb)
     val f = t.attempt.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.racePair(A,B) should end both in terminal error if A completes first in terminal error") { implicit s =>
+  test("Task.racePair(A,B) should end both in terminal error if A completes first in terminal error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta: BIO[Long, Int] = BIO.terminate(dummy).delayExecution(1.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(2.seconds)
+    val ta: Task[Long, Int] = Task.terminate(dummy).delayExecution(1.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(2.seconds)
 
-    val t = BIO.racePair(ta, tb)
+    val t = Task.racePair(ta, tb)
     val f = t.attempt.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(dummy)))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.racePair(A,B) should end both in error if B completes first in error") { implicit s =>
+  test("Task.racePair(A,B) should end both in error if B completes first in error") { implicit s =>
     val dummy = 1204L
-    val ta: BIO[Long, Int] = BIO.now(10).delayExecution(2.seconds)
-    val tb: BIO[Long, Int] = BIO.raiseError(dummy).delayExecution(1.second)
+    val ta: Task[Long, Int] = Task.now(10).delayExecution(2.seconds)
+    val tb: Task[Long, Int] = Task.raiseError(dummy).delayExecution(1.second)
 
-    val t = BIO.racePair(ta, tb)
+    val t = Task.racePair(ta, tb)
     val f = t.attempt.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.racePair(A,B) should end both in terminal error if B completes first in terminal error") { implicit s =>
+  test("Task.racePair(A,B) should end both in terminal error if B completes first in terminal error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta: BIO[Long, Int] = BIO.now(10).delayExecution(2.seconds)
-    val tb: BIO[Long, Int] = BIO.terminate(dummy).delayExecution(1.second)
+    val ta: Task[Long, Int] = Task.now(10).delayExecution(2.seconds)
+    val tb: Task[Long, Int] = Task.terminate(dummy).delayExecution(1.second)
 
-    val t = BIO.racePair(ta, tb)
+    val t = Task.racePair(ta, tb)
     val f = t.attempt.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(dummy)))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.racePair(A,B) should work if A completes second in error") { implicit s =>
+  test("Task.racePair(A,B) should work if A completes second in error") { implicit s =>
     val dummy = 10L
-    val ta: BIO[Long, Int] = BIO.raiseError(dummy).delayExecution(2.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(1.seconds)
+    val ta: Task[Long, Int] = Task.raiseError(dummy).delayExecution(2.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(1.seconds)
 
-    val t1 = BIO.racePair(ta, tb).flatMap {
+    val t1 = Task.racePair(ta, tb).flatMap {
       case Left((a, taskB)) =>
         taskB.join.map(b => a + b)
       case Right((taskA, b)) =>
         taskA.join.map(a => a + b)
     }
 
-    val t2 = BIO.racePair(ta, tb).map {
+    val t2 = Task.racePair(ta, tb).map {
       case Left((a, _)) => a
       case Right((_, b)) => b
     }
@@ -573,19 +573,19 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(20))))
   }
 
-  test("BIO.racePair(A,B) should work if A completes second in terminal error") { implicit s =>
+  test("Task.racePair(A,B) should work if A completes second in terminal error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta: BIO[Long, Int] = BIO.terminate(dummy).delayExecution(2.second)
-    val tb: BIO[Long, Int] = BIO.now(20).delayExecution(1.seconds)
+    val ta: Task[Long, Int] = Task.terminate(dummy).delayExecution(2.second)
+    val tb: Task[Long, Int] = Task.now(20).delayExecution(1.seconds)
 
-    val t1 = BIO.racePair(ta, tb).flatMap {
+    val t1 = Task.racePair(ta, tb).flatMap {
       case Left((a, taskB)) =>
         taskB.join.map(b => a + b)
       case Right((taskA, b)) =>
         taskA.join.map(a => a + b)
     }
 
-    val t2 = BIO.racePair(ta, tb).map {
+    val t2 = Task.racePair(ta, tb).map {
       case Left((a, _)) => a
       case Right((_, b)) => b
     }
@@ -598,19 +598,19 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(20))))
   }
 
-  test("BIO.racePair(A,B) should work if B completes second in error") { implicit s =>
+  test("Task.racePair(A,B) should work if B completes second in error") { implicit s =>
     val dummy = "dummy"
-    val ta = BIO.now(10).delayExecution(1.seconds)
-    val tb: BIO[String, Int] = BIO.raiseError(dummy).delayExecution(2.second)
+    val ta = Task.now(10).delayExecution(1.seconds)
+    val tb: Task[String, Int] = Task.raiseError(dummy).delayExecution(2.second)
 
-    val t1 = BIO.racePair(ta, tb).flatMap {
+    val t1 = Task.racePair(ta, tb).flatMap {
       case Left((a, taskB)) =>
         taskB.join.map(b => a + b)
       case Right((taskA, b)) =>
         taskA.join.map(a => a + b)
     }
 
-    val t2 = BIO.racePair(ta, tb).map {
+    val t2 = Task.racePair(ta, tb).map {
       case Left((a, _)) => a
       case Right((_, b)) => b
     }
@@ -623,10 +623,10 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(10))))
   }
 
-  test("BIO.racePair should be stack safe, take 1") { implicit s =>
+  test("Task.racePair should be stack safe, take 1") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val tasks: Seq[UIO[Int]] = (0 until count).map(x => UIO.evalAsync(x))
-    val init: UIO[Int] = BIO.never[Int]
+    val init: UIO[Int] = Task.never[Int]
 
     val sum = tasks.foldLeft(init)((acc, t) =>
       UIO.racePair(acc, t).map {
@@ -639,10 +639,10 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick()
   }
 
-  test("BIO.racePair should be stack safe, take 2") { implicit s =>
+  test("Task.racePair should be stack safe, take 2") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val tasks = (0 until count).map(x => UIO.eval(x))
-    val init = BIO.never[Int]
+    val init = Task.never[Int]
 
     val sum = tasks.foldLeft(init)((acc, t) =>
       UIO.racePair(acc, t).map {
@@ -655,20 +655,20 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick()
   }
 
-  test("BIO.racePair has a stack safe cancelable") { implicit sc =>
+  test("Task.racePair has a stack safe cancelable") { implicit sc =>
     val count = if (Platform.isJVM) 10000 else 1000
     val p = Promise[Int]()
 
-    val tasks = (0 until count).map(_ => BIO.never[Int])
-    val all = tasks.foldLeft(BIO.never[Int])((acc, t) =>
+    val tasks = (0 until count).map(_ => Task.never[Int])
+    val all = tasks.foldLeft(Task.never[Int])((acc, t) =>
       UIO.racePair(acc, t).flatMap {
         case Left((a, fb)) => fb.cancel.map(_ => a)
         case Right((fa, b)) => fa.cancel.map(_ => b)
       }
     )
 
-    val f = BIO
-      .racePair(BIO.fromFuture(p.future), all)
+    val f = Task
+      .racePair(Task.fromFuture(p.future), all)
       .flatMap {
         case Left((a, fb)) => fb.cancel.map(_ => a)
         case Right((fa, b)) => fa.cancel.map(_ => b)
@@ -682,11 +682,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO.race(a, b) should work if a completes first") { implicit s =>
-    val ta = BIO.now(10).delayExecution(1.second)
-    val tb = BIO.now(20).delayExecution(2.seconds)
+  test("Task.race(a, b) should work if a completes first") { implicit s =>
+    val ta = Task.now(10).delayExecution(1.second)
+    val tb = Task.now(20).delayExecution(2.seconds)
 
-    val t = BIO.race(ta, tb).map {
+    val t = Task.race(ta, tb).map {
       case Left(a) => a
       case Right(b) => b
     }
@@ -697,11 +697,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should work if b completes first") { implicit s =>
-    val ta = BIO.now(10).delayExecution(2.second)
-    val tb = BIO.now(20).delayExecution(1.seconds)
+  test("Task.race(a, b) should work if b completes first") { implicit s =>
+    val ta = Task.now(10).delayExecution(2.second)
+    val tb = Task.now(20).delayExecution(1.seconds)
 
-    val t = BIO.race(ta, tb).map {
+    val t = Task.race(ta, tb).map {
       case Left(a) => a
       case Right(b) => b
     }
@@ -712,11 +712,11 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should cancel both") { implicit s =>
-    val ta = BIO.now(10).delayExecution(2.second)
-    val tb = BIO.now(20).delayExecution(1.seconds)
+  test("Task.race(a, b) should cancel both") { implicit s =>
+    val ta = Task.now(10).delayExecution(2.second)
+    val tb = Task.now(20).delayExecution(1.seconds)
 
-    val t = BIO.race(ta, tb)
+    val t = Task.race(ta, tb)
     val f = t.runToFuture
     s.tick()
     f.cancel()
@@ -724,60 +724,60 @@ object TaskRaceSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should end both in error if `a` completes first in error") { implicit s =>
+  test("Task.race(a, b) should end both in error if `a` completes first in error") { implicit s =>
     val dummy = 2020
-    val ta = BIO.raiseError(dummy).delayExecution(1.second)
-    val tb = BIO.now(20).delayExecution(2.seconds)
+    val ta = Task.raiseError(dummy).delayExecution(1.second)
+    val tb = Task.now(20).delayExecution(2.seconds)
 
-    val t = BIO.race(ta, tb)
+    val t = Task.race(ta, tb)
     val f = t.attempt.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should end both in error if `a` completes first in terminal error") { implicit s =>
+  test("Task.race(a, b) should end both in error if `a` completes first in terminal error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.terminate(dummy).delayExecution(1.second)
-    val tb = BIO.now(20).delayExecution(2.seconds)
+    val ta = Task.terminate(dummy).delayExecution(1.second)
+    val tb = Task.now(20).delayExecution(2.seconds)
 
-    val t = BIO.race(ta, tb)
+    val t = Task.race(ta, tb)
     val f = t.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(dummy)))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should end both in error if `b` completes first in error") { implicit s =>
+  test("Task.race(a, b) should end both in error if `b` completes first in error") { implicit s =>
     val dummy = 2020
-    val ta = BIO.now(20).delayExecution(2.seconds)
-    val tb = BIO.raiseError(dummy).delayExecution(1.second)
+    val ta = Task.now(20).delayExecution(2.seconds)
+    val tb = Task.raiseError(dummy).delayExecution(1.second)
 
-    val t = BIO.race(ta, tb)
+    val t = Task.race(ta, tb)
     val f = t.attempt.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Success(Left(dummy))))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should end both in error if `b` completes first in error") { implicit s =>
+  test("Task.race(a, b) should end both in error if `b` completes first in error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.now(20).delayExecution(2.seconds)
-    val tb = BIO.terminate(dummy).delayExecution(1.second)
+    val ta = Task.now(20).delayExecution(2.seconds)
+    val tb = Task.terminate(dummy).delayExecution(1.second)
 
-    val t = BIO.race(ta, tb)
+    val t = Task.race(ta, tb)
     val f = t.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(dummy)))
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("BIO.race(a, b) should work if `a` completes in typed error") { implicit s =>
+  test("Task.race(a, b) should work if `a` completes in typed error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.raiseError(dummy).delayExecution(2.second).uncancelable
-    val tb = BIO.now(20).delayExecution(1.seconds)
+    val ta = Task.raiseError(dummy).delayExecution(2.second).uncancelable
+    val tb = Task.now(20).delayExecution(1.seconds)
 
-    val task = BIO.race(ta, tb).map {
+    val task = Task.race(ta, tb).map {
       case Left(a) => a
       case Right(b) => b
     }
@@ -789,12 +789,12 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-  test("BIO.race(a, b) should work if `a` completes in unexpected error") { implicit s =>
+  test("Task.race(a, b) should work if `a` completes in unexpected error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.terminate(dummy).delayExecution(2.second).uncancelable
-    val tb = BIO.now(20).delayExecution(1.seconds)
+    val ta = Task.terminate(dummy).delayExecution(2.second).uncancelable
+    val tb = Task.now(20).delayExecution(1.seconds)
 
-    val task = BIO.race(ta, tb).map {
+    val task = Task.race(ta, tb).map {
       case Left(a) => a
       case Right(b) => b
     }
@@ -806,12 +806,12 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-  test("BIO.race(a, b) should work if `b` completes in typed error") { implicit s =>
+  test("Task.race(a, b) should work if `b` completes in typed error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.now(20).delayExecution(1.seconds)
-    val tb = BIO.raiseError(dummy).delayExecution(2.second).uncancelable
+    val ta = Task.now(20).delayExecution(1.seconds)
+    val tb = Task.raiseError(dummy).delayExecution(2.second).uncancelable
 
-    val task = BIO.race(ta, tb).map {
+    val task = Task.race(ta, tb).map {
       case Left(a) => a
       case Right(b) => b
     }
@@ -823,12 +823,12 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-  test("BIO.race(a, b) should work if `b` completes in unexpected error") { implicit s =>
+  test("Task.race(a, b) should work if `b` completes in unexpected error") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.now(20).delayExecution(1.seconds)
-    val tb = BIO.terminate(dummy).delayExecution(2.second).uncancelable
+    val ta = Task.now(20).delayExecution(1.seconds)
+    val tb = Task.terminate(dummy).delayExecution(2.second).uncancelable
 
-    val task = BIO.race(ta, tb).map {
+    val task = Task.race(ta, tb).map {
       case Left(a) => a
       case Right(b) => b
     }
@@ -840,13 +840,13 @@ object TaskRaceSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, dummy)
   }
 
-  test("BIO.race should be stack safe, take 1") { implicit s =>
+  test("Task.race should be stack safe, take 1") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val tasks = (0 until count).map(x => UIO.evalAsync(x))
-    val init = BIO.never[Int]
+    val init = Task.never[Int]
 
     val sum = tasks.foldLeft(init)((acc, t) =>
-      BIO.race(acc, t).map {
+      Task.race(acc, t).map {
         case Left(a) => a
         case Right(b) => b
       }
@@ -856,13 +856,13 @@ object TaskRaceSuite extends BaseTestSuite {
     s.tick()
   }
 
-  test("BIO.race should be stack safe, take 2") { implicit s =>
+  test("Task.race should be stack safe, take 2") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
-    val tasks = (0 until count).map(x => BIO.evalTotal(x))
-    val init = BIO.never[Int]
+    val tasks = (0 until count).map(x => Task.evalTotal(x))
+    val init = Task.never[Int]
 
     val sum = tasks.foldLeft(init)((acc, t) =>
-      BIO.race(acc, t).map {
+      Task.race(acc, t).map {
         case Left(a) => a
         case Right(b) => b
       }
@@ -876,15 +876,15 @@ object TaskRaceSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 10000 else 1000
     val p = Promise[Int]()
 
-    val tasks = (0 until count).map(_ => BIO.never[Int])
-    val all = tasks.foldLeft(BIO.never[Int])((acc, t) =>
-      BIO.race(acc, t).map {
+    val tasks = (0 until count).map(_ => Task.never[Int])
+    val all = tasks.foldLeft(Task.never[Int])((acc, t) =>
+      Task.race(acc, t).map {
         case Left(a) => a
         case Right(b) => b
       }
     )
 
-    val f = BIO.race(BIO.fromFuture(p.future), all).map { case Left(a) => a; case Right(b) => b }.runToFuture
+    val f = Task.race(Task.fromFuture(p.future), all).map { case Left(a) => a; case Right(b) => b }.runToFuture
 
     sc.tick()
     p.success(1)

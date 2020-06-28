@@ -22,23 +22,23 @@ import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import scala.util.Success
 
 object TaskExecutionModelSuite extends BaseTestSuite {
-  test("BIO.now.executeWithModel(AlwaysAsyncExecution) should work") { implicit s =>
-    val task = BIO.now(1).executeWithModel(AlwaysAsyncExecution)
+  test("Task.now.executeWithModel(AlwaysAsyncExecution) should work") { implicit s =>
+    val task = Task.now(1).executeWithModel(AlwaysAsyncExecution)
     val f = task.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO.now.runAsync (CancelableFuture) should not be async with AlwaysAsyncExecution") { s =>
+  test("Task.now.runAsync (CancelableFuture) should not be async with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
-    val task = BIO.now(1)
+    val task = Task.now(1)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO.eval.executeWithModel(AlwaysAsyncExecution) should work") { implicit s =>
-    val task = BIO.eval(1).executeWithModel(AlwaysAsyncExecution)
+  test("Task.eval.executeWithModel(AlwaysAsyncExecution) should work") { implicit s =>
+    val task = Task.eval(1).executeWithModel(AlwaysAsyncExecution)
     val f = task.runToFuture
 
     assertEquals(f.value, None)
@@ -46,9 +46,9 @@ object TaskExecutionModelSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO.eval should be async with AlwaysAsyncExecution") { s =>
+  test("Task.eval should be async with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
-    val task = BIO.eval(1)
+    val task = Task.eval(1)
     val f = task.runToFuture
 
     assertEquals(f.value, None)
@@ -56,13 +56,13 @@ object TaskExecutionModelSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO.now.flatMap loops should work with AlwaysAsyncExecution") { s =>
+  test("Task.now.flatMap loops should work with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
     def loop(count: Int): UIO[Int] =
-      BIO.now(count).flatMap { nr =>
+      Task.now(count).flatMap { nr =>
         if (nr > 0) loop(count - 1)
-        else BIO.now(nr)
+        else Task.now(nr)
       }
 
     val task = loop(100)
@@ -73,13 +73,13 @@ object TaskExecutionModelSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(0)))
   }
 
-  test("BIO.eval.flatMap loops should work with AlwaysAsyncExecution") { s =>
+  test("Task.eval.flatMap loops should work with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
-    def loop(count: Int): Task[Int] =
-      BIO.eval(count).flatMap { nr =>
+    def loop(count: Int): Task.Unsafe[Int] =
+      Task.eval(count).flatMap { nr =>
         if (nr > 0) loop(count - 1)
-        else BIO.eval(nr)
+        else Task.eval(nr)
       }
 
     val task = loop(100)
@@ -90,13 +90,13 @@ object TaskExecutionModelSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(0)))
   }
 
-  test("BIO.flatMap loops should work with AlwaysAsyncExecution") { s =>
+  test("Task.flatMap loops should work with AlwaysAsyncExecution") { s =>
     implicit val s2 = s.withExecutionModel(AlwaysAsyncExecution)
 
-    def loop(count: Int): Task[Int] =
-      BIO.evalAsync(count).flatMap { nr =>
+    def loop(count: Int): Task.Unsafe[Int] =
+      Task.evalAsync(count).flatMap { nr =>
         if (nr > 0) loop(count - 1)
-        else BIO.evalAsync(nr)
+        else Task.evalAsync(nr)
       }
 
     val task = loop(100)

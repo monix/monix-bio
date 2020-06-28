@@ -22,8 +22,8 @@ import monix.execution.exceptions.DummyException
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-object BIODoOnFinishSuite extends BaseTestSuite {
-  test("BIO#doOnFinish should work on successful task") { implicit s =>
+object TaskDoOnFinishSuite extends BaseTestSuite {
+  test("Task#doOnFinish should work on successful task") { implicit s =>
     var effect = 0
     val successfulBIO = UIO(10).delayExecution(1.millisecond)
     val bioWithFinisher = successfulBIO.doOnFinish {
@@ -38,10 +38,10 @@ object BIODoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Success(10)))
   }
 
-  test("BIO#doOnFinish should work on task with raised error") { implicit s =>
+  test("Task#doOnFinish should work on task with raised error") { implicit s =>
     var effect = 0
     val errorValue = "StringError"
-    val errorProneBIO = BIO.raiseError(errorValue)
+    val errorProneBIO = Task.raiseError(errorValue)
     val bioWithFinisher = errorProneBIO.doOnFinish {
       case Some(Cause.Error(`errorValue`)) => UIO.delay { effect += 2 }
       case _ => UIO.delay { effect += 3 }
@@ -54,10 +54,10 @@ object BIODoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Success(Left(errorValue))))
   }
 
-  test("BIO#doOnFinish should work on terminated task") { implicit s =>
+  test("Task#doOnFinish should work on terminated task") { implicit s =>
     var effect = 0
     val fatalError = DummyException("Coincidence")
-    val fatalBIO = BIO
+    val fatalBIO = Task
       .now(10)
       .delayExecution(1.millisecond)
       .map(_ => throw fatalError)
@@ -73,9 +73,9 @@ object BIODoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Failure(fatalError)))
   }
 
-  test("BIO#doOnFinish should not trigger any finishing action when BIO is cancelled") { implicit s =>
+  test("Task#doOnFinish should not trigger any finishing action when Task is cancelled") { implicit s =>
     var effect = 0
-    val bioToCancel = BIO
+    val bioToCancel = Task
       .now(10)
       .delayExecution(10.millisecond)
       .doOnFinish(_ => UIO.delay { effect += 2 })

@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO.{Async, Context}
+import monix.bio.Task.{Async, Context}
 import monix.bio.{BiCallback, UIO}
 import monix.execution.Scheduler
 import monix.execution.schedulers.TracingScheduler

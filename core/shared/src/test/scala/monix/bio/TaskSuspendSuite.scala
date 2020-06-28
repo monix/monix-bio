@@ -22,7 +22,7 @@ import monix.execution.exceptions.DummyException
 import scala.util.{Failure, Success}
 
 object TaskSuspendSuite extends BaseTestSuite {
-  test("BIO.suspend should suspend evaluation") { implicit s =>
+  test("Task.suspend should suspend evaluation") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
@@ -36,18 +36,18 @@ object TaskSuspendSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success("result")))
   }
 
-  test("BIO.suspend should protect against user code errors") { implicit s =>
+  test("Task.suspend should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.suspend[Int](throw ex).runToFuture
+    val f = Task.suspend[Int](throw ex).runToFuture
 
     assertEquals(f.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
-  test("BIO.suspendTotal should protect against unexpected errors") { implicit s =>
+  test("Task.suspendTotal should protect against unexpected errors") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.suspendTotal[Int, Int](throw ex).redeemCause(_ => 10, identity).runToFuture
-    val g = BIO.suspendTotal[Int, Int](throw ex).onErrorHandle(_ => 10).runToFuture
+    val f = Task.suspendTotal[Int, Int](throw ex).redeemCause(_ => 10, identity).runToFuture
+    val g = Task.suspendTotal[Int, Int](throw ex).onErrorHandle(_ => 10).runToFuture
 
     assertEquals(f.value, Some(Success(10)))
     assertEquals(g.value, Some(Failure(ex)))

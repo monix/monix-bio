@@ -3,7 +3,7 @@ id: cats-effect
 title: Cats-Effect Integration
 ---
 
-`BIO` provides [Cats-Effect](https://github.com/typelevel/cats-effect/) integration out of the box.
+Monix-BIO provides [Cats-Effect](https://github.com/typelevel/cats-effect/) integration out of the box.
 In practice, it means that integration with Typelevel libraries, such as [http4s](https://github.com/http4s/http4s), or [doobie](https://github.com/tpolecat/doobie) should work without much hassle.
 
 ## Getting instances in scope
@@ -12,10 +12,10 @@ All Cats instances up until [Effect](https://typelevel.org/cats-effect/typeclass
 
 ```scala mdoc:silent:reset
 import cats.syntax.parallel._
-import monix.bio.BIO
+import monix.bio.Task
 
-val taskA = BIO(20)
-val taskB = BIO(22)
+val taskA = Task(20)
+val taskB = Task(22)
 
 // evaluates taskA and taskB in parallel, then sums the results
 val taskAplusB = (taskA, taskB).parMapN(_ + _)
@@ -26,25 +26,25 @@ val taskAplusB = (taskA, taskB).parMapN(_ + _)
 ### Sync and above
 
 Infamous [Sync type class](https://typelevel.org/cats-effect/typeclasses/sync.html) extends `Bracket[F, Throwable]`.
-`Throwable` is the error type and as an unfortunate consequence - any type class from `Sync` and above will only work with `BIO[Throwable, A]`.
+`Throwable` is the error type and as an unfortunate consequence - any type class from `Sync` and above will only work with `Task[Throwable, A]`.
 
 For instance, let's say we want to use [monix.catnap.ConcurrentQueue](https://monix.io/api/current/monix/catnap/ConcurrentQueue.html)
 which exposes an interface built on Cats-Effect type classes so it can be used with any effect:
 
 ```scala mdoc:silent:reset
-import monix.bio.{BIO, Task}
+import monix.bio.Task
 import monix.catnap.ConcurrentQueue
 
-val queueExample: BIO[Throwable, String] = for {
-  queue <- ConcurrentQueue[Task].bounded[String](10)
+val queueExample: Task[Throwable, String] = for {
+  queue <- ConcurrentQueue[Task.Unsafe].bounded[String](10)
   _ <- queue.offer("Message")
   msg <- queue.poll
 } yield msg
 ```
 
 The `bounded` constructor requires `Concurrent[F]` and `ContextShift[F]` in scope.
-Both requirements are automatically derived by `BIO`, but `Concurrent` extends `Sync`, so we need to settle on `Throwable` error type.
-Since our `F` is `BIO[Throwable, *]`, all operations on `ConcurrentQueue` will return `BIO[Throwable, *]`.
+Both requirements are automatically derived by `Task`, but `Concurrent` extends `Sync`, so we need to settle on `Throwable` error type.
+Since our `F` is `Task[Throwable, *]`, all operations on `ConcurrentQueue` will return `Task[Throwable, *]`.
 
 A workaround is to use `hideErrors` because these methods don't throw any errors, and even if they did - how would we handle them?
 
@@ -53,7 +53,7 @@ import monix.bio.{Task, UIO}
 import monix.catnap.ConcurrentQueue
 
 val queueExample: UIO[String] = (for {
-  queue <- ConcurrentQueue[Task].bounded[String](10)
+  queue <- ConcurrentQueue[Task.Unsafe].bounded[String](10)
   _ <- queue.offer("Message")
   msg <- queue.poll
 } yield msg).hideErrors
@@ -65,42 +65,43 @@ If typed errors prove to be a great idea in the long term, and not just a tempor
 
 Cats-Effect provides a hierarchy of type classes that open the door to conversion between effects.
 
-Monix BIO provides:
-- `monix.bio.TaskLike` to convert other effects to `BIO` with nice `BIO.from` syntax.
-- `monix.bio.TaskLift` to convert `BIO` to a different type with `bio.to[F]` syntax.
+Monix-BIO provides:
+- `monix.bio.TaskLike` to convert other effects to `Task` with nice `Task.from` syntax.
+- `monix.bio.TaskLift` to convert `Task` to a different type with `task.to[F]` syntax.
 
 ### cats.effect.IO
 
-Going from `cats.effect.IO` to `BIO` is very simple because `IO` does not need any runtime to execute:
+Going from `cats.effect.IO` to `Task` is very simple because `IO` does not need any runtime to execute:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 
 val io = cats.effect.IO(20)
-val bio: BIO[Throwable, Int] = BIO.from(io)
+val task: Task[Throwable, Int] = Task.from(io)
 ```
 
 Unfortunately, we need `Scheduler` in scope to go the other way:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 
-val bio: BIO[Throwable, Int] = BIO(20)
-val ioAgain: cats.effect.IO[Int] = bio.to[cats.effect.IO]
+val task: Task[Throwable, Int] = Task(20)
+val ioAgain: cats.effect.IO[Int] = task.to[cats.effect.IO]
 ```
 
 ### monix.eval.Task
 
-`BIO` does not have `monix.eval.Task` in dependencies, but since they both use `Scheduler` to run, we can do it
+`Monix-BIO` does not have `monix.eval.Task` in dependencies, but since they both use `Scheduler` to run, we can do it
 without requiring any implicit in scope, if we use `deferAction`:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.{Task => BIOTask}
+import monix.eval.{Task => MonixTask}
 
-val task = monix.eval.Task(20)
-val bio: BIO[Throwable, Int] = BIO.deferAction(implicit s => BIO.from(task))
-val taskAgain: monix.eval.Task[Int] = monix.eval.Task.deferAction(implicit s => bio.to[monix.eval.Task])
+val task = MonixTask(20)
+val bio: BIOTask[Throwable, Int] = BIOTask.deferAction(implicit s => BIOTask.from(task))
+val taskAgain: MonixTask[Int] = MonixTask.deferAction(implicit s => bio.to[MonixTask])
 ```
 
 In the future, we might introduce a type class in `monix-execution`, which will allow this conversion without any tricks with `deferAction`.
@@ -111,23 +112,23 @@ To convert from `ZIO`, you will need `ConcurrentEffect[zio.Task]` instance.
 It can be derived with [zio-interop-cats](https://github.com/zio/interop-cats) if you have `zio.Runtime` in scope:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import zio.interop.catz._
 
 implicit val rts = zio.Runtime.default
 
 val z = zio.ZIO.effect(20)
-val bio: BIO[Throwable, Int] = BIO.from(z)
+val bio: Task[Throwable, Int] = Task.from(z)
 ```
 
 The other direction requires `Scheduler` in scope:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import zio.interop.catz._
 
 implicit val s = monix.execution.Scheduler.global
 
-val bio: BIO[Throwable, Int] = BIO(20)
+val bio: Task[Throwable, Int] = Task(20)
 val zioAgain: zio.Task[Int] = bio.to[zio.Task]
 ```

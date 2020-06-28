@@ -30,8 +30,8 @@ private[bio] object TaskRacePair {
   /**
     * Implementation for `Task.racePair`.
     */
-  def apply[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, RaceEither[E, A, B]] =
-    BIO.Async(
+  def apply[E, A, B](fa: Task[E, A], fb: Task[E, B]): Task[E, RaceEither[E, A, B]] =
+    Task.Async(
       new Register(fa, fb),
       trampolineBefore = true,
       trampolineAfter = true
@@ -42,9 +42,9 @@ private[bio] object TaskRacePair {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A, B](fa: BIO[E, A], fb: BIO[E, B]) extends ForkedRegister[E, RaceEither[E, A, B]] {
+  private final class Register[E, A, B](fa: Task[E, A], fb: Task[E, B]) extends ForkedRegister[E, RaceEither[E, A, B]] {
 
-    def apply(context: BIO.Context[E], cb: BiCallback[E, RaceEither[E, A, B]]): Unit = {
+    def apply(context: Task.Context[E], cb: BiCallback[E, RaceEither[E, A, B]]): Unit = {
       implicit val s = context.scheduler
       val conn = context.connection
 
@@ -60,7 +60,7 @@ private[bio] object TaskRacePair {
       val contextB = context.withConnection(connB)
 
       // First task: A
-      BIO.unsafeStartEnsureAsync(
+      Task.unsafeStartEnsureAsync(
         fa,
         contextA,
         new BiCallback[E, A] {
@@ -97,7 +97,7 @@ private[bio] object TaskRacePair {
       )
 
       // Second task: B
-      BIO.unsafeStartEnsureAsync(
+      Task.unsafeStartEnsureAsync(
         fb,
         contextB,
         new BiCallback[E, B] {

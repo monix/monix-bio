@@ -24,8 +24,8 @@ import scala.util.{Failure, Random, Success}
 
 object BIOParZipSuite extends BaseTestSuite {
 
-  test("BIO.parZip2 should work if source finishes first") { implicit s =>
-    val f = BIO.parZip2(BIO(1), BIO(2).delayExecution(1.second)).runToFuture
+  test("Task.parZip2 should work if source finishes first") { implicit s =>
+    val f = Task.parZip2(Task(1), Task(2).delayExecution(1.second)).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -33,8 +33,8 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success((1, 2))))
   }
 
-  test("BIO.parZip2 should work if other finishes first") { implicit s =>
-    val f = BIO.parZip2(BIO(1).delayExecution(1.second), BIO(2)).runToFuture
+  test("Task.parZip2 should work if other finishes first") { implicit s =>
+    val f = Task.parZip2(Task(1).delayExecution(1.second), Task(2)).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -42,8 +42,8 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success((1, 2))))
   }
 
-  test("BIO.parZip2 should cancel both") { implicit s =>
-    val f = BIO.parZip2(BIO(1).delayExecution(1.second), BIO(2).delayExecution(2.seconds)).runToFuture
+  test("Task.parZip2 should cancel both") { implicit s =>
+    val f = Task.parZip2(Task(1).delayExecution(1.second), Task(2).delayExecution(2.seconds)).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -53,8 +53,8 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.parZip2 should cancel just the source") { implicit s =>
-    val f = BIO.parZip2(BIO(1).delayExecution(1.second), BIO(2).delayExecution(2.seconds)).runToFuture
+  test("Task.parZip2 should cancel just the source") { implicit s =>
+    val f = Task.parZip2(Task(1).delayExecution(1.second), Task(2).delayExecution(2.seconds)).runToFuture
 
     s.tick(1.second)
     assertEquals(f.value, None)
@@ -64,8 +64,8 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.parZip2 should cancel just the other") { implicit s =>
-    val f = BIO.parZip2(BIO(1).delayExecution(2.second), BIO(2).delayExecution(1.seconds)).runToFuture
+  test("Task.parZip2 should cancel just the other") { implicit s =>
+    val f = Task.parZip2(Task(1).delayExecution(2.second), Task(2).delayExecution(1.seconds)).runToFuture
 
     s.tick(1.second)
     assertEquals(f.value, None)
@@ -75,78 +75,78 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.parZip2 should onError from the source before other") { implicit s =>
+  test("Task.parZip2 should onError from the source before other") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.parZip2(BIO(throw ex).delayExecution(1.second), BIO(2).delayExecution(2.seconds)).runToFuture
+    val f = Task.parZip2(Task(throw ex).delayExecution(1.second), Task(2).delayExecution(2.seconds)).runToFuture
 
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 handle terminal errors from the source before other") { implicit s =>
+  test("Task.parZip2 handle terminal errors from the source before other") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.parZip2(BIO.terminate(ex).delayExecution(1.second), BIO(2).delayExecution(2.seconds)).runToFuture
+    val f = Task.parZip2(Task.terminate(ex).delayExecution(1.second), Task(2).delayExecution(2.seconds)).runToFuture
 
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 should onError from the other after the source") { implicit s =>
+  test("Task.parZip2 should onError from the other after the source") { implicit s =>
     val ex = DummyException("dummy")
 
-    val f = BIO.parZip2(BIO(1).delayExecution(1.second), BIO(throw ex)).delayExecution(2.seconds).runToFuture
+    val f = Task.parZip2(Task(1).delayExecution(1.second), Task(throw ex)).delayExecution(2.seconds).runToFuture
 
     s.tick(2.second)
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 should handle terminal errors from the other after the source") { implicit s =>
+  test("Task.parZip2 should handle terminal errors from the other after the source") { implicit s =>
     val ex = DummyException("dummy")
 
-    val f = BIO.parZip2(BIO(1).delayExecution(1.second), BIO.terminate(ex)).delayExecution(2.seconds).runToFuture
+    val f = Task.parZip2(Task(1).delayExecution(1.second), Task.terminate(ex)).delayExecution(2.seconds).runToFuture
 
     s.tick(2.second)
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 should onError from the other before the source") { implicit s =>
+  test("Task.parZip2 should onError from the other before the source") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.parZip2(BIO(1).delayExecution(2.second), BIO(throw ex).delayExecution(1.seconds)).runToFuture
+    val f = Task.parZip2(Task(1).delayExecution(2.second), Task(throw ex).delayExecution(1.seconds)).runToFuture
 
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.parZip2 works") { implicit s =>
-    val f1 = BIO.parZip2(BIO(1), BIO(2)).runToFuture
-    val f2 = BIO.parMap2(BIO(1), BIO(2))((a, b) => (a, b)).runToFuture
+  test("Task.parZip2 works") { implicit s =>
+    val f1 = Task.parZip2(Task(1), Task(2)).runToFuture
+    val f2 = Task.parMap2(Task(1), Task(2))((a, b) => (a, b)).runToFuture
     s.tick()
     assertEquals(f1.value.get, f2.value.get)
   }
 
-  test("BIO.map2 works") { implicit s =>
-    val fa = BIO.map2(BIO(1), BIO(2))(_ + _).runToFuture
+  test("Task.map2 works") { implicit s =>
+    val fa = Task.map2(Task(1), Task(2))(_ + _).runToFuture
     s.tick()
     assertEquals(fa.value, Some(Success(3)))
   }
 
-  test("BIO#map2 should protect against user code") { implicit s =>
+  test("Task#map2 should protect against user code") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.now(10).delayExecution(1.second)
-    val tb = BIO.now(20).delayExecution(1.second)
-    val result = BIO.map2(ta, tb)((_, _) => (throw dummy): Int)
+    val ta = Task.now(10).delayExecution(1.second)
+    val tb = Task.now(20).delayExecution(1.second)
+    val result = Task.map2(ta, tb)((_, _) => (throw dummy): Int)
 
     val f = result.runToFuture
     s.tick(2.seconds)
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.map2 runs effects in strict sequence") { implicit s =>
+  test("Task.map2 runs effects in strict sequence") { implicit s =>
     var effect1 = 0
     var effect2 = 0
-    val ta = BIO.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
-    val tb = BIO.evalAsync { effect2 += 1 }.delayExecution(1.millisecond)
-    BIO.map2(ta, tb)((_, _) => ()).runToFuture
+    val ta = Task.evalAsync { effect1 += 1 }.delayExecution(1.millisecond)
+    val tb = Task.evalAsync { effect2 += 1 }.delayExecution(1.millisecond)
+    Task.map2(ta, tb)((_, _) => ()).runToFuture
     s.tick()
     assertEquals(effect1, 0)
     assertEquals(effect2, 0)
@@ -158,34 +158,34 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(effect2, 1)
   }
 
-  test("BIO.parMap2 works") { implicit s =>
-    val fa = BIO.parMap2(BIO(1), BIO(2))(_ + _).runToFuture
+  test("Task.parMap2 works") { implicit s =>
+    val fa = Task.parMap2(Task(1), Task(2))(_ + _).runToFuture
     s.tick()
     assertEquals(fa.value, Some(Success(3)))
   }
 
-  test("BIO#parMap2 should protect against user code") { implicit s =>
+  test("Task#parMap2 should protect against user code") { implicit s =>
     val dummy = DummyException("dummy")
-    val ta = BIO.now(10).delayExecution(1.second)
-    val tb = BIO.now(20).delayExecution(1.second)
-    val result = BIO.parMap2(ta, tb)((_, _) => (throw dummy): Int)
+    val ta = Task.now(10).delayExecution(1.second)
+    val tb = Task.now(20).delayExecution(1.second)
+    val result = Task.parMap2(ta, tb)((_, _) => (throw dummy): Int)
 
     val f = result.runToFuture
     s.tick(1.second)
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.parZip3 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parZip3(n(1), n(2), n(3))
+  test("Task.parZip3 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parZip3(n(1), n(2), n(3))
     val r = t.runToFuture
     s.tick(3.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3))))
   }
 
-  test("BIO#map3 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(n.seconds)
-    val t = BIO.map3(n(1), n(2), n(3))((_, _, _))
+  test("Task#map3 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(n.seconds)
+    val t = Task.map3(n(1), n(2), n(3))((_, _, _))
     val r = t.runToFuture
     s.tick(3.seconds)
     assertEquals(r.value, None)
@@ -193,25 +193,25 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(r.value, Some(Success((1, 2, 3))))
   }
 
-  test("BIO#parMap3 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parMap3(n(1), n(2), n(3))((_, _, _))
+  test("Task#parMap3 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parMap3(n(1), n(2), n(3))((_, _, _))
     val r = t.runToFuture
     s.tick(3.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3))))
   }
 
-  test("BIO.parZip4 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parZip4(n(1), n(2), n(3), n(4))
+  test("Task.parZip4 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parZip4(n(1), n(2), n(3), n(4))
     val r = t.runToFuture
     s.tick(4.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3, 4))))
   }
 
-  test("BIO#map4 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(n.seconds)
-    val t = BIO.map4(n(1), n(2), n(3), n(4))((_, _, _, _))
+  test("Task#map4 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(n.seconds)
+    val t = Task.map4(n(1), n(2), n(3), n(4))((_, _, _, _))
     val r = t.runToFuture
     s.tick(6.seconds)
     assertEquals(r.value, None)
@@ -219,25 +219,25 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(r.value, Some(Success((1, 2, 3, 4))))
   }
 
-  test("BIO#parMap4 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parMap4(n(1), n(2), n(3), n(4))((_, _, _, _))
+  test("Task#parMap4 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parMap4(n(1), n(2), n(3), n(4))((_, _, _, _))
     val r = t.runToFuture
     s.tick(4.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3, 4))))
   }
 
-  test("BIO.parZip5 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parZip5(n(1), n(2), n(3), n(4), n(5))
+  test("Task.parZip5 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parZip5(n(1), n(2), n(3), n(4), n(5))
     val r = t.runToFuture
     s.tick(5.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3, 4, 5))))
   }
 
-  test("BIO#map5 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(n.seconds)
-    val t = BIO.map5(n(1), n(2), n(3), n(4), n(5))((_, _, _, _, _))
+  test("Task#map5 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(n.seconds)
+    val t = Task.map5(n(1), n(2), n(3), n(4), n(5))((_, _, _, _, _))
     val r = t.runToFuture
     s.tick(10.seconds)
     assertEquals(r.value, None)
@@ -245,25 +245,25 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(r.value, Some(Success((1, 2, 3, 4, 5))))
   }
 
-  test("BIO#parMap5 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parMap5(n(1), n(2), n(3), n(4), n(5))((_, _, _, _, _))
+  test("Task#parMap5 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parMap5(n(1), n(2), n(3), n(4), n(5))((_, _, _, _, _))
     val r = t.runToFuture
     s.tick(5.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3, 4, 5))))
   }
 
-  test("BIO.parZip6 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parZip6(n(1), n(2), n(3), n(4), n(5), n(6))
+  test("Task.parZip6 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parZip6(n(1), n(2), n(3), n(4), n(5), n(6))
     val r = t.runToFuture
     s.tick(6.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3, 4, 5, 6))))
   }
 
-  test("BIO#map6 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(n.seconds)
-    val t = BIO.map6(n(1), n(2), n(3), n(4), n(5), n(6))((_, _, _, _, _, _))
+  test("Task#map6 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(n.seconds)
+    val t = Task.map6(n(1), n(2), n(3), n(4), n(5), n(6))((_, _, _, _, _, _))
     val r = t.runToFuture
     s.tick(20.seconds)
     assertEquals(r.value, None)
@@ -271,9 +271,9 @@ object BIOParZipSuite extends BaseTestSuite {
     assertEquals(r.value, Some(Success((1, 2, 3, 4, 5, 6))))
   }
 
-  test("BIO#parMap6 works") { implicit s =>
-    def n(n: Int) = BIO.now(n).delayExecution(Random.nextInt(n).seconds)
-    val t = BIO.parMap6(n(1), n(2), n(3), n(4), n(5), n(6))((_, _, _, _, _, _))
+  test("Task#parMap6 works") { implicit s =>
+    def n(n: Int) = Task.now(n).delayExecution(Random.nextInt(n).seconds)
+    val t = Task.parMap6(n(1), n(2), n(3), n(4), n(5), n(6))((_, _, _, _, _, _))
     val r = t.runToFuture
     s.tick(6.seconds)
     assertEquals(r.value, Some(Success((1, 2, 3, 4, 5, 6))))

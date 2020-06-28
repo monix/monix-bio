@@ -25,51 +25,51 @@ import scala.util.{Failure, Success}
 
 object TaskEvalOnceSuite extends BaseTestSuite {
   // TODO: needs to be implemented with Coeval and s.tick() removed in other tests
-//  test("BIO.evalOnce should work synchronously") { implicit s =>
+//  test("Task.evalOnce should work synchronously") { implicit s =>
 //    var wasTriggered = false
 //    def trigger(): String = { wasTriggered = true; "result" }
 //
 //    val task = Task.evalOnce(trigger())
 //    assert(!wasTriggered, "!wasTriggered")
 //
-//    val f = task.runToFuture
+//    val f = Task.runToFuture
 //    assert(wasTriggered, "wasTriggered")
 //    assertEquals(f.value, Some(Success("result")))
 //  }
 
-  test("BIO.evalOnce should protect against user code errors") { implicit s =>
+  test("Task.evalOnce should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.evalOnce[Int](if (1 == 1) throw ex else 1).runToFuture
+    val f = Task.evalOnce[Int](if (1 == 1) throw ex else 1).runToFuture
     s.tick()
 
     assertEquals(f.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
-  test("BIO.evalOnce.flatMap should be equivalent with Task.evalOnce") { implicit s =>
+  test("Task.evalOnce.flatMap should be equivalent with Task.evalOnce") { implicit s =>
     val ex = DummyException("dummy")
-    val t = BIO.evalOnce[Int](if (1 == 1) throw ex else 1).flatMap(BIO.now)
-    check(t <-> BIO.raiseError(ex))
+    val t = Task.evalOnce[Int](if (1 == 1) throw ex else 1).flatMap(Task.now)
+    check(t <-> Task.raiseError(ex))
   }
 
-  test("BIO.evalOnce.flatMap should protect against user code") { implicit s =>
+  test("Task.evalOnce.flatMap should protect against user code") { implicit s =>
     val ex = DummyException("dummy")
-    val t = BIO.evalOnce(1).flatMap[Throwable, Int](_ => throw ex)
-    check(t <-> BIO.raiseError(ex))
+    val t = Task.evalOnce(1).flatMap[Throwable, Int](_ => throw ex)
+    check(t <-> Task.raiseError(ex))
   }
 
-  test("BIO.evalOnce.map should work") { implicit s =>
+  test("Task.evalOnce.map should work") { implicit s =>
     check1 { a: Int =>
-      BIO.evalOnce(a).map(_ + 1) <-> BIO.evalOnce(a + 1)
+      Task.evalOnce(a).map(_ + 1) <-> Task.evalOnce(a + 1)
     }
   }
 
-  test("BIO.evalOnce.flatMap should be tail recursive") { implicit s =>
-    def loop(n: Int, idx: Int): Task[Int] =
-      BIO.evalOnce(idx).flatMap { _ =>
+  test("Task.evalOnce.flatMap should be tail recursive") { implicit s =>
+    def loop(n: Int, idx: Int): Task.Unsafe[Int] =
+      Task.evalOnce(idx).flatMap { _ =>
         if (idx < n) loop(n, idx + 1).map(_ + 1)
         else
-          BIO.evalOnce(idx)
+          Task.evalOnce(idx)
       }
 
     val iterations = s.executionModel.recommendedBatchSize * 20
@@ -80,37 +80,37 @@ object TaskEvalOnceSuite extends BaseTestSuite {
 
   // won't pass until it is  implemented with Coeval
 
-//  test("BIO.evalOnce should not be cancelable") { implicit s =>
-//    val t = BIO.evalOnce(10)
+//  test("Task.evalOnce should not be cancelable") { implicit s =>
+//    val t = Task.evalOnce(10)
 //    val f = t.runToFuture
 //    f.cancel()
 //    s.tick()
 //    assertEquals(f.value, Some(Success(Right(10))))
 //  }
 //
-//  test("BIO.evalOnce.coeval") { implicit s =>
-//    val result = BIO.evalOnce(100).runSyncStep
+//  test("Task.evalOnce.coeval") { implicit s =>
+//    val result = Task.evalOnce(100).runSyncStep
 //    assertEquals(result, Right(100))
 //  }
 
-  test("BIO.EvalOnce.runAsync override") { implicit s =>
+  test("Task.EvalOnce.runAsync override") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.evalOnce { if (1 == 1) throw dummy else 10 }
+    val task = Task.evalOnce { if (1 == 1) throw dummy else 10 }
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.evalOnce.materialize should work for success") { implicit s =>
-    val task = BIO.evalOnce(1).materialize
+  test("Task.evalOnce.materialize should work for success") { implicit s =>
+    val task = Task.evalOnce(1).materialize
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Success(1))))
   }
 
-  test("BIO.evalOnce.materialize should work for failure") { implicit s =>
+  test("Task.evalOnce.materialize should work for failure") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.evalOnce[Int](throw dummy).materialize
+    val task = Task.evalOnce[Int](throw dummy).materialize
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Failure(dummy))))

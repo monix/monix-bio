@@ -1,63 +1,63 @@
 ---
 id: creating
-title: Creating BIO
+title: Creating Task
 ---
 
 As always, a full and up to date list of operators is available in the API or the companion object.
 
 ## Simple builders
 
-### BIO.now
+### Task.now
 
-`BIO.now` lifts an already known value in the `BIO` context, the equivalent of `Future.successful`.
+`Task.now` lifts an already known value in the `Task` context, the equivalent of `Future.successful`.
 Do not use it with any side effects, because they will be evaluated immediately and just once:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 
-val task = BIO.now { println("Effect"); "Hello!" }
+val task = Task.now { println("Effect"); "Hello!" }
 //=> Effect
 ```
 
-### BIO.raiseError
+### Task.raiseError
 
-`BIO.raiseError` lifts a typed error to the context of `BIO`:
+`Task.raiseError` lifts a typed error to the context of `Task`:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val error: BIO[DummyException, Nothing] = BIO.raiseError(DummyException("boom"))
+val error: Task[DummyException, Nothing] = Task.raiseError(DummyException("boom"))
 
 error.runAsync(result => println(result))
 //=> Left(Cause.Error(DummyException("boom")))
 ```
 
-### BIO.terminate
+### Task.terminate
 
-`BIO.raiseError` lifts a terminal error to the context of `BIO`:
+`Task.raiseError` lifts a terminal error to the context of `Task`:
 
 ```scala mdoc:silent:reset
-import monix.bio.{BIO, UIO}
+import monix.bio.{Task, UIO}
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val error: UIO[Nothing] = BIO.terminate(DummyException("boom"))
+val error: UIO[Nothing] = Task.terminate(DummyException("boom"))
 
 error.runAsync(result => println(result))
 //=> Left(Cause.Termination(DummyException("boom")))
 ```
 
-### BIO.eval / BIO.apply
+### Task.eval / Task.apply
 
-`BIO.eval` is the equivalent of `Function0`, taking a function that will always be evaluated on running, possibly on the same thread (depending on the chosen execution model):
+`Task.eval` is the equivalent of `Function0`, taking a function that will always be evaluated on running, possibly on the same thread (depending on the chosen execution model):
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 
-val task: BIO[Throwable, String] = BIO.eval { println("Effect"); "Hello!" }
+val task: Task[Throwable, String] = Task.eval { println("Effect"); "Hello!" }
 
 task.runToFuture.foreach(println)
 //=> Effect
@@ -70,14 +70,14 @@ task.runToFuture.foreach(println)
 //=> Hello!
 ```
 
-`BIO.eval` catches errors that are thrown in the passed function:
+`Task.eval` catches errors that are thrown in the passed function:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val task = BIO.eval { println("Effect"); throw DummyException("Goodbye")}
+val task = Task.eval { println("Effect"); throw DummyException("Goodbye")}
 
 task.runAsync(result => println(result))
 //=> Effect
@@ -90,16 +90,16 @@ task.runAsync(result => println(result))
 //=> Left(Cause.Error(DummyException("Goodbye")))
 ```
 
-### BIO.evalTotal / UIO.apply
+### Task.evalTotal / UIO.apply
 
-`BIO.evalTotal` is similar to `eval` because it also suspends side effects, but it doesn't expect any errors to be thrown, so the error type is `Nothing`.
+`Task.evalTotal` is similar to `eval` because it also suspends side effects, but it doesn't expect any errors to be thrown, so the error type is `Nothing`.
 If there are any, they are considered terminal errors.
 
 ```scala mdoc:silent:reset
-import monix.bio.{BIO, UIO}
+import monix.bio.{Task, UIO}
 import monix.execution.Scheduler.Implicits.global
 
-val task: UIO[String] = BIO.evalTotal { println("Effect"); "Hello!" }
+val task: UIO[String] = Task.evalTotal { println("Effect"); "Hello!" }
 
 task.runToFuture.foreach(println)
 //=> Effect
@@ -112,17 +112,17 @@ task.runToFuture.foreach(println)
 //=> Hello!
 ```
 
-### BIO.evalOnce
+### Task.evalOnce
 
-`BIO.evalOnce` is the equivalent of a `lazy val`, a type that cannot be precisely expressed in Scala. 
+`Task.evalOnce` is the equivalent of a `lazy val`, a type that cannot be precisely expressed in Scala. 
 The `evalOnce` builder does memoization on the first run, such that the result of the evaluation will be available for subsequent runs. 
 It also has guaranteed idempotency and thread-safety:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 
-val task = BIO.evalOnce { println("Effect"); "Hello!" }
+val task = Task.evalOnce { println("Effect"); "Hello!" }
 
 task.runToFuture.foreach(println)
 //=> Effect
@@ -133,9 +133,9 @@ task.runToFuture.foreach(println)
 //=> Hello!
 ```
 
-NOTE: this operation is effectively `BIO.eval(f).memoize`.
+NOTE: this operation is effectively `Task.eval(f).memoize`.
 
-### BIO.never
+### Task.never
 
 `Task.never` returns a Task instance that never completes:
 
@@ -160,40 +160,40 @@ This instance is shared so that it can relieve some stress from the garbage coll
 
 ## Asynchronous builders
 
-### BIO.evalAsync
+### Task.evalAsync
 
-By default, `BIO` prefers to execute things on the current thread.
+By default, `Task` prefers to execute things on the current thread.
 
-`BIO.evalAsync` will evaluate the effect asynchronously; consider it an optimized version of `BIO.eval.executeAsync`.
+`Task.evalAsync` will evaluate the effect asynchronously; consider it an optimized version of `Task.eval.executeAsync`.
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 
-BIO.eval(println(s"${Thread.currentThread().getName}: Executing eval")).runSyncUnsafe()
+Task.eval(println(s"${Thread.currentThread().getName}: Executing eval")).runSyncUnsafe()
 // => main: Executing eval
 
-BIO.evalAsync(println(s"${Thread.currentThread().getName}: Executing evalAsync")).runSyncUnsafe()
+Task.evalAsync(println(s"${Thread.currentThread().getName}: Executing evalAsync")).runSyncUnsafe()
 // => scala-execution-context-global-14: Executing evalAsync
 ```
 
-### BIO.create
+### Task.create
 
-`BIO.create` aggregates a handful of methods that create a `BIO` from a callback.
+`Task.create` aggregates a handful of methods that create a `Task` from a callback.
 
 For example, let's create a utility that evaluates expressions with a given delay:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import scala.util.Try
 import concurrent.duration._
 
 def evalDelayed[A](delay: FiniteDuration)
-  (f: => A): BIO[Throwable, A] = {
+  (f: => A): Task[Throwable, A] = {
 
   // On execution, we have the scheduler and
   // the callback injected ;-)
-  BIO.create { (scheduler, callback) =>
+  Task.create { (scheduler, callback) =>
     val cancelable =
       scheduler.scheduleOnce(delay) {
         callback(Try(f))
@@ -206,10 +206,10 @@ def evalDelayed[A](delay: FiniteDuration)
 }
 ```
 
-`BIO.create` supports different cancelation tokens, such as:
+`Task.create` supports different cancelation tokens, such as:
 - `Unit` for non-cancelable tasks
 - `cats.effect.IO`
-- `monix.bio.BIO`
+- `monix.bio.Task`
 - `monix.execution.Cancelable`
 - And others.
 
@@ -221,17 +221,17 @@ Some notes:
 - The [Callback](https://monix.io/docs/3x/execution/callback.html) gets injected on execution, and that callback has a contract. In particular, you need to execute `onSuccess`, `onError`, or `onTermination` or apply only once. The implementation does a reasonably good job to protect against contract violations, but if you do call it multiple times, then you’re doing it risking undefined and nondeterministic behavior.
 - It’s OK to return a `Cancelable.empty` in case the executed process really can’t be canceled in time. Still, you should strive to produce a cancelable that does cancel your execution, if possible.
 
-### BIO.fromFuture
+### Task.fromFuture
 
-`BIO.fromFuture` can convert any Scala Future instance into a `BIO`:
+`Task.fromFuture` can convert any Scala Future instance into a `Task`:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 import scala.concurrent.Future
 
 val future = Future { println("Effect"); "Hello!" }
-val task = BIO.fromFuture(future)
+val task = Task.fromFuture(future)
 //=> Effect
 
 task.runToFuture.foreach(println)
@@ -243,17 +243,17 @@ task.runToFuture.foreach(println)
 Note that `fromFuture` takes a strict argument, and that may not be what you want. 
 When you receive a Future like this, whatever process that’s supposed to complete has probably started already.
 You might want a factory of Future to be able to suspend its evaluation and reuse it.
-The design of `BIO` is to have fine-grained control over the evaluation model, so in case you want a factory, 
-you need to either combine it with `BIO.defer` or use `BIO.deferFuture`:
+The design of `Task` is to have fine-grained control over the evaluation model, so in case you want a factory, 
+you need to either combine it with `Task.defer` or use `Task.deferFuture`:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 import scala.concurrent.Future
 
-val task = BIO.defer {
+val task = Task.defer {
   val future = Future { println("Effect"); "Hello!" }
-  BIO.fromFuture(future)
+  Task.fromFuture(future)
 }
 
 task.runToFuture.foreach(println)
@@ -266,11 +266,11 @@ task.runToFuture.foreach(println)
 Or use the equivalent:
 
 ```scala mdoc:silent:reset
-import monix.bio.BIO
+import monix.bio.Task
 import monix.execution.Scheduler.Implicits.global
 import scala.concurrent.Future
 
-val task = BIO.deferFuture {
+val task = Task.deferFuture {
   Future { println("Effect"); "Hello!" }
 }
 
@@ -282,9 +282,9 @@ task.runToFuture.foreach(println)
 //=> Hello!
 ```
 
-### BIO.deferFutureAction
+### Task.deferFutureAction
 
-`BIO.deferFutureAction` wraps calls that generate Future results into Task, 
+`Task.deferFutureAction` wraps calls that generate Future results into Task, 
 provided a callback with an injected Scheduler to act as the necessary ExecutionContext.
 
 This builder helps with wrapping Future-enabled APIs that need an implicit ExecutionContext to work. 
@@ -303,19 +303,19 @@ We’d like to wrap this function into one that returns a lazy Task that evaluat
 import monix.bio.Task
 import scala.concurrent.ExecutionContext
 
-def sumTask(list: Seq[Int])(implicit ec: ExecutionContext): Task[Int] =
+def sumTask(list: Seq[Int])(implicit ec: ExecutionContext): Task.Unsafe[Int] =
   Task.deferFuture(sumFuture(list))
 ```
 
-But this is not only superfluous but against the best practices of using `BIO`. 
+But this is not only superfluous but against the best practices of using `Task`. 
 The difference is that Task takes a Scheduler (inheriting from ExecutionContext) only when the run gets called, but we don’t need it just for building a Task reference.
-`BIO` is aware that `Scheduler` will be supplied during execution, and it can access it any time. 
+`Task` is aware that `Scheduler` will be supplied during execution, and it can access it any time. 
 With `deferFutureAction` or `deferAction` we get to have an injected Scheduler in the passed callback:
 
 ```scala mdoc:silent
 import monix.bio.Task
 
-def sumTask(list: Seq[Int]): Task[Int] =
+def sumTask(list: Seq[Int]): Task.Unsafe[Int] =
   Task.deferFutureAction { implicit scheduler =>
     sumFuture(list)
   }

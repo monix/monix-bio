@@ -20,8 +20,8 @@ package monix.bio.internal
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
-import monix.bio.{BIO, BiCallback}
-import monix.bio.BIO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
+import monix.bio.{BiCallback, Task}
+import monix.bio.Task.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
 import monix.execution.exceptions.UncaughtErrorException
@@ -36,8 +36,8 @@ private[bio] object TaskRunSyncUnsafe {
   /** Run-loop specialization that evaluates the given task and blocks for the result
     * if the given task is asynchronous.
     */
-  def apply[E, A](source: BIO[E, A], timeout: Duration, scheduler: Scheduler, opts: BIO.Options): A = {
-    var current = source.asInstanceOf[BIO[Any, Any]]
+  def apply[E, A](source: Task[E, A], timeout: Duration, scheduler: Scheduler, opts: Task.Options): A = {
+    var current = source.asInstanceOf[Task[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
     // Values from Now, Always and Once are unboxed in this var, for code reuse
@@ -150,10 +150,10 @@ private[bio] object TaskRunSyncUnsafe {
   }
 
   private def blockForResult[A](
-    source: BIO[Any, Any],
+    source: Task[Any, Any],
     limit: Duration,
     scheduler: Scheduler,
-    opts: BIO.Options,
+    opts: Task.Options,
     bFirst: Bind,
     bRest: CallStack
   ): A = {

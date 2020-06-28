@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback}
-import monix.bio.BIO.{Async, Context}
+import monix.bio.{BiCallback, Task}
+import monix.bio.Task.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.Ack.Stop
 import monix.execution.Scheduler
@@ -33,7 +33,7 @@ private[bio] object TaskMapBoth {
   /**
     * Implementation for `Task.mapBoth`.
     */
-  def apply[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] = {
+  def apply[E, A1, A2, R](fa1: Task[E, A1], fa2: Task[E, A2])(f: (A1, A2) => R): Task[E, R] = {
     Async(new Register(fa1, fa2, f), trampolineBefore = true, trampolineAfter = true, restoreLocals = true)
   }
 
@@ -42,7 +42,7 @@ private[bio] object TaskMapBoth {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2], f: (A1, A2) => R)
+  private final class Register[E, A1, A2, R](fa1: Task[E, A1], fa2: Task[E, A2], f: (A1, A2) => R)
       extends ForkedRegister[E, R] {
 
     /* For signaling the values after the successful completion of both tasks. */
@@ -64,8 +64,8 @@ private[bio] object TaskMapBoth {
     }
 
     /* For signaling an error. */
-    @tailrec def sendError(mainConn: TaskConnection[E], state: AtomicAny[AnyRef], cb: BiCallback[E, R], ex: E)(
-      implicit s: Scheduler
+    @tailrec def sendError(mainConn: TaskConnection[E], state: AtomicAny[AnyRef], cb: BiCallback[E, R], ex: E)(implicit
+      s: Scheduler
     ): Unit = {
 
       // Guarding the contract of the callback, as we cannot send an error
@@ -121,7 +121,7 @@ private[bio] object TaskMapBoth {
 
       // Light asynchronous boundary; with most scheduler implementations
       // it will not fork a new (logical) thread!
-      BIO.unsafeStartEnsureAsync(
+      Task.unsafeStartEnsureAsync(
         fa1,
         context1,
         new BiCallback[E, A1] {
@@ -149,7 +149,7 @@ private[bio] object TaskMapBoth {
       )
 
       // Start first task with a "hard" async boundary to ensure parallel evaluation
-      BIO.unsafeStartEnsureAsync(
+      Task.unsafeStartEnsureAsync(
         fa2,
         context2,
         new BiCallback[E, A2] {

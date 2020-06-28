@@ -23,8 +23,8 @@ import monix.execution.schedulers.TestScheduler
 import scala.util.Success
 
 object TaskExecuteAsyncSuite extends BaseTestSuite {
-  test("BIO.now.executeAsync should execute async") { implicit s =>
-    val t = BIO.now(10).executeAsync
+  test("Task.now.executeAsync should execute async") { implicit s =>
+    val t = Task.now(10).executeAsync
     val f = t.runToFuture
 
     assertEquals(f.value, None)
@@ -32,9 +32,9 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("BIO.now.executeOn should execute async if forceAsync = true") { implicit s =>
+  test("Task.now.executeOn should execute async if forceAsync = true") { implicit s =>
     val s2 = TestScheduler()
-    val t = BIO.now(10).executeOn(s2)
+    val t = Task.now(10).executeOn(s2)
     val f = t.runToFuture
 
     assertEquals(f.value, None)
@@ -46,18 +46,18 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("BIO.now.executeOn should not execute async if forceAsync = false") { implicit s =>
+  test("Task.now.executeOn should not execute async if forceAsync = false") { implicit s =>
     val s2 = TestScheduler()
-    val t = BIO.now(10).executeOn(s2, forceAsync = false)
+    val t = Task.now(10).executeOn(s2, forceAsync = false)
     val f = t.runToFuture
 
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("BIO.create.executeOn should execute async") { implicit s =>
+  test("Task.create.executeOn should execute async") { implicit s =>
     val s2 = TestScheduler()
-    val source = BIO.cancelable0[Int, Int] { (_, cb) =>
-      cb.onSuccess(10); BIO.unit
+    val source = Task.cancelable0[Int, Int] { (_, cb) =>
+      cb.onSuccess(10); Task.unit
     }
     val t = source.executeOn(s2)
     val f = t.attempt.runToFuture
@@ -73,7 +73,7 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
 
   test("executeAsync should be stack safe, test 1") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 5000
-    var task = BIO.eval(1)
+    var task = Task.eval(1)
     for (_ <- 0 until count) task = task.executeAsync
 
     val result = task.runToFuture
@@ -81,9 +81,9 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(1)))
   }
 
-  test("BIO.executeOn should be stack safe, test 2") { implicit s =>
+  test("Task.executeOn should be stack safe, test 2") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 5000
-    var task = BIO.eval(1)
+    var task = Task.eval(1)
     for (_ <- 0 until count) task = task.executeOn(s)
 
     val result = task.runToFuture
@@ -95,8 +95,8 @@ object TaskExecuteAsyncSuite extends BaseTestSuite {
     val count = if (Platform.isJVM) 100000 else 5000
 
     def loop(n: Int): UIO[Int] =
-      if (n <= 0) BIO.now(0).executeAsync
-      else BIO.now(n).executeAsync.flatMap(_ => loop(n - 1))
+      if (n <= 0) Task.now(0).executeAsync
+      else Task.now(n).executeAsync.flatMap(_ => loop(n - 1))
 
     val result = loop(count).runToFuture
     s.tick()

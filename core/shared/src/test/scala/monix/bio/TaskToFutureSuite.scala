@@ -25,7 +25,7 @@ import scala.util.{Failure, Success}
 
 object TaskToFutureSuite extends BaseTestSuite {
   test("Task.fromFuture for already completed references") { implicit s =>
-    def sum(list: List[Int]): Task[Int] =
+    def sum(list: List[Int]): Task.Unsafe[Int] =
       Task.fromFuture(Future.successful(list.sum))
 
     val f = sum((0 until 100).toList).runToFuture
@@ -35,7 +35,7 @@ object TaskToFutureSuite extends BaseTestSuite {
   }
 
   test("Task.deferFuture for already completed references") { implicit s =>
-    def sum(list: List[Int]): Task[Int] =
+    def sum(list: List[Int]): Task.Unsafe[Int] =
       Task.deferFuture(Future.successful(list.sum))
 
     val f = sum((0 until 100).toList).runToFuture
@@ -45,7 +45,7 @@ object TaskToFutureSuite extends BaseTestSuite {
   }
 
   test("Task.deferFutureAction for already completed references") { implicit s =>
-    def sum(list: List[Int]): Task[Int] =
+    def sum(list: List[Int]): Task.Unsafe[Int] =
       Task.deferFutureAction(implicit s => Future.successful(list.sum))
 
     val f = sum((0 until 100).toList).runToFuture
@@ -79,7 +79,7 @@ object TaskToFutureSuite extends BaseTestSuite {
   }
 
   test("Task.fromFuture for completed reference is stack safe (flatMap)") { implicit s =>
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): Task.Unsafe[Int] =
       if (n > 0)
         Task.fromFuture(Future.successful(acc + 1)).flatMap(loop(n - 1, _))
       else
@@ -90,7 +90,7 @@ object TaskToFutureSuite extends BaseTestSuite {
   }
 
   test("Task.deferFuture for completed reference is stack safe (flatMap)") { implicit s =>
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): Task.Unsafe[Int] =
       if (n > 0)
         Task.deferFuture(Future.successful(acc + 1)).flatMap(loop(n - 1, _))
       else
@@ -101,7 +101,7 @@ object TaskToFutureSuite extends BaseTestSuite {
   }
 
   test("Task.deferFutureAction for completed reference is stack safe (flatMap)") { implicit s =>
-    def loop(n: Int, acc: Int): Task[Int] =
+    def loop(n: Int, acc: Int): Task.Unsafe[Int] =
       if (n > 0)
         Task
           .deferFutureAction(implicit s => Future.successful(acc + 1))

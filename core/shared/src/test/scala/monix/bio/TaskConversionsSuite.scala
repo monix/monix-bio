@@ -31,16 +31,16 @@ import scala.util.{Failure, Success}
 
 object TaskConversionsSuite extends BaseTestSuite {
 
-  test("BIO.now(value).to[IO]") { implicit s =>
-    assertEquals(BIO.now(123).to[IO].unsafeRunSync(), 123)
+  test("Task.now(value).to[IO]") { implicit s =>
+    assertEquals(Task.now(123).to[IO].unsafeRunSync(), 123)
   }
 
-  test("BIO.eval(thunk).to[IO]") { implicit s =>
-    assertEquals(BIO.eval(123).to[IO].unsafeRunSync(), 123)
+  test("Task.eval(thunk).to[IO]") { implicit s =>
+    assertEquals(Task.eval(123).to[IO].unsafeRunSync(), 123)
   }
 
-  test("BIO.eval(thunk).executeAsync.to[IO]") { implicit s =>
-    val io = BIO.eval(123).executeAsync.to[IO]
+  test("Task.eval(thunk).executeAsync.to[IO]") { implicit s =>
+    val io = Task.eval(123).executeAsync.to[IO]
     val f = io.unsafeToFuture()
 
     assertEquals(f.value, None)
@@ -48,12 +48,12 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("BIO.evalTotal(thunk).to[IO]") { implicit s =>
-    assertEquals(BIO.evalTotal(123).to[IO].unsafeRunSync(), 123)
+  test("Task.evalTotal(thunk).to[IO]") { implicit s =>
+    assertEquals(Task.evalTotal(123).to[IO].unsafeRunSync(), 123)
   }
 
-  test("BIO.evalTotal(thunk).executeAsync.to[IO]") { implicit s =>
-    val io = BIO.evalTotal(123).executeAsync.to[IO]
+  test("Task.evalTotal(thunk).executeAsync.to[IO]") { implicit s =>
+    val io = Task.evalTotal(123).executeAsync.to[IO]
     val f = io.unsafeToFuture()
 
     assertEquals(f.value, None)
@@ -61,17 +61,17 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("BIO.raiseError(dummy).to[IO]") { implicit s =>
+  test("Task.raiseError(dummy).to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
     intercept[DummyException] {
-      BIO.raiseError(dummy).to[IO].unsafeRunSync()
+      Task.raiseError(dummy).to[IO].unsafeRunSync()
     }
     ()
   }
 
-  test("BIO.raiseError(dummy).executeAsync.to[IO]") { implicit s =>
+  test("Task.raiseError(dummy).executeAsync.to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
-    val io = BIO.raiseError(dummy).executeAsync.to[IO]
+    val io = Task.raiseError(dummy).executeAsync.to[IO]
     val f = io.unsafeToFuture()
 
     assertEquals(f.value, None)
@@ -79,17 +79,17 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.terminate(dummy).to[IO]") { implicit s =>
+  test("Task.terminate(dummy).to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
     intercept[DummyException] {
-      BIO.terminate(dummy).to[IO].unsafeRunSync()
+      Task.terminate(dummy).to[IO].unsafeRunSync()
     }
     ()
   }
 
-  test("BIO.terminate(dummy).executeAsync.to[IO]") { implicit s =>
+  test("Task.terminate(dummy).executeAsync.to[IO]") { implicit s =>
     val dummy = DummyException("dummy")
-    val io = BIO.terminate(dummy).executeAsync.to[IO]
+    val io = Task.terminate(dummy).executeAsync.to[IO]
     val f = io.unsafeToFuture()
 
     assertEquals(f.value, None)
@@ -97,128 +97,128 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.toAsync converts successful tasks") { implicit s =>
-    val io = BIO.now(123).executeAsync.toAsync[IO]
+  test("Task.toAsync converts successful tasks") { implicit s =>
+    val io = Task.now(123).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("BIO.toAsync converts tasks with typed errors") { implicit s =>
+  test("Task.toAsync converts tasks with typed errors") { implicit s =>
     val ex = DummyException("TypedError")
-    val io = BIO.raiseError(ex).executeAsync.toAsync[IO]
+    val io = Task.raiseError(ex).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.toAsync converts tasks with terminal errors") { implicit s =>
+  test("Task.toAsync converts tasks with terminal errors") { implicit s =>
     val ex = DummyException("Fatal")
-    val io = BIO.terminate(ex).executeAsync.toAsync[IO]
+    val io = Task.terminate(ex).executeAsync.toAsync[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.toConcurrent converts successful tasks") { implicit s =>
+  test("Task.toConcurrent converts successful tasks") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    val io = BIO.evalAsync(123).toConcurrent[IO]
+    val io = Task.evalAsync(123).toConcurrent[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("BIO.toConcurrent converts tasks with typed errors") { implicit s =>
+  test("Task.toConcurrent converts tasks with typed errors") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val ex = DummyException("TypedError")
-    val io = BIO.raiseError(ex).executeAsync.toConcurrent[IO]
+    val io = Task.raiseError(ex).executeAsync.toConcurrent[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.toConcurrent converts tasks with terminal errors") { implicit s =>
+  test("Task.toConcurrent converts tasks with terminal errors") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val ex = DummyException("Fatal")
-    val io = BIO.terminate(ex).executeAsync.toConcurrent[IO]
+    val io = Task.terminate(ex).executeAsync.toConcurrent[IO]
     val f = io.unsafeToFuture()
 
     s.tick()
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.fromEffect(task)) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromEffect(task) <-> task
+  test("Task.fromEffect(task)) <-> task") { implicit s =>
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromEffect(task) <-> task
     }
   }
 
-  test("BIO.fromEffect(task.toAsync[Task]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromEffect(task.toAsync[Task]) <-> task
+  test("Task.fromEffect(task.toAsync[Task.Unsafe]) <-> task") { implicit s =>
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromEffect(task.toAsync[Task.Unsafe]) <-> task
     }
   }
 
-  test("BIO.fromEffect(task.toAsync[IO]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromEffect(task.toAsync[IO]) <-> task
+  test("Task.fromEffect(task.toAsync[IO]) <-> task") { implicit s =>
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromEffect(task.toAsync[IO]) <-> task
     }
   }
 
-  test("BIO.fromEffect(task.toAsync[F]) <-> task") { implicit s =>
+  test("Task.fromEffect(task.toAsync[F]) <-> task") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: CustomEffect = new CustomEffect
 
-    check1 { task: Task[Int] =>
-      BIO.fromEffect(task.toAsync[CIO]) <-> task
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromEffect(task.toAsync[CIO]) <-> task
     }
   }
 
-  test("BIO.fromEffect converts `IO`") { implicit s =>
+  test("Task.fromEffect converts `IO`") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    val f = BIO.fromEffect(IO(123)).runToFuture
+    val f = Task.fromEffect(IO(123)).runToFuture
     assertEquals(f.value, Some(Success(123)))
 
     val io2 = IO.shift >> IO(123)
-    val f2 = BIO.fromEffect(io2).runToFuture
+    val f2 = Task.fromEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
     assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
     val io3 = IO.raiseError(ex)
-    val f3 = BIO.fromEffect(io3).runToFuture
+    val f3 = Task.fromEffect(io3).runToFuture
     assertEquals(f3.value, Some(Failure(ex)))
   }
 
-  test("BIO.fromEffect converts valid custom effects") { implicit s =>
+  test("Task.fromEffect converts valid custom effects") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: Effect[CIO] = new CustomEffect
 
-    val f = BIO.fromEffect(CIO(IO(123))).runToFuture
+    val f = Task.fromEffect(CIO(IO(123))).runToFuture
     assertEquals(f.value, Some(Success(123)))
 
     val io2 = CIO(IO.shift) >> CIO(IO(123))
-    val f2 = BIO.fromEffect(io2).runToFuture
+    val f2 = Task.fromEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
     assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
-    val f3 = BIO.fromEffect(CIO(IO.raiseError(ex))).runToFuture
+    val f3 = Task.fromEffect(CIO(IO.raiseError(ex))).runToFuture
     assertEquals(f3.value, Some(Failure(ex)))
   }
 
-  test("BIO.fromEffect doesn't convert invalid custom effects") { implicit s =>
+  test("Task.fromEffect doesn't convert invalid custom effects") { implicit s =>
     val ex = DummyException("Dummy")
     implicit val effect: Effect[CIO] =
       new CustomEffect()(IO.contextShift(s)) {
@@ -227,17 +227,17 @@ object TaskConversionsSuite extends BaseTestSuite {
         ): SyncIO[Unit] = throw ex
       }
 
-    val f = BIO.fromEffect(CIO(IO(123))).runToFuture
+    val f = Task.fromEffect(CIO(IO(123))).runToFuture
     s.tick()
     assertEquals(f.value, None)
     assertEquals(s.state.lastReportedError, ex)
   }
 
-  test("BIO.fromEffect(task.toConcurrent[IO]) preserves cancellability") { implicit s =>
+  test("Task.fromEffect(task.toConcurrent[IO]) preserves cancellability") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    val task0 = BIO(123).delayExecution(10.seconds)
-    val task = BIO.fromEffect(task0.toConcurrent[IO])
+    val task0 = Task(123).delayExecution(10.seconds)
+    val task = Task.fromEffect(task0.toConcurrent[IO])
     val f = task.runToFuture
 
     s.tick()
@@ -253,72 +253,72 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.fromConcurrentEffect(task) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromConcurrentEffect(task) <-> task
+  test("Task.fromConcurrentEffect(task) <-> task") { implicit s =>
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromConcurrentEffect(task) <-> task
     }
   }
 
-  test("BIO.fromConcurrentEffect(task.toConcurrent[Task]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromConcurrentEffect(task.toConcurrent[Task]) <-> task
+  test("Task.fromConcurrentEffect(task.toConcurrent[Task.Unsafe]) <-> task") { implicit s =>
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromConcurrentEffect(task.toConcurrent[Task.Unsafe]) <-> task
     }
   }
 
-  test("BIO.fromConcurrentEffect(task.toConcurrent[IO]) <-> task") { implicit s =>
+  test("Task.fromConcurrentEffect(task.toConcurrent[IO]) <-> task") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    check1 { task: Task[Int] =>
-      BIO.fromConcurrentEffect(task.toConcurrent[IO]) <-> task
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromConcurrentEffect(task.toConcurrent[IO]) <-> task
     }
   }
 
-  test("BIO.fromConcurrentEffect(task.toConcurrent[F]) <-> task") { implicit s =>
+  test("Task.fromConcurrentEffect(task.toConcurrent[F]) <-> task") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: CustomConcurrentEffect = new CustomConcurrentEffect
 
-    check1 { task: Task[Int] =>
-      BIO.fromConcurrentEffect(task.toConcurrent[CIO]) <-> task
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromConcurrentEffect(task.toConcurrent[CIO]) <-> task
     }
   }
 
-  test("BIO.fromConcurrentEffect converts `IO`") { implicit s =>
+  test("Task.fromConcurrentEffect converts `IO`") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
-    val f = BIO.fromConcurrentEffect(IO(123)).runToFuture
+    val f = Task.fromConcurrentEffect(IO(123)).runToFuture
     assertEquals(f.value, Some(Success(123)))
 
     val io2 = IO.shift >> IO(123)
-    val f2 = BIO.fromConcurrentEffect(io2).runToFuture
+    val f2 = Task.fromConcurrentEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
     assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
     val io3 = IO.raiseError(ex)
-    val f3 = BIO.fromConcurrentEffect(io3).runToFuture
+    val f3 = Task.fromConcurrentEffect(io3).runToFuture
     assertEquals(f3.value, Some(Failure(ex)))
   }
 
-  test("BIO.fromConcurrentEffect converts valid custom effects") { implicit s =>
+  test("Task.fromConcurrentEffect converts valid custom effects") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: ConcurrentEffect[CIO] = new CustomConcurrentEffect()
 
-    val f = BIO.fromConcurrentEffect(CIO(IO(123))).runToFuture
+    val f = Task.fromConcurrentEffect(CIO(IO(123))).runToFuture
     assertEquals(f.value, Some(Success(123)))
 
     val io2 = CIO(IO.shift) >> CIO(IO(123))
-    val f2 = BIO.fromConcurrentEffect(io2).runToFuture
+    val f2 = Task.fromConcurrentEffect(io2).runToFuture
     assertEquals(f2.value, None)
     s.tick()
     assertEquals(f2.value, Some(Success(123)))
 
     val ex = DummyException("Dummy")
-    val f3 = BIO.fromConcurrentEffect(CIO(IO.raiseError(ex))).runToFuture
+    val f3 = Task.fromConcurrentEffect(CIO(IO.raiseError(ex))).runToFuture
     assertEquals(f3.value, Some(Failure(ex)))
   }
 
-  test("BIO.fromConcurrentEffect doesn't convert invalid custom effects") { implicit s =>
+  test("Task.fromConcurrentEffect doesn't convert invalid custom effects") { implicit s =>
     val ex = DummyException("Dummy")
     implicit val effect: ConcurrentEffect[CIO] =
       new CustomConcurrentEffect()(IO.contextShift(s)) {
@@ -327,7 +327,7 @@ object TaskConversionsSuite extends BaseTestSuite {
         ): SyncIO[CancelToken[CIO]] = throw ex
       }
 
-    val f = BIO.fromConcurrentEffect(CIO(IO(123))).runToFuture
+    val f = Task.fromConcurrentEffect(CIO(IO(123))).runToFuture
     assertEquals(f.value, None)
     s.tick()
     assertEquals(f.value, None)
@@ -335,12 +335,12 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, ex)
   }
 
-  test("BIO.fromConcurrentEffect preserves cancellability of an `IO`") { implicit s =>
+  test("Task.fromConcurrentEffect preserves cancellability of an `IO`") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val timer = SchedulerEffect.timer[IO](s)
     val io = timer.sleep(10.seconds)
-    val f = BIO.fromConcurrentEffect(io).runToFuture
+    val f = Task.fromConcurrentEffect(io).runToFuture
 
     s.tick()
     assert(s.state.tasks.nonEmpty, "tasks.nonEmpty")
@@ -355,13 +355,13 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.fromConcurrentEffect preserves cancellability of a custom effect") { implicit s =>
+  test("Task.fromConcurrentEffect preserves cancellability of a custom effect") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: ConcurrentEffect[CIO] = new CustomConcurrentEffect
 
     val timer = SchedulerEffect.timer[CIO](s)
     val cio = timer.sleep(10.seconds)
-    val f = BIO.fromConcurrentEffect(cio)(effect).runToFuture
+    val f = Task.fromConcurrentEffect(cio)(effect).runToFuture
 
     s.tick()
     assert(s.state.tasks.nonEmpty, "tasks.nonEmpty")
@@ -376,11 +376,11 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.fromConcurrentEffect(task.toConcurrent[IO]) preserves cancellability") { implicit s =>
+  test("Task.fromConcurrentEffect(task.toConcurrent[IO]) preserves cancellability") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
 
     val task0 = Task(123).delayExecution(10.seconds)
-    val task = BIO.fromConcurrentEffect(task0.toConcurrent[IO])
+    val task = Task.fromConcurrentEffect(task0.toConcurrent[IO])
 
     val f = task.runToFuture
     s.tick()
@@ -396,12 +396,12 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.fromConcurrentEffect(task.toConcurrent[CIO]) preserves cancellability") { implicit s =>
+  test("Task.fromConcurrentEffect(task.toConcurrent[CIO]) preserves cancellability") { implicit s =>
     implicit val cs: ContextShift[IO] = IO.contextShift(s)
     implicit val effect: ConcurrentEffect[CIO] = new CustomConcurrentEffect
 
     val task0 = Task(123).delayExecution(10.seconds)
-    val task = BIO.fromConcurrentEffect(task0.toConcurrent[CIO])
+    val task = Task.fromConcurrentEffect(task0.toConcurrent[CIO])
 
     val f = task.runToFuture
     s.tick()
@@ -417,7 +417,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.fromReactivePublisher converts `.onNext` callbacks") { implicit s =>
+  test("Task.fromReactivePublisher converts `.onNext` callbacks") { implicit s =>
     val pub = new Publisher[Int] {
       def subscribe(s: Subscriber[_ >: Int]): Unit = {
         s.onSubscribe {
@@ -438,10 +438,10 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(Some(123))))
+    assertEquals(Task.fromReactivePublisher(pub).runToFuture.value, Some(Success(Some(123))))
   }
 
-  test("BIO.fromReactivePublisher converts `.onComplete` callbacks") { implicit s =>
+  test("Task.fromReactivePublisher converts `.onComplete` callbacks") { implicit s =>
     val pub = new Publisher[Int] {
       def subscribe(s: Subscriber[_ >: Int]): Unit = {
         s.onSubscribe {
@@ -461,10 +461,10 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Success(None)))
+    assertEquals(Task.fromReactivePublisher(pub).runToFuture.value, Some(Success(None)))
   }
 
-  test("BIO.fromReactivePublisher converts `.onError` callbacks") { implicit s =>
+  test("Task.fromReactivePublisher converts `.onError` callbacks") { implicit s =>
     val dummy = DummyException("Error")
     val pub = new Publisher[Int] {
       def subscribe(s: Subscriber[_ >: Int]): Unit = {
@@ -485,10 +485,10 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Failure(dummy)))
+    assertEquals(Task.fromReactivePublisher(pub).runToFuture.value, Some(Failure(dummy)))
   }
 
-  test("BIO.fromReactivePublisher protects against user errors") { implicit s =>
+  test("Task.fromReactivePublisher protects against user errors") { implicit s =>
     val dummy = DummyException("Error")
     val pub = new Publisher[Int] {
       def subscribe(s: Subscriber[_ >: Int]): Unit = {
@@ -501,10 +501,10 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    assertEquals(BIO.fromReactivePublisher(pub).runToFuture.value, Some(Failure(dummy)))
+    assertEquals(Task.fromReactivePublisher(pub).runToFuture.value, Some(Failure(dummy)))
   }
 
-  test("BIO.fromReactivePublisher is cancelable") { implicit s =>
+  test("Task.fromReactivePublisher is cancelable") { implicit s =>
     var wasRequested = false
     val pub = new Publisher[Int] {
       def subscribe(s: Subscriber[_ >: Int]): Unit = {
@@ -527,7 +527,7 @@ object TaskConversionsSuite extends BaseTestSuite {
       }
     }
 
-    val bio = BIO.fromReactivePublisher(pub).delayExecution(1.second)
+    val bio = Task.fromReactivePublisher(pub).delayExecution(1.second)
     val f = bio.runToFuture
     f.cancel()
 
@@ -542,9 +542,9 @@ object TaskConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("BIO.fromReactivePublisher <-> Task") { implicit s =>
-    check1 { task: Task[Int] =>
-      BIO.fromReactivePublisher(task.toReactivePublisher) <-> task.map(Some(_))
+  test("Task.fromReactivePublisher <-> Task") { implicit s =>
+    check1 { task: Task.Unsafe[Int] =>
+      Task.fromReactivePublisher(task.toReactivePublisher) <-> task.map(Some(_))
     }
   }
 

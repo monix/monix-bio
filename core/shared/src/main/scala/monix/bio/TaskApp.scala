@@ -22,8 +22,8 @@ import monix.catnap.SchedulerEffect
 import monix.bio.instances.CatsConcurrentEffectForTask
 import monix.execution.Scheduler
 
-/** Safe `App` type that executes a [[BIO]].  Shutdown occurs after
-  * the `BIO` completes, as follows:
+/** Safe `App` type that executes a [[Task]].  Shutdown occurs after
+  * the `Task` completes, as follows:
   *
   * - If completed with `ExitCode.Success`, the main method exits and
   *   shutdown is handled by the platform.
@@ -31,10 +31,10 @@ import monix.execution.Scheduler
   * - If completed with any other `ExitCode`, `sys.exit` is called
   *   with the specified code.
   *
-  * - If the `BIO` raises an error, the stack trace is printed to
+  * - If the `Task` raises an error, the stack trace is printed to
   *   standard error and `sys.exit(1)` is called.
   *
-  * When a shutdown is requested via a signal, the `BIO` is canceled and
+  * When a shutdown is requested via a signal, the `Task` is canceled and
   * we wait for the `IO` to release any resources.  The process exits
   * with the numeric value of the signal plus 128.
   *
@@ -43,7 +43,7 @@ import monix.execution.Scheduler
   *   import cats.implicits._
   *   import monix.bio._
   *
-  *   object MyApp extends BIOApp {
+  *   object MyApp extends TaskApp {
   *     def run(args: List[String]): UIO[ExitCode] =
   *       args.headOption match {
   *         case Some(name) =>
@@ -56,31 +56,31 @@ import monix.execution.Scheduler
   *
   * N.B. this is homologous with
   * [[https://typelevel.org/cats-effect/datatypes/ioapp.html cats.effect.IOApp]],
-  * but meant for usage with [[BIO]].
+  * but meant for usage with [[Task]].
   *
   * Works on top of JavaScript as well ;-)
   */
-trait BIOApp {
+trait TaskApp {
   // To implement ...
   def run(args: List[String]): UIO[ExitCode]
 
-  /** Scheduler for executing the [[Task]] action.
+  /** Scheduler for executing the [[Task.Unsafe]] action.
     * Defaults to `global`, but can be overridden.
     */
   protected def scheduler: Scheduler = Scheduler.global
 
-  /** [[monix.bio.BIO.Options Options]] for executing the
-    * [[Task]] action. The default value is defined in
-    * [[monix.bio.BIO.defaultOptions defaultOptions]],
+  /** [[monix.bio.Task.Options Options]] for executing the
+    * [[Task.Unsafe]] action. The default value is defined in
+    * [[monix.bio.Task.defaultOptions defaultOptions]],
     * but can be overridden.
     */
-  protected def options: BIO.Options = BIO.defaultOptions.withSchedulerFeatures(scheduler)
+  protected def options: Task.Options = Task.defaultOptions.withSchedulerFeatures(scheduler)
 
   /** Provides the
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
     * instance of this runtime environment.
     */
-  protected implicit lazy val catsEffect: ConcurrentEffect[Task] =
+  protected implicit lazy val catsEffect: ConcurrentEffect[Task.Unsafe] =
     new CatsConcurrentEffectForTask()(scheduler, options)
 
   final def main(args: Array[String]): Unit = {

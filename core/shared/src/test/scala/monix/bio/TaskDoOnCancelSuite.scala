@@ -48,7 +48,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
   test("doOnCancel should mirror failed sources") { implicit s =>
     var effect = 0
     val dummy = "dummy"
-    val f = BIO
+    val f = Task
       .raiseError(dummy)
       .executeAsync
       .doOnCancel(UIO.eval { effect += 1 })
@@ -63,7 +63,7 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
   test("doOnCancel should mirror terminated sources") { implicit s =>
     var effect = 0
     val dummy = new RuntimeException("dummy")
-    val f = BIO
+    val f = Task
       .terminate(dummy)
       .executeAsync
       .doOnCancel(UIO.eval { effect += 1 })
@@ -226,11 +226,11 @@ object TaskDoOnCancelSuite extends BaseTestSuite {
 
   testAsync("local.write.doOnCancel works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
     val onCancel = UIO.evalAsync(throw DummyException("dummy"))
 
     val task = for {
-      l <- BIOLocal(10)
+      l <- TaskLocal(10)
       _ <- l.write(100).doOnCancel(onCancel)
       _ <- Task.shift
       v <- l.read

@@ -28,12 +28,12 @@ import scala.concurrent.duration._
 
 object TaskLocalSuite extends SimpleBIOTestSuite {
   implicit val ec: Scheduler = monix.execution.Scheduler.Implicits.global
-  implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+  implicit val opts = Task.defaultOptions.enableLocalContextPropagation
 
-  testAsync("BIOLocal.apply") {
+  testAsync("TaskLocal.apply") {
     val test =
       for {
-        local <- BIOLocal(0)
+        local <- TaskLocal(0)
         v1    <- local.read
         _     <- UIO.now(assertEquals(v1, 0))
         _     <- local.write(100)
@@ -49,11 +49,11 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("BIOLocal.wrap") {
+  testAsync("TaskLocal.wrap") {
     val local = Local(0)
     val test =
       for {
-        local <- BIOLocal.wrap(Task(local))
+        local <- TaskLocal.wrap(Task(local))
         v1    <- local.read
         _     <- UIO.now(assertEquals(v1, 0))
         _     <- local.write(100)
@@ -69,10 +69,10 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("BIOLocal!.bind") {
+  testAsync("TaskLocal!.bind") {
     val test =
       for {
-        local <- BIOLocal(0)
+        local <- TaskLocal(0)
         _     <- local.write(100)
         _     <- UIO.shift
         v1    <- local.bind(200)(local.read.map(_ * 2))
@@ -84,10 +84,10 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("BIOLocal!.bindL") {
+  testAsync("TaskLocal!.bindL") {
     val test =
       for {
-        local <- BIOLocal(0)
+        local <- TaskLocal(0)
         _     <- local.write(100)
         _     <- UIO.shift
         v1    <- local.bindL(Task.eval(200))(local.read.map(_ * 2))
@@ -99,10 +99,10 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("BIOLocal!.bindClear") {
+  testAsync("TaskLocal!.bindClear") {
     val test =
       for {
-        local <- BIOLocal(200)
+        local <- TaskLocal(200)
         _     <- local.write(100)
         _     <- UIO.shift
         v1    <- local.bindClear(local.read.map(_ * 2))
@@ -114,11 +114,11 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("BIOLocal canceled") {
+  testAsync("TaskLocal canceled") {
     import scala.concurrent.duration._
 
     val test: UIO[Unit] = for {
-      local  <- BIOLocal[String]("Good")
+      local  <- TaskLocal[String]("Good")
       forked <- UIO.sleep(1.second).start
       _      <- local.bind("Bad!")(forked.cancel).start
       _      <- UIO.sleep(1.second)
@@ -129,10 +129,10 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsync("BIOLocal!.local") {
+  testAsync("TaskLocal!.local") {
     val test =
       for {
-        taskLocal <- BIOLocal(200)
+        taskLocal <- TaskLocal(200)
         local     <- taskLocal.local
         v1        <- taskLocal.read
         _         <- UIO.now(assertEquals(local.get, v1))
@@ -151,16 +151,16 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     test.runToFutureOpt
   }
 
-  testAsyncE("TaskLocals get restored in BIO.create on error") {
+  testAsyncE("TaskLocals get restored in Task.create on error") {
     val dummy = "dummy"
-    val task = BIO.create[String, Int] { (_, cb) =>
+    val task = Task.create[String, Int] { (_, cb) =>
       ec.execute(new Runnable {
         def run() = cb.onError(dummy)
       })
     }
 
     val t = for {
-      local <- BIOLocal(0)
+      local <- TaskLocal(0)
       _     <- local.write(10)
       i     <- task.onErrorRecover { case `dummy` => 10 }
       l     <- local.read
@@ -171,16 +171,16 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.attempt.runToFutureOpt
   }
 
-  testAsync("TaskLocals get restored in BIO.create on termination") {
+  testAsync("TaskLocals get restored in Task.create on termination") {
     val dummy = DummyException("dummy")
-    val task = BIO.create[String, Int] { (_, cb) =>
+    val task = Task.create[String, Int] { (_, cb) =>
       ec.execute(new Runnable {
         def run() = cb.onTermination(dummy)
       })
     }
 
     val t = for {
-      local <- BIOLocal(0)
+      local <- TaskLocal(0)
       _     <- local.write(10)
       i     <- task.redeemCause(_ => 10, identity)
       l     <- local.read
@@ -191,11 +191,12 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  testAsync("BIOLocal should work with bracket") {
+  testAsync("TaskLocal should work with bracket") {
     val t = for {
-      local <- BIOLocal(0)
-      _ <- UIO.unit.executeAsync
-        .guarantee(local.write(10))
+      local <- TaskLocal(0)
+      _ <-
+        UIO.unit.executeAsync
+          .guarantee(local.write(10))
       value <- local.read
       _     <- UIO.eval(assertEquals(value, 10))
     } yield ()
@@ -203,14 +204,14 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  testAsync("BIOLocal.isolate should prevent context changes") {
+  testAsync("TaskLocal.isolate should prevent context changes") {
     val t = for {
-      local <- BIOLocal(0)
+      local <- TaskLocal(0)
       inc = local.read.map(_ + 1).flatMap(local.write)
       _    <- inc
       res1 <- local.read
       _    <- UIO(assertEquals(res1, 1))
-      _    <- BIOLocal.isolate(inc)
+      _    <- TaskLocal.isolate(inc)
       res2 <- local.read
       _    <- UIO(assertEquals(res1, res2))
     } yield ()
@@ -218,12 +219,12 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  testAsync("BIOLocal interop with future via deferFutureAction") {
+  testAsync("TaskLocal interop with future via deferFutureAction") {
     val t = for {
-      local  <- BIOLocal(0)
+      local  <- TaskLocal(0)
       unsafe <- local.local
       _      <- local.write(1)
-      _ <- BIO.deferFutureAction { implicit ec =>
+      _ <- Task.deferFutureAction { implicit ec =>
         Future {
           assertEquals(unsafe.get, 1)
         }.map { _ =>
@@ -237,8 +238,8 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  testAsync("BIOLocal.bind scoping works") {
-    val tl = BIOLocal(999)
+  testAsync("TaskLocal.bind scoping works") {
+    val tl = TaskLocal(999)
     val t = Task
       .map3(tl, tl, tl) { (l1, l2, l3) =>
         def setAll(x: Int) = Task.traverse(List(l1, l2, l3))(_.write(x))
@@ -253,10 +254,10 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  testAsync("BIOLocal.bind actually isolates reads") {
+  testAsync("TaskLocal.bind actually isolates reads") {
     val t = for {
-      l1 <- BIOLocal(0)
-      l2 <- BIOLocal(0)
+      l1 <- TaskLocal(0)
+      l2 <- TaskLocal(0)
       f  <- l1.bind(0)(UIO.sleep(1.second) *> (l1.read, l2.read).tupled).start
       _  <- l1.write(5)
       _  <- l2.write(5)
@@ -268,21 +269,21 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
     t.runToFutureOpt
   }
 
-  testAsync("BIOLocal.isolate with ConcurrentChannel") {
+  testAsync("TaskLocal.isolate with ConcurrentChannel") {
     val bufferSize = 16
 
     class Test(
-      l: BIOLocal[String],
-      ch: ConcurrentChannel[Task, Unit, Int]
+      l: TaskLocal[String],
+      ch: ConcurrentChannel[Task.Unsafe, Unit, Int]
     ) {
-      private[this] def produceLoop(n: Int): Task[Unit] =
+      private[this] def produceLoop(n: Int): Task.Unsafe[Unit] =
         if (n == 0) Task.unit
         else
           ch.push(n) >> l.read.flatMap { s =>
             Task(assertEquals(s, "producer"))
           } >> produceLoop(n - 1)
 
-      def produce: Task[Unit] =
+      def produce: Task.Unsafe[Unit] =
         for {
           _ <- ch.awaitConsumers(1)
           _ <- l.write("producer")
@@ -290,26 +291,27 @@ object TaskLocalSuite extends SimpleBIOTestSuite {
           _ <- ch.halt(())
         } yield ()
 
-      def consume: Task[Unit] = ch.consume.use { c =>
-        c.pull
-          .delayResult(1.milli)
-          .flatMap { x =>
-            l.write(x.toString).as(x)
-          }
-          .iterateWhile(_.isRight)
-          .void
-      }
+      def consume: Task.Unsafe[Unit] =
+        ch.consume.use { c =>
+          c.pull
+            .delayResult(1.milli)
+            .flatMap { x =>
+              l.write(x.toString).as(x)
+            }
+            .iterateWhile(_.isRight)
+            .void
+        }
     }
 
     val t = for {
-      tl <- BIOLocal("undefined")
-      ch <- ConcurrentChannel[Task].withConfig[Unit, Int](
+      tl <- TaskLocal("undefined")
+      ch <- ConcurrentChannel[Task.Unsafe].withConfig[Unit, Int](
         ConsumerF.Config(
           capacity = BufferCapacity.Bounded(bufferSize).some
         )
       )
       test = new Test(tl, ch)
-      _ <- BIOLocal.isolate(test.produce) &> BIOLocal.isolate(test.consume)
+      _ <- TaskLocal.isolate(test.produce) &> TaskLocal.isolate(test.consume)
     } yield ()
 
     t.runToFutureOpt

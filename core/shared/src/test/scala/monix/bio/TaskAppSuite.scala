@@ -19,15 +19,15 @@ package monix.bio
 
 import cats.effect.{ExitCode, IO}
 import minitest.SimpleTestSuite
-import monix.bio.BIO.Options
+import monix.bio.Task.Options
 import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.Promise
 
-object BIOAppSuite extends SimpleTestSuite {
+object TaskAppSuite extends SimpleTestSuite {
   testAsync("run works") {
     val wasExecuted = Promise[Boolean]()
-    val app = new BIOApp {
+    val app = new TaskApp {
       override def run(args: List[String]) =
         UIO {
           wasExecuted.success(args.headOption.getOrElse("unknown") == "true")
@@ -42,17 +42,17 @@ object BIOAppSuite extends SimpleTestSuite {
   }
 
   testAsync("options are configurable") {
-    val opts = BIO.defaultOptions
+    val opts = Task.defaultOptions
     assert(!opts.localContextPropagation, "!opts.localContextPropagation")
     val opts2 = opts.enableLocalContextPropagation
     assert(opts2.localContextPropagation, "opts2.localContextPropagation")
     val p = Promise[Options]()
 
-    val app = new BIOApp {
+    val app = new TaskApp {
       override val options = opts2
 
       def run(args: List[String]): UIO[ExitCode] =
-        for (opts <- BIO.readOptions) yield {
+        for (opts <- Task.readOptions) yield {
           p.success(opts)
           ExitCode.Success
         }
@@ -64,14 +64,14 @@ object BIOAppSuite extends SimpleTestSuite {
     }
   }
 
-  testAsync("ConcurrentEffect[Task]") {
+  testAsync("ConcurrentEffect[Task.Unsafe]") {
     val wasExecuted = Promise[Boolean]()
-    val app = new BIOApp {
+    val app = new TaskApp {
       def run(args: List[String]): UIO[ExitCode] = {
         Task
           .from(
             Task
-              .async[ExitCode] { cb =>
+              .async[Throwable, ExitCode] { cb =>
                 wasExecuted.success(true)
                 cb.onSuccess(ExitCode.Success)
               }

@@ -36,35 +36,35 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
   val WORKERS = 10
   val RETRIES = if (!isTravis) 1000 else 100
 
-  test("BIO.async has a safe callback") {
-    runConcurrentCallbackTest(BIO.async)
+  test("Task.async has a safe callback") {
+    runConcurrentCallbackTest(Task.async)
   }
 
-  test("BIO.async0 has a safe callback") {
-    runConcurrentCallbackTest(f => BIO.async0((_, cb) => f(cb)))
+  test("Task.async0 has a safe callback") {
+    runConcurrentCallbackTest(f => Task.async0((_, cb) => f(cb)))
   }
 
-  test("BIO.asyncF has a safe callback") {
-    runConcurrentCallbackTest(f => BIO.asyncF(cb => BIO.evalTotal(f(cb))))
+  test("Task.asyncF has a safe callback") {
+    runConcurrentCallbackTest(f => Task.asyncF(cb => Task.evalTotal(f(cb))))
   }
 
-  test("BIO.cancelable has a safe callback") {
+  test("Task.cancelable has a safe callback") {
     runConcurrentCallbackTest(f =>
-      BIO.cancelable[String, Int] { cb =>
-        f(cb); BIO.evalTotal(())
+      Task.cancelable[String, Int] { cb =>
+        f(cb); Task.evalTotal(())
       }
     )
   }
 
-  test("BIO.cancelable0 has a safe callback") {
+  test("Task.cancelable0 has a safe callback") {
     runConcurrentCallbackTest(f =>
-      BIO.cancelable0[String, Int] { (_, cb) =>
-        f(cb); BIO.evalTotal(())
+      Task.cancelable0[String, Int] { (_, cb) =>
+        f(cb); Task.evalTotal(())
       }
     )
   }
 
-  def runConcurrentCallbackTest(create: (BiCallback[String, Int] => Unit) => BIO[String, Int]): Unit = {
+  def runConcurrentCallbackTest(create: (BiCallback[String, Int] => Unit) => Task[String, Int]): Unit = {
     def run(trigger: BiCallback[String, Int] => Unit): Unit = {
       implicit val sc: SchedulerService = Scheduler.io("task-callback-safety")
       try {

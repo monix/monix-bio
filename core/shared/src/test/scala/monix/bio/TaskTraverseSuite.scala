@@ -23,9 +23,9 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskTraverseSuite extends BaseTestSuite {
-  test("BIO.traverse should not execute in parallel") { implicit s =>
+  test("Task.traverse should not execute in parallel") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = BIO
+    val f = Task
       .traverse(seq) {
         case (i, d) =>
           UIO.evalAsync(i + 1).delayExecution(d.seconds)
@@ -42,14 +42,14 @@ object TaskTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Seq(2, 3, 4))))
   }
 
-  test("BIO.traverse should onError if one of the tasks terminates in error") { implicit s =>
+  test("Task.traverse should onError if one of the tasks terminates in error") { implicit s =>
     val ex = 1111
     val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
-    val f = BIO
+    val f = Task
       .traverse(seq) {
         case (i, d) =>
-          BIO
-            .suspendTotal(if (i < 0) BIO.raiseError(ex) else BIO.now(i + 1))
+          Task
+            .suspendTotal(if (i < 0) Task.raiseError(ex) else Task.now(i + 1))
             .delayExecution(d.seconds)
       }
       .attempt
@@ -63,10 +63,10 @@ object TaskTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("BIO.traverse should onError if one of the tasks terminates in error") { implicit s =>
+  test("Task.traverse should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
-    val f = BIO
+    val f = Task
       .traverse(seq) {
         case (i, d) =>
           UIO
@@ -83,9 +83,9 @@ object TaskTraverseSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.traverse should be canceled") { implicit s =>
+  test("Task.traverse should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
-    val f = BIO
+    val f = Task
       .traverse(seq) {
         case (i, d) => UIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
