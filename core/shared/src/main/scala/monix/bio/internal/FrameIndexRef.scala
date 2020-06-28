@@ -30,7 +30,7 @@ import monix.execution.misc.ThreadLocal
   * tasks with `Task.unsafeCreate`, which exposes internals,
   * is considered unsafe to use and is now deprecated.
   *
-  * In case the [[Task.Unsafe]] is executed with
+  * In case the [[Task]] is executed with
   * [[monix.execution.ExecutionModel.BatchedExecution BatchedExecution]],
   * this class boxes a `FrameIndex` in order to transport it over
   * light async boundaries, possibly using a
@@ -46,7 +46,7 @@ import monix.execution.misc.ThreadLocal
   * [[monix.execution.schedulers.TrampolinedRunnable TrampolinedRunnable]]
   * instances executed by capable schedulers. This is why
   * [[FrameIndexRef]] is part of the `Context` of execution for
-  * [[Task.Unsafe]], available for asynchronous tasks that get created with
+  * [[Task]], available for asynchronous tasks that get created with
   * `Task.unsafeCreate` (which is now deprecated).
   *
   * Note that in case the execution model is not

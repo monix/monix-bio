@@ -22,9 +22,9 @@ Published for ScalaJS 0.6.x, 1.x, Scala 2.12 and 2.13.
 
 The project maintains binary compatibility in `0.1.x` line and it is suitable for production usage.
 
-`BIO` covers full `monix.eval.Task` API.
+`monix.bio.Task` covers full `monix.eval.Task` API.
 
-The documentation is in progress and not all scaladocs are updated for `BIO`.
+The documentation is in progress and not all scaladocs are updated.
 
 ## Plans for the future
 
@@ -33,7 +33,7 @@ Long term `1.0.0` version is expected to come around July-August 2020 once the b
 We are considering [a different encoding](https://github.com/monix/monix-bio/issues/6) but if we don't go forward with it there won't be many changes.
 
 Upcoming features (either `1.0.0` or later):
-- `reactive` module to use `monix.reactive.Observable` with `monix.bio.BIO`
+- `reactive` module to use `monix.reactive.Observable` with `monix.bio.Task`
 - built-in interop with `monix.eval.Task` without any imports
 - `Coeval` with typed errors
 - better stack traces
