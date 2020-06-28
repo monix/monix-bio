@@ -17,64 +17,64 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO
+import monix.bio.Task
 
-private[bio] object BIODeprecated {
+private[bio] object TaskDeprecated {
 
   /**
-    * Extension methods describing deprecated `BIO` operations.
+    * Extension methods describing deprecated `Task` operations.
     */
   private[bio] abstract class Companion {
 
-    /** DEPRECATED — renamed to [[BIO.parSequence]]. */
+    /** DEPRECATED — renamed to [[Task.parSequence]]. */
     @deprecated("Use parSequence", "0.1.0")
     def gather[E, A](
-      in: Iterable[BIO[E, A]]
-    ): BIO[E, List[A]] = {
+      in: Iterable[Task[E, A]]
+    ): Task[E, List[A]] = {
       // $COVERAGE-OFF$
-      BIO.parSequence(in)
+      Task.parSequence(in)
       // $COVERAGE-ON$
     }
 
-    /** DEPRECATED — renamed to [[BIO.parSequenceN]] */
+    /** DEPRECATED — renamed to [[Task.parSequenceN]] */
     @deprecated("Use parSequenceN", "0.1.0")
-    def gatherN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] = {
+    def gatherN[E, A](parallelism: Int)(in: Iterable[Task[E, A]]): Task[E, List[A]] = {
       // $COVERAGE-OFF$
-      BIO.parSequenceN(parallelism)(in)
+      Task.parSequenceN(parallelism)(in)
       // $COVERAGE-ON$
     }
 
-    /** DEPRECATED — renamed to [[BIO.parSequenceUnordered]] */
+    /** DEPRECATED — renamed to [[Task.parSequenceUnordered]] */
     @deprecated("Use parSequenceUnordered", "0.1.0")
-    def gatherUnordered[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] = {
+    def gatherUnordered[E, A](in: Iterable[Task[E, A]]): Task[E, List[A]] = {
       // $COVERAGE-OFF$
-      BIO.parSequenceUnordered(in)
+      Task.parSequenceUnordered(in)
       // $COVERAGE-ON$
     }
 
-    /** DEPRECATED — renamed to [[BIO.parTraverse]] */
+    /** DEPRECATED — renamed to [[Task.parTraverse]] */
     @deprecated("Use parTraverse", "0.1.0")
     def wander[E, A, B](
       in: Iterable[A]
-    )(f: A => BIO[E, B]): BIO[E, List[B]] = {
+    )(f: A => Task[E, B]): Task[E, List[B]] = {
       // $COVERAGE-OFF$
-      BIO.parTraverse(in)(f)
+      Task.parTraverse(in)(f)
       // $COVERAGE-ON$
     }
 
-    /** DEPRECATED — renamed to [[BIO.parTraverseN]] */
+    /** DEPRECATED — renamed to [[Task.parTraverseN]] */
     @deprecated("Use parTraverseN", "0.1.0")
-    def wanderN[E, A, B](parallelism: Int)(in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] = {
+    def wanderN[E, A, B](parallelism: Int)(in: Iterable[A])(f: A => Task[E, B]): Task[E, List[B]] = {
       // $COVERAGE-OFF$
-      BIO.parTraverseN(parallelism)(in)(f)
+      Task.parTraverseN(parallelism)(in)(f)
       // $COVERAGE-ON$
     }
 
-    /** DEPRECATED — renamed to [[BIO.parTraverseUnordered]] */
+    /** DEPRECATED — renamed to [[Task.parTraverseUnordered]] */
     @deprecated("Use parTraverseUnordered", "3.2.0")
-    def wanderUnordered[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => BIO[E, B]): BIO[E, List[B]] = {
+    def wanderUnordered[E, A, B, M[X] <: Iterable[X]](in: M[A])(f: A => Task[E, B]): Task[E, List[B]] = {
       // $COVERAGE-OFF$
-      BIO.parTraverseUnordered(in)(f)
+      Task.parTraverseUnordered(in)(f)
       // $COVERAGE-ON$
     }
   }

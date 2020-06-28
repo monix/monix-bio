@@ -18,9 +18,9 @@
 package monix.bio.instances
 
 import cats.{~>, CommutativeApplicative, Monad, Parallel}
-import monix.bio.BIO
+import monix.bio.Task
 
-/** `cats.Parallel` type class instance for [[monix.bio.BIO BIO]].
+/** `cats.Parallel` type class instance for [[monix.bio.Task Task]].
   *
   * A `cats.Parallel` instances means that `Task` can be used for
   * processing tasks in parallel (with non-deterministic effects
@@ -31,40 +31,40 @@ import monix.bio.BIO
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsParallelForTask[E] extends Parallel[BIO[E, *]] {
-  override type F[A] = BIO.Par[E, A]
+class CatsParallelForTask[E] extends Parallel[Task[E, *]] {
+  override type F[A] = Task.Par[E, A]
 
-  override val applicative: CommutativeApplicative[BIO.Par[E, *]] = new NondetApplicative[E]
-  override val monad: Monad[BIO[E, *]] = new CatsBaseForTask[E]
+  override val applicative: CommutativeApplicative[Task.Par[E, *]] = new NondetApplicative[E]
+  override val monad: Monad[Task[E, *]] = new CatsBaseForTask[E]
 
-  override val sequential: BIO.Par[E, *] ~> BIO[E, *] = new (BIO.Par[E, *] ~> BIO[E, *]) {
-    def apply[A](fa: BIO.Par[E, A]): BIO[E, A] = BIO.Par.unwrap(fa)
+  override val sequential: Task.Par[E, *] ~> Task[E, *] = new (Task.Par[E, *] ~> Task[E, *]) {
+    def apply[A](fa: Task.Par[E, A]): Task[E, A] = Task.Par.unwrap(fa)
   }
 
-  override val parallel: BIO[E, *] ~> BIO.Par[E, *] = new (BIO[E, *] ~> BIO.Par[E, *]) {
-    def apply[A](fa: BIO[E, A]): BIO.Par[E, A] = BIO.Par.apply(fa)
+  override val parallel: Task[E, *] ~> Task.Par[E, *] = new (Task[E, *] ~> Task.Par[E, *]) {
+    def apply[A](fa: Task[E, A]): Task.Par[E, A] = Task.Par.apply(fa)
   }
 }
 
-private class NondetApplicative[E] extends CommutativeApplicative[BIO.Par[E, *]] {
+private class NondetApplicative[E] extends CommutativeApplicative[Task.Par[E, *]] {
 
-  import BIO.Par.{unwrap, apply => par}
+  import Task.Par.{unwrap, apply => par}
 
-  override def ap[A, B](ff: BIO.Par[E, A => B])(fa: BIO.Par[E, A]): BIO.Par[E, B] =
-    par(BIO.mapBoth(unwrap(ff), unwrap(fa))(_(_)))
+  override def ap[A, B](ff: Task.Par[E, A => B])(fa: Task.Par[E, A]): Task.Par[E, B] =
+    par(Task.mapBoth(unwrap(ff), unwrap(fa))(_(_)))
 
-  override def map2[A, B, Z](fa: BIO.Par[E, A], fb: BIO.Par[E, B])(f: (A, B) => Z): BIO.Par[E, Z] =
-    par(BIO.mapBoth(unwrap(fa), unwrap(fb))(f))
+  override def map2[A, B, Z](fa: Task.Par[E, A], fb: Task.Par[E, B])(f: (A, B) => Z): Task.Par[E, Z] =
+    par(Task.mapBoth(unwrap(fa), unwrap(fb))(f))
 
-  override def product[A, B](fa: BIO.Par[E, A], fb: BIO.Par[E, B]): BIO.Par[E, (A, B)] =
-    par(BIO.mapBoth(unwrap(fa), unwrap(fb))((_, _)))
+  override def product[A, B](fa: Task.Par[E, A], fb: Task.Par[E, B]): Task.Par[E, (A, B)] =
+    par(Task.mapBoth(unwrap(fa), unwrap(fb))((_, _)))
 
-  override def pure[A](a: A): BIO.Par[E, A] =
-    par(BIO.now(a))
+  override def pure[A](a: A): Task.Par[E, A] =
+    par(Task.now(a))
 
-  override val unit: BIO.Par[E, Unit] =
-    par(BIO.unit)
+  override val unit: Task.Par[E, Unit] =
+    par(Task.unit)
 
-  override def map[A, B](fa: BIO.Par[E, A])(f: A => B): BIO.Par[E, B] =
+  override def map[A, B](fa: Task.Par[E, A])(f: A => B): Task.Par[E, B] =
     par(unwrap(fa).map(f))
 }

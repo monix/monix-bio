@@ -26,7 +26,7 @@ import scala.util.{Failure, Success}
 object TaskTimedSuite extends BaseTestSuite {
 
   test("measure tasks with no errors") { implicit s =>
-    val bio = BIO.fromEither(123.asRight[String]).delayExecution(2.second).timed
+    val bio = Task.fromEither(123.asRight[String]).delayExecution(2.second).timed
     val f = bio.attempt.runToFuture
 
     s.tick()
@@ -43,7 +43,7 @@ object TaskTimedSuite extends BaseTestSuite {
   }
 
   test("not measure tasks with typed errors") { implicit s =>
-    val bio = BIO.fromEither("Error".asLeft[Int]).delayExecution(2.second).timed
+    val bio = Task.fromEither("Error".asLeft[Int]).delayExecution(2.second).timed
     val f = bio.attempt.runToFuture
 
     s.tick()
@@ -60,7 +60,7 @@ object TaskTimedSuite extends BaseTestSuite {
   }
 
   test("not measure tasks with terminal errors") { implicit s =>
-    val bio = BIO.terminate(DummyException("Fatal")).delayExecution(2.second).timed
+    val bio = Task.terminate(DummyException("Fatal")).delayExecution(2.second).timed
     val f = bio.runToFuture
 
     s.tick()
@@ -77,7 +77,7 @@ object TaskTimedSuite extends BaseTestSuite {
   }
 
   test("measure tasks with typed errors followed by `.attempt`") { implicit s =>
-    val bio = BIO.fromEither("Error".asLeft[Int]).delayExecution(2.second).attempt.timed
+    val bio = Task.fromEither("Error".asLeft[Int]).delayExecution(2.second).attempt.timed
     val f = bio.runToFuture
 
     s.tick()
@@ -94,7 +94,7 @@ object TaskTimedSuite extends BaseTestSuite {
   }
 
   test("not measure tasks with terminal errors followed by `.attempt`") { implicit s =>
-    val bio = BIO.terminate(DummyException("Fatal")).delayExecution(2.second).attempt.timed
+    val bio = Task.terminate(DummyException("Fatal")).delayExecution(2.second).attempt.timed
     val f = bio.runToFuture
 
     s.tick()
@@ -111,13 +111,13 @@ object TaskTimedSuite extends BaseTestSuite {
   }
 
   test("stack safety") { implicit sc =>
-    def loop(n: Int, acc: Duration): BIO[Nothing, Duration] =
-      BIO.unit.delayResult(1.second).timed.flatMap {
+    def loop(n: Int, acc: Duration): Task[Nothing, Duration] =
+      Task.unit.delayResult(1.second).timed.flatMap {
         case (duration, _) =>
           if (n > 0)
             loop(n - 1, acc + duration)
           else
-            BIO.now(acc)
+            Task.now(acc)
       }
 
     val f = loop(10000, 0.second).runToFuture

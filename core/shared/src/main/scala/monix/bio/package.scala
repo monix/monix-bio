@@ -18,5 +18,5 @@
 package monix
 
 package object bio {
-  type UIO[+A] = BIO[Nothing, A]
+  type UIO[+A] = Task[Nothing, A]
 }

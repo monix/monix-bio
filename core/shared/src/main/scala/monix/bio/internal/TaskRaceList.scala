@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio
-import monix.bio.{BIO, BiCallback, Cause, UIO}
+import monix.bio.{BiCallback, Cause, Task, UIO}
 import monix.execution.Scheduler
 import monix.execution.atomic.{Atomic, PaddingStrategy}
 import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
@@ -27,18 +27,18 @@ import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
 private[bio] object TaskRaceList {
 
   /**
-    * Implementation for `BIO.raceMany`
+    * Implementation for `Task.raceMany`
     */
-  def apply[E, A](tasks: Iterable[BIO[E, A]]): BIO[E, A] =
-    BIO.Async(new Register(tasks), trampolineBefore = true, trampolineAfter = true)
+  def apply[E, A](tasks: Iterable[Task[E, A]]): Task[E, A] =
+    Task.Async(new Register(tasks), trampolineBefore = true, trampolineAfter = true)
 
   // Implementing Async's "start" via `ForkedStart` in order to signal
   // that this is a task that forks on evaluation.
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A](tasks: Iterable[BIO[E, A]]) extends ForkedRegister[E, A] {
-    def apply(context: bio.BIO.Context[E], callback: BiCallback[E, A]): Unit = {
+  private final class Register[E, A](tasks: Iterable[Task[E, A]]) extends ForkedRegister[E, A] {
+    def apply(context: bio.Task.Context[E], callback: BiCallback[E, A]): Unit = {
       implicit val s: Scheduler = context.scheduler
 
       val isActive = Atomic.withPadding(true, PaddingStrategy.LeftRight128)
@@ -55,7 +55,7 @@ private[bio] object TaskRaceList {
         val taskContext = context.withConnection(taskCancelable)
         index += 1
 
-        BIO.unsafeStartEnsureAsync(
+        Task.unsafeStartEnsureAsync(
           task,
           taskContext,
           new BiCallback[E, A] {
@@ -95,10 +95,13 @@ private[bio] object TaskRaceList {
   private def batchCancel(tokens: Array[CancelToken[UIO]]): CancelToken[UIO] = {
     def loop(idx: Int, exceptions: List[Throwable]): CancelToken[UIO] = {
       if (idx < tokens.length) {
-        tokens(idx).redeemCauseWith({
-          case Cause.Error(_) => loop(idx + 1, exceptions)
-          case Cause.Termination(ex) => loop(idx + 1, ex :: exceptions)
-        }, _ => loop(idx + 1, exceptions))
+        tokens(idx).redeemCauseWith(
+          {
+            case Cause.Error(_) => loop(idx + 1, exceptions)
+            case Cause.Termination(ex) => loop(idx + 1, ex :: exceptions)
+          },
+          _ => loop(idx + 1, exceptions)
+        )
       } else if (exceptions.isEmpty) UIO.unit
       else if (exceptions.size == 1) UIO.terminate(exceptions.head)
       else UIO.terminate(CompositeException(exceptions))

@@ -25,7 +25,7 @@ import scala.util.Success
 
 object TaskStartSuite extends BaseTestSuite {
   test("task.start.flatMap(_.join) <-> task") { implicit sc =>
-    check1 { task: BIO[Long, Int] =>
+    check1 { task: Task[Long, Int] =>
       task.start.flatMap(_.join) <-> task
     }
   }
@@ -54,13 +54,13 @@ object TaskStartSuite extends BaseTestSuite {
   testAsync("task.start shares Local.Context with fibers") { _ =>
     import monix.execution.Scheduler.Implicits.global
     import cats.syntax.all._
-    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      local <- BIOLocal(0)
+      local <- TaskLocal(0)
       _     <- local.write(100)
       v1    <- local.read
-      f     <- (BIO.shift *> local.read <* local.write(200)).start
+      f     <- (Task.shift *> local.read <* local.write(200)).start
       // Here, before joining, reads are nondeterministic
       v2 <- f.join
       v3 <- local.read

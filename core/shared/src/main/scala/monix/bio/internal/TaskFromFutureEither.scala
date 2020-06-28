@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback}
-import monix.bio.BIO.Context
+import monix.bio.{BiCallback, Task}
+import monix.bio.Task.Context
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.schedulers.TrampolinedRunnable
 import monix.execution.{Cancelable, CancelableFuture, CancelablePromise}
@@ -27,8 +27,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 private[bio] object TaskFromFutureEither {
-  /** Implementation for `BIO.fromFutureEither`. */
-  def strict[E, A](f: Future[Either[E, A]]): BIO[E, A] = {
+  /** Implementation for `Task.fromFutureEither`. */
+  def strict[E, A](f: Future[Either[E, A]]): Task[E, A] = {
     f.value match {
       case None =>
         f match {
@@ -41,12 +41,12 @@ private[bio] object TaskFromFutureEither {
             rawAsync[E, A](startSimple(_, _, f))
         }
       case Some(value) =>
-        BIO.fromTryEither(value)
+        Task.fromTryEither(value)
     }
   }
 
-  /** Implementation for `BIO.fromCancelablePromiseEither`. */
-  def fromCancelablePromise[E, A](p: CancelablePromise[Either[E, A]]): BIO[E, A] = {
+  /** Implementation for `Task.fromCancelablePromiseEither`. */
+  def fromCancelablePromise[E, A](p: CancelablePromise[Either[E, A]]): Task[E, A] = {
     val start: Start[E, A] = (ctx, cb) => {
       implicit val ec = ctx.scheduler
       if (p.isCompleted) {
@@ -59,7 +59,7 @@ private[bio] object TaskFromFutureEither {
       }
     }
 
-    BIO.Async(
+    Task.Async(
       start,
       trampolineBefore = false,
       trampolineAfter = false,
@@ -67,7 +67,7 @@ private[bio] object TaskFromFutureEither {
     )
   }
 
-  private def startSimple[E, A](ctx: BIO.Context[E], cb: BiCallback[E, A], f: Future[Either[E, A]]) = {
+  private def startSimple[E, A](ctx: Task.Context[E], cb: BiCallback[E, A], f: Future[Either[E, A]]) = {
 
     f.value match {
       case Some(value) =>
@@ -80,7 +80,7 @@ private[bio] object TaskFromFutureEither {
   }
 
   private def startCancelable[E, A](
-    ctx: BIO.Context[E],
+    ctx: Task.Context[E],
     cb: BiCallback[E, A],
     f: Future[Either[E, A]],
     c: Cancelable
@@ -101,16 +101,16 @@ private[bio] object TaskFromFutureEither {
     }
   }
 
-  private def rawAsync[E, A](start: (Context[E], BiCallback[E, A]) => Unit): BIO[E, A] =
-    BIO.Async(
+  private def rawAsync[E, A](start: (Context[E], BiCallback[E, A]) => Unit): Task[E, A] =
+    Task.Async(
       start,
       trampolineBefore = true,
       trampolineAfter = false,
       restoreLocals = true
     )
 
-  private def trampolinedCB[E, A](cb: BiCallback[E, A], conn: TaskConnection[E])(
-    implicit ec: ExecutionContext
+  private def trampolinedCB[E, A](cb: BiCallback[E, A], conn: TaskConnection[E])(implicit
+    ec: ExecutionContext
   ): Try[Either[E, A]] => Unit = {
 
     new (Try[Either[E, A]] => Unit) with TrampolinedRunnable {

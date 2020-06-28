@@ -20,7 +20,7 @@ package monix.bio.internal
 import java.util.concurrent.atomic.AtomicReference
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, BiCallback, UIO}
+import monix.bio.{BiCallback, Task, UIO}
 import monix.execution.schedulers.TrampolineExecutionContext
 import monix.execution.Scheduler
 
@@ -30,7 +30,7 @@ import scala.util.control.NonFatal
 
 /**
   * A placeholder for a [[cats.effect.CancelToken]] that will be set at a later time,
-  * the equivalent of a `Deferred[BIO.Unsafe, CancelToken]`.
+  * the equivalent of a `Deferred[Task.Unsafe, CancelToken]`.
   *
   * Used in the implementation of `bracket`, see [[TaskBracket]].
   */
@@ -40,7 +40,7 @@ final private[internal] class ForwardCancelable private () {
   private[this] val state = new AtomicReference[State](init)
 
   val cancel: CancelToken[UIO] = {
-    @tailrec def loop(ctx: BIO.Context[Nothing], cb: BiCallback[Nothing, Unit]): Unit =
+    @tailrec def loop(ctx: Task.Context[Nothing], cb: BiCallback[Nothing, Unit]): Unit =
       state.get() match {
         case current @ Empty(list) =>
           if (!state.compareAndSet(current, Empty(cb :: list)))
@@ -50,11 +50,11 @@ final private[internal] class ForwardCancelable private () {
           state.lazySet(finished) // GC purposes
           context.execute(new Runnable {
             def run() =
-              BIO.unsafeStartNow(token, ctx, cb)
+              Task.unsafeStartNow(token, ctx, cb)
           })
       }
 
-    BIO.Async[Nothing, Unit](loop)
+    Task.Async[Nothing, Unit](loop)
   }
 
   def complete(value: CancelToken[UIO])(implicit s: Scheduler): Unit =

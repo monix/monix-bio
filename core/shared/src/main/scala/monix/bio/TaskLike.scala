@@ -26,7 +26,7 @@ import scala.annotation.implicitNotFound
 import scala.concurrent.Future
 import scala.util.Try
 
-/** A lawless type class that provides conversions into a [[BIO.Unsafe]].
+/** A lawless type class that provides conversions into a [[Task.Unsafe]].
   *
   * Sample:
   * {{{
@@ -56,14 +56,14 @@ import scala.util.Try
 @implicitNotFound("""Cannot find implicit value for TaskLike[${F}].
 Building this implicit value might depend on having an implicit
 s.c.ExecutionContext in scope, a Scheduler or some equivalent type.""")
-trait TaskLike[F[_]] extends (F ~> BIO.Unsafe) {
+trait TaskLike[F[_]] extends (F ~> Task.Unsafe) {
 
   /**
-    * Converts `F[A]` into a `BIO.Unsafe[A]`, preserving referential
+    * Converts `F[A]` into a `Task.Unsafe[A]`, preserving referential
     * transparency if `F[_]` is a pure data type and preserving
     * interruptibility if the source is cancelable.
     */
-  def apply[A](fa: F[A]): BIO.Unsafe[A]
+  def apply[A](fa: F[A]): Task.Unsafe[A]
 
 }
 
@@ -77,9 +77,9 @@ object TaskLike extends TaskLikeImplicits0 {
   /**
     * Instance for `Task`, returning the same reference.
     */
-  implicit val fromTask: TaskLike[BIO.Unsafe] =
-    new TaskLike[BIO.Unsafe] {
-      def apply[A](fa: BIO.Unsafe[A]): BIO.Unsafe[A] =
+  implicit val fromTask: TaskLike[Task.Unsafe] =
+    new TaskLike[Task.Unsafe] {
+      def apply[A](fa: Task.Unsafe[A]): Task.Unsafe[A] =
         fa
     }
 
@@ -88,8 +88,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromFuture: TaskLike[Future] =
     new TaskLike[Future] {
-      def apply[A](fa: Future[A]): BIO.Unsafe[A] =
-        BIO.fromFuture(fa)
+      def apply[A](fa: Future[A]): Task.Unsafe[A] =
+        Task.fromFuture(fa)
     }
 
   /**
@@ -97,8 +97,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromEval: TaskLike[Eval] =
     new TaskLike[Eval] {
-      def apply[A](fa: Eval[A]): BIO.Unsafe[A] =
-        Concurrent.liftIO[BIO.Unsafe, A](IO.eval(fa))
+      def apply[A](fa: Eval[A]): Task.Unsafe[A] =
+        Concurrent.liftIO[Task.Unsafe, A](IO.eval(fa))
     }
 
   /**
@@ -107,8 +107,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromIO: TaskLike[IO] =
     new TaskLike[IO] {
-      def apply[A](fa: IO[A]): BIO.Unsafe[A] =
-        Concurrent.liftIO[BIO.Unsafe, A](fa)
+      def apply[A](fa: IO[A]): Task.Unsafe[A] =
+        Concurrent.liftIO[Task.Unsafe, A](fa)
     }
 
   /**
@@ -116,8 +116,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromSyncIO: TaskLike[SyncIO] =
     new TaskLike[SyncIO] {
-      def apply[A](fa: SyncIO[A]): BIO.Unsafe[A] =
-        Concurrent.liftIO[BIO.Unsafe, A](fa.toIO)
+      def apply[A](fa: SyncIO[A]): Task.Unsafe[A] =
+        Concurrent.liftIO[Task.Unsafe, A](fa.toIO)
     }
 
   /**
@@ -125,8 +125,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromTry: TaskLike[Try] =
     new TaskLike[Try] {
-      def apply[A](fa: Try[A]): BIO.Unsafe[A] =
-        BIO.fromTry(fa)
+      def apply[A](fa: Try[A]): Task.Unsafe[A] =
+        Task.fromTry(fa)
     }
 
   /**
@@ -134,8 +134,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromCancelablePromise: TaskLike[CancelablePromise] =
     new TaskLike[CancelablePromise] {
-      def apply[A](p: CancelablePromise[A]): BIO.Unsafe[A] =
-        BIO.fromCancelablePromise(p)
+      def apply[A](p: CancelablePromise[A]): Task.Unsafe[A] =
+        Task.fromCancelablePromise(p)
     }
 
   /**
@@ -144,8 +144,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit val fromFunction0: TaskLike[Function0] =
     new TaskLike[Function0] {
-      def apply[A](thunk: () => A): BIO.Unsafe[A] =
-        BIO.Eval(thunk)
+      def apply[A](thunk: () => A): Task.Unsafe[A] =
+        Task.Eval(thunk)
     }
 
   /**
@@ -153,8 +153,8 @@ object TaskLike extends TaskLikeImplicits0 {
     */
   implicit def fromEither[E <: Throwable]: TaskLike[Either[E, *]] =
     new TaskLike[Either[E, *]] {
-      def apply[A](fa: Either[E, A]): BIO.Unsafe[A] =
-        BIO.fromEither(fa)
+      def apply[A](fa: Either[E, A]): Task.Unsafe[A] =
+        Task.fromEither(fa)
     }
 
 }
@@ -167,8 +167,8 @@ private[bio] abstract class TaskLikeImplicits0 extends TaskLikeImplicits1 {
     */
   implicit def fromConcurrentEffect[F[_]](implicit F: ConcurrentEffect[F]): TaskLike[F] =
     new TaskLike[F] {
-      def apply[A](fa: F[A]): BIO.Unsafe[A] =
-        BIO.fromConcurrentEffect(fa)
+      def apply[A](fa: F[A]): Task.Unsafe[A] =
+        Task.fromConcurrentEffect(fa)
     }
 
 }
@@ -181,8 +181,8 @@ private[bio] abstract class TaskLikeImplicits1 extends TaskLikeImplicits2 {
     */
   implicit def fromEffect[F[_]](implicit F: Effect[F]): TaskLike[F] =
     new TaskLike[F] {
-      def apply[A](fa: F[A]): BIO.Unsafe[A] =
-        BIO.fromEffect(fa)
+      def apply[A](fa: F[A]): Task.Unsafe[A] =
+        Task.fromEffect(fa)
     }
 
 }
@@ -192,10 +192,10 @@ private[bio] abstract class TaskLikeImplicits2 {
   /**
     * Converts any Future-like datatype into a `Task`, via [[monix.catnap.FutureLift]].
     */
-  implicit def fromFutureLift[F[_]](implicit F: FutureLift[BIO.Unsafe, F]): TaskLike[F] =
+  implicit def fromFutureLift[F[_]](implicit F: FutureLift[Task.Unsafe, F]): TaskLike[F] =
     new TaskLike[F] {
-      def apply[A](fa: F[A]): BIO.Unsafe[A] =
-        BIO.fromFutureLike(BIO.now(fa))
+      def apply[A](fa: F[A]): Task.Unsafe[A] =
+        Task.fromFutureLike(Task.now(fa))
     }
 
 }

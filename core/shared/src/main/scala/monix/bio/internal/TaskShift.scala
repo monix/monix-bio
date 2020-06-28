@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO.{Async, Context}
+import monix.bio.Task.{Async, Context}
 import monix.bio.{BiCallback, UIO}
 import monix.execution.Scheduler
 import monix.execution.schedulers.TracingScheduler
@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext
 private[bio] object TaskShift {
 
   /**
-    * Implementation for `BIO.shift`
+    * Implementation for `Task.shift`
     */
   def apply(ec: ExecutionContext): UIO[Unit] = {
     Async[Nothing, Unit](

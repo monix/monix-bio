@@ -25,9 +25,9 @@ import scala.util.Success
 
 object BIOStartAndForgetSuite extends BaseTestSuite {
 
-  test("BIO#startAndForget triggers execution in background thread") { implicit sc =>
+  test("Task#startAndForget triggers execution in background thread") { implicit sc =>
     var counter = 0
-    val bio = BIO.eval { counter += 1; counter }
+    val bio = Task.eval { counter += 1; counter }
 
     val main = for {
       _ <- bio.delayExecution(10.millisecond).startAndForget
@@ -42,9 +42,9 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     assertEquals(counter, 2)
   }
 
-  test("BIO#startAndForget does not affect execution of main thread with raised errors") { implicit sc =>
-    val errorProneBIO = BIO.raiseError[String]("Failed")
-    val successfulBIO = BIO.now(10).delayExecution(5.millisecond)
+  test("Task#startAndForget does not affect execution of main thread with raised errors") { implicit sc =>
+    val errorProneBIO = Task.raiseError[String]("Failed")
+    val successfulBIO = Task.now(10).delayExecution(5.millisecond)
 
     val result = for {
       _     <- errorProneBIO.startAndForget
@@ -56,10 +56,10 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("BIO#startAndForget triggers fatal errors in background thread") { implicit sc =>
+  test("Task#startAndForget triggers fatal errors in background thread") { implicit sc =>
     val fatalError = new DummyException()
-    val successfulBIO = BIO.now(20)
-    val fatalBIO = BIO.terminate(fatalError)
+    val successfulBIO = Task.now(20)
+    val fatalBIO = Task.terminate(fatalError)
 
     val result = for {
       _     <- fatalBIO.startAndForget
@@ -72,12 +72,12 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     assertEquals(sc.state.lastReportedError, fatalError)
   }
 
-  test("BIO#startAndForget is stack safe") { implicit sc =>
+  test("Task#startAndForget is stack safe") { implicit sc =>
     val count = if (Platform.isJVM) 100000 else 5000
 
-    var bio: BIO.Unsafe[Any] = BIO.evalAsync(1)
+    var bio: Task.Unsafe[Any] = Task.evalAsync(1)
     for (_ <- 0 until count) bio = bio.startAndForget
-    for (_ <- 0 until count) bio = bio.flatMap(_ => BIO.unit)
+    for (_ <- 0 until count) bio = bio.flatMap(_ => Task.unit)
 
     val f = bio.runToFuture
     sc.tick()

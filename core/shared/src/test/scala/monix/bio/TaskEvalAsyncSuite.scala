@@ -24,7 +24,7 @@ import monix.execution.exceptions.DummyException
 import scala.util.{Failure, Success}
 
 object TaskEvalAsyncSuite extends BaseTestSuite {
-  test("BIO.evalAsync should work, on different thread") { implicit s =>
+  test("Task.evalAsync should work, on different thread") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
@@ -40,9 +40,9 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success("result")))
   }
 
-  test("BIO.evalAsync should protect against user code errors") { implicit s =>
+  test("Task.evalAsync should protect against user code errors") { implicit s =>
     val ex = DummyException("dummy")
-    val f = BIO.evalAsync[Int](if (1 == 1) throw ex else 1).attempt.runToFuture
+    val f = Task.evalAsync[Int](if (1 == 1) throw ex else 1).attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(ex))))
@@ -58,50 +58,50 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
     assertEquals(s.state.lastReportedError, null)
   }
 
-  test("BIO.evalAsync is equivalent with BIO.eval") { implicit s =>
+  test("Task.evalAsync is equivalent with Task.eval") { implicit s =>
     check1 { a: Int =>
       val t1 = {
         var effect = 100
-        BIO.evalAsync { effect += 100; effect + a }
+        Task.evalAsync { effect += 100; effect + a }
       }
 
       val t2 = {
         var effect = 100
-        BIO.eval { effect += 100; effect + a }
+        Task.eval { effect += 100; effect + a }
       }
 
       List(t1 <-> t2, t2 <-> t1)
     }
   }
 
-  test("BIO.evalAsync is equivalent with BIO.evalOnce on first run") { implicit s =>
+  test("Task.evalAsync is equivalent with Task.evalOnce on first run") { implicit s =>
     check1 { a: Int =>
       val t1 = {
         var effect = 100
-        BIO.evalAsync { effect += 100; effect + a }
+        Task.evalAsync { effect += 100; effect + a }
       }
 
       val t2 = {
         var effect = 100
-        BIO.evalOnce { effect += 100; effect + a }
+        Task.evalOnce { effect += 100; effect + a }
       }
 
       t1 <-> t2
     }
   }
 
-  test("BIO.evalAsync.flatMap should protect against user code") { implicit s =>
+  test("Task.evalAsync.flatMap should protect against user code") { implicit s =>
     val ex = DummyException("dummy")
-    val t = BIO.evalAsync(1).flatMap[Throwable, Int](_ => throw ex)
-    check(t <-> BIO.terminate(ex))
+    val t = Task.evalAsync(1).flatMap[Throwable, Int](_ => throw ex)
+    check(t <-> Task.terminate(ex))
   }
 
-  test("BIO.evalAsync should be tail recursive") { implicit s =>
-    def loop(n: Int, idx: Int): BIO.Unsafe[Int] =
-      BIO.evalAsync(idx).flatMap { idx =>
+  test("Task.evalAsync should be tail recursive") { implicit s =>
+    def loop(n: Int, idx: Int): Task.Unsafe[Int] =
+      Task.evalAsync(idx).flatMap { idx =>
         if (idx < n) loop(n, idx + 1).map(_ + 1)
         else
-          BIO.evalAsync(idx)
+          Task.evalAsync(idx)
       }
 
     val iterations = s.executionModel.recommendedBatchSize * 20
@@ -111,15 +111,15 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(iterations * 2)))
   }
 
-  test("BIO.evalAsync.flatten is equivalent with flatMap") { implicit s =>
+  test("Task.evalAsync.flatten is equivalent with flatMap") { implicit s =>
     check1 { a: Int =>
-      val t = BIO.evalAsync(BIO.eval(a))
+      val t = Task.evalAsync(Task.eval(a))
       t.flatMap(identity) <-> t.flatten
     }
   }
 
-  test("BIO.evalAsync.coeval") { implicit s =>
-    val f = BIO.evalAsync(100).runToFuture
+  test("Task.evalAsync.coeval") { implicit s =>
+    val f = Task.evalAsync(100).runToFuture
     f.value match {
       case None =>
         s.tick()

@@ -17,9 +17,9 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO.{Context, Error, Now, Termination}
+import monix.bio.Task.{Context, Error, Now, Termination}
 import monix.bio.internal.TaskRunLoop.startFull
-import monix.bio.{BIO, BiCallback}
+import monix.bio.{BiCallback, Task}
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
 
@@ -32,19 +32,19 @@ private[bio] object TaskMemoize {
   /**
     * Implementation for `.memoize` and `.memoizeOnSuccess`.
     */
-  def apply[E, A](source: BIO[E, A], cacheErrors: Boolean): BIO[E, A] =
+  def apply[E, A](source: Task[E, A], cacheErrors: Boolean): Task[E, A] =
     source match {
       case Now(_) | Error(_) | Termination(_) =>
         source
 
 //      TODO: implement this optimization once `Coeval` is implemented
-//      case BIO.Eval(Coeval.Suspend(f: LazyVal[A @unchecked])) if !cacheErrors || f.cacheErrors =>
+//      case Task.Eval(Coeval.Suspend(f: LazyVal[A @unchecked])) if !cacheErrors || f.cacheErrors =>
 //        source
 
-      case BIO.Async(r: Register[E, A] @unchecked, _, _, _) if !cacheErrors || r.cacheErrors =>
+      case Task.Async(r: Register[E, A] @unchecked, _, _, _) if !cacheErrors || r.cacheErrors =>
         source
       case _ =>
-        BIO.Async(
+        Task.Async(
           new Register(source, cacheErrors),
           trampolineBefore = false,
           trampolineAfter = true,
@@ -52,9 +52,9 @@ private[bio] object TaskMemoize {
         )
     }
 
-  /** Registration function, used in `BIO.Async`. */
-  private final class Register[E, A](source: BIO[E, A], val cacheErrors: Boolean)
-      extends ((BIO.Context[E], BiCallback[E, A]) => Unit) { self =>
+  /** Registration function, used in `Task.Async`. */
+  private final class Register[E, A](source: Task[E, A], val cacheErrors: Boolean)
+      extends ((Task.Context[E], BiCallback[E, A]) => Unit) { self =>
 
     // N.B. keeps state!
     private[this] var thunk = source
@@ -129,15 +129,15 @@ private[bio] object TaskMemoize {
     /** While the task is pending completion, registers a new listener
       * that will receive the result once the task is complete.
       */
-    private def registerListener(p: Promise[Either[E, A]], context: Context[E], cb: BiCallback[E, A])(
-      implicit ec: ExecutionContext
+    private def registerListener(p: Promise[Either[E, A]], context: Context[E], cb: BiCallback[E, A])(implicit
+      ec: ExecutionContext
     ): Unit = {
 
       p.future.onComplete { r =>
         // Listener is cancelable: we simply ensure that the result isn't streamed
         if (!context.connection.isCanceled) {
           context.frameRef.reset()
-          startFull(BIO.fromTryEither(r), context, cb, null, null, null, 1)
+          startFull(Task.fromTryEither(r), context, cb, null, null, null, 1)
         }
       }
     }
@@ -165,7 +165,7 @@ private[bio] object TaskMemoize {
               .withConnection(TaskConnection.uncancelable)
 
             // Start with light async boundary to prevent stack-overflows!
-            BIO.unsafeStartTrampolined(self.thunk, ctx2, self.complete)
+            Task.unsafeStartTrampolined(self.thunk, ctx2, self.complete)
           }
 
         case ref: Promise[Either[E, A]] @unchecked =>
@@ -183,8 +183,9 @@ private[bio] object TaskMemoize {
   /**
     * Separates success case from expected and terminal error case.
     */
-  private def isSuccess[E, A](result: Try[Either[E, A]]): Boolean = result match {
-    case Success(Right(_)) => true
-    case _ => false
-  }
+  private def isSuccess[E, A](result: Try[Either[E, A]]): Boolean =
+    result match {
+      case Success(Right(_)) => true
+      case _ => false
+    }
 }

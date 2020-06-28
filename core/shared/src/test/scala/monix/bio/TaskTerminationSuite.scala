@@ -23,79 +23,79 @@ import cats.laws.discipline._
 import scala.util.{Failure, Success}
 
 object TaskTerminationSuite extends BaseTestSuite {
-  test("BIO#redeemCause should mirror source on success") { implicit s =>
-    val task = (UIO.evalAsync(1): BIO[String, Int]).redeemCause(_ => 99, identity)
+  test("Task#redeemCause should mirror source on success") { implicit s =>
+    val task = (UIO.evalAsync(1): Task[String, Int]).redeemCause(_ => 99, identity)
 
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO#redeemCause should recover typed error") { implicit s =>
+  test("Task#redeemCause should recover typed error") { implicit s =>
     val ex = "dummy"
-    val task = (BIO.raiseError(ex): BIO[String, Int]).redeemCause(_ => 99, identity)
+    val task = (Task.raiseError(ex): Task[String, Int]).redeemCause(_ => 99, identity)
 
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(99)))
   }
 
-  test("BIO#redeemCause should recover unexpected error") { implicit s =>
+  test("Task#redeemCause should recover unexpected error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = BIO.evalTotal[Int](if (1 == 1) throw ex else 1).redeemCause(_ => 99, identity)
+    val task = Task.evalTotal[Int](if (1 == 1) throw ex else 1).redeemCause(_ => 99, identity)
 
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(99)))
   }
 
-  test("BIO#redeemCause should protect against user code") { implicit s =>
+  test("Task#redeemCause should protect against user code") { implicit s =>
     val ex1 = DummyException("one")
     val ex2 = DummyException("two")
 
-    val task = (BIO.terminate(ex1): BIO[String, Int]).redeemCause(_ => throw ex2, _ => throw ex2)
+    val task = (Task.terminate(ex1): Task[String, Int]).redeemCause(_ => throw ex2, _ => throw ex2)
 
     val f = task.runToFuture; s.tick()
     assertEquals(f.value, Some(Failure(ex2)))
   }
 
-  test("BIO#redeemCauseWith derives flatMap") { implicit s =>
-    check2 { (fa: BIO[String, Int], f: Int => BIO[String, Int]) =>
-      fa.redeemCauseWith(_.fold(BIO.terminate, BIO.raiseError), f) <-> fa.flatMap(f)
+  test("Task#redeemCauseWith derives flatMap") { implicit s =>
+    check2 { (fa: Task[String, Int], f: Int => Task[String, Int]) =>
+      fa.redeemCauseWith(_.fold(Task.terminate, Task.raiseError), f) <-> fa.flatMap(f)
     }
   }
 
-  test("BIO#redeemCauseWith should mirror source on success") { implicit s =>
-    val task = (UIO.evalAsync(1): BIO[String, Int]).redeemCauseWith(_ => BIO.now(99), BIO.now)
+  test("Task#redeemCauseWith should mirror source on success") { implicit s =>
+    val task = (UIO.evalAsync(1): Task[String, Int]).redeemCauseWith(_ => Task.now(99), Task.now)
 
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(1)))
   }
 
-  test("BIO#redeemCauseWith should recover typed error") { implicit s =>
+  test("Task#redeemCauseWith should recover typed error") { implicit s =>
     val ex = "dummy"
-    val task = (BIO.raiseError(ex): BIO[String, Int]).redeemCauseWith(_ => BIO.now(99), BIO.now)
+    val task = (Task.raiseError(ex): Task[String, Int]).redeemCauseWith(_ => Task.now(99), Task.now)
 
     val f = task.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(99)))
   }
 
-  test("BIO#redeemCauseWith should recover unexpected error") { implicit s =>
+  test("Task#redeemCauseWith should recover unexpected error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = BIO.evalTotal[Int](if (1 == 1) throw ex else 1).redeemCauseWith(_ => BIO.now(99), BIO.now)
+    val task = Task.evalTotal[Int](if (1 == 1) throw ex else 1).redeemCauseWith(_ => Task.now(99), Task.now)
 
     val f = task.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(99))))
   }
 
-  test("BIO#redeemCauseWith should protect against user code") { implicit s =>
+  test("Task#redeemCauseWith should protect against user code") { implicit s =>
     val ex1 = DummyException("one")
     val ex2 = DummyException("two")
 
-    val task = (BIO.terminate(ex1): BIO[String, Int]).redeemCauseWith(_ => throw ex2, _ => throw ex2)
+    val task = (Task.terminate(ex1): Task[String, Int]).redeemCauseWith(_ => throw ex2, _ => throw ex2)
 
     val f = task.runToFuture; s.tick()
     assertEquals(f.value, Some(Failure(ex2)))

@@ -23,14 +23,14 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskDeferActionSuite extends BaseTestSuite {
-  test("BIO.deferAction works") { implicit s =>
-    def measureLatency[E, A](source: BIO[E, A]): BIO[E, (A, Long)] =
-      BIO.deferAction { implicit s =>
+  test("Task.deferAction works") { implicit s =>
+    def measureLatency[E, A](source: Task[E, A]): Task[E, (A, Long)] =
+      Task.deferAction { implicit s =>
         val start = s.clockMonotonic(MILLISECONDS)
         source.map(a => (a, s.clockMonotonic(MILLISECONDS) - start))
       }
 
-    val task = measureLatency(BIO.now("hello").delayExecution(1.second))
+    val task = measureLatency(Task.now("hello").delayExecution(1.second))
     val f = task.runToFuture
 
     s.tick()
@@ -40,54 +40,54 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(("hello", 1000))))
   }
 
-  test("BIO.deferAction works for failed tasks") { implicit s =>
+  test("Task.deferAction works for failed tasks") { implicit s =>
     val dummy = "dummy"
-    val task = BIO.deferAction(_ => BIO.raiseError(dummy))
+    val task = Task.deferAction(_ => Task.raiseError(dummy))
     val f = task.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("BIO.deferAction protects against user error") { implicit s =>
+  test("Task.deferAction protects against user error") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.deferAction(_ => throw dummy)
+    val task = Task.deferAction(_ => throw dummy)
     val f = task.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.deferAction should properly cast errors") { implicit s =>
+  test("Task.deferAction should properly cast errors") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.deferAction[Int, Int](_ => throw dummy)
+    val task = Task.deferAction[Int, Int](_ => throw dummy)
     val f = task.onErrorHandle(identity).runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("BIO.deferAction is stack safe") { implicit sc =>
-    def loop(n: Int, acc: Int): BIO.Unsafe[Int] =
-      BIO.deferAction { _ =>
+  test("Task.deferAction is stack safe") { implicit sc =>
+    def loop(n: Int, acc: Int): Task.Unsafe[Int] =
+      Task.deferAction { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          BIO.now(acc)
+          Task.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(10000)))
   }
 
-  testAsync("BIO.deferAction(local.write) works") { _ =>
+  testAsync("Task.deferAction(local.write) works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- BIOLocal(10)
-      _ <- BIO.deferAction(_ => l.write(100))
-      _ <- BIO.shift
+      l <- TaskLocal(10)
+      _ <- Task.deferAction(_ => l.write(100))
+      _ <- Task.shift
       v <- l.read
     } yield v
 

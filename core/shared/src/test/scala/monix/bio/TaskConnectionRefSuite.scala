@@ -45,7 +45,7 @@ object TaskConnectionRefSuite extends BaseTestSuite {
   test("assign and cancel a CancelableF") { implicit s =>
     var effect = 0
     val cr = TaskConnectionRef[Throwable]()
-    val b = CancelableF.wrap(BIO { effect += 1 })
+    val b = CancelableF.wrap(Task { effect += 1 })
 
     cr := b
     assertEquals(effect, 0)
@@ -54,10 +54,10 @@ object TaskConnectionRefSuite extends BaseTestSuite {
     assert(effect == 1)
   }
 
-  test("assign and cancel a CancelToken[BIO.Unsafe]") { implicit s =>
+  test("assign and cancel a CancelToken[Task.Unsafe]") { implicit s =>
     var effect = 0
     val cr = TaskConnectionRef[Throwable]()
-    val b = BIO { effect += 1 }
+    val b = Task { effect += 1 }
 
     cr := b
     assertEquals(effect, 0)
@@ -99,7 +99,7 @@ object TaskConnectionRefSuite extends BaseTestSuite {
     cr.cancel.runAsyncAndForget; s.tick()
 
     var effect = 0
-    val b = BooleanCancelableF(BIO { effect += 1 }).runToFuture.value.flatMap(_.toOption).get
+    val b = BooleanCancelableF(Task { effect += 1 }).runToFuture.value.flatMap(_.toOption).get
     cr := b
 
     assert(b.isCanceled.runToFuture.value.flatMap(_.toOption).get)
@@ -108,7 +108,7 @@ object TaskConnectionRefSuite extends BaseTestSuite {
     cr.cancel.runAsyncAndForget; s.tick()
     assertEquals(effect, 1)
 
-    val b2 = BooleanCancelableF(BIO { effect += 1 }).runToFuture.value.flatMap(_.toOption).get
+    val b2 = BooleanCancelableF(Task { effect += 1 }).runToFuture.value.flatMap(_.toOption).get
     intercept[IllegalStateException] { cr := b2 }
     assertEquals(effect, 2)
   }
@@ -118,7 +118,7 @@ object TaskConnectionRefSuite extends BaseTestSuite {
     cr.cancel.runAsyncAndForget; s.tick()
 
     var effect = 0
-    val b = BIO { effect += 1 }
+    val b = Task { effect += 1 }
 
     cr := b; s.tick()
     assertEquals(effect, 1)

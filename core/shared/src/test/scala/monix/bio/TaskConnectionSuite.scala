@@ -188,14 +188,14 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("pop when self is empty") { implicit s =>
     val sc = TaskConnection[Throwable]()
-    assertEquals(sc.pop(), BIO.unit)
+    assertEquals(sc.pop(), Task.unit)
   }
 
   test("pop when self is canceled") { implicit s =>
     val sc = TaskConnection[Throwable]()
     sc.cancel.runAsyncAndForget
     s.tick()
-    assertEquals(sc.pop(), BIO.unit)
+    assertEquals(sc.pop(), Task.unit)
   }
 
   test("cancel mixture") { implicit s =>
@@ -310,7 +310,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     t.push(c2)
     t.pushConnections(c3, c4)
 
-    assertEquals(t.pop(), BIO.unit)
+    assertEquals(t.pop(), Task.unit)
     t.push(bc)
 
     t.cancel.runAsyncAndForget; s.tick()
@@ -322,7 +322,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     assert(!c3.isCanceled, "!c3.isCanceled")
     assert(!c4.isCanceled, "!c4.isCanceled")
     assertEquals(effect, 0)
-    assertEquals(t.pop(), BIO.unit)
+    assertEquals(t.pop(), Task.unit)
     assert(t.tryReactivate(), "t.tryReactivate()")
 
     assertEquals(t.toCancelable, Cancelable.empty)
@@ -330,7 +330,7 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("throwing error in Task on cancel all") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = BIO.terminate(dummy)
+    val task = Task.terminate(dummy)
 
     val c = TaskConnection[Throwable]()
     c.push(task)
@@ -341,9 +341,9 @@ object TaskConnectionSuite extends BaseTestSuite {
 
   test("throwing multiple errors in Tasks on cancel all") { implicit s =>
     val dummy1 = DummyException("dummy1")
-    val task1 = BIO.terminate(dummy1)
+    val task1 = Task.terminate(dummy1)
     val dummy2 = DummyException("dummy2")
-    val task2 = BIO.terminate(dummy2)
+    val task2 = Task.terminate(dummy2)
 
     val c = TaskConnection[Throwable]()
     c.push(task1)
@@ -368,7 +368,7 @@ object TaskConnectionSuite extends BaseTestSuite {
     c.cancel.runAsyncAndForget; s.tick()
 
     val dummy = DummyException("dummy")
-    val task = BIO.terminate(dummy)
+    val task = Task.terminate(dummy)
     c.push(task); s.tick()
 
     assertEquals(s.state.lastReportedError, dummy)

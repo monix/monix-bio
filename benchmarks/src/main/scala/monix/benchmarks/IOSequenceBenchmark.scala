@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 import cats.effect.IO
 import cats.effect.implicits._
 import cats.implicits._
-import monix.bio.BIO
+import monix.bio.Task
 import monix.eval.Task
 import org.openjdk.jmh.annotations._
 import zio.ZIO
@@ -86,54 +86,54 @@ class IOSequenceBenchmark {
 
 
   @Benchmark
-  def monixGather(): Long = {
+  def monixParSequence(): Long = {
     val tasks = (0 until count).map(_ => Task.eval(1)).toList
-    val result = Task.gather(tasks).map(_.sum.toLong)
+    val result = Task.parSequence(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
 
   @Benchmark
-  def monixGatherUnordered(): Long = {
+  def monixParSequenceUnordered(): Long = {
     val tasks = (0 until count).map(_ => Task.eval(1)).toList
-    val result = Task.gatherUnordered(tasks).map(_.sum.toLong)
+    val result = Task.parSequenceUnordered(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
   @Benchmark
-  def monixGatherN(): Long = {
+  def monixParSequenceN(): Long = {
     val tasks = (0 until count).map(_ => Task.eval(1)).toList
-    val result = Task.gatherN(parallelism)(tasks).map(_.sum.toLong)
+    val result = Task.parSequenceN(parallelism)(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
   @Benchmark
   def monixBioSequence(): Long = {
-    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.sequence(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => Task.eval(1)).toList
+    val result = Task.sequence(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
 
   @Benchmark
   def monixBioParSequence(): Long = {
-    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.parSequence(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => Task.eval(1)).toList
+    val result = Task.parSequence(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
 
   @Benchmark
   def monixBioParSequenceUnordered(): Long = {
-    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.parSequenceUnordered(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => Task.eval(1)).toList
+    val result = Task.parSequenceUnordered(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 
   @Benchmark
   def monixBioParSequenceN(): Long = {
-    val tasks = (0 until count).map(_ => BIO.eval(1)).toList
-    val result = BIO.parSequenceN(parallelism)(tasks).map(_.sum.toLong)
+    val tasks = (0 until count).map(_ => Task.eval(1)).toList
+    val result = Task.parSequenceN(parallelism)(tasks).map(_.sum.toLong)
     result.runSyncUnsafe()
   }
 

@@ -27,8 +27,8 @@ import scala.util.{Failure, Try}
 
 object TaskBlockingSuite extends SimpleTestSuite {
   test("blocking on future should work") {
-    val source1 = BIO.evalAsync(100)
-    val source2 = BIO.evalAsync(200).onErrorHandleWith { case e: Exception => BIO.raiseError(e) }
+    val source1 = Task.evalAsync(100)
+    val source2 = Task.evalAsync(200).onErrorHandleWith { case e: Exception => Task.raiseError(e) }
 
     val derived = source1.map { x =>
       val r = Await.result(source2.runToFuture, 10.seconds)
@@ -41,53 +41,53 @@ object TaskBlockingSuite extends SimpleTestSuite {
 
   test("blocking on async") {
     for (_ <- 0 until 1000) {
-      val task = BIO.evalAsync(1)
+      val task = Task.evalAsync(1)
       assertEquals(task.runSyncUnsafe(Duration.Inf), 1)
     }
   }
 
   test("blocking on async.flatMap") {
     for (_ <- 0 until 1000) {
-      val task = BIO.evalAsync(1).flatMap(_ => BIO.evalAsync(2))
+      val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2))
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
     }
   }
 
-  test("BIO.eval(throw ex).attempt.runSyncUnsafe") {
+  test("Task.eval(throw ex).attempt.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task = BIO.eval(throw dummy)
+      val task = Task.eval(throw dummy)
       assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
     }
   }
 
-  test("BIO.evalTotal(throw ex).onErrorHandle.runSyncUnsafe") {
+  test("Task.evalTotal(throw ex).onErrorHandle.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task: BIO[Int, Int] = BIO.evalTotal(throw dummy)
+      val task: Task[Int, Int] = Task.evalTotal(throw dummy)
       assertEquals(Try(task.onErrorHandle(_ => 10).runSyncUnsafe(Duration.Inf)), Failure(dummy))
     }
   }
 
-  test("BIO.suspend(throw ex).attempt.runSyncUnsafe") {
+  test("Task.suspend(throw ex).attempt.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task = BIO.suspend(throw dummy)
+      val task = Task.suspend(throw dummy)
       assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
     }
   }
 
-  test("BIO.suspendTotal(throw ex).onErrorHandle.runSyncUnsafe") {
+  test("Task.suspendTotal(throw ex).onErrorHandle.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")
-      val task: BIO[Int, Int] = BIO.suspendTotal(throw dummy)
+      val task: Task[Int, Int] = Task.suspendTotal(throw dummy)
       assertEquals(Try(task.onErrorHandle(_ => 10).runSyncUnsafe(Duration.Inf)), Failure(dummy))
     }
   }
 
   test("blocking on memoize") {
     for (_ <- 0 until 1000) {
-      val task = BIO.evalAsync(1).flatMap(_ => BIO.evalAsync(2)).memoize
+      val task = Task.evalAsync(1).flatMap(_ => Task.evalAsync(2)).memoize
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
       assertEquals(task.runSyncUnsafe(Duration.Inf), 2)
     }
@@ -95,16 +95,16 @@ object TaskBlockingSuite extends SimpleTestSuite {
 
   test("timeout exception") {
     intercept[TimeoutException] {
-      BIO.never.runSyncUnsafe(100.millis)
+      Task.never.runSyncUnsafe(100.millis)
     }
     ()
   }
 
-  test("BIO.attempt.runSyncUnsafe works") {
+  test("Task.attempt.runSyncUnsafe works") {
     val dummy = "boom"
     val dummyEx = DummyException(dummy)
-    val task: BIO[String, Int] = BIO.raiseError(dummy)
-    val task2: BIO[String, Int] = BIO.terminate(dummyEx)
+    val task: Task[String, Int] = Task.raiseError(dummy)
+    val task2: Task[String, Int] = Task.terminate(dummyEx)
 
     assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
 

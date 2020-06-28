@@ -17,11 +17,11 @@
 
 package monix.bio
 
-import monix.bio.BIO.Context
+import monix.bio.Task.Context
 
 package object internal {
 
-  /** Handy alias for building `BIO.Async` nodes. */
+  /** Handy alias for building `Task.Async` nodes. */
   private[bio] type Start[E, A] = (Context[E], BiCallback[E, A]) => Unit
 
   /** Internal API: A run-loop frame index is a number representing the current

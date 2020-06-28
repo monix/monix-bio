@@ -23,13 +23,13 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskSequenceSuite extends BaseTestSuite {
-  test("BIO.sequence should not execute in parallel") { implicit s =>
+  test("Task.sequence should not execute in parallel") { implicit s =>
     val seq = Seq(
-      BIO.evalAsync(1).delayExecution(2.seconds),
-      BIO.evalAsync(2).delayExecution(1.second),
-      BIO.evalAsync(3).delayExecution(3.seconds)
+      Task.evalAsync(1).delayExecution(2.seconds),
+      Task.evalAsync(2).delayExecution(1.second),
+      Task.evalAsync(3).delayExecution(3.seconds)
     )
-    val f = BIO.sequence(seq).runToFuture
+    val f = Task.sequence(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -41,16 +41,16 @@ object TaskSequenceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Seq(1, 2, 3))))
   }
 
-  test("BIO.sequence should onError if one of the tasks terminates in error") { implicit s =>
+  test("Task.sequence should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq(
-      BIO.evalAsync(2).delayExecution(1.second),
-      BIO.evalAsync(throw ex).delayExecution(2.seconds),
-      BIO.evalAsync(3).delayExecution(3.seconds),
-      BIO.evalAsync(3).delayExecution(1.seconds)
+      Task.evalAsync(2).delayExecution(1.second),
+      Task.evalAsync(throw ex).delayExecution(2.seconds),
+      Task.evalAsync(3).delayExecution(3.seconds),
+      Task.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = BIO.sequence(seq).runToFuture
+    val f = Task.sequence(seq).runToFuture
 
     // First
     s.tick(1.second)
@@ -60,7 +60,7 @@ object TaskSequenceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.sequence should onTerminate if one of the tasks terminates in error") { implicit s =>
+  test("Task.sequence should onTerminate if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq(
       UIO.evalAsync(2).delayExecution(1.second),
@@ -79,13 +79,13 @@ object TaskSequenceSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("BIO.sequence should be canceled") { implicit s =>
+  test("Task.sequence should be canceled") { implicit s =>
     val seq = Seq(
-      BIO.evalAsync(1).delayExecution(2.seconds),
-      BIO.evalAsync(2).delayExecution(1.second),
-      BIO.evalAsync(3).delayExecution(3.seconds)
+      Task.evalAsync(1).delayExecution(2.seconds),
+      Task.evalAsync(2).delayExecution(1.second),
+      Task.evalAsync(3).delayExecution(3.seconds)
     )
-    val f = BIO.sequence(seq).runToFuture
+    val f = Task.sequence(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)

@@ -18,8 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, BiCallback, UIO}
-import monix.bio.BIO.{Async, Context}
+import monix.bio.{BiCallback, Task, UIO}
+import monix.bio.Task.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.Scheduler
 
@@ -29,11 +29,11 @@ import scala.util.control.NonFatal
 private[bio] object TaskParSequence {
 
   /**
-    * Implementation for `BIO.parSequence`
+    * Implementation for `Task.parSequence`
     */
   def apply[E, A](
-    in: Iterable[BIO[E, A]]
-  ): BIO[E, List[A]] = {
+    in: Iterable[Task[E, A]]
+  ): Task[E, List[A]] = {
     Async(
       new Register(in),
       trampolineBefore = true,
@@ -48,7 +48,7 @@ private[bio] object TaskParSequence {
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
   private final class Register[E, A](
-    in: Iterable[BIO[E, A]]
+    in: Iterable[Task[E, A]]
   ) extends ForkedRegister[E, List[A]] {
 
     def apply(context: Context[E], finalCallback: BiCallback[E, List[A]]): Unit = {
@@ -56,7 +56,7 @@ private[bio] object TaskParSequence {
       val lock = new AnyRef
       val mainConn = context.connection
 
-      var tasks: Array[BIO[E, A]] = null
+      var tasks: Array[Task[E, A]] = null
       var results: Array[AnyRef] = null
       var tasksCount = 0
       var completed = 0
@@ -134,7 +134,7 @@ private[bio] object TaskParSequence {
           // If it's a single task, then execute it directly
           val source = tasks(0).map(r => List(r))
           // Needs to ensure full async delivery due to implementing ForkedStart!
-          BIO.unsafeStartEnsureAsync(source, context, finalCallback)
+          Task.unsafeStartEnsureAsync(source, context, finalCallback)
         } else {
           results = new Array[AnyRef](tasksCount)
 
@@ -156,7 +156,7 @@ private[bio] object TaskParSequence {
             allCancelables += stacked.cancel
 
             // Light asynchronous boundary
-            BIO.unsafeStartEnsureAsync(
+            Task.unsafeStartEnsureAsync(
               tasks(idx),
               childContext,
               new BiCallback[E, A] {

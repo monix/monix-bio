@@ -17,14 +17,14 @@
 
 package monix.bio.internal
 
-import monix.bio.BIO.{Async, Context}
+import monix.bio.Task.{Async, Context}
 import monix.bio.{BiCallback, UIO}
 
 import scala.concurrent.duration.Duration
 
 private[bio] object TaskSleep {
 
-  /** Implementation for `BIO.sleep`. */
+  /** Implementation for `Task.sleep`. */
   def apply(timespan: Duration): UIO[Unit] =
     Async[Nothing, Unit](
       new Register(timespan),

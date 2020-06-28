@@ -18,7 +18,7 @@
 package monix.bio.instances
 
 import cats.{Bifunctor, CoflatMap, Eval, MonadError, SemigroupK}
-import monix.bio.{BIO, UIO}
+import monix.bio.{Task, UIO}
 
 import scala.util.Try
 
@@ -32,71 +32,71 @@ import scala.util.Try
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
 class CatsBaseForTask[E]
-    extends MonadError[BIO[E, *], E] with CoflatMap[BIO[E, *]] with SemigroupK[BIO[E, *]] with Bifunctor[BIO] {
+    extends MonadError[Task[E, *], E] with CoflatMap[Task[E, *]] with SemigroupK[Task[E, *]] with Bifunctor[Task] {
 
   override def pure[A](a: A): UIO[A] =
-    BIO.pure(a)
+    Task.pure(a)
 
   override val unit: UIO[Unit] =
-    BIO.unit
+    Task.unit
 
-  override def flatMap[A, B](fa: BIO[E, A])(f: (A) => BIO[E, B]): BIO[E, B] =
+  override def flatMap[A, B](fa: Task[E, A])(f: (A) => Task[E, B]): Task[E, B] =
     fa.flatMap(f)
 
-  override def flatten[A](ffa: BIO[E, BIO[E, A]]): BIO[E, A] =
+  override def flatten[A](ffa: Task[E, Task[E, A]]): Task[E, A] =
     ffa.flatten
 
-  override def tailRecM[A, B](a: A)(f: (A) => BIO[E, Either[A, B]]): BIO[E, B] =
-    BIO.tailRecM(a)(f)
+  override def tailRecM[A, B](a: A)(f: (A) => Task[E, Either[A, B]]): Task[E, B] =
+    Task.tailRecM(a)(f)
 
-  override def ap[A, B](ff: BIO[E, (A) => B])(fa: BIO[E, A]): BIO[E, B] =
+  override def ap[A, B](ff: Task[E, (A) => B])(fa: Task[E, A]): Task[E, B] =
     for (f <- ff; a <- fa) yield f(a)
 
-  override def map2[A, B, Z](fa: BIO[E, A], fb: BIO[E, B])(f: (A, B) => Z): BIO[E, Z] =
+  override def map2[A, B, Z](fa: Task[E, A], fb: Task[E, B])(f: (A, B) => Z): Task[E, Z] =
     for (a <- fa; b <- fb) yield f(a, b)
 
-  override def product[A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, (A, B)] =
+  override def product[A, B](fa: Task[E, A], fb: Task[E, B]): Task[E, (A, B)] =
     for (a <- fa; b <- fb) yield (a, b)
 
-  override def map[A, B](fa: BIO[E, A])(f: (A) => B): BIO[E, B] =
+  override def map[A, B](fa: Task[E, A])(f: (A) => B): Task[E, B] =
     fa.map(f)
 
-  override def raiseError[A](e: E): BIO[E, A] =
-    BIO.raiseError(e)
+  override def raiseError[A](e: E): Task[E, A] =
+    Task.raiseError(e)
 
-  override def handleError[A](fa: BIO[E, A])(f: (E) => A): BIO[E, A] =
+  override def handleError[A](fa: Task[E, A])(f: (E) => A): Task[E, A] =
     fa.onErrorHandle(f)
 
-  override def handleErrorWith[A](fa: BIO[E, A])(f: (E) => BIO[E, A]): BIO[E, A] =
+  override def handleErrorWith[A](fa: Task[E, A])(f: (E) => Task[E, A]): Task[E, A] =
     fa.onErrorHandleWith(f)
 
-  override def recover[A](fa: BIO[E, A])(pf: PartialFunction[E, A]): BIO[E, A] =
+  override def recover[A](fa: Task[E, A])(pf: PartialFunction[E, A]): Task[E, A] =
     fa.onErrorRecover(pf)
 
-  override def recoverWith[A](fa: BIO[E, A])(pf: PartialFunction[E, BIO[E, A]]): BIO[E, A] =
+  override def recoverWith[A](fa: Task[E, A])(pf: PartialFunction[E, Task[E, A]]): Task[E, A] =
     fa.onErrorRecoverWith(pf)
 
-  override def attempt[A](fa: BIO[E, A]): BIO[E, Either[E, A]] =
+  override def attempt[A](fa: Task[E, A]): Task[E, Either[E, A]] =
     fa.attempt
 
-  override def catchNonFatal[A](a: => A)(implicit ev: <:<[Throwable, E]): BIO[E, A] =
-    BIO.eval(a).asInstanceOf[BIO[E, A]]
+  override def catchNonFatal[A](a: => A)(implicit ev: <:<[Throwable, E]): Task[E, A] =
+    Task.eval(a).asInstanceOf[Task[E, A]]
 
-  override def catchNonFatalEval[A](a: Eval[A])(implicit ev: <:<[Throwable, E]): BIO[E, A] =
-    BIO.eval(a.value).asInstanceOf[BIO[E, A]]
+  override def catchNonFatalEval[A](a: Eval[A])(implicit ev: <:<[Throwable, E]): Task[E, A] =
+    Task.eval(a.value).asInstanceOf[Task[E, A]]
 
-  override def fromTry[A](t: Try[A])(implicit ev: <:<[Throwable, E]): BIO[E, A] =
-    BIO.fromTry(t).asInstanceOf[BIO[E, A]]
+  override def fromTry[A](t: Try[A])(implicit ev: <:<[Throwable, E]): Task[E, A] =
+    Task.fromTry(t).asInstanceOf[Task[E, A]]
 
-  override def coflatMap[A, B](fa: BIO[E, A])(f: (BIO[E, A]) => B): BIO[E, B] =
+  override def coflatMap[A, B](fa: Task[E, A])(f: (Task[E, A]) => B): Task[E, B] =
     fa.start.map(fiber => f(fiber.join))
 
-  override def coflatten[A](fa: BIO[E, A]): BIO[E, BIO[E, A]] =
+  override def coflatten[A](fa: Task[E, A]): Task[E, Task[E, A]] =
     fa.start.map(_.join)
 
-  override def combineK[A](ta: BIO[E, A], tb: BIO[E, A]): BIO[E, A] =
+  override def combineK[A](ta: Task[E, A], tb: Task[E, A]): Task[E, A] =
     ta.onErrorHandleWith(_ => tb)
 
-  override def bimap[A, B, C, D](fab: BIO[A, B])(f: A => C, g: B => D): BIO[C, D] =
+  override def bimap[A, B, C, D](fab: Task[A, B])(f: A => C, g: B => D): Task[C, D] =
     fab.bimap(f, g)
 }

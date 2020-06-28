@@ -41,7 +41,7 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .settings(crossSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC21",
+      "dev.zio" %% "zio" % "1.0.0-RC21-1",
       "io.monix" %% "monix-eval" % monixVersion
     ))
 
@@ -58,7 +58,7 @@ lazy val docs = project
   .enablePlugins(DocusaurusPlugin, MdocPlugin, ScalaUnidocPlugin)
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC21",
+      "dev.zio" %% "zio" % "1.0.0-RC21-1",
       "dev.zio" %% "zio-interop-cats" % "2.1.3.0-RC16",
       "io.monix" %% "monix-eval" % monixVersion
     ))
@@ -107,7 +107,7 @@ updateSiteVariables in ThisBuild := {
     Map[String, String](
       "organization" -> (organization in LocalRootProject).value,
       "coreModuleName" -> (moduleName in coreJVM).value,
-      "latestVersion" -> version.value,
+      "latestVersion" -> version.value.takeWhile(_ != '-'),
       "scalaPublishVersions" -> {
         val minorVersions = (crossScalaVersions in coreJVM).value.map(minorVersion)
         if (minorVersions.size <= 2) minorVersions.mkString(" and ")

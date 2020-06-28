@@ -18,8 +18,8 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.{BIO, BiCallback, UIO}
-import monix.bio.BIO.{
+import monix.bio.{BiCallback, Task, UIO}
+import monix.bio.Task.{
   Async,
   Context,
   ContextSwitch,
@@ -42,8 +42,8 @@ import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 private[bio] object TaskRunLoop {
-  type Current = BIO[Any, Any]
-  type Bind = Any => BIO[Any, Any]
+  type Current = Task[Any, Any]
+  type Bind = Any => Task[Any, Any]
   type CallStack = ChunkedArrayStack[Bind]
 
   /** Starts or resumes evaluation of the run-loop from where it left
@@ -53,7 +53,7 @@ private[bio] object TaskRunLoop {
     * happens from [[startFuture]] and [[startLight]].
     */
   def startFull[E, A](
-    source: BIO[E, A],
+    source: Task[E, A],
     contextInit: Context[E],
     cb: BiCallback[E, A],
     rcb: TaskRestartCallback,
@@ -237,7 +237,7 @@ private[bio] object TaskRunLoop {
     * trampoline loop.
     */
   def restartAsync[E, A](
-    source: BIO[E, A],
+    source: Task[E, A],
     context: Context[E],
     cb: BiCallback[E, A],
     rcb: TaskRestartCallback,
@@ -277,22 +277,22 @@ private[bio] object TaskRunLoop {
     }
   }
 
-  /** A run-loop that attempts to evaluate a `BIO` without
-    * initializing a `BIO.Context`, falling back to
+  /** A run-loop that attempts to evaluate a `Task` without
+    * initializing a `Task.Context`, falling back to
     * [[startFull]] when the first `Async` boundary is hit.
     *
-    * Function gets invoked by `BIO.runAsync(cb: Callback)`.
+    * Function gets invoked by `Task.runAsync(cb: Callback)`.
     */
   def startLight[E, A](
-    source: BIO[E, A],
+    source: Task[E, A],
     scheduler: Scheduler,
-    opts: BIO.Options,
+    opts: Task.Options,
     // TODO: should it be [E, A]?
     cb: BiCallback[Any, A],
     isCancelable: Boolean = true
   ): CancelToken[UIO] = {
 
-    var current = source.asInstanceOf[BIO[Any, Any]]
+    var current = source.asInstanceOf[Task[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
     // Values from Now, Always and Once are unboxed in this var, for code reuse
@@ -368,7 +368,7 @@ private[bio] object TaskRunLoop {
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
                 cb.onError(error)
-                return BIO.unit
+                return Task.unit
               case bind =>
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
@@ -382,7 +382,7 @@ private[bio] object TaskRunLoop {
             findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
                 if (!cb.tryOnTermination(error)) scheduler.reportFailure(error)
-                return BIO.unit
+                return Task.unit
               case bind =>
                 // Try/catch described as statement, otherwise ObjectRef happens ;-)
                 try {
@@ -410,7 +410,7 @@ private[bio] object TaskRunLoop {
           popNextBind(bFirst, bRest) match {
             case null =>
               cb.onSuccess(unboxed.asInstanceOf[A])
-              return BIO.unit
+              return Task.unit
             case bind =>
               // Try/catch described as statement, otherwise ObjectRef happens ;-)
               try {
@@ -447,8 +447,8 @@ private[bio] object TaskRunLoop {
   /** A run-loop version that evaluates the given task until the
     * first async boundary or until completion.
     */
-  def startStep[E, A](source: BIO[E, A], scheduler: Scheduler, opts: BIO.Options): Either[BIO[E, A], A] = {
-    var current = source.asInstanceOf[BIO[Any, Any]]
+  def startStep[E, A](source: Task[E, A], scheduler: Scheduler, opts: Task.Options): Either[Task[E, A], A] = {
+    var current = source.asInstanceOf[Task[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
     // Values from Now, Always and Once are unboxed in this var, for code reuse
@@ -579,10 +579,10 @@ private[bio] object TaskRunLoop {
     * synchronously falling back to [[startFull]] and actual
     * asynchronous execution in case of an asynchronous boundary.
     *
-    * Function gets invoked by `BIO.runToFuture(implicit s: Scheduler)`.
+    * Function gets invoked by `Task.runToFuture(implicit s: Scheduler)`.
     */
-  def startFuture[E, A](source: BIO[E, A], scheduler: Scheduler, opts: BIO.Options): CancelableFuture[A] = {
-    var current = source.asInstanceOf[BIO[Any, Any]]
+  def startFuture[E, A](source: Task[E, A], scheduler: Scheduler, opts: Task.Options): CancelableFuture[A] = {
+    var current = source.asInstanceOf[Task[Any, Any]]
     var bFirst: Bind = null
     var bRest: CallStack = null
     // Values from Now, Always and Once are unboxed in this var, for code reuse
@@ -720,7 +720,7 @@ private[bio] object TaskRunLoop {
   }
 
   private[internal] def executeAsyncTask(
-    task: BIO.Async[Any, Any],
+    task: Task.Async[Any, Any],
     context: Context[Any],
     cb: BiCallback[Any, Any],
     rcb: TaskRestartCallback,
@@ -751,7 +751,7 @@ private[bio] object TaskRunLoop {
   private def goAsyncForLightCB[E](
     source: Current,
     scheduler: Scheduler,
-    opts: BIO.Options,
+    opts: Task.Options,
     cb: BiCallback[Any, Any],
     bFirst: Bind,
     bRest: CallStack,
@@ -783,7 +783,7 @@ private[bio] object TaskRunLoop {
   private def goAsync4Future[E, A](
     source: Current,
     scheduler: Scheduler,
-    opts: BIO.Options,
+    opts: Task.Options,
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
@@ -793,7 +793,7 @@ private[bio] object TaskRunLoop {
     val p = Promise[A]()
     val cb = BiCallback.fromTry(p.complete).asInstanceOf[BiCallback[Any, Any]]
     val context = Context[Any](scheduler, opts)
-    val current = source.asInstanceOf[BIO[E, A]]
+    val current = source.asInstanceOf[Task[E, A]]
 
     if (!forceFork) source match {
       case async: Async[Any, Any] =>
@@ -812,12 +812,12 @@ private[bio] object TaskRunLoop {
   private def goAsync4Step[E, A](
     source: Current,
     scheduler: Scheduler,
-    opts: BIO.Options,
+    opts: Task.Options,
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
     forceFork: Boolean
-  ): Either[BIO[E, A], A] = {
+  ): Either[Task[E, A], A] = {
 
     val ctx = Context[Any](scheduler, opts)
     val start: Start[Any, Any] =
@@ -837,9 +837,9 @@ private[bio] object TaskRunLoop {
     )
   }
 
-  private[internal] def findErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, BIO[E, Any]] = {
+  private[internal] def findErrorHandler[E](bFirst: Bind, bRest: CallStack): StackFrame[E, Any, Task[E, Any]] = {
     bFirst match {
-      case ref: StackFrame[E, Any, BIO[E, Any]] @unchecked =>
+      case ref: StackFrame[E, Any, Task[E, Any]] @unchecked =>
         ref
       case _ =>
         if (bRest eq null) null
@@ -849,7 +849,7 @@ private[bio] object TaskRunLoop {
             if (ref eq null)
               return null
             else if (ref.isInstanceOf[StackFrame[_, _, _]])
-              return ref.asInstanceOf[StackFrame[E, Any, BIO[E, Any]]]
+              return ref.asInstanceOf[StackFrame[E, Any, Task[E, Any]]]
           } while (true)
           // $COVERAGE-OFF$
           null
@@ -861,9 +861,9 @@ private[bio] object TaskRunLoop {
   private[internal] def findTerminationHandler[E](
     bFirst: Bind,
     bRest: CallStack
-  ): StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] = {
+  ): StackFrame.FatalStackFrame[E, Any, Task[E, Any]] = {
     bFirst match {
-      case ref: StackFrame.FatalStackFrame[E, Any, BIO[E, Any]] @unchecked => ref
+      case ref: StackFrame.FatalStackFrame[E, Any, Task[E, Any]] @unchecked => ref
       case _ =>
         if (bRest eq null) null
         else {
@@ -872,7 +872,7 @@ private[bio] object TaskRunLoop {
             if (ref eq null)
               return null
             else if (ref.isInstanceOf[StackFrame.FatalStackFrame[_, _, _]])
-              return ref.asInstanceOf[StackFrame.FatalStackFrame[E, Any, BIO[E, Any]]]
+              return ref.asInstanceOf[StackFrame.FatalStackFrame[E, Any, Task[E, Any]]]
           } while (true)
           // $COVERAGE-OFF$
           null
@@ -903,12 +903,12 @@ private[bio] object TaskRunLoop {
     em.nextFrameIndex(0)
 
   private final class RestoreContext(old: Context[Any], restore: (Any, Any, Context[Any], Context[Any]) => Context[Any])
-      extends StackFrame[Any, Any, BIO[Any, Any]] {
+      extends StackFrame[Any, Any, Task[Any, Any]] {
 
-    def apply(a: Any): BIO[Any, Any] =
+    def apply(a: Any): Task[Any, Any] =
       ContextSwitch[Any, Any](Now(a), current => restore(a, null, old, current), null)
 
-    def recover(e: Any): BIO[Any, Any] =
+    def recover(e: Any): Task[Any, Any] =
       ContextSwitch[Any, Any](Error(e), current => restore(null, e, old, current), null)
   }
 }

@@ -17,17 +17,17 @@
 
 package monix.bio.internal
 
-import monix.bio.{BIO, BiCallback}
+import monix.bio.{BiCallback, Task}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.atomic.Atomic
 
 private[bio] object TaskRace {
 
   /**
-    * Implementation for `BIO.race`.
+    * Implementation for `Task.race`.
     */
-  def apply[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[A, B]] =
-    BIO.Async(
+  def apply[E, A, B](fa: Task[E, A], fb: Task[E, B]): Task[E, Either[A, B]] =
+    Task.Async(
       new Register(fa, fb),
       trampolineBefore = true,
       trampolineAfter = true
@@ -38,9 +38,9 @@ private[bio] object TaskRace {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A, B](fa: BIO[E, A], fb: BIO[E, B]) extends ForkedRegister[E, Either[A, B]] {
+  private final class Register[E, A, B](fa: Task[E, A], fb: Task[E, B]) extends ForkedRegister[E, Either[A, B]] {
 
-    def apply(context: BIO.Context[E], cb: BiCallback[E, Either[A, B]]): Unit = {
+    def apply(context: Task.Context[E], cb: BiCallback[E, Either[A, B]]): Unit = {
       implicit val sc = context.scheduler
       val conn = context.connection
 
@@ -53,7 +53,7 @@ private[bio] object TaskRace {
       val contextB = context.withConnection(connB)
 
       // First task: A
-      BIO.unsafeStartEnsureAsync(
+      Task.unsafeStartEnsureAsync(
         fa,
         contextA,
         new BiCallback[E, A] {
@@ -88,7 +88,7 @@ private[bio] object TaskRace {
       )
 
       // Second task: B
-      BIO.unsafeStartEnsureAsync(
+      Task.unsafeStartEnsureAsync(
         fb,
         contextB,
         new BiCallback[E, B] {

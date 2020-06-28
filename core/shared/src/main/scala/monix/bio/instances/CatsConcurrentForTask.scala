@@ -31,37 +31,41 @@ import monix.bio.internal.TaskCreate
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[BIO.Unsafe] {
+class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[Task.Unsafe] {
 
-  override def delay[A](thunk: => A): BIO.Unsafe[A] =
-    BIO.eval(thunk)
+  override def delay[A](thunk: => A): Task.Unsafe[A] =
+    Task.eval(thunk)
 
-  override def suspend[A](fa: => BIO.Unsafe[A]): BIO.Unsafe[A] =
-    BIO.defer(fa)
+  override def suspend[A](fa: => Task.Unsafe[A]): Task.Unsafe[A] =
+    Task.defer(fa)
 
-  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): BIO.Unsafe[A] = {
+  override def async[A](k: (Either[Throwable, A] => Unit) => Unit): Task.Unsafe[A] = {
     TaskCreate.async(cb => k(BiCallback.toEither(cb)))
   }
 
-  override def bracket[A, B](acquire: BIO.Unsafe[A])(use: A => BIO.Unsafe[B])(release: A => BIO.Unsafe[Unit]): BIO.Unsafe[B] =
-    acquire.bracket(use)(release.andThen(_.onErrorHandleWith(BIO.terminate)))
+  override def bracket[A, B](
+    acquire: Task.Unsafe[A]
+  )(use: A => Task.Unsafe[B])(release: A => Task.Unsafe[Unit]): Task.Unsafe[B] =
+    acquire.bracket(use)(release.andThen(_.onErrorHandleWith(Task.terminate)))
 
   override def bracketCase[A, B](
-    acquire: BIO.Unsafe[A]
-  )(use: A => BIO.Unsafe[B])(release: (A, ExitCase[Throwable]) => BIO.Unsafe[Unit]): BIO.Unsafe[B] =
-    acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
+    acquire: Task.Unsafe[A]
+  )(use: A => Task.Unsafe[B])(release: (A, ExitCase[Throwable]) => Task.Unsafe[Unit]): Task.Unsafe[B] =
+    acquire.bracketCase(use)((a, exit) => release(a, exitCaseFromCause(exit)).onErrorHandleWith(Task.terminate))
 
-  override def asyncF[A](k: (Either[Throwable, A] => Unit) => BIO.Unsafe[Unit]): BIO.Unsafe[A] =
+  override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task.Unsafe[Unit]): Task.Unsafe[A] =
     TaskCreate.asyncF(cb => k(BiCallback.toEither(cb)))
 
-  override def guarantee[A](acquire: BIO.Unsafe[A])(finalizer: BIO.Unsafe[Unit]): BIO.Unsafe[A] =
-    acquire.guarantee(finalizer.onErrorHandleWith(BIO.terminate))
+  override def guarantee[A](acquire: Task.Unsafe[A])(finalizer: Task.Unsafe[Unit]): Task.Unsafe[A] =
+    acquire.guarantee(finalizer.onErrorHandleWith(Task.terminate))
 
-  override def guaranteeCase[A](acquire: BIO.Unsafe[A])(finalizer: ExitCase[Throwable] => BIO.Unsafe[Unit]): BIO.Unsafe[A] =
-    acquire.guaranteeCase(exit => finalizer(exitCaseFromCause(exit)).onErrorHandleWith(BIO.terminate))
+  override def guaranteeCase[A](
+    acquire: Task.Unsafe[A]
+  )(finalizer: ExitCase[Throwable] => Task.Unsafe[Unit]): Task.Unsafe[A] =
+    acquire.guaranteeCase(exit => finalizer(exitCaseFromCause(exit)).onErrorHandleWith(Task.terminate))
 }
 
-/** Cats type class instance of [[monix.bio.BIO BIO]]
+/** Cats type class instance of [[monix.bio.Task Task]]
   * for  `cats.effect.Concurrent`.
   *
   * References:
@@ -69,30 +73,30 @@ class CatsAsyncForTask extends CatsBaseForTask[Throwable] with Async[BIO.Unsafe]
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsConcurrentForTask extends CatsAsyncForTask with Concurrent[BIO.Unsafe] {
+class CatsConcurrentForTask extends CatsAsyncForTask with Concurrent[Task.Unsafe] {
 
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[BIO.Unsafe]): BIO.Unsafe[A] =
+  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task.Unsafe]): Task.Unsafe[A] =
     TaskCreate.cancelableEffect(k)
 
-  override def uncancelable[A](fa: BIO.Unsafe[A]): BIO.Unsafe[A] =
+  override def uncancelable[A](fa: Task.Unsafe[A]): Task.Unsafe[A] =
     fa.uncancelable
 
-  override def start[A](fa: BIO.Unsafe[A]): BIO.Unsafe[Fiber[Throwable, A]] =
+  override def start[A](fa: Task.Unsafe[A]): Task.Unsafe[Fiber[Throwable, A]] =
     fa.start
 
   override def racePair[A, B](
-    fa: BIO.Unsafe[A],
-    fb: BIO.Unsafe[B]
-  ): BIO.Unsafe[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
-    BIO.racePair(fa, fb)
+    fa: Task.Unsafe[A],
+    fb: Task.Unsafe[B]
+  ): Task.Unsafe[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
+    Task.racePair(fa, fb)
 
-  override def race[A, B](fa: BIO.Unsafe[A], fb: BIO.Unsafe[B]): BIO.Unsafe[Either[A, B]] =
-    BIO.race(fa, fb)
+  override def race[A, B](fa: Task.Unsafe[A], fb: Task.Unsafe[B]): Task.Unsafe[Either[A, B]] =
+    Task.race(fa, fb)
 }
 
 /** Default and reusable instance for [[CatsConcurrentForTask]].
   *
   * Globally available in scope, as it is returned by
-  * [[monix.bio.BIO.catsAsync BIO.catsAsync]].
+  * [[monix.bio.Task.catsAsync Task.catsAsync]].
   */
 object CatsConcurrentForTask extends CatsConcurrentForTask

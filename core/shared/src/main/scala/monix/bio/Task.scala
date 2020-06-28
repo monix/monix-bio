@@ -48,18 +48,18 @@ import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUni
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-/** `BIO` represents a specification for a possibly lazy or
+/** `Task` represents a specification for a possibly lazy or
   * asynchronous computation, which when executed will produce an `A`
   * as a result, along with possible side-effects.
   *
-  * Compared with `Future` from Scala's standard library, `BIO` does
+  * Compared with `Future` from Scala's standard library, `Task` does
   * not represent a running computation or a value detached from time,
-  * as `BIO` does not execute anything when working with its builders
+  * as `Task` does not execute anything when working with its builders
   * or operators and it does not submit any work into any thread-pool,
   * the execution eventually taking place only after `runAsync` is
   * called and not before that.
   *
-  * Note that `BIO` is conservative in how it spawns logical threads.
+  * Note that `Task` is conservative in how it spawns logical threads.
   * Transformations like `map` and `flatMap` for example will default
   * to being executed on the logical thread on which the asynchronous
   * computation was started. But one shouldn't make assumptions about
@@ -70,23 +70,23 @@ import scala.util.{Failure, Success, Try}
   *
   * =Getting Started=
   *
-  * To build a `BIO` from a by-name parameters (thunks), we can use
-  * [[monix.bio.BIO.apply BIO.apply]] (
-  * alias [[monix.bio.BIO.eval BIO.eval]]),
-  * [[monix.bio.BIO.evalTotal]] if the thunk is guaranteed to not throw any exceptions, or
-  * [[monix.bio.BIO.evalAsync BIO.evalAsync]]:
+  * To build a `Task` from a by-name parameters (thunks), we can use
+  * [[monix.bio.Task.apply Task.apply]] (
+  * alias [[monix.bio.Task.eval Task.eval]]),
+  * [[monix.bio.Task.evalTotal]] if the thunk is guaranteed to not throw any exceptions, or
+  * [[monix.bio.Task.evalAsync Task.evalAsync]]:
   *
   * {{{
-  *   val hello = BIO("Hello ")
-  *   val world = BIO.evalAsync("World!")
+  *   val hello = Task("Hello ")
+  *   val world = Task.evalAsync("World!")
   * }}}
   *
-  * Nothing gets executed yet, as `BIO` is lazy, nothing executes
-  * until you trigger its evaluation via [[BIO!.runAsync runAsync]] or
-  * [[BIO!.runToFuture runToFuture]].
+  * Nothing gets executed yet, as `Task` is lazy, nothing executes
+  * until you trigger its evaluation via [[Task!.runAsync runAsync]] or
+  * [[Task!.runToFuture runToFuture]].
   *
-  * To combine `BIO` values we can use [[BIO!.map .map]] and
-  * [[BIO!.flatMap .flatMap]], which describe sequencing and this time
+  * To combine `Task` values we can use [[Task!.map .map]] and
+  * [[Task!.flatMap .flatMap]], which describe sequencing and this time
   * it's in a very real sense because of the laziness involved:
   *
   * {{{
@@ -95,7 +95,7 @@ import scala.util.{Failure, Success, Try}
   *     .map(println)
   * }}}
   *
-  * This `BIO` reference will trigger a side effect on evaluation, but
+  * This `Task` reference will trigger a side effect on evaluation, but
   * not yet. To make the above print its message:
   *
   * {{{
@@ -115,16 +115,16 @@ import scala.util.{Failure, Success, Try}
   *
   * =Laziness, Purity and Referential Transparency=
   *
-  * The fact that `BIO` is lazy whereas `Future` is not
-  * has real consequences. For example with `BIO` you can do this:
+  * The fact that `Task` is lazy whereas `Future` is not
+  * has real consequences. For example with `Task` you can do this:
   *
   * {{{
   *   import scala.concurrent.duration._
   *
-  *   def retryOnFailure[A](times: Int, source: BIO.Unsafe[A]): BIO.Unsafe[A] =
+  *   def retryOnFailure[A](times: Int, source: Task.Unsafe[A]): Task.Unsafe[A] =
   *     source.onErrorHandleWith { err =>
   *       // No more retries left? Re-throw error:
-  *       if (times <= 0) BIO.raiseError(err) else {
+  *       if (times <= 0) Task.raiseError(err) else {
   *         // Recursive call, yes we can!
   *         retryOnFailure(times - 1, source)
   *           // Adding 500 ms delay for good measure
@@ -134,33 +134,33 @@ import scala.util.{Failure, Success, Try}
   * }}}
   *
   * `Future` being a strict value-wannabe means that the actual value
-  * gets "memoized" (means cached), however `BIO` is basically a function
+  * gets "memoized" (means cached), however `Task` is basically a function
   * that can be repeated for as many times as you want.
   *
-  * `BIO` is a pure data structure that can be used to describe
+  * `Task` is a pure data structure that can be used to describe
   * pure functions, the equivalent of Haskell's `IO`.
   *
   * ==Memoization==
   *
-  * `BIO` can also do memoization, making it behave like a "lazy"
+  * `Task` can also do memoization, making it behave like a "lazy"
   * Scala `Future`, meaning that nothing is started yet, its
   * side effects being evaluated on the first `runAsync` and then
   * the result reused on subsequent evaluations:
   *
   * {{{
-  *   BIO(println("boo")).memoize
+  *   Task(println("boo")).memoize
   * }}}
   *
   * The difference between this and just calling `runAsync()` is that
-  * `memoize()` still returns a `BIO` and the actual memoization
+  * `memoize()` still returns a `Task` and the actual memoization
   * happens on the first `runAsync()` (with idempotency guarantees of
   * course).
   *
   * But here's something else that the `Future` data type cannot do,
-  * [[monix.bio.BIO!.memoizeOnSuccess memoizeOnSuccess]]:
+  * [[monix.bio.Task!.memoizeOnSuccess memoizeOnSuccess]]:
   *
   * {{{
-  *   BIO.eval {
+  *   Task.eval {
   *     if (scala.util.Random.nextDouble() > 0.33)
   *       throw new RuntimeException("error!")
   *     println("moo")
@@ -176,11 +176,11 @@ import scala.util.{Failure, Success, Try}
   * ==Parallelism==
   *
   * Because of laziness, invoking
-  * [[monix.bio.BIO.sequence BIO.sequence]] will not work like
-  * it does for `Future.sequence`, the given `BIO` values being
+  * [[monix.bio.Task.sequence Task.sequence]] will not work like
+  * it does for `Future.sequence`, the given `Task` values being
   * evaluated one after another, in ''sequence'', not in ''parallel''.
   * If you want parallelism, then you need to use
-  * [[monix.bio.BIO.parSequence BIO.parSequence]] and thus be explicit about it.
+  * [[monix.bio.Task.parSequence Task.parSequence]] and thus be explicit about it.
   *
   * This is great because it gives you the possibility of fine tuning the
   * execution. For example, say you want to execute things in parallel,
@@ -189,43 +189,43 @@ import scala.util.{Failure, Success, Try}
   *
   * {{{
   *   // Some array of tasks, you come up with something good :-)
-  *   val list: Seq[BIO.Unsafe[Int]] = Seq.tabulate(100)(BIO(_))
+  *   val list: Seq[Task.Unsafe[Int]] = Seq.tabulate(100)(Task(_))
   *
   *   // Split our list in chunks of 30 items per chunk,
   *   // this being the maximum parallelism allowed
   *   val chunks = list.sliding(30, 30).toSeq
   *
   *   // Specify that each batch should process stuff in parallel
-  *   val batchedTasks = chunks.map(chunk => BIO.parSequence(chunk))
+  *   val batchedTasks = chunks.map(chunk => Task.parSequence(chunk))
   *   // Sequence the batches
-  *   val allBatches = BIO.sequence(batchedTasks)
+  *   val allBatches = Task.sequence(batchedTasks)
   *
-  *   // Flatten the result, within the context of BIO
-  *   val all: BIO.Unsafe[Seq[Int]] = allBatches.map(_.flatten)
+  *   // Flatten the result, within the context of Task
+  *   val all: Task.Unsafe[Seq[Int]] = allBatches.map(_.flatten)
   * }}}
   *
-  * Note that the built `BIO` reference is just a specification at
+  * Note that the built `Task` reference is just a specification at
   * this point, or you can view it as a function, as nothing has
-  * executed yet, you need to call [[BIO!.runAsync runAsync]]
-  * or [[BIO!.runToFuture runToFuture]] explicitly.
+  * executed yet, you need to call [[Task!.runAsync runAsync]]
+  * or [[Task!.runToFuture runToFuture]] explicitly.
   *
   * =Cancellation=
   *
-  * The logic described by an `BIO` task could be cancelable,
-  * depending on how the `BIO` gets built.
+  * The logic described by an `Task` task could be cancelable,
+  * depending on how the `Task` gets built.
   *
   * [[monix.execution.CancelableFuture CancelableFuture]] references
   * can also be canceled, in case the described computation can be
-  * canceled. When describing `BIO` tasks with `BIO.eval` nothing
+  * canceled. When describing `Task` tasks with `Task.eval` nothing
   * can be cancelled, since there's nothing about a plain function
   * that you can cancel, but we can build cancelable tasks with
-  * [[monix.bio.BIO.cancelable0[E,A](register* BIO.cancelable]].
+  * [[monix.bio.Task.cancelable0[E,A](register* Task.cancelable]].
   *
   * {{{
   *   import scala.concurrent.duration._
   *   import scala.util._
   *
-  *   val delayedHello = BIO.cancelable0[Throwable, Unit] { (scheduler, callback) =>
+  *   val delayedHello = Task.cancelable0[Throwable, Unit] { (scheduler, callback) =>
   *     val task = scheduler.scheduleOnce(1.second) {
   *       println("Delayed Hello!")
   *       // Signaling successful completion
@@ -233,7 +233,7 @@ import scala.util.{Failure, Success, Try}
   *     }
   *     // Returning a cancel token that knows how to cancel the
   *     // scheduled computation:
-  *     BIO {
+  *     Task {
   *       println("Cancelling!")
   *       task.cancel()
   *     }
@@ -248,9 +248,9 @@ import scala.util.{Failure, Success, Try}
   * logic. In case we have no cancelable logic to express, then it's
   * OK if we returned a
   * [[monix.execution.Cancelable.empty Cancelable.empty]] reference,
-  * in which case the resulting `BIO` would not be cancelable.
+  * in which case the resulting `Task` would not be cancelable.
   *
-  * But the `BIO` we just described is cancelable, for one at the
+  * But the `Task` we just described is cancelable, for one at the
   * edge, due to `runAsync` returning [[monix.execution.Cancelable Cancelable]]
   * and [[monix.execution.CancelableFuture CancelableFuture]] references:
   *
@@ -262,19 +262,19 @@ import scala.util.{Failure, Success, Try}
   *   cf.cancel()
   * }}}
   *
-  * But also cancellation is described on `BIO` as a pure action,
-  * which can be used for example in [[monix.bio.BIO.race race]] conditions:
+  * But also cancellation is described on `Task` as a pure action,
+  * which can be used for example in [[monix.bio.Task.race race]] conditions:
   *
   * {{{
   *   import scala.concurrent.duration._
   *   import scala.concurrent.TimeoutException
   *
-  *   val ta = BIO(1 + 1).delayExecution(4.seconds)
+  *   val ta = Task(1 + 1).delayExecution(4.seconds)
   *
-  *   val tb: BIO.Unsafe[Int] = BIO.raiseError(new TimeoutException)
+  *   val tb: Task.Unsafe[Int] = Task.raiseError(new TimeoutException)
   *     .delayExecution(4.seconds)
   *
-  *   BIO.racePair(ta, tb).flatMap {
+  *   Task.racePair(ta, tb).flatMap {
   *     case Left((a, fiberB)) =>
   *       fiberB.cancel.map(_ => a)
   *     case Right((fiberA, b)) =>
@@ -288,23 +288,23 @@ import scala.util.{Failure, Success, Try}
   *
   * Also, given a task, we can specify actions that need to be
   * triggered in case of cancellation, see
-  * [[monix.bio.BIO!.doOnCancel doOnCancel]]:
+  * [[monix.bio.Task!.doOnCancel doOnCancel]]:
   *
   * {{{
-  *   val task = BIO.eval(println("Hello!")).executeAsync
+  *   val task = Task.eval(println("Hello!")).executeAsync
   *
-  *   task doOnCancel BIO.evalTotal {
+  *   task doOnCancel Task.evalTotal {
   *     println("A cancellation attempt was made!")
   *   }
   * }}}
   *
   * Given a task, we can also create a new task from it that atomic
   * (non cancelable), in the sense that either all of it executes
-  * or nothing at all, via [[monix.bio.BIO!.uncancelable uncancelable]].
+  * or nothing at all, via [[monix.bio.Task!.uncancelable uncancelable]].
   *
   * =Note on the ExecutionModel=
   *
-  * `BIO` is conservative in how it introduces async boundaries.
+  * `Task` is conservative in how it introduces async boundaries.
   * Transformations like `map` and `flatMap` for example will default
   * to being executed on the current call stack on which the
   * asynchronous computation was started. But one shouldn't make
@@ -315,21 +315,19 @@ import scala.util.{Failure, Success, Try}
   *
   * Currently the default
   * [[monix.execution.ExecutionModel ExecutionModel]] specifies
-  * batched execution by default and `BIO` in its evaluation respects
+  * batched execution by default and `Task` in its evaluation respects
   * the injected `ExecutionModel`. If you want a different behavior,
-  * you need to execute the `BIO` reference with a different scheduler.
+  * you need to execute the `Task` reference with a different scheduler.
   *
   * @define schedulerDesc is an injected
   *         [[monix.execution.Scheduler Scheduler]] that gets used
   *         whenever asynchronous boundaries are needed when
   *         evaluating the task; a `Scheduler` is in general needed
-  *         when the `BIO` needs to be evaluated via `runAsync`
-  *
+  *         when the `Task` needs to be evaluated via `runAsync`
   * @define schedulerEvalDesc is the
   *         [[monix.execution.Scheduler Scheduler]] needed in order
-  *         to evaluate the source, being required in BIO's
+  *         to evaluate the source, being required in Task's
   *         [[runAsync]], [[runAsyncF]] or [[runToFuture]].
-  *
   * @define callbackDesc ==BiCallback==
   *
   *         When executing the task via this method, the user is
@@ -339,7 +337,7 @@ import scala.util.{Failure, Success, Try}
   *         This will be used by the implementation to signal completion,
   *         signaling either a `Right(value)` or a `Left(error)`.
   *
-  *         `BIO` however uses [[monix.bio.BiCallback BiCallback]]
+  *         `Task` however uses [[monix.bio.BiCallback BiCallback]]
   *         internally, so you can supply a `BiCallback` instance instead
   *         and it will be used to avoid unnecessary boxing. It also has
   *         handy utilities.
@@ -352,7 +350,6 @@ import scala.util.{Failure, Success, Try}
   *            [[monix.bio.BiCallback.fromPromise BiCallback.fromPromise]]
   *          - pass an empty callback that just reports errors via
   *            [[monix.bio.BiCallback.empty BiCallback.empty]]
-  *
   * @define callbackParamDesc is a callback that will be invoked upon
   *         completion, either with a successful result, or with an error;
   *         note that you can use [[monix.bio.BiCallback]]
@@ -361,15 +358,15 @@ import scala.util.{Failure, Success, Try}
   * @define cancelableDesc a [[monix.execution.Cancelable Cancelable]]
   *         that can be used to cancel a running task
   *
-  * @define cancelTokenDesc a `BIO.Unsafe[Unit]`, aliased via Cats-Effect
-  *         as a `CancelToken[BIO.Unsafe]`, that can be used to cancel the
-  *         running task. Given that this is a `BIO`, it can describe
+  * @define cancelTokenDesc a `Task.Unsafe[Unit]`, aliased via Cats-Effect
+  *         as a `CancelToken[Task.Unsafe]`, that can be used to cancel the
+  *         running task. Given that this is a `Task`, it can describe
   *         asynchronous finalizers (if the source had any), therefore
   *         users can apply back-pressure on the completion of such
   *         finalizers.
   *
-  * @define optionsDesc a set of [[monix.bio.BIO.Options Options]]
-  *         that determine the behavior of BIO's run-loop.
+  * @define optionsDesc a set of [[monix.bio.Task.Options Options]]
+  *         that determine the behavior of Task's run-loop.
   *
   * @define startInspiration Inspired by
   *         [[https://github.com/functional-streams-for-scala/fs2 FS2]],
@@ -389,20 +386,16 @@ import scala.util.{Failure, Success, Try}
   * @define runSyncUnsafePermit is an implicit value that's only available for
   *         the JVM and not for JavaScript, its purpose being to stop usage of
   *         this operation on top of engines that do not support blocking threads.
-  *
   * @define runSyncMaybeReturn `Right(result)` in case a result was processed,
   *         or `Left(future)` in case an asynchronous boundary
   *         was hit and further async execution is needed
-  *
   * @define runSyncStepReturn `Right(result)` in case a result was processed,
   *         or `Left(task)` in case an asynchronous boundary
   *         was hit and further async execution is needed
-  *
   * @define runAsyncToFutureReturn a
   *         [[monix.execution.CancelableFuture CancelableFuture]]
   *         that can be used to extract the result or to cancel
   *         a running task.
-  *
   * @define bracketErrorNote '''NOTE on error handling''': one big
   *         difference versus `try {} finally {}` is that, in case
   *         both the `release` function and the `use` function throws,
@@ -413,12 +406,12 @@ import scala.util.{Failure, Success, Try}
   *         For example:
   *
   *         {{{
-  *           BIO.evalAsync("resource").bracket { _ =>
+  *           Task.evalAsync("resource").bracket { _ =>
   *             // use
-  *             BIO.raiseError(new RuntimeException("Foo"))
+  *             Task.raiseError(new RuntimeException("Foo"))
   *           } { _ =>
   *             // release
-  *             BIO.terminate(new RuntimeException("Bar"))
+  *             Task.terminate(new RuntimeException("Bar"))
   *           }
   *         }}}
   *
@@ -426,7 +419,6 @@ import scala.util.{Failure, Success, Try}
   *         while the `"Bar"` error gets reported. This is consistent
   *         with the behavior of Haskell's `bracket` operation and NOT
   *         with `try {} finally {}` from Scala, Java or JavaScript.
-  *
   * @define unsafeRun '''UNSAFE (referential transparency)''' —
   *         this operation can trigger the execution of side effects, which
   *         breaks referential transparency and is thus not a pure function.
@@ -436,14 +428,13 @@ import scala.util.{Failure, Success, Try}
   *         the program (for a console app), or at the end of a web
   *         request (in case you're working with a web framework or
   *         toolkit that doesn't provide good integration with Monix's
-  *         `BIO` via Cats-Effect).
+  *         `Task` via Cats-Effect).
   *
   *         Otherwise for modifying or operating on tasks, prefer
   *         its pure functions like `map` and `flatMap`.
-  *         In FP code don't use `runAsync`. Remember that `BIO`
-  *         is not a 1:1 replacement for `Future`, `BIO` being
+  *         In FP code don't use `runAsync`. Remember that `Task`
+  *         is not a 1:1 replacement for `Future`, `Task` being
   *         a very different abstraction.
-  *
   * @define memoizeCancel '''Cancellation''' — a memoized task will mirror
   *         the behavior of the source on cancellation. This means that:
   *
@@ -459,7 +450,6 @@ import scala.util.{Failure, Success, Try}
   *            by the memoization logic
   *          - usage of [[uncancelable]], either before or after applying
   *            memoization, to ensure that the memoized task cannot be cancelled
-  *
   * @define memoizeUnsafe '''UNSAFE''' — this operation allocates a shared,
   *         mutable reference, which can break in certain cases
   *         referential transparency, even if this operation guarantees
@@ -476,16 +466,16 @@ import scala.util.{Failure, Success, Try}
   *         it might be better to pass such a reference around as
   *         a parameter.
   */
-sealed abstract class BIO[+E, +A] extends Serializable {
-  import BIO._
+sealed abstract class Task[+E, +A] extends Serializable {
+  import Task._
   import cats.effect.Async
 
   /** Triggers the asynchronous execution, returning a cancelable
     * [[monix.execution.CancelableFuture CancelableFuture]] that can
     * be awaited for the final result or canceled.
     *
-    * Note that without invoking `runAsync` on a `BIO`, nothing
-    * gets evaluated, as a `BIO` has lazy behavior.
+    * Note that without invoking `runAsync` on a `Task`, nothing
+    * gets evaluated, as a `Task` has lazy behavior.
     *
     * {{{
     *   import scala.concurrent.duration._
@@ -493,12 +483,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   // Nothing executes yet
-    *   val task: BIO.Unsafe[String] =
+    *   val task: Task.Unsafe[String] =
     *     for {
-    *       _ <- BIO.sleep(3.seconds)
-    *       r <- BIO { println("Executing..."); "Hello!" }
+    *       _ <- Task.sleep(3.seconds)
+    *       r <- Task { println("Executing..."); "Hello!" }
     *     } yield r
-    *
     *
     *   // Triggering the task's execution:
     *   val f = task.runToFuture
@@ -528,17 +517,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   }
     *
     *   // ANTI-PATTERN 3: this is even WORSE than (2)!
-    *   def increment3(sample: BIO.Unsafe[Int]): BIO.Unsafe[Int] = {
+    *   def increment3(sample: Task.Unsafe[Int]): Task.Unsafe[Int] = {
     *     // Triggering side-effects, but misleading users/readers
     *     // into thinking this function is pure via the return type
-    *     BIO.fromFuture(sample.runToFuture.map(_ + 1))
+    *     Task.fromFuture(sample.runToFuture.map(_ + 1))
     *   }
     * }}}
     *
-    * Instead prefer the pure versions. `BIO` has its own [[map]],
+    * Instead prefer the pure versions. `Task` has its own [[map]],
     * [[flatMap]], [[onErrorHandleWith]] or [[bracketCase]], which
     * are really powerful and can allow you to operate on a task
-    * in however way you like without escaping BIO's context and
+    * in however way you like without escaping Task's context and
     * triggering unwanted side-effects.
     *
     * @param s $schedulerDesc
@@ -546,33 +535,33 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runToFuture(implicit s: Scheduler, ev: E <:< Throwable): CancelableFuture[A] =
-    runToFutureOpt(s, BIO.defaultOptions, ev)
+    runToFutureOpt(s, Task.defaultOptions, ev)
 
   /** Triggers the asynchronous execution, much like normal [[runToFuture]],
-    * but includes the ability to specify [[monix.bio.BIO.Options Options]]
+    * but includes the ability to specify [[monix.bio.Task.Options Options]]
     * that can modify the behavior of the run-loop.
     *
     * This is the configurable version of [[runToFuture]].
     * It allows you to specify options such as:
     *
-    *  - enabling support for [[BIOLocal]]
+    *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
-    * See [[BIO.Options]]. Example:
+    * See [[Task.Options]]. Example:
     *
     * {{{
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   val task =
     *     for {
-    *       local <- BIOLocal(0)
+    *       local <- TaskLocal(0)
     *       _     <- local.write(100)
-    *       _     <- BIO.shift
+    *       _     <- Task.shift
     *       value <- local.read
     *     } yield value
     *
-    *   // We need to activate support of BIOLocal via:
-    *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    *   // We need to activate support of TaskLocal via:
+    *   implicit val opts = Task.defaultOptions.enableLocalContextPropagation
     *   // Actual execution that depends on these custom options:
     *   // task.runToFutureOpt
     * }}}
@@ -598,8 +587,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * that's going to be called at some point in the future with
     * the final result.
     *
-    * Note that without invoking `runAsync` on a `BIO`, nothing
-    * gets evaluated, as a `BIO` has lazy behavior.
+    * Note that without invoking `runAsync` on a `Task`, nothing
+    * gets evaluated, as a `Task` has lazy behavior.
     *
     * {{{
     *   import scala.concurrent.duration._
@@ -608,12 +597,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   // Nothing executes yet
-    *   val task: BIO[String, String] =
+    *   val task: Task[String, String] =
     *     for {
-    *       _ <- BIO.sleep(3.seconds)
-    *       r <- BIO.evalTotal { println("Executing..."); "Hello!" }
+    *       _ <- Task.sleep(3.seconds)
+    *       r <- Task.evalTotal { println("Executing..."); "Hello!" }
     *     } yield r
-    *
     *
     *   // Triggering the task's execution:
     *   val f = task.runAsync {
@@ -669,15 +657,15 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsync(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler): Cancelable =
-    runAsyncOpt(cb)(s, BIO.defaultOptions)
+    runAsyncOpt(cb)(s, Task.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsync]], but
-    * includes the ability to specify [[monix.bio.BIO.Options BIO.Options]]
+    * includes the ability to specify [[monix.bio.Task.Options Task.Options]]
     * that can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[BIOLocal]]
+    *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * Example:
@@ -687,14 +675,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *   val task =
     *     for {
-    *       local <- BIOLocal(0)
+    *       local <- TaskLocal(0)
     *       _     <- local.write(100)
-    *       _     <- BIO.shift
+    *       _     <- Task.shift
     *       value <- local.read
     *     } yield value
     *
-    *   // We need to activate support of BIOLocal via:
-    *   implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    *   // We need to activate support of TaskLocal via:
+    *   implicit val opts = Task.defaultOptions.enableLocalContextPropagation
     *
     *   // Actual execution that depends on these custom options:
     *   task.runAsyncOpt {
@@ -707,7 +695,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   }
     * }}}
     *
-    * See [[BIO.Options]].
+    * See [[Task.Options]].
     *
     * $callbackDesc
     *
@@ -726,12 +714,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     }
   }
 
-  /** Triggers the asynchronous execution, returning a `BIO.Unsafe[Unit]`
-    * (aliased to `CancelToken[BIO.Unsafe]` in Cats-Effect) which can
+  /** Triggers the asynchronous execution, returning a `Task.Unsafe[Unit]`
+    * (aliased to `CancelToken[Task.Unsafe]` in Cats-Effect) which can
     * cancel the running computation.
     *
     * This is the more potent version of [[runAsync]],
-    * because the returned cancelation token is a `BIO.Unsafe[Unit]` that
+    * because the returned cancelation token is a `Task.Unsafe[Unit]` that
     * can be used to back-pressure on the result of the cancellation
     * token, in case the finalizers are specified as asynchronous
     * actions that are expensive to complete.
@@ -740,8 +728,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   val task = BIO("Hello!").bracketCase { str =>
-    *     BIO(println(str))
+    *   val task = Task("Hello!").bracketCase { str =>
+    *     Task(println(str))
     *   } { (_, exitCode) =>
     *     // Finalization
     *     UIO(println(s"Finished via exit code: $$exitCode"))
@@ -775,7 +763,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * $unsafeRun
     *
     * NOTE: the `F` suffix comes from `F[_]`, highlighting our usage
-    * of `CancelToken[F]` to return a `BIO.Unsafe[Unit]`, instead of a
+    * of `CancelToken[F]` to return a `Task.Unsafe[Unit]`, instead of a
     * plain and side effectful `Cancelable` object.
     *
     * @param cb $callbackParamDesc
@@ -784,20 +772,20 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsyncF(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler): CancelToken[UIO] =
-    runAsyncOptF(cb)(s, BIO.defaultOptions)
+    runAsyncOptF(cb)(s, Task.defaultOptions)
 
   /** Triggers the asynchronous execution, much like normal [[runAsyncF]], but
-    * includes the ability to specify [[monix.bio.BIO.Options BIO.Options]]
+    * includes the ability to specify [[monix.bio.Task.Options Task.Options]]
     * that can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[BIOLocal]]
+    *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runToFutureOpt]] for an example.
     *
-    * The returned cancelation token is a `BIO.Unsafe[Unit]` that
+    * The returned cancelation token is a `Task.Unsafe[Unit]` that
     * can be used to back-pressure on the result of the cancellation
     * token, in case the finalizers are specified as asynchronous
     * actions that are expensive to complete.
@@ -812,7 +800,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * $unsafeRun
     *
     * NOTE: the `F` suffix comes from `F[_]`, highlighting our usage
-    * of `CancelToken[F]` to return a `BIO.Unsafe[Unit]`, instead of a
+    * of `CancelToken[F]` to return a `Task.Unsafe[Unit]`, instead of a
     * plain and side effectful `Cancelable` object.
     *
     * @param cb $callbackParamDesc
@@ -844,7 +832,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import monix.execution.Scheduler.Implicits.global
     *
-    *   val task = BIO(println("Hello!"))
+    *   val task = Task(println("Hello!"))
     *
     *   // We don't care about the result, we don't care about the
     *   // cancellation token, we just want this thing to run:
@@ -857,20 +845,20 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsyncAndForget(implicit s: Scheduler): Unit =
-    runAsyncAndForgetOpt(s, BIO.defaultOptions)
+    runAsyncAndForgetOpt(s, Task.defaultOptions)
 
   /** Triggers the asynchronous execution in a "fire and forget"
     * fashion, like normal [[runAsyncAndForget]], but includes the
-    * ability to specify [[monix.bio.BIO.Options BIO.Options]] that
+    * ability to specify [[monix.bio.Task.Options Task.Options]] that
     * can modify the behavior of the run-loop.
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[BIOLocal]]
+    *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of customizing the
-    * default [[BIO.Options]].
+    * default [[Task.Options]].
     *
     * See the description of [[runAsyncAndForget]] for an example
     * of running as a "fire and forget".
@@ -881,7 +869,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param opts $optionsDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncAndForgetOpt(implicit s: Scheduler, opts: BIO.Options): Unit =
+  def runAsyncAndForgetOpt(implicit s: Scheduler, opts: Task.Options): Unit =
     runAsyncUncancelableOpt(BiCallback.empty)(s, opts)
 
   /** Triggers the asynchronous execution of the source task,
@@ -897,9 +885,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.bio.Cause
     *   import monix.execution.Scheduler.Implicits.global
     *
-    *   val task: BIO[String, String] =
+    *   val task: Task[String, String] =
     *     for {
-    *       _ <- BIO.sleep(3.seconds)
+    *       _ <- Task.sleep(3.seconds)
     *       r <- UIO { println("Executing..."); "Hello!" }
     *     } yield r
     *
@@ -923,20 +911,20 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   final def runAsyncUncancelable(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler): Unit =
-    runAsyncUncancelableOpt(cb)(s, BIO.defaultOptions)
+    runAsyncUncancelableOpt(cb)(s, Task.defaultOptions)
 
   /** Triggers the asynchronous execution in uncancelable mode,
     * like [[runAsyncUncancelable]], but includes the ability to
-    * specify [[monix.bio.BIO.Options BIO.Options]] that can modify
+    * specify [[monix.bio.Task.Options Task.Options]] that can modify
     * the behavior of the run-loop.
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[BIOLocal]]
+    *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of customizing the
-    * default [[BIO.Options]].
+    * default [[Task.Options]].
     *
     * This is an optimization over plain [[runAsyncOpt]] or
     * [[runAsyncOptF]] that doesn't give you a cancellation token for
@@ -949,7 +937,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param opts $optionsDesc
     */
   @UnsafeBecauseImpure
-  def runAsyncUncancelableOpt(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler, opts: BIO.Options): Unit = {
+  def runAsyncUncancelableOpt(cb: Either[Cause[E], A] => Unit)(implicit s: Scheduler, opts: Task.Options): Unit = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop
@@ -973,7 +961,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.util._
     *   import scala.util.control.NonFatal
     *
-    *   try BIO(42).runSyncStep match {
+    *   try Task(42).runSyncStep match {
     *     case Right(a) => println("Success: " + a)
     *     case Left(task) =>
     *       task.runToFuture.onComplete {
@@ -998,11 +986,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $runSyncStepReturn
     */
   @UnsafeBecauseImpure
-  final def runSyncStep(implicit s: Scheduler): Either[BIO[E, A], A] =
+  final def runSyncStep(implicit s: Scheduler): Either[Task[E, A], A] =
     runSyncStepOpt(s, defaultOptions)
 
   /** A variant of [[runSyncStep]] that takes an implicit
-    * [[BIO.Options]] from the current scope.
+    * [[Task.Options]] from the current scope.
     *
     * This helps in tuning the evaluation model of task.
     *
@@ -1014,7 +1002,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return $runSyncStepReturn
     */
   @UnsafeBecauseImpure
-  final def runSyncStepOpt(implicit s: Scheduler, opts: Options): Either[BIO[E, A], A] = {
+  final def runSyncStepOpt(implicit s: Scheduler, opts: Options): Either[Task[E, A], A] = {
     val opts2 = opts.withSchedulerFeatures
     Local.bindCurrentIf(opts2.localContextPropagation) {
       TaskRunLoop.startStep(this, s, opts2)
@@ -1033,8 +1021,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * error prone on top of the JVM. It's a good practice to not block
     * any threads and use the asynchronous `runAsync` methods instead.
     *
-    * In general prefer to use the asynchronous [[BIO.runAsync]] or
-    * [[BIO.runToFuture]] and to structure your logic around asynchronous
+    * In general prefer to use the asynchronous [[Task.runAsync]] or
+    * [[Task.runToFuture]] and to structure your logic around asynchronous
     * actions in a non-blocking way. But in case you're blocking only once, in
     * `main`, at the "edge of the world" so to speak, then it's OK.
     *
@@ -1043,14 +1031,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
     *
-    *   BIO(42).runSyncUnsafe(3.seconds)
+    *   Task(42).runSyncUnsafe(3.seconds)
     * }}}
     *
     * This is equivalent with:
     * {{{
     *   import scala.concurrent.Await
     *
-    *   Await.result[Int](BIO(42).runToFuture, 3.seconds)
+    *   Await.result[Int](Task(42).runToFuture, 3.seconds)
     * }}}
     *
     * Some implementation details:
@@ -1090,17 +1078,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
   )(implicit s: Scheduler, permit: CanBlock, ev: E <:< Throwable): A =
     runSyncUnsafeOpt(timeout)(s, defaultOptions, permit, ev)
 
-  /** Variant of [[runSyncUnsafe]] that takes a [[BIO.Options]]
+  /** Variant of [[runSyncUnsafe]] that takes a [[Task.Options]]
     * implicitly from the scope in order to tune the evaluation model
     * of the task.
     *
     * This allows you to specify options such as:
     *
-    *  - enabling support for [[BIOLocal]]
+    *  - enabling support for [[TaskLocal]]
     *  - disabling auto-cancelable run-loops
     *
     * See the description of [[runAsyncOpt]] for an example of
-    * customizing the default [[BIO.Options]].
+    * customizing the default [[Task.Options]].
     *
     * $unsafeRun
     *
@@ -1112,8 +1100,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     */
   @UnsafeBecauseImpure
   @UnsafeBecauseBlocking
-  final def runSyncUnsafeOpt(timeout: Duration = Duration.Inf)(
-    implicit s: Scheduler,
+  final def runSyncUnsafeOpt(timeout: Duration = Duration.Inf)(implicit
+    s: Scheduler,
     opts: Options,
     permit: CanBlock,
     ev: E <:< Throwable
@@ -1140,7 +1128,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.concurrent.CancellationException
     *   import scala.concurrent.duration._
     *
-    *   val source = BIO(1).delayExecution(5.seconds)
+    *   val source = Task(1).delayExecution(5.seconds)
     *
     *   // Option 1: trigger error on cancellation
     *   val err = new CancellationException
@@ -1162,7 +1150,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @return a `Task` that can be used to wait for the memoized value
     */
   @UnsafeBecauseImpure
-  final def memoize: BIO[E, A] =
+  final def memoize: Task[E, A] =
     TaskMemoize(this, cacheErrors = true)
 
   /** Memoizes (cache) the successful result of the source task
@@ -1179,7 +1167,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.concurrent.CancellationException
     *   import scala.concurrent.duration._
     *
-    *   val source = BIO(1).delayExecution(5.seconds)
+    *   val source = Task(1).delayExecution(5.seconds)
     *
     *   // Option 1: trigger error on cancellation
     *   val err = new CancellationException
@@ -1197,26 +1185,25 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[memoize]] for a version that caches both successful
     *     results and failures
-    *
     * @return a `Task` that can be used to wait for the memoized value
     */
   @UnsafeBecauseImpure
-  final def memoizeOnSuccess: BIO[E, A] =
+  final def memoizeOnSuccess: Task[E, A] =
     TaskMemoize(this, cacheErrors = false)
 
-  /** Creates a new [[BIO]] that will expose any triggered typed
+  /** Creates a new [[Task]] that will expose any triggered typed
     * errors from the source.
     */
   final def attempt: UIO[Either[E, A]] =
     FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
 
-  /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
+  /** Inverse of `attempt`. Creates a new [[Task]] that absorbs `Either`.
     *
-    * `BIO.now(Right(42)).rethrow <-> BIO.now(42)`
+    * `Task.now(Right(42)).rethrow <-> Task.now(42)`
     *
-    * `BIO.now(Left("error")).rethrow <-> BIO.raiseError("error")`
+    * `Task.now(Left("error")).rethrow <-> Task.raiseError("error")`
     */
-  final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): BIO[E1, B] =
+  final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): Task[E1, B] =
     this.flatMap(fromEither(_))
 
   /** Runs this task first and then, when successful, the given task.
@@ -1224,18 +1211,18 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Example:
     * {{{
-    *   val combined = BIO { println("first"); "first"} >> BIO { println("second"); "second"}
+    *   val combined = Task { println("first"); "first"} >> Task { println("second"); "second"}
     *   // Prints "first" and then "second"
     *   // Result value will be "second"
     * }}}
     */
-  final def >>[E1 >: E, B](tb: => BIO[E1, B]): BIO[E1, B] =
+  final def >>[E1 >: E, B](tb: => Task[E1, B]): Task[E1, B] =
     this.flatMap(_ => tb)
 
   /** Introduces an asynchronous boundary at the current stage in the
     * asynchronous processing pipeline.
     *
-    * The `BIO` will be returned to the default `Scheduler` to
+    * The `Task` will be returned to the default `Scheduler` to
     * reschedule the rest of its execution.
     *
     * Consider the following example:
@@ -1246,12 +1233,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *   val s = Scheduler.singleThread("example-scheduler").withExecutionModel(SynchronousExecution)
     *
-    *   val source1 = BIO(println("task 1")).loopForever
-    *   val source2 = BIO(println("task 2")).loopForever
+    *   val source1 = Task(println("task 1")).loopForever
+    *   val source2 = Task(println("task 2")).loopForever
     *
     *   // Will keep printing only "task 1" or "task 2"
     *   // depending on which one was scheduled first
-    *   // doctodo BIO.parZip2(source1, source2)
+    *   // doctodo Task.parZip2(source1, source2)
     * }}}
     *
     * We might expect that both `source1` and `source2` would execute
@@ -1263,11 +1250,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * after each iteration, i.e.:
     *
     * {{{
-    *   val source3 = BIO(println("task 1")).asyncBoundary.loopForever
-    *   val source4 = BIO(println("task 2")).asyncBoundary.loopForever
+    *   val source3 = Task(println("task 1")).asyncBoundary.loopForever
+    *   val source4 = Task(println("task 2")).asyncBoundary.loopForever
     *
     *   // Will keep printing "task 1" and "task 2" alternately.
-    *   // doctodo BIO.parZip2(source3, source4)
+    *   // doctodo Task.parZip2(source3, source4)
     * }}}
     *
     * A lot of asynchronous boundaries can lead to unnecessary overhead so in the
@@ -1276,10 +1263,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Likelihood that different tasks are able to advance is called `fairness`.
     *
-    * @see [[BIO.executeOn]] for a way to override the default `Scheduler`
+    * @see [[Task.executeOn]] for a way to override the default `Scheduler`
     */
-  final def asyncBoundary: BIO[E, A] =
-    flatMap(a => BIO.shift.map(_ => a))
+  final def asyncBoundary: Task[E, A] =
+    flatMap(a => Task.shift.map(_ => a))
 
   /** Introduces an asynchronous boundary at the current stage in the
     * asynchronous processing pipeline, making processing to jump on
@@ -1294,23 +1281,23 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   implicit val s = Scheduler.global
     *   val io = Scheduler.io()
     *
-    *   val source = BIO(1) // s
+    *   val source = Task(1) // s
     *     .asyncBoundary(io)
-    *     .flatMap(_ => BIO(2)) // io
-    *     .flatMap(_ => BIO(3)) // io
+    *     .flatMap(_ => Task(2)) // io
+    *     .flatMap(_ => Task(3)) // io
     *     .asyncBoundary
-    *     .flatMap(_ => BIO(4))  // s
+    *     .flatMap(_ => Task(4))  // s
     * }}}
     *
-    * If `Scheduler s` is passed implicitly when running the `BIO`, `BIO(1)`
-    * will be executed there. Then it will switch to `io` for `BIO(2)` and `BIO(3)`.
-    * `asyncBoundary` without any arguments returns to the default `Scheduler` so `BIO(4)`
+    * If `Scheduler s` is passed implicitly when running the `Task`, `Task(1)`
+    * will be executed there. Then it will switch to `io` for `Task(2)` and `Task(3)`.
+    * `asyncBoundary` without any arguments returns to the default `Scheduler` so `Task(4)`
     * will be executed there.
     *
     * @param s is the scheduler triggering the asynchronous boundary
     */
-  final def asyncBoundary(s: Scheduler): BIO[E, A] =
-    flatMap(a => BIO.shift(s).map(_ => a))
+  final def asyncBoundary(s: Scheduler): Task[E, A] =
+    flatMap(a => Task.shift(s).map(_ => a))
 
   /** Returns a task that treats the source task as the acquisition of a resource,
     * which is then exploited by the `use` function and then `released`.
@@ -1325,22 +1312,22 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * If an exception is raised, then `bracket` will re-raise the exception
     * ''after'' performing the `release`. If the resulting task gets cancelled,
     * then `bracket` will still perform the `release`, but the yielded task
-    * will be non-terminating (equivalent with [[BIO.never]]).
+    * will be non-terminating (equivalent with [[Task.never]]).
     *
     * Example:
     *
     * {{{
     *   import java.io._
     *
-    *   def readFile(file: File): BIO.Unsafe[String] = {
+    *   def readFile(file: File): Task.Unsafe[String] = {
     *     // Opening a file handle for reading text
-    *     val acquire = BIO.eval(new BufferedReader(
+    *     val acquire = Task.eval(new BufferedReader(
     *       new InputStreamReader(new FileInputStream(file), "utf-8")
     *     ))
     *
     *     acquire.bracket { in =>
     *       // Usage part
-    *       BIO.eval {
+    *       Task.eval {
     *         // Yes, ugly Java, non-FP loop;
     *         // side-effects are suspended though
     *         var line: String = null
@@ -1378,16 +1365,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * $bracketErrorNote
     *
     * @see [[bracketCase]] and [[bracketE]]
-    *
     * @param use is a function that evaluates the resource yielded by the source,
     *        yielding a result that will get generated by the task returned
     *        by this `bracket` function
-    *
     * @param release is a function that gets called after `use` terminates,
     *        either normally or in error, or if it gets cancelled, receiving
     *        as input the resource that needs to be released
     */
-  final def bracket[E1 >: E, B](use: A => BIO[E1, B])(release: A => UIO[Unit]): BIO[E1, B] =
+  final def bracket[E1 >: E, B](use: A => Task[E1, B])(release: A => UIO[Unit]): Task[E1, B] =
     bracketCase(use)((a, _) => release(a))
 
   /** Returns a new task that treats the source task as the
@@ -1410,18 +1395,18 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * parameter.
     *
     * @see [[bracket]] and [[bracketE]]
-    *
     * @param use is a function that evaluates the resource yielded by
     *        the source, yielding a result that will get generated by
     *        this function on evaluation
-    *
     * @param release is a function that gets called after `use`
     *        terminates, either normally or in error, or if it gets
     *        canceled, receiving as input the resource that needs that
     *        needs release, along with the result of `use`
     *        (cancelation, error or successful result)
     */
-  final def bracketCase[E1 >: E, B](use: A => BIO[E1, B])(release: (A, ExitCase[Cause[E1]]) => UIO[Unit]): BIO[E1, B] =
+  final def bracketCase[E1 >: E, B](
+    use: A => Task[E1, B]
+  )(release: (A, ExitCase[Cause[E1]]) => UIO[Unit]): Task[E1, B] =
     TaskBracket.exitCase(this, use, release)
 
   /** Returns a task that treats the source task as the acquisition of a resource,
@@ -1448,19 +1433,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * $bracketErrorNote
     *
     * @see [[bracket]] and [[bracketCase]]
-    *
     * @param use is a function that evaluates the resource yielded by the source,
     *        yielding a result that will get generated by this function on
     *        evaluation
-    *
     * @param release is a function that gets called after `use` terminates,
     *        either normally or in error, or if it gets cancelled, receiving
     *        as input the resource that needs that needs release, along with
     *        the result of `use` (cancellation, error or successful result)
     */
   final def bracketE[E1 >: E, B](
-    use: A => BIO[E1, B]
-  )(release: (A, Either[Option[Cause[E1]], B]) => UIO[Unit]): BIO[E1, B] =
+    use: A => Task[E1, B]
+  )(release: (A, Either[Option[Cause[E1]], B]) => UIO[Unit]): Task[E1, B] =
     TaskBracket.either(this, use, release)
 
   /**
@@ -1480,10 +1463,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[guaranteeCase]] for the version that can discriminate
     *      between termination conditions
-    *
     * @see [[bracket]] for the more general operation
     */
-  final def guarantee(finalizer: UIO[Unit]): BIO[E, A] =
+  final def guarantee(finalizer: UIO[Unit]): Task[E, A] =
     guaranteeCase(_ => finalizer)
 
   /**
@@ -1504,10 +1486,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * for the acquisition and release of resources.
     *
     * @see [[guarantee]] for the simpler version
-    *
     * @see [[bracketCase]] for the more general operation
     */
-  final def guaranteeCase(finalizer: ExitCase[Cause[E]] => UIO[Unit]): BIO[E, A] =
+  final def guaranteeCase(finalizer: ExitCase[Cause[E]] => UIO[Unit]): Task[E, A] =
     TaskBracket.guaranteeCase(this, finalizer)
 
   /** Returns a task that waits for the specified `timespan` before
@@ -1519,25 +1500,25 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   BIO(println("Hello!"))
+    *   Task(println("Hello!"))
     *     .delayExecution(3.seconds)
     * }}}
     *
     * This operation is also equivalent with:
     *
     * {{{
-    *   BIO.sleep(3.seconds).flatMap(_ => BIO(println("Hello!")))
+    *   Task.sleep(3.seconds).flatMap(_ => Task(println("Hello!")))
     * }}}
     *
-    * See [[BIO.sleep]] for the operation that describes the effect
-    * and [[BIO.delayResult]] for the version that evaluates the
+    * See [[Task.sleep]] for the operation that describes the effect
+    * and [[Task.delayResult]] for the version that evaluates the
     * task on time, but delays the signaling of the result.
     *
     * @param timespan is the time span to wait before triggering
     *        the evaluation of the task
     */
-  final def delayExecution(timespan: FiniteDuration): BIO[E, A] =
-    BIO.sleep(timespan).flatMap(_ => this)
+  final def delayExecution(timespan: FiniteDuration): Task[E, A] =
+    Task.sleep(timespan).flatMap(_ => this)
 
   /** Returns a task that executes the source immediately on `runAsync`,
     * but before emitting the `onSuccess` result for the specified
@@ -1553,15 +1534,15 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   BIO(1 + 1)
-    *     .flatMap(a => BIO.now(a).delayExecution(3.seconds))
+    *   Task(1 + 1)
+    *     .flatMap(a => Task.now(a).delayExecution(3.seconds))
     * }}}
     *
-    * Or if we are to use the [[BIO.sleep]] describing just the
+    * Or if we are to use the [[Task.sleep]] describing just the
     * effect, this operation is equivalent with:
     *
     * {{{
-    *   BIO(1 + 1).flatMap(a => BIO.sleep(3.seconds).map(_ => a))
+    *   Task(1 + 1).flatMap(a => Task.sleep(3.seconds).map(_ => a))
     * }}}
     *
     * Thus in this example 3 seconds will pass before the result
@@ -1569,7 +1550,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * before it is finally emitted:
     *
     * {{{
-    *   BIO(1 + 1)
+    *   Task(1 + 1)
     *     .delayExecution(3.seconds)
     *     .delayResult(5.seconds)
     * }}}
@@ -1577,14 +1558,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param timespan is the time span to sleep before signaling
     *        the result, but after the evaluation of the source
     */
-  final def delayResult(timespan: FiniteDuration): BIO[E, A] =
-    flatMap(a => BIO.sleep(timespan).map(_ => a))
+  final def delayResult(timespan: FiniteDuration): Task[E, A] =
+    flatMap(a => Task.sleep(timespan).map(_ => a))
 
   /** Overrides the default [[monix.execution.Scheduler Scheduler]],
     * possibly forcing an asynchronous boundary before execution
     * (if `forceAsync` is set to `true`, the default).
     *
-    * When a `Task` is executed with [[BIO.runAsync]] or [[BIO.runToFuture]],
+    * When a `Task` is executed with [[Task.runAsync]] or [[Task.runToFuture]],
     * it needs a `Scheduler`, which is going to be injected in all
     * asynchronous tasks processed within the `flatMap` chain,
     * a `Scheduler` that is used to manage asynchronous boundaries
@@ -1598,7 +1579,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import java.io.{BufferedReader, FileInputStream, InputStreamReader}
     *
     *   /** Reads the contents of a file using blocking I/O. */
-    *   def readFile(path: String): BIO.Unsafe[String] = BIO.eval {
+    *   def readFile(path: String): Task.Unsafe[String] = Task.eval {
     *     val in = new BufferedReader(
     *       new InputStreamReader(new FileInputStream(path), "utf-8"))
     *
@@ -1620,11 +1601,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   readFile("path/to/file").executeOn(io, forceAsync = true)
     * }}}
     *
-    * In this example we are using [[BIO.eval]], which executes the
+    * In this example we are using [[Task.eval]], which executes the
     * given `thunk` immediately (on the current thread and call stack).
     *
     * By calling `executeOn(io)`, we are ensuring that the used
-    * `Scheduler` (injected in [[BIO.cancelable0]])
+    * `Scheduler` (injected in [[Task.cancelable0]])
     * will be `io`, a `Scheduler` that we intend to use for blocking
     * I/O actions. And we are also forcing an asynchronous boundary
     * right before execution, by passing the `forceAsync` parameter as
@@ -1642,7 +1623,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * For example:
     *
     * {{{
-    *   BIO.eval("Hello, " + "World!")
+    *   Task.eval("Hello, " + "World!")
     *     .executeOn(io, forceAsync = false)
     * }}}
     *
@@ -1651,13 +1632,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * [[monix.execution.ExecutionModel ExecutionModel]]) and the
     * given scheduler will probably not be used at all.
     *
-    * However in case we would use [[BIO.evalAsync]], which ensures
+    * However in case we would use [[Task.evalAsync]], which ensures
     * that execution of the provided thunk will be async, then
     * by using `executeOn` we'll indeed get a logical fork on
     * the `io` scheduler:
     *
     * {{{
-    *   BIO.evalAsync("Hello, " + "World!").executeOn(io, forceAsync = false)
+    *   Task.evalAsync("Hello, " + "World!").executeOn(io, forceAsync = false)
     * }}}
     *
     * Also note that overriding the "default" scheduler can only
@@ -1670,7 +1651,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   val io1 = Scheduler.io()
     *   val io2 = Scheduler.io()
     *
-    *   BIO(1 + 1).executeOn(io1).executeOn(io2)
+    *   Task(1 + 1).executeOn(io1).executeOn(io2)
     * }}}
     *
     * In this example the implementation of `task` will receive
@@ -1712,7 +1693,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *         the default and possibly force an extra asynchronous
     *         boundary on execution
     */
-  final def executeOn(s: Scheduler, forceAsync: Boolean = true): BIO[E, A] =
+  final def executeOn(s: Scheduler, forceAsync: Boolean = true): Task[E, A] =
     TaskExecuteOn(this, s, forceAsync)
 
   /** Mirrors the given source `Task`, but upon execution ensure
@@ -1720,26 +1701,26 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * The [[monix.execution.Scheduler Scheduler]] used will be
     * the one that is used to start the run-loop in
-    * [[BIO.runAsync]] or [[BIO.runToFuture]].
+    * [[Task.runAsync]] or [[Task.runToFuture]].
     *
     * This operation is equivalent with:
     *
     * {{{
-    *   BIO.shift.flatMap(_ => BIO(1 + 1))
+    *   Task.shift.flatMap(_ => Task(1 + 1))
     *
     *   // ... or ...
     *
     *   import cats.syntax.all._
     *
-    *   BIO.shift >> BIO(1 + 1)
+    *   Task.shift >> Task(1 + 1)
     * }}}
     *
     * The [[monix.execution.Scheduler Scheduler]] used for scheduling
     * the async boundary will be the default, meaning the one used to
     * start the run-loop in `runAsync`.
     */
-  final def executeAsync: BIO[E, A] =
-    BIO.shift.flatMap(_ => this)
+  final def executeAsync: Task[E, A] =
+    Task.shift.flatMap(_ => this)
 
   /** Returns a new task that will execute the source with a different
     * [[monix.execution.ExecutionModel ExecutionModel]].
@@ -1749,45 +1730,45 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * {{{
     *   import monix.execution.ExecutionModel.AlwaysAsyncExecution
-    *   BIO(1 + 1).executeWithModel(AlwaysAsyncExecution)
+    *   Task(1 + 1).executeWithModel(AlwaysAsyncExecution)
     * }}}
     *
     * @param em is the
     *        [[monix.execution.ExecutionModel ExecutionModel]]
     *        with which the source will get evaluated on `runAsync`
     */
-  final def executeWithModel(em: ExecutionModel): BIO[E, A] =
+  final def executeWithModel(em: ExecutionModel): Task[E, A] =
     TaskExecuteWithModel(this, em)
 
   /** Returns a new task that will execute the source with a different
-    * set of [[BIO.Options Options]].
+    * set of [[Task.Options Options]].
     *
     * This allows fine-tuning the default options. Example:
     *
     * {{{
-    *   BIO(1 + 1).executeWithOptions(_.enableAutoCancelableRunLoops)
+    *   Task(1 + 1).executeWithOptions(_.enableAutoCancelableRunLoops)
     * }}}
     *
     * @param f is a function that takes the source's current set of
-    *          [[BIO.Options options]] and returns a modified set of
+    *          [[Task.Options options]] and returns a modified set of
     *          options that will be used to execute the source
     *          upon `runAsync`
     */
-  final def executeWithOptions(f: Options => Options): BIO[E, A] =
+  final def executeWithOptions(f: Options => Options): Task[E, A] =
     TaskExecuteWithOptions(this, f)
 
   /** Returns a failed projection of this task.
     *
-    * The failed projection is a `BIO` holding a value of type `E`,
+    * The failed projection is a `Task` holding a value of type `E`,
     * emitting the error yielded by the source, in case the source fails,
     * otherwise if the source succeeds the result will fail with a
     * `NoSuchElementException`.
     */
   final def failed: UIO[E] =
-    FlatMap(this, BIO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
+    FlatMap(this, Task.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
 
   /**
-    * Creates a new BIO by swapping the error and value parameters. This allows you to
+    * Creates a new Task by swapping the error and value parameters. This allows you to
     * work with the error in a right-biased context, allowing you to apply a series of
     * operations that may depend on the error thrown by this task.
     *
@@ -1798,11 +1779,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   case class ErrorA(i: Int)
     *   case class ErrorB(errA: ErrorA, createdAt: Instant)
     *
-    *   def mapToErrorB(error: ErrorA): BIO.Unsafe[ErrorB] = ???
-    *   def logToStdErr(error: ErrorB): BIO.Unsafe[ErrorB] = ???
-    *   def logErrorToFile(error: ErrorB): BIO.Unsafe[ErrorB] = ???
+    *   def mapToErrorB(error: ErrorA): Task.Unsafe[ErrorB] = ???
+    *   def logToStdErr(error: ErrorB): Task.Unsafe[ErrorB] = ???
+    *   def logErrorToFile(error: ErrorB): Task.Unsafe[ErrorB] = ???
     *
-    *   val f1 = BIO.raiseError(ErrorA(500))
+    *   val f1 = Task.raiseError(ErrorA(500))
     *
     *   for {
     *     errorA <- f1.flip
@@ -1813,11 +1794,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * }}}
     */
-  final def flip: BIO[A, E] = {
-    this.redeemWith(BIO.now, BIO.raiseError)
+  final def flip: Task[A, E] = {
+    this.redeemWith(Task.now, Task.raiseError)
   }
 
-  /***
+  /** *
     * This function implements a common pattern with [[flip]] in that it returns the already flipped task
     * and allows applying a series of operations that may depend on the error thrown by this task, before
     * flipping the error and value parameters back.
@@ -1829,11 +1810,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   case class ErrorA(i: Int)
     *   case class ErrorB(errA: ErrorA, createdAt: Instant)
     *
-    *   def mapToErrorB(error: ErrorA): BIO.Unsafe[ErrorB] = ???
-    *   def logToStdErr(error: ErrorB): BIO.Unsafe[ErrorB] = ???
-    *   def logErrorToFile(error: ErrorB): BIO.Unsafe[ErrorB] = ???
+    *   def mapToErrorB(error: ErrorA): Task.Unsafe[ErrorB] = ???
+    *   def logToStdErr(error: ErrorB): Task.Unsafe[ErrorB] = ???
+    *   def logErrorToFile(error: ErrorB): Task.Unsafe[ErrorB] = ???
     *
-    *   val f1 = BIO.raiseError(ErrorA(500)).flipWith { f1 =>
+    *   val f1 = Task.raiseError(ErrorA(500)).flipWith { f1 =>
     *     for {
     *       errorA <- f1
     *       errorB <- mapToErrorB(errorA)
@@ -1844,14 +1825,14 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * }}}
     */
-  final def flipWith[E1, A1](f: BIO[A, E] => BIO[A1, E1]): BIO[E1, A1] =
+  final def flipWith[E1, A1](f: Task[A, E] => Task[A1, E1]): Task[E1, A1] =
     f(this.flip).flip
 
   /** Creates a new Task by applying a function to the successful result
     * of the source Task, and returns a task equivalent to the result
     * of the function.
     */
-  final def flatMap[E1 >: E, B](f: A => BIO[E1, B]): BIO[E1, B] =
+  final def flatMap[E1 >: E, B](f: A => Task[E1, B]): Task[E1, B] =
     FlatMap(this, f)
 
   /**  Describes flatMap-driven loops, as an alternative to recursive functions.
@@ -1861,22 +1842,22 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.util.Random
     *
-    *   val random = BIO(Random.nextInt())
+    *   val random = Task(Random.nextInt())
     *   val loop = random.flatMapLoop(Vector.empty[Int]) { (a, list, continue) =>
     *     val newList = list :+ a
     *     if (newList.length < 5)
     *       continue(newList)
     *     else
-    *       BIO.now(newList)
+    *       Task.now(newList)
     *   }
     * }}}
     *
     * @param seed initializes the result of the loop
     * @param f is the function that updates the result
-    *        on each iteration, returning a `BIO`.
-    * @return a new [[BIO]] that contains the result of the loop.
+    *        on each iteration, returning a `Task`.
+    * @return a new [[Task]] that contains the result of the loop.
     */
-  final def flatMapLoop[E1 >: E, S](seed: S)(f: (A, S, S => BIO[E1, S]) => BIO[E1, S]): BIO[E1, S] =
+  final def flatMapLoop[E1 >: E, S](seed: S)(f: (A, S, S => Task[E1, S]) => Task[E1, S]): Task[E1, S] =
     this.flatMap { a =>
       f(a, seed, flatMapLoop[E1, S](_)(f))
     }
@@ -1885,17 +1866,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * flattens the result, returning a Task equivalent to the emitted
     * Task by the source.
     */
-  final def flatten[E1 >: E, B](implicit ev: A <:< BIO[E1, B]): BIO[E1, B] =
+  final def flatten[E1 >: E, B](implicit ev: A <:< Task[E1, B]): Task[E1, B] =
     flatMap(a => a)
 
   /** Returns a new task that upon evaluation will execute the given
     * function for the generated element, transforming the source into
-    * a `BIO[E, Unit]`.
+    * a `Task[E, Unit]`.
     *
     * Similar in spirit with normal [[foreach]], but lazy, as
     * obviously nothing gets executed at this point.
     */
-  final def foreachL(f: A => Unit): BIO[E, Unit] =
+  final def foreachL(f: A => Unit): Task[E, Unit] =
     this.map { a =>
       f(a); ()
     }
@@ -1920,31 +1901,29 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   BIO.eval(println("Tick!"))
+    *   Task.eval(println("Tick!"))
     *     .delayExecution(1.second)
     *     .loopForever
     * }}}
-    *
     */
-  final def loopForever: BIO[E, Nothing] =
+  final def loopForever: Task[E, Nothing] =
     flatMap(_ => this.loopForever)
 
-  /** Start asynchronous execution of the source suspended in the `BIO` context,
+  /** Start asynchronous execution of the source suspended in the `Task` context,
     * running it in the background and discarding the result.
     *
     * Similar to [[start]] after mapping result to Unit. Below law holds:
     *
     * `bio.startAndForget <-> bio.start.map(_ => ())`
-    *
     */
   final def startAndForget: UIO[Unit] =
-    BIOStartAndForget(this)
+    TaskStartAndForget(this)
 
-  /** Returns a new `BIO` in which `f` is scheduled to be run on
+  /** Returns a new `Task` in which `f` is scheduled to be run on
     * completion. This would typically be used to release any
-    * resources acquired by this `BIO`.
+    * resources acquired by this `Task`.
     *
-    * The returned `BIO` completes when both the source and the task
+    * The returned `Task` completes when both the source and the task
     * returned by `f` complete.
     *
     * NOTE: The given function is only called when the task is
@@ -1955,10 +1934,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * See [[doOnCancel]] for specifying a callback to call on
     * canceling a task.
     */
-  final def doOnFinish(f: Option[Cause[E]] => UIO[Unit]): BIO[E, A] =
+  final def doOnFinish(f: Option[Cause[E]] => UIO[Unit]): Task[E, A] =
     this.guaranteeCase {
       case ExitCase.Completed => f(None)
-      case ExitCase.Canceled => BIO.unit
+      case ExitCase.Canceled => Task.unit
       case ExitCase.Error(e) => f(Some(e))
     }
 
@@ -1972,18 +1951,18 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param callback is the callback to execute if the task gets
     *        canceled prematurely
     */
-  final def doOnCancel(callback: UIO[Unit]): BIO[E, A] =
+  final def doOnCancel(callback: UIO[Unit]): Task[E, A] =
     TaskDoOnCancel(this, callback)
 
-  /** Creates a new [[BIO]] that will expose any triggered error from
+  /** Creates a new [[Task]] that will expose any triggered error from
     * the source.
     */
   final def materialize(implicit ev: E <:< Throwable): UIO[Try[A]] =
     FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[A]]])
 
   /** Dematerializes the source's result from a `Try`. */
-  final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): BIO.Unsafe[B] =
-    this.asInstanceOf[UIO[Try[B]]].flatMap(BIO.fromTry)
+  final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task.Unsafe[B] =
+    this.asInstanceOf[UIO[Try[B]]].flatMap(Task.fromTry)
 
   /** Returns a new task that mirrors the source task for normal termination,
     * but that triggers the given error on cancellation.
@@ -1996,7 +1975,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.concurrent.duration._
     *   import java.util.concurrent.TimeoutException
     *
-    *   val tenSecs = BIO.sleep(10.seconds)
+    *   val tenSecs = Task.sleep(10.seconds)
     *   val task1 = tenSecs.start.flatMap { fa =>
     *     // Triggering pure cancellation, then trying to get its result
     *     fa.cancel.flatMap(_ => tenSecs)
@@ -2010,13 +1989,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * cancellation.
     *
     * This `onCancelRaiseError` operator transforms a task that would yield
-    * [[BIO.never]] on cancellation into one that yields [[BIO.raiseError]].
+    * [[Task.never]] on cancellation into one that yields [[Task.raiseError]].
     *
     * Example:
     * {{{
     *   import java.util.concurrent.CancellationException
     *
-    *   val anotherTenSecs = BIO.sleep(10.seconds)
+    *   val anotherTenSecs = Task.sleep(10.seconds)
     *     .onCancelRaiseError(new CancellationException)
     *
     *   val task2 = anotherTenSecs.start.flatMap { fa =>
@@ -2028,7 +2007,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   // => CancellationException
     * }}}
     */
-  final def onCancelRaiseError[E1 >: E](e: E1): BIO[E1, A] =
+  final def onCancelRaiseError[E1 >: E](e: E1): Task[E1, A] =
     TaskCancellation.raiseError(this, e)
 
   /** Creates a new task that will try recovering from an error by
@@ -2036,7 +2015,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * See [[onErrorHandleWith]] for the version that takes a total function.
     */
-  final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, BIO[E1, B]]): BIO[E1, B] =
+  final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, Task[E1, B]]): Task[E1, B] =
     onErrorHandleWith(ex => pf.applyOrElse(ex, raiseConstructor[E]))
 
   /** Creates a new task that will handle any matching throwable that
@@ -2044,19 +2023,19 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * See [[onErrorRecoverWith]] for the version that takes a partial function.
     */
-  final def onErrorHandleWith[E1, B >: A](f: E => BIO[E1, B]): BIO[E1, B] =
+  final def onErrorHandleWith[E1, B >: A](f: E => Task[E1, B]): Task[E1, B] =
     FlatMap(this, new StackFrame.ErrorHandler(f, nowConstructor))
 
   /** Creates a new task that in case of error will fallback to the
     * given backup task.
     */
-  final def onErrorFallbackTo[E1, B >: A](that: BIO[E1, B]): BIO[E1, B] =
+  final def onErrorFallbackTo[E1, B >: A](that: Task[E1, B]): Task[E1, B] =
     onErrorHandleWith(_ => that)
 
   /** Given a predicate function, keep retrying the
-    * BIO until the function returns true.
+    * Task until the function returns true.
     */
-  final def restartUntil(p: A => Boolean): BIO[E, A] =
+  final def restartUntil(p: A => Boolean): Task[E, A] =
     this.flatMap(a => if (p(a)) now(a) else this.restartUntil(p))
 
   /** Returns a new `Task` that applies the mapping function to
@@ -2067,9 +2046,9 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * This equivalence with [[flatMap]] always holds:
     *
-    * `fa.map(f) <-> fa.flatMap(x => BIO.pure(f(x)))`
+    * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
     */
-  final def map[B](f: A => B): BIO[E, B] =
+  final def map[B](f: A => B): Task[E, B] =
     this match {
       case Map(source, g, index) =>
         // Allowed to do a fixed number of map operations fused before
@@ -2086,10 +2065,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Example:
     *  {{{
-    *    import monix.bio.BIO
+    *    import monix.bio.Task
     *
     *    // will result in Left("Error") and print the error to console
-    *    BIO.raiseError("Error1").tapError(err => BIO.evalTotal(println(err)))
+    *    Task.raiseError("Error1").tapError(err => Task.evalTotal(println(err)))
     *  }}}
     *
     * If provided function returns an error then the resulting task will raise that error instead.
@@ -2097,11 +2076,11 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Example:
     *  {{{
     *    // will result in Left("Error2")
-    *    BIO.raiseError("Error1").tapError(err => BIO.raiseError("Error2"))
+    *    Task.raiseError("Error1").tapError(err => Task.raiseError("Error2"))
     *  }}}
-    *  */
-  final def tapError[E1 >: E, B](f: E => BIO[E1, B]): BIO[E1, A] =
-    this.onErrorHandleWith(e => f(e).flatMap(_ => BIO.raiseError(e)))
+    */
+  final def tapError[E1 >: E, B](f: E => Task[E1, B]): Task[E1, A] =
+    this.onErrorHandleWith(e => f(e).flatMap(_ => Task.raiseError(e)))
 
   /** Creates a new task that in case of error will retry executing the
     * source again and again, until it succeeds.
@@ -2109,7 +2088,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * In case of continuous failure the total number of executions
     * will be maxRetries + 1.
     */
-  final def onErrorRestart(maxRetries: Long): BIO[E, A] =
+  final def onErrorRestart(maxRetries: Long): Task[E, A] =
     this.onErrorHandleWith { error =>
       if (maxRetries > 0) this.onErrorRestart(maxRetries - 1)
       else raiseError(error)
@@ -2123,7 +2102,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * {{{
     *   import scala.concurrent.TimeoutException
     *
-    *   BIO("some long call that may timeout").onErrorRestartIf {
+    *   Task("some long call that may timeout").onErrorRestartIf {
     *     case _: TimeoutException => true
     *     case _ => false
     *   }
@@ -2132,7 +2111,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * @param p is the predicate that is executed if an error is thrown and
     *        that keeps restarting the source for as long as it returns `true`
     */
-  final def onErrorRestartIf(p: E => Boolean): BIO[E, A] =
+  final def onErrorRestartIf(p: E => Boolean): Task[E, A] =
     this.onErrorHandleWith(ex => if (p(ex)) this.onErrorRestartIf(p) else raiseError(ex))
 
   /** On error restarts the source with a customizable restart loop.
@@ -2150,7 +2129,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import scala.util.Random
     *   import scala.concurrent.duration._
     *
-    *   val task = BIO {
+    *   val task = Task {
     *     if (Random.nextInt(20) > 10)
     *       throw new RuntimeException("boo")
     *     else 78
@@ -2162,7 +2141,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *       retry(maxRetries - 1).delayExecution(1.second)
     *     else
     *       // No retries left, rethrow the error
-    *       BIO.raiseError(err)
+    *       Task.raiseError(err)
     *   }
     * }}}
     *
@@ -2183,7 +2162,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *       retry(Backoff(maxRetries - 1, delay * 2)).delayExecution(delay)
     *     else
     *       // No retries left, rethrow the error
-    *       BIO.raiseError(err)
+    *       Task.raiseError(err)
     *   }
     * }}}
     *
@@ -2191,7 +2170,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *  1. `error` reference that was thrown
     *  2. the current `state`, based on which a decision for the retry is made
-    *  3. `retry: S => BIO[E, B]` function that schedules the next retry
+    *  3. `retry: S => Task[E, B]` function that schedules the next retry
     *
     * @param initial is the initial state used to determine the next on error
     *        retry cycle
@@ -2199,14 +2178,16 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *        function that can signal a retry is to be made and returns
     *        the next task
     */
-  final def onErrorRestartLoop[S, E1 >: E, B >: A](initial: S)(f: (E1, S, S => BIO[E1, B]) => BIO[E1, B]): BIO[E1, B] =
-    onErrorHandleWith(err => f(err, initial, state => (this: BIO[E1, B]).onErrorRestartLoop(state)(f)))
+  final def onErrorRestartLoop[S, E1 >: E, B >: A](
+    initial: S
+  )(f: (E1, S, S => Task[E1, B]) => Task[E1, B]): Task[E1, B] =
+    onErrorHandleWith(err => f(err, initial, state => (this: Task[E1, B]).onErrorRestartLoop(state)(f)))
 
-  /** Returns a new `BIO` that applies the mapping function `fa` to the
+  /** Returns a new `Task` that applies the mapping function `fa` to the
     * success channel and `fe` to the error channel.
     */
-  final def bimap[E1, B](fe: E => E1, fa: A => B): BIO[E1, B] =
-    BIO.FlatMap(this, BIO.Bimap(fe, fa))
+  final def bimap[E1, B](fe: E => E1, fa: A => B): Task[E1, B] =
+    Task.FlatMap(this, Task.Bimap(fe, fa))
 
   /** Creates a new task that will will transform errors
     * using supplied function `f`.
@@ -2218,12 +2199,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   case class ErrorA(i: Int)
     *   case class ErrorB(errA: ErrorA, createdAt: Instant)
     *
-    *   val task1: BIO[ErrorA, String] = BIO.raiseError(ErrorA(10))
-    *   val task2: BIO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
+    *   val task1: Task[ErrorA, String] = Task.raiseError(ErrorA(10))
+    *   val task2: Task[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
     * }}}
     */
-  final def mapError[E1](f: E => E1): BIO[E1, A] =
-    BIO.FlatMap(this, BIO.MapError[E, E1, A](f))
+  final def mapError[E1](f: E => E1): Task[E1, A] =
+    Task.FlatMap(this, Task.MapError[E, E1, A](f))
 
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
@@ -2238,18 +2219,18 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * See [[onErrorHandle]] for the version that takes a total function.
     */
-  final def onErrorRecover[E1 >: E, U >: A](pf: PartialFunction[E, U]): BIO[E1, U] =
+  final def onErrorRecover[E1 >: E, U >: A](pf: PartialFunction[E, U]): Task[E1, U] =
     onErrorRecoverWith(pf.andThen(nowConstructor))
 
   /** Start execution of the source suspended in the `Task` context.
     *
     * This can be used for non-deterministic / concurrent execution.
     * The following code is more or less equivalent with
-    * doctodo BIO.parMap2 (minus the behavior on error handling and
+    * doctodo Task.parMap2 (minus the behavior on error handling and
     * cancellation):
     *
     * {{{
-    *   def par2[A, B](ta: BIO.Unsafe[A], tb: BIO.Unsafe[B]): BIO.Unsafe[(A, B)] =
+    *   def par2[A, B](ta: Task.Unsafe[A], tb: Task.Unsafe[B]): Task.Unsafe[(A, B)] =
     *     for {
     *       fa <- ta.start
     *       fb <- tb.start
@@ -2258,8 +2239,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *     } yield (a, b)
     * }}}
     *
-    * Note in such a case usage of doctodo BIO.parMap2 parMap2
-    * (and doctodo BIO.parMap3 parMap3, etc.) is still recommended
+    * Note in such a case usage of doctodo Task.parMap2 parMap2
+    * (and doctodo Task.parMap3 parMap3, etc.) is still recommended
     * because of behavior on error and cancellation — consider that
     * in the example above, if the first task finishes in error,
     * the second task doesn't get cancelled.
@@ -2303,13 +2284,13 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
     *
-    *   BIO.eval(println("Hello!"))
+    *   Task.eval(println("Hello!"))
     *     .delayExecution(5.seconds)
     *     .to[IO]
     * }}}
     */
   final def to[F[_]](implicit F: TaskLift[F], ev: E <:< Throwable): F[A @uV] =
-    F(this.asInstanceOf[BIO.Unsafe[A]])
+    F(this.asInstanceOf[Task.Unsafe[A]])
 
   /** Converts the source task into any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]].
@@ -2323,12 +2304,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *   implicit val cs = IO.contextShift(global)
     *
-    *   BIO.eval(println("Hello!"))
+    *   Task.eval(println("Hello!"))
     *     .delayExecution(5.seconds)
     *     .toConcurrent[IO]
     * }}}
     *
-    * A `ConcurrentEffect[BIO.Unsafe]` instance is needed in scope, which itself
+    * A `ConcurrentEffect[Task.Unsafe]` instance is needed in scope, which itself
     * might need a [[monix.execution.Scheduler Scheduler]] to be available.
     * Such a requirement is needed because the `Task` has to be evaluated
     * in order to be converted.
@@ -2345,20 +2326,21 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[to]] that is able to convert into any data type that has
     *      a [[TaskLift]] implementation
-    *
     * @see [[toAsync]] that is able to convert into non-cancelable values via the
     *       [[https://typelevel.org/cats-effect/typeclasses/async.html Async]]
     *       type class.
-    *
     * @param F is the `cats.effect.Concurrent` instance required in
     *        order to perform the conversion
-    *
-    * @param eff is the `ConcurrentEffect[BIO.Unsafe]` instance needed to
+    * @param eff is the `ConcurrentEffect[Task.Unsafe]` instance needed to
     *        evaluate tasks; when evaluating tasks, this is the pure
     *        alternative to demanding a `Scheduler`
     */
-  final def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[BIO.Unsafe], ev: E <:< Throwable): F[A @uV] =
-    TaskConversions.toConcurrent(this.asInstanceOf[BIO.Unsafe[A]])(F, eff)
+  final def toConcurrent[F[_]](implicit
+    F: Concurrent[F],
+    eff: ConcurrentEffect[Task.Unsafe],
+    ev: E <:< Throwable
+  ): F[A @uV] =
+    TaskConversions.toConcurrent(this.asInstanceOf[Task.Unsafe[A]])(F, eff)
 
   /** Converts the source task into any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]].
@@ -2370,12 +2352,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
     *
-    *   BIO.eval(println("Hello!"))
+    *   Task.eval(println("Hello!"))
     *     .delayExecution(5.seconds)
     *     .toAsync[IO]
     * }}}
     *
-    * An `Effect[BIO.Unsafe]` instance is needed in scope, which itself
+    * An `Effect[Task.Unsafe]` instance is needed in scope, which itself
     * might need a [[monix.execution.Scheduler Scheduler]] to
     * be available. Such requirement is needed because the `Task`
     * has to be evaluated in order to be converted.
@@ -2396,20 +2378,17 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * @see [[to]] that is able to convert to any data type that has
     *      a [[TaskLift]] implementation
-    *
     * @see [[toConcurrent]] that is able to convert to cancelable values via the
     *      [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]]
     *      type class.
-    *
     * @param F is the `cats.effect.Async` instance required in
     *        order to perform the conversion
-    *
-    * @param eff is the `Effect[BIO.Unsafe]` instance needed to
+    * @param eff is the `Effect[Task.Unsafe]` instance needed to
     *        evaluate tasks; when evaluating tasks, this is the pure
     *        alternative to demanding a `Scheduler`
     */
-  final def toAsync[F[_]](implicit F: Async[F], eff: Effect[BIO.Unsafe], ev: E <:< Throwable): F[A @uV] =
-    TaskConversions.toAsync(this.asInstanceOf[BIO.Unsafe[A]])(F, eff)
+  final def toAsync[F[_]](implicit F: Async[F], eff: Effect[Task.Unsafe], ev: E <:< Throwable): F[A @uV] =
+    TaskConversions.toAsync(this.asInstanceOf[Task.Unsafe[A]])(F, eff)
 
   /** Converts the source task into an `org.reactivestreams.Publisher`
     * that emits a single item on success, or an error when there is
@@ -2426,19 +2405,20 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Reactive Streams specification.
     */
   final def toReactivePublisher(implicit s: Scheduler, ev: E <:< Throwable): Publisher[A @uV] =
-    TaskToReactivePublisher(this.asInstanceOf[BIO.Unsafe[A]])(s)
+    TaskToReactivePublisher(this.asInstanceOf[Task.Unsafe[A]])(s)
 
   /** Returns a string representation of this task meant for
     * debugging purposes only.
     */
-  override def toString: String = this match {
-    case Now(a) => s"BIO.Now($a)"
-    case Error(e) => s"BIO.Error($e)"
-    case Termination(e) => s"BIO.Termination($e)"
-    case _ =>
-      val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.BIO[$.]", "")
-      s"BIO.$n$$${System.identityHashCode(this)}"
-  }
+  override def toString: String =
+    this match {
+      case Now(a) => s"Task.Now($a)"
+      case Error(e) => s"Task.Error($e)"
+      case Termination(e) => s"Task.Termination($e)"
+      case _ =>
+        val n = this.getClass.getName.replaceFirst("^monix\\.bio\\.Task[$.]", "")
+        s"Task.$n$$${System.identityHashCode(this)}"
+    }
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `map` functions, which get executed depending
@@ -2459,7 +2439,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *        in case it ends in success
     */
   def redeem[B](recover: E => B, map: A => B): UIO[B] =
-    BIO.FlatMap(this, new BIO.Redeem(recover, map))
+    Task.FlatMap(this, new Task.Redeem(recover, map))
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `bind` functions, which get executed depending
@@ -2476,15 +2456,15 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Usage of `redeemWith` also subsumes [[flatMap]] because:
     *
-    * `task.redeemWith(BIO.raiseError, fs) <-> task.flatMap(fs)`
+    * `task.redeemWith(Task.raiseError, fs) <-> task.flatMap(fs)`
     *
     * @param recover is the function that gets called to recover the source
     *        in case of error
     * @param bind is the function that gets to transform the source
     *        in case of success
     */
-  def redeemWith[E1, B](recover: E => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
-    BIO.FlatMap(this, new StackFrame.RedeemWith(recover, bind))
+  def redeemWith[E1, B](recover: E => Task[E1, B], bind: A => Task[E1, B]): Task[E1, B] =
+    Task.FlatMap(this, new StackFrame.RedeemWith(recover, bind))
 
   /** Makes the source `Task` uninterruptible such that a `cancel` signal
     * (e.g. [[Fiber.cancel]]) has no effect.
@@ -2493,7 +2473,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.Scheduler.Implicits.global
     *   import scala.concurrent.duration._
     *
-    *   val uncancelable = BIO
+    *   val uncancelable = Task
     *     .eval(println("Hello!"))
     *     .delayExecution(10.seconds)
     *     .uncancelable
@@ -2506,7 +2486,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   // => Hello!
     * }}}
     */
-  final def uncancelable: BIO[E, A] =
+  final def uncancelable: Task[E, A] =
     TaskCancellation.uncancelable(this)
 
   /** Measures execution time of the source task and returns both its duration
@@ -2515,46 +2495,47 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * Example:
     * {{{
     *   for {
-    *     result <- BIO(1 + 1).timed
+    *     result <- Task(1 + 1).timed
     *     (duration, value) = result
-    *     _ <- BIO(println("Executed in " + duration.toMillis + " ms"))
+    *     _ <- Task(println("Executed in " + duration.toMillis + " ms"))
     *   } yield value
     * }}}
     */
-  final def timed: BIO[E, (FiniteDuration, A)] =
+  final def timed: Task[E, (FiniteDuration, A)] =
     for {
-      start <- BIO.clock.monotonic(NANOSECONDS)
+      start <- Task.clock.monotonic(NANOSECONDS)
       a     <- this
-      end   <- BIO.clock.monotonic(NANOSECONDS)
+      end   <- Task.clock.monotonic(NANOSECONDS)
     } yield (FiniteDuration(end - start, NANOSECONDS), a)
 
   /** Returns a Task that mirrors the source Task but returns `None`
     * in case the given duration passes without the
     * task emitting any item. Otherwise, returns `Some` of the resulting value.
     */
-  final def timeout(after: FiniteDuration): BIO[E, Option[A]] =
+  final def timeout(after: FiniteDuration): Task[E, Option[A]] =
     timeoutL(now(after))
 
   /** Returns a Task that mirrors the source Task but that triggers a
     * specified error in case the given duration passes
     * without the task emitting any item.
+    *
     * @param error `Error` raised after given duration passes
     */
-  final def timeoutWith[E1 >: E, B >: A](after: FiniteDuration, error: E1): BIO[E1, B] =
+  final def timeoutWith[E1 >: E, B >: A](after: FiniteDuration, error: E1): Task[E1, B] =
     timeoutTo(after, raiseError(error))
 
   /** Returns a Task that mirrors the source Task but switches to the
     * given backup Task in case the given duration passes without the
     * source emitting any item.
     */
-  final def timeoutTo[E1 >: E, B >: A](after: FiniteDuration, backup: BIO[E1, B]): BIO[E1, B] =
+  final def timeoutTo[E1 >: E, B >: A](after: FiniteDuration, backup: Task[E1, B]): Task[E1, B] =
     timeoutToL(now(after), backup)
 
   /** Returns a Task that mirrors the source Task but returns `None`
     * in case the given duration passes without the
     * task emitting any item. Otherwise, returns `Some` of the resulting value.
     */
-  final def timeoutL(after: UIO[FiniteDuration]): BIO[E, Option[A]] =
+  final def timeoutL(after: UIO[FiniteDuration]): Task[E, Option[A]] =
     this.map(Some(_)).timeoutToL(after, now(None))
 
   /** Returns a Task that mirrors the source Task but switches to the
@@ -2576,12 +2557,12 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     *   // re-evaluate deadline time on every request
     *   val actualTimeout = UIO(singleCallTimeout.min(deadline.timeLeft))
-    *   val error = BIO.raiseError(new TimeoutException("Task timed-out"))
+    *   val error = Task.raiseError(new TimeoutException("Task timed-out"))
     *
     *   // expensive remote call
     *   def call(): Unit = ()
     *
-    *   val remoteCall = BIO(call())
+    *   val remoteCall = Task(call())
     *     .timeoutToL(actualTimeout, error)
     *     .onErrorRestart(100)
     *     .timeout(deadline.time)
@@ -2591,9 +2572,8 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * to a value of `5 seconds`, then this task will timeout
     * in exactly 5 seconds from the moment computation started,
     * which means in 2 seconds after the timeout task has been evaluated.
-    *
-    **/
-  final def timeoutToL[E1 >: E, B >: A](after: UIO[FiniteDuration], backup: BIO[E1, B]): BIO[E1, B] = {
+    */
+  final def timeoutToL[E1 >: E, B >: A](after: UIO[FiniteDuration], backup: Task[E1, B]): Task[E1, B] = {
     val timeoutTask: UIO[Unit] =
       after.timed.flatMap {
         case (took, need) =>
@@ -2623,7 +2603,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.exceptions.DummyException
     *   import monix.execution.Scheduler.Implicits.global
     *
-    *   val task: UIO[Int] = BIO
+    *   val task: UIO[Int] = Task
     *     .raiseError(DummyException("boom!"))
     *     .hideErrors
     *     .map(_ => 10)
@@ -2633,7 +2613,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * }}}
     */
   final def hideErrors(implicit E: E <:< Throwable): UIO[A] =
-    onErrorHandleWith(ex => BIO.terminate(E(ex)))
+    onErrorHandleWith(ex => Task.terminate(E(ex)))
 
   /** Hides all errors from the return type and raises them in the internal channel,
     * using supplied function to transform `E` into `Throwable`.
@@ -2645,7 +2625,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *   import monix.execution.exceptions.DummyException
     *   import monix.execution.Scheduler.Implicits.global
     *
-    *   val task: UIO[Int] = BIO
+    *   val task: UIO[Int] = Task
     *     .raiseError("boom!")
     *     .hideErrorsWith(e => DummyException(e))
     *     .map(_ => 10)
@@ -2655,7 +2635,7 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     * }}}
     */
   final def hideErrorsWith(f: E => Throwable): UIO[A] =
-    onErrorHandleWith(ex => BIO.terminate(f(ex)))
+    onErrorHandleWith(ex => Task.terminate(f(ex)))
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `map` functions, which get executed depending
@@ -2665,11 +2645,10 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *        source ends in error
     * @param map is a function used for mapping the result of the source
     *        in case it ends in success
-    *
-    * @see [[BIO.redeem]] for a version which works on typed errors
+    * @see [[Task.redeem]] for a version which works on typed errors
     */
   final def redeemCause[B](recover: Cause[E] => B, map: A => B): UIO[B] =
-    BIO.FlatMap(this, new BIO.RedeemFatal(recover, map))
+    Task.FlatMap(this, new Task.RedeemFatal(recover, map))
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `bind` functions, which get executed depending
@@ -2677,115 +2656,111 @@ sealed abstract class BIO[+E, +A] extends Serializable {
     *
     * Usage of `redeemWith` also subsumes [[flatMap]] because:
     *
-    * `task.redeemCauseWith(BIO.raiseError, fs) <-> task.flatMap(fs)`
+    * `task.redeemCauseWith(Task.raiseError, fs) <-> task.flatMap(fs)`
     *
     * @param recover is the function that gets called to recover the source
     *        in case of error
     * @param bind is the function that gets to transform the source
     *        in case of success
-    *
-    * @see [[BIO.redeemWith]] for a version which only works on typed errors
+    * @see [[Task.redeemWith]] for a version which only works on typed errors
     */
-  final def redeemCauseWith[E1, B](recover: Cause[E] => BIO[E1, B], bind: A => BIO[E1, B]): BIO[E1, B] =
-    BIO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
+  final def redeemCauseWith[E1, B](recover: Cause[E] => Task[E1, B], bind: A => Task[E1, B]): Task[E1, B] =
+    Task.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 
   /** Returns this task mapped to unit
     */
-  final def void: BIO[E, Unit] =
+  final def void: Task[E, Unit] =
     this.map(_ => ())
 }
 
-/** Builders for [[BIO]].
+/** Builders for [[Task]].
   *
   * @define registerParamDesc is a function that will be called when
-  *         this `Task` is executed, receiving a callback as a
-  *         parameter, a callback that the user is supposed to call in
-  *         order to signal the desired outcome of this `Task`. This
-  *         function also receives a [[monix.execution.Scheduler Scheduler]]
-  *         that can be used for managing asynchronous boundaries, a
-  *         scheduler being nothing more than an evolved `ExecutionContext`.
-  *
-  * @define shiftDesc For example we can introduce an
-  *         asynchronous boundary in the `flatMap` chain before a
-  *         certain task, this being literally the implementation of
-  *         [[BIO.executeAsync executeAsync]]:
+  *                           this `Task` is executed, receiving a callback as a
+  *                           parameter, a callback that the user is supposed to call in
+  *                           order to signal the desired outcome of this `Task`. This
+  *                           function also receives a [[monix.execution.Scheduler Scheduler]]
+  *                           that can be used for managing asynchronous boundaries, a
+  *                           scheduler being nothing more than an evolved `ExecutionContext`.
+  * @define shiftDesc         For example we can introduce an
+  *                           asynchronous boundary in the `flatMap` chain before a
+  *                           certain task, this being literally the implementation of
+  *                           [[Task.executeAsync executeAsync]]:
   *
   *         {{{
-  *           val task = BIO.eval(35)
+  *           val task = Task.eval(35)
   *
-  *           BIO.shift.flatMap(_ => task)
+  *           Task.shift.flatMap(_ => task)
   *         }}}
   *
-  *         And this can also be described with `>>` from Cats:
+  *                           And this can also be described with `>>` from Cats:
   *
   *         {{{
   *           import cats.syntax.all._
   *
-  *           BIO.shift >> task
+  *           Task.shift >> task
   *         }}}
   *
-  *         Or we can specify an asynchronous boundary ''after''
-  *         the evaluation of a certain task, this being literally
-  *         the implementation of
-  *         [[BIO!.asyncBoundary:monix\.bio\.BIO[E,A]* .asyncBoundary]]:
+  *                           Or we can specify an asynchronous boundary ''after''
+  *                           the evaluation of a certain task, this being literally
+  *                           the implementation of
+  *                           [[Task!.asyncBoundary:monix\.bio\.Task[E,A]* .asyncBoundary]]:
   *
   *         {{{
-  *           task.flatMap(a => BIO.shift.map(_ => a))
+  *           task.flatMap(a => Task.shift.map(_ => a))
   *         }}}
   *
-  *         And again we can also describe this with `<*`
-  *         from Cats:
+  *                           And again we can also describe this with `<*`
+  *                           from Cats:
   *
   *         {{{
-  *           task <* BIO.shift
+  *           task <* Task.shift
   *         }}}
+  * @define parallelismNote   NOTE: the tasks get forked automatically so there's
+  *                           no need to force asynchronous execution for immediate tasks,
+  *                           parallelism being guaranteed when multi-threading is available!
   *
-  * @define parallelismNote NOTE: the tasks get forked automatically so there's
-  *         no need to force asynchronous execution for immediate tasks,
-  *         parallelism being guaranteed when multi-threading is available!
-  *
-  *         All specified tasks get evaluated in parallel, regardless of their
-  *         execution model ([[BIO.eval]] vs [[BIO.evalAsync]] doesn't matter).
-  *         Also the implementation tries to be smart about detecting forked
-  *         tasks so it can eliminate extraneous forks for the very obvious
-  *         cases.
-  *
+  *                           All specified tasks get evaluated in parallel, regardless of their
+  *                           execution model ([[Task.eval]] vs [[Task.evalAsync]] doesn't matter).
+  *                           Also the implementation tries to be smart about detecting forked
+  *                           tasks so it can eliminate extraneous forks for the very obvious
+  *                           cases.
   * @define parallelismAdvice ADVICE: In a real life scenario the tasks should
-  *         be expensive in order to warrant parallel execution. Parallelism
-  *         doesn't magically speed up the code - it's usually fine for I/O-bound
-  *         tasks, however for CPU-bound tasks it can make things worse.
-  *         Performance improvements need to be verified.
+  *                           be expensive in order to warrant parallel execution. Parallelism
+  *                           doesn't magically speed up the code - it's usually fine for I/O-bound
+  *                           tasks, however for CPU-bound tasks it can make things worse.
+  *                           Performance improvements need to be verified.
   */
-object BIO extends TaskInstancesLevel0 {
+object Task extends TaskInstancesLevel0 {
 
-  type Safe[+A] = BIO[Nothing, A]
-  type Unsafe[+A] = BIO[Throwable, A]
+  type Safe[+A] = Task[Nothing, A]
+  type Unsafe[+A] = Task[Throwable, A]
 
-  /** Lifts the given thunk in the `BIO` context, processing it synchronously
+  /** Lifts the given thunk in the `Task` context, processing it synchronously
     * when the task gets evaluated.
     *
     * This is an alias for:
     *
     * {{{
     *   val thunk = () => 42
-    *   BIO.eval(thunk())
+    *   Task.eval(thunk())
     * }}}
     *
-    * WARN: behavior of `BIO.apply` has changed since 3.0.0-RC2.
+    * WARN: behavior of `Task.apply` has changed since 3.0.0-RC2.
     * Before the change (during Monix 2.x series), this operation was forcing
-    * a fork, being equivalent to the new [[BIO.evalAsync]].
+    * a fork, being equivalent to the new [[Task.evalAsync]].
     *
-    * Switch to [[BIO.evalAsync]] if you wish the old behavior, or combine
-    * [[BIO.eval]] with [[BIO.executeAsync]].
+    * Switch to [[Task.evalAsync]] if you wish the old behavior, or combine
+    * [[Task.eval]] with [[Task.executeAsync]].
     */
-  def apply[A](a: => A): BIO.Unsafe[A] =
+  def apply[A](a: => A): Task.Unsafe[A] =
     eval(a)
 
-  /** Returns a `BIO` that on execution is always successful, emitting
+  /** Returns a `Task` that on execution is always successful, emitting
     * the given strict value.
     */
   def now[A](a: A): UIO[A] =
-    BIO.Now(a)
+    Task.Now(a)
 
   /** Lifts a value into the task context. Alias for [[now]]. */
   def pure[A](a: A): UIO[A] = now(a)
@@ -2793,14 +2768,14 @@ object BIO extends TaskInstancesLevel0 {
   /** Returns a task that on execution is always finishing in error
     * emitting the specified value in a typed error channel.
     */
-  def raiseError[E](ex: E): BIO[E, Nothing] =
+  def raiseError[E](ex: E): Task[E, Nothing] =
     Error(ex)
 
   /** Returns a task that on execution is always finishing in a fatal (unexpected) error
     * emitting the specified exception.
     *
     * This type of errors is not reflected in the type signature and it skips all regular
-    * error handlers, except for [[BIO.redeemCause]] and [[BIO.redeemCauseWith]].
+    * error handlers, except for [[Task.redeemCause]] and [[Task.redeemCauseWith]].
     */
   def terminate(ex: Throwable): UIO[Nothing] =
     Termination(ex)
@@ -2812,15 +2787,15 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see [[deferTotal]] if `fa` is not expected to throw any exceptions.
     */
-  def defer[A](fa: => BIO.Unsafe[A]): BIO.Unsafe[A] =
+  def defer[A](fa: => Task.Unsafe[A]): Task.Unsafe[A] =
     Suspend(fa _)
 
-  /** Defers the creation of a `BIO` in case it is effectful.
+  /** Defers the creation of a `Task` in case it is effectful.
     *
     * @see [[defer]] if `fa` is expected to throw exceptions and you would
     *      like to expose them as typed errors.
     */
-  def deferTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
+  def deferTotal[E, A](fa: => Task[E, A]): Task[E, A] =
     SuspendTotal(fa _)
 
   /** Defers the creation of a `Task` by using the provided
@@ -2831,8 +2806,8 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   import scala.concurrent.duration.MILLISECONDS
     *
-    *   def measureLatency[A](source: BIO.Unsafe[A]): BIO.Unsafe[(A, Long)] =
-    *     BIO.deferAction { implicit s =>
+    *   def measureLatency[A](source: Task.Unsafe[A]): Task.Unsafe[(A, Long)] =
+    *     Task.deferAction { implicit s =>
     *       // We have our Scheduler, which can inject time, we
     *       // can use it for side-effectful operations
     *       val start = s.clockRealTime(MILLISECONDS)
@@ -2847,7 +2822,7 @@ object BIO extends TaskInstancesLevel0 {
     * @param f is the function that's going to be called when the
     *        resulting `Task` gets evaluated
     */
-  def deferAction[E, A](f: Scheduler => BIO[E, A]): BIO[E, A] =
+  def deferAction[E, A](f: Scheduler => Task[E, A]): Task[E, A] =
     TaskDeferAction(f)
 
   /** Promote a non-strict Scala `Future` to a `Task` of the same type.
@@ -2857,13 +2832,13 @@ object BIO extends TaskInstancesLevel0 {
     *   import scala.concurrent.Future
     *   def mkFuture = Future.successful(27)
     *
-    *   BIO.defer(BIO.fromFuture(mkFuture))
+    *   Task.defer(Task.fromFuture(mkFuture))
     * }}}
     */
-  def deferFuture[A](fa: => Future[A]): BIO.Unsafe[A] =
+  def deferFuture[A](fa: => Future[A]): Task.Unsafe[A] =
     defer(fromFuture(fa))
 
-  /** Wraps calls that generate `Future` results into [[BIO.Unsafe]], provided
+  /** Wraps calls that generate `Future` results into [[Task.Unsafe]], provided
     * a callback with an injected [[monix.execution.Scheduler Scheduler]]
     * to act as the necessary `ExecutionContext`.
     *
@@ -2883,20 +2858,20 @@ object BIO extends TaskInstancesLevel0 {
     * function an `ExecutionContext` is needed:
     *
     * {{{
-    *   def sumBIO(list: Seq[Int])(implicit ec: ExecutionContext): BIO.Unsafe[Int] =
-    *     BIO.deferFuture(sumFuture(list))
+    *   def sumTask(list: Seq[Int])(implicit ec: ExecutionContext): Task.Unsafe[Int] =
+    *     Task.deferFuture(sumFuture(list))
     * }}}
     *
     * But this is not only superfluous, but against the best practices
     * of using `Task`. The difference is that `Task` takes a
     * [[monix.execution.Scheduler Scheduler]] (inheriting from
-    * `ExecutionContext`) only when [[BIO.runAsync runAsync]] happens.
+    * `ExecutionContext`) only when [[Task.runAsync runAsync]] happens.
     * But with `deferFutureAction` we get to have an injected
     * `Scheduler` in the passed callback:
     *
     * {{{
-    *   def sumTask2(list: Seq[Int]): BIO.Unsafe[Int] =
-    *     BIO.deferFutureAction { implicit scheduler =>
+    *   def sumTask2(list: Seq[Int]): Task.Unsafe[Int] =
+    *     Task.deferFutureAction { implicit scheduler =>
     *       sumFuture(list)
     *     }
     * }}}
@@ -2904,43 +2879,41 @@ object BIO extends TaskInstancesLevel0 {
     * @param f is the function that's going to be executed when the task
     *        gets evaluated, generating the wrapped `Future`
     */
-  def deferFutureAction[A](f: Scheduler => Future[A]): BIO.Unsafe[A] =
+  def deferFutureAction[A](f: Scheduler => Future[A]): Task.Unsafe[A] =
     TaskFromFuture.deferAction(f)
 
   /** Alias for [[defer]]. */
-  def suspend[A](fa: => BIO.Unsafe[A]): BIO.Unsafe[A] =
+  def suspend[A](fa: => Task.Unsafe[A]): Task.Unsafe[A] =
     Suspend(fa _)
 
   /** Alias for [[deferTotal]]. */
-  def suspendTotal[E, A](fa: => BIO[E, A]): BIO[E, A] =
+  def suspendTotal[E, A](fa: => Task[E, A]): Task[E, A] =
     SuspendTotal(fa _)
 
-  /** Promote a non-strict value to a `BIO` that is memoized on the first
+  /** Promote a non-strict value to a `Task` that is memoized on the first
     * evaluation, the result being then available on subsequent evaluations.
     */
-  def evalOnce[A](a: => A): BIO.Unsafe[A] =
+  def evalOnce[A](a: => A): Task.Unsafe[A] =
     eval(a).memoize
 
-  /** Promote a non-strict value, a thunk, to a `BIO`, catching exceptions
+  /** Promote a non-strict value, a thunk, to a `Task`, catching exceptions
     * in the process.
     *
-    * Note that since `BIO` is not memoized or strict, this will recompute the
-    * value each time the `BIO` is executed, behaving like a function.
+    * Note that since `Task` is not memoized or strict, this will recompute the
+    * value each time the `Task` is executed, behaving like a function.
     *
     * @param a is the thunk to process on evaluation
-    *
     * @see [[evalTotal]] if `a` is not expected to throw any exceptions.
     */
-  def eval[A](a: => A): BIO.Unsafe[A] =
+  def eval[A](a: => A): Task.Unsafe[A] =
     Eval(a _)
 
   /** Promote a non-strict value which does not throw any unexpected errors to `UIO`.
     *
-    * Note that since `BIO` is not memoized or strict, this will recompute the
-    * value each time the `BIO` is executed, behaving like a function.
+    * Note that since `Task` is not memoized or strict, this will recompute the
+    * value each time the `Task` is executed, behaving like a function.
     *
     * @param a is the thunk to process on evaluation
-    *
     * @see [[eval]] if `a` is expected to throw exceptions and you want to expose them
     *      in a typed error channel.
     */
@@ -2953,17 +2926,17 @@ object BIO extends TaskInstancesLevel0 {
     * Like [[eval]], but the provided `thunk` will not be evaluated immediately.
     * Equivalence:
     *
-    * `BIO.evalAsync(a) <-> BIO.eval(a).executeAsync`
+    * `Task.evalAsync(a) <-> Task.eval(a).executeAsync`
     *
     * @param a is the thunk to process on evaluation
     */
-  def evalAsync[A](a: => A): BIO.Unsafe[A] =
+  def evalAsync[A](a: => A): Task.Unsafe[A] =
     TaskEvalAsync(a _)
 
   /** Alias for [[eval]]. */
-  def delay[A](a: => A): BIO.Unsafe[A] = eval(a)
+  def delay[A](a: => A): Task.Unsafe[A] = eval(a)
 
-  /** A [[BIO]] instance that upon evaluation will never complete. */
+  /** A [[Task]] instance that upon evaluation will never complete. */
   def never[A]: UIO[A] = neverRef
 
   /** Converts into a `Task` from any `F[_]` for which there exists
@@ -2980,24 +2953,23 @@ object BIO extends TaskInstancesLevel0 {
     *  - [[scala.util.Try]]
     *  - [[scala.concurrent.Future]]
     */
-  def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): BIO.Unsafe[A] =
+  def from[F[_], A](fa: F[A])(implicit F: TaskLike[F]): Task.Unsafe[A] =
     F.apply(fa)
 
-  /** Converts an `org.reactivestreams.Publisher` into a [[BIO]].
+  /** Converts an `org.reactivestreams.Publisher` into a [[Task]].
     *
     * See [[http://www.reactive-streams.org/ reactive-streams.org]] for the
     * Reactive Streams specification.
     *
-    * @see [[BIO.toReactivePublisher]] for converting a [[BIO]] into
+    * @see [[Task.toReactivePublisher]] for converting a [[Task]] into
     *      a reactive publisher.
-    *
     * @param source is the `org.reactivestreams.Publisher` reference to
-    *        wrap into a [[BIO]].
+    *               wrap into a [[Task]].
     */
-  def fromReactivePublisher[A](source: Publisher[A]): BIO.Unsafe[Option[A]] =
+  def fromReactivePublisher[A](source: Publisher[A]): Task.Unsafe[Option[A]] =
     TaskConversions.fromReactivePublisher(source)
 
-  /** Builds a [[BIO.Unsafe]] out of any data type that implements
+  /** Builds a [[Task.Unsafe]] out of any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]] and
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html ConcurrentEffect]].
     *
@@ -3015,29 +2987,26 @@ object BIO extends TaskInstancesLevel0 {
     *   val io = IO.sleep(5.seconds) *> IO(println("Hello!"))
     *
     *   // Resulting task is cancelable
-    *   val task: BIO.Unsafe[Unit] = BIO.fromConcurrentEffect(io)
+    *   val task: Task.Unsafe[Unit] = Task.fromConcurrentEffect(io)
     * }}}
     *
     * Cancellation / finalization behavior is carried over, so the
     * resulting task can be safely cancelled.
     *
-    * @see [[BIO.liftToConcurrent]] for its dual
-    *
-    * @see [[BIO.fromEffect]] for a version that works with simpler,
+    * @see [[Task.liftToConcurrent]] for its dual
+    * @see [[Task.fromEffect]] for a version that works with simpler,
     *      non-cancelable `Async` data types
-    *
-    * @see [[BIO.from]] for a more generic version that works with
+    * @see [[Task.from]] for a more generic version that works with
     *      any [[TaskLike]] data type
-    *
     * @param F is the `cats.effect.Effect` type class instance necessary
     *        for converting to `Task`; this instance can also be a
     *        `cats.effect.Concurrent`, in which case the resulting
     *        `Task` value is cancelable if the source also is
     */
-  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): BIO.Unsafe[A] =
+  def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task.Unsafe[A] =
     TaskConversions.fromConcurrentEffect(fa)(F)
 
-  /** Builds a [[BIO]] out of any data type that implements
+  /** Builds a [[Task]] out of any data type that implements
     * [[https://typelevel.org/cats-effect/typeclasses/async.html Async]] and
     * [[https://typelevel.org/cats-effect/typeclasses/effect.html Effect]].
     *
@@ -3047,71 +3016,66 @@ object BIO extends TaskInstancesLevel0 {
     *   import cats.effect._
     *
     *   val io: IO[Unit] = IO(println("Hello!"))
-    *   val task: BIO.Unsafe[Unit] = BIO.fromEffect(io)
+    *   val task: Task.Unsafe[Unit] = Task.fromEffect(io)
     * }}}
     *
     * WARNING: the resulting task might not carry the source's cancellation behavior
     * if the source is cancelable! This is implicit in the usage of `Effect`.
     *
-    * @see [[BIO.fromConcurrentEffect]] for a version that can use
+    * @see [[Task.fromConcurrentEffect]] for a version that can use
     *      [[https://typelevel.org/cats-effect/typeclasses/concurrent.html Concurrent]]
     *      for converting cancelable tasks.
-    *
-    * @see [[BIO.from]] for a more generic version that works with
+    * @see [[Task.from]] for a more generic version that works with
     *      any [[TaskLike]] data type
-    *
-    * @see [[BIO.liftToAsync for]] its dual
-    *
+    * @see [[Task.liftToAsync for]] its dual
     * @param F is the `cats.effect.Effect` type class instance necessary
-    *        for converting to `Task`; this instance can also be a
-    *        `cats.effect.Concurrent`, in which case the resulting
-    *        `Task` value is cancelable if the source also is
+    *          for converting to `Task`; this instance can also be a
+    *          `cats.effect.Concurrent`, in which case the resulting
+    *          `Task` value is cancelable if the source also is
     */
-  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): BIO.Unsafe[A] =
+  def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task.Unsafe[A] =
     TaskConversions.fromEffect(fa)
 
   /**
-    * Builds a [[BIO]] instance out of a Scala `Option`.
+    * Builds a [[Task]] instance out of a Scala `Option`.
     * If the Option is empty, the task fails with Unit.
     *
     * Example:
     *
     * {{{
-    *   BIO.fromOption(Some(1)) // <-> BIO.now(1))
-    *   BIO.fromOption(None)    // <-> BIO.raiseError(())
+    *   Task.fromOption(Some(1)) // <-> Task.now(1))
+    *   Task.fromOption(None)    // <-> Task.raiseError(())
     * }}}
-    *
     */
-  def fromOption[A](opt: Option[A]): BIO[Unit, A] =
+  def fromOption[A](opt: Option[A]): Task[Unit, A] =
     opt match {
       case None => Error(())
       case Some(v) => Now(v)
     }
 
   /**
-    * Builds a [[BIO]] instance out of a Scala `Option`.
+    * Builds a [[Task]] instance out of a Scala `Option`.
     * If the Option is empty, the task fails with the provided fallback.
     *
-    * @see [[BIO.fromOptionEval]] for a version that takes a `BIO[E, Option[A]]`
+    * @see [[Task.fromOptionEval]] for a version that takes a `Task[E, Option[A]]`
     *
     * Example:
     *
     * {{{
     *   final case class NotFound()
     *
-    *   BIO.fromOption(Some(1), NotFound()) // <-> BIO.now(1)
-    *   BIO.fromOption(None, NotFound())   // <-> BIO.raiseError(NotFound())
+    *   Task.fromOption(Some(1), NotFound()) // <-> Task.now(1)
+    *   Task.fromOption(None, NotFound())   // <-> Task.raiseError(NotFound())
     * }}}
-    *
     */
-  def fromOption[E, A](opt: Option[A], ifEmpty: => E): BIO[E, A] =
+  def fromOption[E, A](opt: Option[A], ifEmpty: => E): Task[E, A] =
     opt match {
-      case None => BIO.suspendTotal(BIO.raiseError(ifEmpty))
+      case None => Task.suspendTotal(Task.raiseError(ifEmpty))
       case Some(v) => Now(v)
     }
 
   /**
-    * Builds a new [[BIO]] instance out of a `BIO[E, Option[A]]`.
+    * Builds a new [[Task]] instance out of a `Task[E, Option[A]]`.
     * If the inner Option is empty, the task fails with the provided fallback.
     *
     * Example:
@@ -3120,50 +3084,50 @@ object BIO extends TaskInstancesLevel0 {
     *  type ErrorCode = Int
     *  final case class Item()
     *
-    *  def findItem(id: Int): BIO[ErrorCode, Option[Item]] =
+    *  def findItem(id: Int): Task[ErrorCode, Option[Item]] =
     *    UIO.now(Some(Item()))
     *
-    *  BIO.fromOptionEval(findItem(1), 404)
+    *  Task.fromOptionEval(findItem(1), 404)
     * }}}
-    *
     */
-  def fromOptionEval[E, E1 >: E, A](opt: BIO[E, Option[A]], ifEmpty: => E1): BIO[E1, A] = {
+  def fromOptionEval[E, E1 >: E, A](opt: Task[E, Option[A]], ifEmpty: => E1): Task[E1, A] = {
     opt.flatMap {
       case None => Error(ifEmpty)
       case Some(v) => Now(v)
     }
   }
 
-  /** Builds a [[BIO.Unsafe]] instance out of a Scala `Try`. */
-  def fromTry[A](a: Try[A]): BIO.Unsafe[A] =
+  /** Builds a [[Task.Unsafe]] instance out of a Scala `Try`. */
+  def fromTry[A](a: Try[A]): Task.Unsafe[A] =
     a match {
       case Success(v) => Now(v)
       case Failure(ex) => Error(ex)
     }
 
-  /** Builds a [[BIO.Unsafe]] instance out of a Scala `Either`. */
-  def fromEither[E, A](a: Either[E, A]): BIO[E, A] =
+  /** Builds a [[Task.Unsafe]] instance out of a Scala `Either`. */
+  def fromEither[E, A](a: Either[E, A]): Task[E, A] =
     a match {
       case Right(v) => Now(v)
       case Left(ex) => Error(ex)
     }
 
-  /** Builds a [[BIO]] instance out of scala `Either` wrapped in scala `Try` */
-  def fromTryEither[E, A](a: Try[Either[E, A]]): BIO[E, A] = a match {
-    case Success(Right(a)) => Now(a)
-    case Success(Left(e)) => Error(e)
-    case Failure(t) => Termination(t)
-  }
+  /** Builds a [[Task]] instance out of scala `Either` wrapped in scala `Try` */
+  def fromTryEither[E, A](a: Try[Either[E, A]]): Task[E, A] =
+    a match {
+      case Success(Right(a)) => Now(a)
+      case Success(Left(e)) => Error(e)
+      case Failure(t) => Termination(t)
+    }
 
   /** Keeps calling `f` until it returns a `Right` result.
     *
     * Based on Phil Freeman's
     * [[http://functorial.com/stack-safety-for-free/index.pdf Stack Safety for Free]].
     */
-  def tailRecM[E, A, B](a: A)(f: A => BIO[E, Either[A, B]]): BIO[E, B] =
-    BIO.deferTotal(f(a)).flatMap {
+  def tailRecM[E, A, B](a: A)(f: A => Task[E, Either[A, B]]): Task[E, B] =
+    Task.deferTotal(f(a)).flatMap {
       case Left(continueA) => tailRecM(continueA)(f)
-      case Right(b) => BIO.now(b)
+      case Right(b) => Task.now(b)
     }
 
   /** A `UIO[Unit]` provided for convenience. */
@@ -3175,22 +3139,22 @@ object BIO extends TaskInstancesLevel0 {
     *
     * This operation is the implementation for `cats.effect.Async` and
     * is thus yielding non-cancelable tasks, being the simplified
-    * version of [[BIO.cancelable[E,A](register* BIO.cancelable]].
+    * version of [[Task.cancelable[E,A](register* Task.cancelable]].
     * This can be used to translate from a callback-based API to pure
     * `Task` values that cannot be canceled.
     *
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]].
     *
-    * For example, in case we wouldn't have [[BIO.deferFuture]]
+    * For example, in case we wouldn't have [[Task.deferFuture]]
     * already defined, we could do this:
     *
     * {{{
     *   import scala.concurrent.{Future, ExecutionContext}
     *   import scala.util._
     *
-    *   def deferFuture[A](f: => Future[A])(implicit ec: ExecutionContext): BIO.Unsafe[A] =
-    *     BIO.async { cb =>
+    *   def deferFuture[A](f: => Future[A])(implicit ec: ExecutionContext): Task.Unsafe[A] =
+    *     Task.async { cb =>
     *       // N.B. we could do `f.onComplete(cb)` directly ;-)
     *       f.onComplete {
     *         case Success(a) => cb.onSuccess(a)
@@ -3203,7 +3167,7 @@ object BIO extends TaskInstancesLevel0 {
     * to trigger `Future#complete`, however Monix's `Task` can inject
     * a [[monix.execution.Scheduler Scheduler]] for you, thus allowing you
     * to get rid of these pesky execution contexts being passed around explicitly.
-    * See [[BIO.async0]].
+    * See [[Task.async0]].
     *
     * CONTRACT for `register`:
     *
@@ -3219,14 +3183,14 @@ object BIO extends TaskInstancesLevel0 {
     *    and [[monix.execution.Callback.tryOnError Callback.tryOnError]]
     *    and [[monix.bio.BiCallback.tryOnTermination]]
     *
-    * @see [[BIO.async0]] for a variant that also injects a
+    * @see [[Task.async0]] for a variant that also injects a
     *      [[monix.execution.Scheduler Scheduler]] into the provided callback,
     *      useful for forking, or delaying tasks or managing async boundaries
-    * @see [[BIO.cancelable[E,A](register* BIO.cancelable]] and [[BIO.cancelable0]]
+    * @see [[Task.cancelable[E,A](register* Task.cancelable]] and [[Task.cancelable0]]
     *      for creating cancelable tasks
-    * @see [[BIO.create]] for the builder that does it all
+    * @see [[Task.create]] for the builder that does it all
     */
-  def async[E, A](register: BiCallback[E, A] => Unit): BIO[E, A] =
+  def async[E, A](register: BiCallback[E, A] => Unit): Task[E, A] =
     TaskCreate.async(register)
 
   /** Create a non-cancelable `Task` from an asynchronous computation,
@@ -3236,21 +3200,21 @@ object BIO extends TaskInstancesLevel0 {
     *
     * This operation is the implementation for `cats.effect.Async` and
     * is thus yielding non-cancelable tasks, being the simplified
-    * version of [[BIO.cancelable0]]. It can be used to translate from a
+    * version of [[Task.cancelable0]]. It can be used to translate from a
     * callback-based API to pure `Task` values that cannot be canceled.
     *
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]].
     *
-    * For example, in case we wouldn't have [[BIO.deferFuture]]
+    * For example, in case we wouldn't have [[Task.deferFuture]]
     * already defined, we could do this:
     *
     * {{{
     *   import scala.concurrent.Future
     *   import scala.util._
     *
-    *   def deferFuture[A](f: => Future[A]): BIO.Unsafe[A] =
-    *     BIO.async0 { (scheduler, cb) =>
+    *   def deferFuture[A](f: => Future[A]): Task.Unsafe[A] =
+    *     Task.async0 { (scheduler, cb) =>
     *       // We are being given an ExecutionContext ;-)
     *       implicit val ec = scheduler
     *
@@ -3263,7 +3227,7 @@ object BIO extends TaskInstancesLevel0 {
     * }}}
     *
     * Note that this function doesn't need an implicit `ExecutionContext`.
-    * Compared with usage of [[BIO.async[E,A](register* BIO.async]], this
+    * Compared with usage of [[Task.async[E,A](register* Task.async]], this
     * function injects a [[monix.execution.Scheduler Scheduler]] for us to
     * use for managing async boundaries.
     *
@@ -3285,18 +3249,18 @@ object BIO extends TaskInstancesLevel0 {
     *
     *  - `async` comes from `cats.effect.Async#async`
     *  - the `0` suffix is about overloading the simpler
-    *    [[BIO.async[E,A](register* BIO.async]] builder
+    *    [[Task.async[E,A](register* Task.async]] builder
     *
-    * @see [[BIO.async]] for a simpler variant that doesn't inject a
+    * @see [[Task.async]] for a simpler variant that doesn't inject a
     *      `Scheduler`, in case you don't need one
-    * @see [[BIO.cancelable[E,A](register* BIO.cancelable]] and [[BIO.cancelable0]]
+    * @see [[Task.cancelable[E,A](register* Task.cancelable]] and [[Task.cancelable0]]
     *      for creating cancelable tasks
-    * @see [[BIO.create]] for the builder that does it all
+    * @see [[Task.create]] for the builder that does it all
     */
-  def async0[E, A](register: (Scheduler, BiCallback[E, A]) => Unit): BIO[E, A] =
+  def async0[E, A](register: (Scheduler, BiCallback[E, A]) => Unit): Task[E, A] =
     TaskCreate.async0(register)
 
-  /** Suspends an asynchronous side effect in `BIO`, this being a
+  /** Suspends an asynchronous side effect in `Task`, this being a
     * variant of [[async]] that takes a pure registration function.
     *
     * Implements `cats.effect.Async.asyncF`.
@@ -3306,23 +3270,23 @@ object BIO extends TaskInstancesLevel0 {
     * in polymorphic code making use of the `cats.effect.Async`
     * type class, as it alleviates the need for `cats.effect.Effect`.
     *
-    * Contract for the returned `BIO[E, Unit]` in the provided function:
+    * Contract for the returned `Task[E, Unit]` in the provided function:
     *
     *  - can be asynchronous
-    *  - can be cancelable, in which case it hooks into BIO's cancelation
+    *  - can be cancelable, in which case it hooks into Task's cancelation
     *    mechanism such that the resulting task is cancelable
     *  - it should not end in error, because the provided callback
     *    is the only way to signal the final result and it can only
     *    be called once, so invoking it twice would be a contract
-    *    violation; so on errors thrown in `BIO`, the task can become
+    *    violation; so on errors thrown in `Task`, the task can become
     *    non-terminating, with the error being printed via
     *    [[monix.execution.Scheduler.reportFailure Scheduler.reportFailure]]
     *
-    * @see [[BIO.async]] and [[BIO.async0]] for a simpler variants
-    * @see [[BIO.cancelable[E,A](register* BIO.cancelable]] and
-    *      [[BIO.cancelable0]] for creating cancelable tasks
+    * @see [[Task.async]] and [[Task.async0]] for a simpler variants
+    * @see [[Task.cancelable[E,A](register* Task.cancelable]] and
+    *      [[Task.cancelable0]] for creating cancelable tasks
     */
-  def asyncF[E, A](register: BiCallback[E, A] => BIO[E, Unit]): BIO[E, A] =
+  def asyncF[E, A](register: BiCallback[E, A] => Task[E, Unit]): Task[E, A] =
     TaskCreate.asyncF(register)
 
   /** Create a cancelable `Task` from an asynchronous computation that
@@ -3337,7 +3301,7 @@ object BIO extends TaskInstancesLevel0 {
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html cats.effect.Concurrent]].
     *
-    * For example, in case we wouldn't have [[BIO.delayExecution]]
+    * For example, in case we wouldn't have [[Task.delayExecution]]
     * already defined and we wanted to delay evaluation using a Java
     * [[https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ScheduledExecutorService.html ScheduledExecutorService]]
     * (no need for that because we've got [[monix.execution.Scheduler Scheduler]],
@@ -3351,9 +3315,9 @@ object BIO extends TaskInstancesLevel0 {
     *
     *   def delayed[A](sc: ScheduledExecutorService, timespan: FiniteDuration)
     *     (thunk: => A)
-    *     (implicit ec: ExecutionContext): BIO.Unsafe[A] = {
+    *     (implicit ec: ExecutionContext): Task.Unsafe[A] = {
     *
-    *     BIO.cancelable[Throwable, A] { cb =>
+    *     Task.cancelable[Throwable, A] { cb =>
     *       val future = sc.schedule(new Runnable { // scheduling delay
     *         def run() = ec.execute(new Runnable { // scheduling thunk execution
     *           def run() =
@@ -3369,7 +3333,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     *       // Returning the cancelation token that is able to cancel the
     *       // scheduling in case the active computation hasn't finished yet
-    *       BIO(future.cancel(false))
+    *       Task(future.cancel(false))
     *     }
     *   }
     * }}}
@@ -3378,7 +3342,7 @@ object BIO extends TaskInstancesLevel0 {
     * in order to do the actual processing, the `ScheduledExecutorService`
     * being in charge just of scheduling. We don't need to do that, as `Task`
     * affords to have a [[monix.execution.Scheduler Scheduler]] injected
-    * instead via [[BIO.cancelable0]].
+    * instead via [[Task.cancelable0]].
     *
     * CONTRACT for `register`:
     *
@@ -3394,15 +3358,15 @@ object BIO extends TaskInstancesLevel0 {
     *    and [[monix.execution.Callback.tryOnError Callback.tryOnError]]
     *    and [[monix.bio.BiCallback.tryOnTermination BiCallback.tryOnTermination]]
     *
-    * @see [[BIO.cancelable0]] for the version that also injects a
+    * @see [[Task.cancelable0]] for the version that also injects a
     *      [[monix.execution.Scheduler Scheduler]] in that callback
-    * @see [[BIO.async0]] and [[BIO.async[E,A](register* BIO.async]] for the
+    * @see [[Task.async0]] and [[Task.async[E,A](register* Task.async]] for the
     *      simpler versions of this builder that create non-cancelable tasks
     *      from callback-based APIs
-    * @see [[BIO.create]] for the builder that does it all
+    * @see [[Task.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable[E, A](register: BiCallback[E, A] => CancelToken[BIO[E, *]]): BIO[E, A] =
+  def cancelable[E, A](register: BiCallback[E, A] => CancelToken[Task[E, *]]): Task[E, A] =
     cancelable0[E, A]((_, cb) => register(cb))
 
   /** Create a cancelable `Task` from an asynchronous computation,
@@ -3418,7 +3382,7 @@ object BIO extends TaskInstancesLevel0 {
     * See the the documentation for
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html cats.effect.Concurrent]].
     *
-    * For example, in case we wouldn't have [[BIO.delayExecution]]
+    * For example, in case we wouldn't have [[Task.delayExecution]]
     * already defined and we wanted to delay evaluation using a Java
     * [[https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ScheduledExecutorService.html ScheduledExecutorService]]
     * (no need for that because we've got [[monix.execution.Scheduler Scheduler]],
@@ -3430,9 +3394,9 @@ object BIO extends TaskInstancesLevel0 {
     *   import scala.util.control.NonFatal
     *
     *   def delayed1[A](sc: ScheduledExecutorService, timespan: FiniteDuration)
-    *     (thunk: => A): BIO.Unsafe[A] = {
+    *     (thunk: => A): Task.Unsafe[A] = {
     *
-    *     BIO.cancelable0[Throwable, A] { (scheduler, cb) =>
+    *     Task.cancelable0[Throwable, A] { (scheduler, cb) =>
     *       val future = sc.schedule(new Runnable { // scheduling delay
     *         def run = scheduler.execute(new Runnable { // scheduling thunk execution
     *           def run() =
@@ -3448,7 +3412,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     *       // Returning the cancel token that is able to cancel the
     *       // scheduling in case the active computation hasn't finished yet
-    *       BIO(future.cancel(false))
+    *       Task(future.cancel(false))
     *     }
     *   }
     * }}}
@@ -3463,16 +3427,16 @@ object BIO extends TaskInstancesLevel0 {
     * Java's standard library:
     *
     * {{{
-    *   def delayed2[A](timespan: FiniteDuration)(thunk: => A): BIO.Unsafe[A] =
-    *     BIO.cancelable0[Throwable, A] { (scheduler, cb) =>
+    *   def delayed2[A](timespan: FiniteDuration)(thunk: => A): Task.Unsafe[A] =
+    *     Task.cancelable0[Throwable, A] { (scheduler, cb) =>
     *       // N.B. this already returns the Cancelable that we need!
     *       val cancelable = scheduler.scheduleOnce(timespan) {
     *         try cb.onSuccess(thunk)
     *         catch { case NonFatal(e) => cb.onError(e) }
     *       }
     *       // `scheduleOnce` above returns a Cancelable, which
-    *       // has to be converted into a BIO.Unsafe[Unit]
-    *       BIO(cancelable.cancel())
+    *       // has to be converted into a Task.Unsafe[Unit]
+    *       Task(cancelable.cancel())
     *     }
     * }}}
     *
@@ -3494,24 +3458,24 @@ object BIO extends TaskInstancesLevel0 {
     *
     *  - `cancelable` comes from `cats.effect.Concurrent#cancelable`
     *  - the `0` suffix is about overloading the simpler
-    *    [[BIO.cancelable[E,A](register* BIO.cancelable]] builder
+    *    [[Task.cancelable[E,A](register* Task.cancelable]] builder
     *
-    * @see [[BIO.cancelable[E,A](register* BIO.cancelable]] for the simpler
+    * @see [[Task.cancelable[E,A](register* Task.cancelable]] for the simpler
     *      variant that doesn't inject the `Scheduler` in that callback
-    * @see [[BIO.async0]] and [[BIO.async[E,A](register* BIO.async]] for the
+    * @see [[Task.async0]] and [[Task.async[E,A](register* Task.async]] for the
     *      simpler versions of this builder that create non-cancelable tasks
     *      from callback-based APIs
-    * @see [[BIO.create]] for the builder that does it all
+    * @see [[Task.create]] for the builder that does it all
     * @param register $registerParamDesc
     */
-  def cancelable0[E, A](register: (Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]): BIO[E, A] =
+  def cancelable0[E, A](register: (Scheduler, BiCallback[E, A]) => CancelToken[Task[E, *]]): Task[E, A] =
     TaskCreate.cancelable0(register)
 
   /** Returns a cancelable boundary — a `Task` that checks for the
     * cancellation status of the run-loop and does not allow for the
     * bind continuation to keep executing in case cancellation happened.
     *
-    * This operation is very similar to `BIO.shift`, as it can be dropped
+    * This operation is very similar to `Task.shift`, as it can be dropped
     * in `flatMap` chains in order to make loops cancelable.
     *
     * Example:
@@ -3520,14 +3484,14 @@ object BIO extends TaskInstancesLevel0 {
     *
     *  import cats.syntax.all._
     *
-    *  def fib(n: Int, a: Long, b: Long): BIO.Safe[Long] =
-    *    BIO.suspendTotal {
-    *      if (n <= 0) BIO.pure(a) else {
+    *  def fib(n: Int, a: Long, b: Long): Task.Safe[Long] =
+    *    Task.suspendTotal {
+    *      if (n <= 0) Task.pure(a) else {
     *        val next = fib(n - 1, b, a + b)
     *
     *        // Every 100-th cycle, check cancellation status
     *        if (n % 100 == 0)
-    *          BIO.cancelBoundary *> next
+    *          Task.cancelBoundary *> next
     *        else
     *          next
     *      }
@@ -3535,11 +3499,11 @@ object BIO extends TaskInstancesLevel0 {
     * }}}
     *
     * NOTE: that by default `Task` is configured to be auto-cancelable
-    * (see [[BIO.Options]]), so this isn't strictly needed, unless you
+    * (see [[Task.Options]]), so this isn't strictly needed, unless you
     * want to fine tune the cancelation boundaries.
     */
   val cancelBoundary: UIO[Unit] =
-    BIO.Async[Nothing, Unit] { (ctx, cb) =>
+    Task.Async[Nothing, Unit] { (ctx, cb) =>
       if (!ctx.connection.isCanceled) cb.onSuccess(())
     }
 
@@ -3550,17 +3514,17 @@ object BIO extends TaskInstancesLevel0 {
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type technique]].
     *
     * Calling `create` with a callback that returns `Unit` is
-    * equivalent with [[BIO.async0]]:
+    * equivalent with [[Task.async0]]:
     *
-    * `BIO.async0(f) <-> BIO.create(f)`
+    * `Task.async0(f) <-> Task.create(f)`
     *
     * Example:
     *
     * {{{
     *   import scala.concurrent.Future
     *
-    *   def deferFuture[A](f: => Future[A]): BIO.Unsafe[A] =
-    *     BIO.create { (scheduler, cb) =>
+    *   def deferFuture[A](f: => Future[A]): Task.Unsafe[A] =
+    *     Task.create { (scheduler, cb) =>
     *       f.onComplete(cb(_))(scheduler)
     *     }
     * }}}
@@ -3573,8 +3537,8 @@ object BIO extends TaskInstancesLevel0 {
     *   import scala.concurrent.duration.FiniteDuration
     *   import scala.util.Try
     *
-    *   def delayResult1[A](timespan: FiniteDuration)(thunk: => A): BIO.Unsafe[A] =
-    *     BIO.create { (scheduler, cb) =>
+    *   def delayResult1[A](timespan: FiniteDuration)(thunk: => A): Task.Unsafe[A] =
+    *     Task.create { (scheduler, cb) =>
     *       val c = scheduler.scheduleOnce(timespan)(cb(Try(thunk)))
     *       // We can simply return `c`, but doing this for didactic purposes!
     *       Cancelable(() => c.cancel())
@@ -3587,26 +3551,26 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   import cats.effect.IO
     *
-    *   def delayResult2[A](timespan: FiniteDuration)(thunk: => A): BIO.Unsafe[A] =
-    *     BIO.create { (scheduler, cb) =>
+    *   def delayResult2[A](timespan: FiniteDuration)(thunk: => A): Task.Unsafe[A] =
+    *     Task.create { (scheduler, cb) =>
     *       val c = scheduler.scheduleOnce(timespan)(cb(Try(thunk)))
     *       // We can simply return `c`, but doing this for didactic purposes!
     *       IO(c.cancel())
     *     }
     * }}}
     *
-    * Passed function can also return `BIO.Unsafe[Unit]` as a task that
+    * Passed function can also return `Task.Unsafe[Unit]` as a task that
     * describes a cancelation action, thus for an `f` that can be
-    * passed to [[BIO.cancelable0]], and this equivalence holds:
+    * passed to [[Task.cancelable0]], and this equivalence holds:
     *
-    * `BIO.cancelable(f) <-> BIO.create(f)`
+    * `Task.cancelable(f) <-> Task.create(f)`
     *
     * {{{
-    *   def delayResult3[A](timespan: FiniteDuration)(thunk: => A): BIO.Unsafe[A] =
-    *     BIO.create { (scheduler, cb) =>
+    *   def delayResult3[A](timespan: FiniteDuration)(thunk: => A): Task.Unsafe[A] =
+    *     Task.create { (scheduler, cb) =>
     *       val c = scheduler.scheduleOnce(timespan)(cb(Try(thunk)))
     *       // We can simply return `c`, but doing this for didactic purposes!
-    *       BIO(c.cancel())
+    *       Task(c.cancel())
     *     }
     * }}}
     *
@@ -3614,7 +3578,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     *  - `Unit`, yielding non-cancelable tasks
     *  - [[monix.execution.Cancelable Cancelable]], the Monix standard
-    *  - [[monix.bio.Task BIO.Unsafe[Unit]]]
+    *  - [[monix.bio.Task Task.Unsafe[Unit]]]
     *  - `cats.effect.IO[Unit]`, see
     *    [[https://typelevel.org/cats-effect/datatypes/io.html IO docs]]
     *
@@ -3630,21 +3594,21 @@ object BIO extends TaskInstancesLevel0 {
     * NOTE: if you want to defer the creation of the future, use
     * in combination with [[defer]].
     */
-  def fromFuture[A](f: Future[A]): BIO.Unsafe[A] =
+  def fromFuture[A](f: Future[A]): Task.Unsafe[A] =
     TaskFromFuture.strict(f)
 
   /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
-  def fromCancelablePromise[A](p: CancelablePromise[A]): BIO.Unsafe[A] =
+  def fromCancelablePromise[A](p: CancelablePromise[A]): Task.Unsafe[A] =
     TaskFromFuture.fromCancelablePromise(p)
 
-  /** Wraps a [[monix.execution.CancelablePromise]] into `BIO`. */
-  def fromCancelablePromiseEither[E, A](p: CancelablePromise[Either[E, A]]): BIO[E, A] =
+  /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
+  def fromCancelablePromiseEither[E, A](p: CancelablePromise[Either[E, A]]): Task[E, A] =
     TaskFromFutureEither.fromCancelablePromise(p)
 
   /**
     * Converts any Future-like data-type into a `Task`, via [[monix.catnap.FutureLift]].
     */
-  def fromFutureLike[F[_], A](tfa: BIO.Unsafe[F[A]])(implicit F: FutureLift[BIO.Unsafe, F]): BIO.Unsafe[A] =
+  def fromFutureLike[F[_], A](tfa: Task.Unsafe[F[A]])(implicit F: FutureLift[Task.Unsafe, F]): Task.Unsafe[A] =
     F.apply(tfa)
 
   /** Run two `Task` actions concurrently, and return the first to
@@ -3654,30 +3618,30 @@ object BIO extends TaskInstancesLevel0 {
     * The two tasks are executed in parallel, the winner being the
     * first that signals a result.
     *
-    * As an example, this would be equivalent with [[BIO.timeout]]:
+    * As an example, this would be equivalent with [[Task.timeout]]:
     * {{{
     *   import scala.concurrent.duration._
     *   import scala.concurrent.TimeoutException
     *
     *   // some long running task
-    *   val myTask = BIO(42)
+    *   val myTask = Task(42)
     *
-    *   val timeoutError = BIO
+    *   val timeoutError = Task
     *     .raiseError(new TimeoutException)
     *     .delayExecution(5.seconds)
     *
-    *   BIO.race(myTask, timeoutError)
+    *   Task.race(myTask, timeoutError)
     * }}}
     *
-    * Similarly [[BIO.timeoutTo]] is expressed in terms of `race`.
+    * Similarly [[Task.timeoutTo]] is expressed in terms of `race`.
     *
     * $parallelismNote
     *
     * @see [[racePair]] for a version that does not cancel
-    *     the loser automatically on successful results and doctodo raceMany
-    *     for a version that races a whole list of tasks.
+    *      the loser automatically on successful results and doctodo raceMany
+    *      for a version that races a whole list of tasks.
     */
-  def race[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[A, B]] =
+  def race[E, A, B](fa: Task[E, A], fb: Task[E, B]): Task[E, Either[A, B]] =
     TaskRace(fa, fb)
 
   /** Runs multiple tasks in a concurrent way and returns the fastest
@@ -3688,9 +3652,9 @@ object BIO extends TaskInstancesLevel0 {
     *   import scala.concurrent.duration._
     *
     *   val tasks: List[UIO[Int]] =
-    *     List(1, 2, 3).map(i => BIO.sleep(i.seconds).map(_ => i))
+    *     List(1, 2, 3).map(i => Task.sleep(i.seconds).map(_ => i))
     *
-    *   val winner: UIO[Int] = BIO.raceMany(tasks)
+    *   val winner: UIO[Int] = Task.raceMany(tasks)
     * }}}
     *
     * $parallelismNote
@@ -3698,7 +3662,7 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[race]] or [[racePair]] for racing two tasks, which might
     *      give you more control over the execution.
     */
-  def raceMany[E, A](tasks: Iterable[BIO[E, A]]): BIO[E, A] =
+  def raceMany[E, A](tasks: Iterable[Task[E, A]]): Task[E, A] =
     TaskRaceList(tasks)
 
   /** Run two `Task` actions concurrently, and returns a pair
@@ -3714,8 +3678,8 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   val ta = BIO.sleep(2.seconds).map(_ => "a")
-    *   val tb = BIO.sleep(3.seconds).map(_ => "b")
+    *   val ta = Task.sleep(2.seconds).map(_ => "a")
+    *   val tb = Task.sleep(3.seconds).map(_ => "b")
     *
     *   // `tb` is going to be cancelled as it returns 1 second after `ta`
     *   UIO.racePair(ta, tb).flatMap {
@@ -3731,16 +3695,16 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[race]] for a simpler version that cancels the loser
     *      immediately or doctodo raceMany that races collections of tasks.
     */
-  def racePair[E, A, B](fa: BIO[E, A], fb: BIO[E, B]): BIO[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
+  def racePair[E, A, B](fa: Task[E, A], fb: Task[E, B]): Task[E, Either[(A, Fiber[E, B]), (Fiber[E, A], B)]] =
     TaskRacePair(fa, fb)
 
-  /** Inverse of `attempt`. Creates a new [[BIO]] that absorbs `Either`.
+  /** Inverse of `attempt`. Creates a new [[Task]] that absorbs `Either`.
     *
-    * `BIO.rethrow(BIO.now(Right(42))) <-> BIO.now(42)`
+    * `Task.rethrow(Task.now(Right(42))) <-> Task.now(42)`
     *
-    * `BIO.rethrow(BIO.now(Left("error"))) <-> BIO.raiseError("error")`
+    * `Task.rethrow(Task.now(Left("error"))) <-> Task.raiseError("error")`
     */
-  def rethrow[E, A](fa: BIO[E, Either[E, A]]): BIO[E, A] =
+  def rethrow[E, A](fa: Task[E, Either[E, A]]): Task[E, A] =
     fa.rethrow
 
   /** Asynchronous boundary described as an effectful `Task` that
@@ -3749,13 +3713,13 @@ object BIO extends TaskInstancesLevel0 {
     * the default [[monix.execution.Scheduler Scheduler]].
     *
     * This is the equivalent of `IO.shift`, except that Monix's `Task`
-    * gets executed with an injected `Scheduler` in [[BIO.runAsync]] or
-    * in [[BIO.runToFuture]] and that's going to be the `Scheduler`
+    * gets executed with an injected `Scheduler` in [[Task.runAsync]] or
+    * in [[Task.runToFuture]] and that's going to be the `Scheduler`
     * responsible for the "shift".
     *
     * $shiftDesc
     *
-    * @see [[BIO.executeOn]] for a way to override the default `Scheduler`
+    * @see [[Task.executeOn]] for a way to override the default `Scheduler`
     */
   val shift: UIO[Unit] =
     shift(null)
@@ -3781,13 +3745,13 @@ object BIO extends TaskInstancesLevel0 {
     * {{{
     *   import scala.concurrent.duration._
     *
-    *   BIO.sleep(3.seconds).flatMap { _ =>
-    *     BIO.eval(println("Hello!"))
+    *   Task.sleep(3.seconds).flatMap { _ =>
+    *     Task.eval(println("Hello!"))
     *   }
     * }}}
     *
-    * See [[BIO.delayExecution]] for this operation described as
-    * a method on `Task` references or [[BIO.delayResult]] for the
+    * See [[Task.delayExecution]] for this operation described as
+    * a method on `Task` references or [[Task.delayResult]] for the
     * helper that triggers the evaluation of the source on time, but
     * then delays the result.
     */
@@ -3805,11 +3769,11 @@ object BIO extends TaskInstancesLevel0 {
     *  It's a simple version of [[traverse]].
     */
   def sequence[E, A](
-    in: Iterable[BIO[E, A]]
-  ): BIO[E, List[A]] =
+    in: Iterable[Task[E, A]]
+  ): Task[E, List[A]] =
     TaskSequence.list(in)
 
-  /** Given a `Iterable[A]` and a function `A => BIO.Unsafe[B]`, sequentially
+  /** Given a `Iterable[A]` and a function `A => Task.Unsafe[B]`, sequentially
     * apply the function to each element of the collection and gather their
     * results in the same collection.
     *
@@ -3817,7 +3781,7 @@ object BIO extends TaskInstancesLevel0 {
     */
   def traverse[E, A, B](
     in: Iterable[A]
-  )(f: A => BIO[E, B]): BIO[E, List[B]] =
+  )(f: A => Task[E, B]): Task[E, List[B]] =
     TaskSequence.traverse(in, f)
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
@@ -3836,10 +3800,10 @@ object BIO extends TaskInstancesLevel0 {
     *
     * Example:
     * {{{
-    *   val tasks = List(BIO(1 + 1), BIO(2 + 2), BIO(3 + 3))
+    *   val tasks = List(Task(1 + 1), Task(2 + 2), Task(3 + 3))
     *
     *   // Yields 2, 4, 6
-    *   BIO.parSequence(tasks)
+    *   Task.parSequence(tasks)
     * }}}
     *
     * $parallelismAdvice
@@ -3849,11 +3813,11 @@ object BIO extends TaskInstancesLevel0 {
     * @see [[parSequenceN]] for a version that limits parallelism.
     */
   def parSequence[E, A](
-    in: Iterable[BIO[E, A]]
-  ): BIO[E, List[A]] =
+    in: Iterable[Task[E, A]]
+  ): Task[E, List[A]] =
     TaskParSequence[E, A](in)
 
-  /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
+  /** Given a `Iterable[A]` and a function `A => Task[E, B]`,
     * nondeterministically apply the function to each element of the collection
     * and return a task that will signal a collection of the results once all
     * tasks are finished.
@@ -3876,7 +3840,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see doctodo parTraverseN for a version that limits parallelism.
     */
-  def parTraverse[E, A, B](in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] =
+  def parTraverse[E, A, B](in: Iterable[A])(f: A => Task[E, B]): Task[E, List[B]] =
     UIO.eval(in.map(f)).flatMap(col => TaskParSequence[E, B](col))
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
@@ -3891,14 +3855,14 @@ object BIO extends TaskInstancesLevel0 {
     *   import scala.concurrent.duration._
     *
     *   val tasks = List(
-    *     BIO(1 + 1).delayExecution(1.second),
-    *     BIO(2 + 2).delayExecution(2.second),
-    *     BIO(3 + 3).delayExecution(3.second),
-    *     BIO(4 + 4).delayExecution(4.second)
+    *     Task(1 + 1).delayExecution(1.second),
+    *     Task(2 + 2).delayExecution(2.second),
+    *     Task(3 + 3).delayExecution(3.second),
+    *     Task(4 + 4).delayExecution(4.second)
     *    )
     *
     *   // Yields 2, 4, 6, 8 after around 6 seconds
-    *   BIO.parSequenceN(2)(tasks)
+    *   Task.parSequenceN(2)(tasks)
     * }}}
     *
     * $parallelismAdvice
@@ -3907,7 +3871,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see [[parSequence]] for a version that does not limit parallelism.
     */
-  def parSequenceN[E, A](parallelism: Int)(in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
+  def parSequenceN[E, A](parallelism: Int)(in: Iterable[Task[E, A]]): Task[E, List[A]] =
     TaskParSequenceN[E, A](parallelism, in)
 
   /** Applies the provided function in a non-deterministic way to each element
@@ -3935,7 +3899,7 @@ object BIO extends TaskInstancesLevel0 {
     *   val numbers = List(1, 2, 3, 4)
     *
     *   // Yields 2, 4, 6, 8 after around 6 seconds
-    *   BIO.parTraverseN(2)(numbers)(n => BIO(n + n).delayExecution(n.second))
+    *   Task.parTraverseN(2)(numbers)(n => Task(n + n).delayExecution(n.second))
     * }}}
     *
     * $parallelismAdvice
@@ -3944,7 +3908,7 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @see [[parTraverse]] for a version that does not limit parallelism.
     */
-  def parTraverseN[E, A, B](parallelism: Int)(in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] =
+  def parTraverseN[E, A, B](parallelism: Int)(in: Iterable[A])(f: A => Task[E, B]): Task[E, List[B]] =
     deferTotal(TaskParSequenceN(parallelism, in.map(f)))
 
   /** Processes the given collection of tasks in parallel and
@@ -3960,10 +3924,10 @@ object BIO extends TaskInstancesLevel0 {
     *
     * Example:
     * {{{
-    *   val tasks = List(BIO(1 + 1), BIO(2 + 2), BIO(3 + 3))
+    *   val tasks = List(Task(1 + 1), Task(2 + 2), Task(3 + 3))
     *
     *   // Yields 2, 4, 6 (but order is NOT guaranteed)
-    *   BIO.parSequenceUnordered(tasks)
+    *   Task.parSequenceUnordered(tasks)
     * }}}
     *
     * $parallelismAdvice
@@ -3972,10 +3936,10 @@ object BIO extends TaskInstancesLevel0 {
     *
     * @param in is a list of tasks to execute
     */
-  def parSequenceUnordered[E, A](in: Iterable[BIO[E, A]]): BIO[E, List[A]] =
+  def parSequenceUnordered[E, A](in: Iterable[Task[E, A]]): Task[E, List[A]] =
     TaskParSequenceUnordered(in)
 
-  /** Given a `Iterable[A]` and a function `A => BIO[E, B]`,
+  /** Given a `Iterable[A]` and a function `A => Task[E, B]`,
     * nondeterministically apply the function to each element of the collection
     * without keeping the original ordering of the results.
     *
@@ -3992,203 +3956,203 @@ object BIO extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     */
-  def parTraverseUnordered[E, A, B](in: Iterable[A])(f: A => BIO[E, B]): BIO[E, List[B]] =
-    BIO.evalTotal(in.map(f)).flatMap(parSequenceUnordered)
+  def parTraverseUnordered[E, A, B](in: Iterable[A])(f: A => Task[E, B]): Task[E, List[B]] =
+    Task.evalTotal(in.map(f)).flatMap(parSequenceUnordered)
 
   /** Yields a task that on evaluation will process the given tasks
     * in parallel, then apply the given mapping function on their results.
     *
     * Example:
     * {{{
-    *   val task1 = BIO(1 + 1)
-    *   val task2 = BIO(2 + 2)
+    *   val task1 = Task(1 + 1)
+    *   val task2 = Task(2 + 2)
     *
     *   // Yields 6
-    *   BIO.mapBoth(task1, task2)((a, b) => a + b)
+    *   Task.mapBoth(task1, task2)((a, b) => a + b)
     * }}}
     *
     * $parallelismAdvice
     *
     * $parallelismNote
     */
-  def mapBoth[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
+  def mapBoth[E, A1, A2, R](fa1: Task[E, A1], fa2: Task[E, A2])(f: (A1, A2) => R): Task[E, R] =
     TaskMapBoth(fa1, fa2)(f)
 
-  /** Pairs 2 `BIO` values, applying the given mapping function.
+  /** Pairs 2 `Task` values, applying the given mapping function.
     *
-    * Returns a new `BIO` reference that completes with the result
+    * Returns a new `Task` reference that completes with the result
     * of mapping that function to their successful results, or in
     * failure in case either of them fails.
     *
-    * This is a specialized [[BIO.sequence]] operation and as such
+    * This is a specialized [[Task.sequence]] operation and as such
     * the tasks are evaluated in order, one after another, the
-    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    * operation being described in terms of [[Task.flatMap .flatMap]].
     *
     * {{{
-    *   val fa1 = BIO(1)
-    *   val fa2 = BIO(2)
+    *   val fa1 = Task(1)
+    *   val fa2 = Task(2)
     *
     *   // Yields Success(3)
-    *   BIO.map2(fa1, fa2) { (a, b) =>
+    *   Task.map2(fa1, fa2) { (a, b) =>
     *     a + b
     *   }
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.map2(fa1, BIO.raiseError(new RuntimeException("boo"))) { (a, b: Int) =>
+    *   Task.map2(fa1, Task.raiseError(new RuntimeException("boo"))) { (a, b: Int) =>
     *     a + b
     *   }
     * }}}
     */
-  def map2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
+  def map2[E, A1, A2, R](fa1: Task[E, A1], fa2: Task[E, A2])(f: (A1, A2) => R): Task[E, R] =
     for (a1 <- fa1; a2 <- fa2)
       yield f(a1, a2)
 
-  /** Pairs 3 `BIO` values, applying the given mapping function.
+  /** Pairs 3 `Task` values, applying the given mapping function.
     *
-    * Returns a new `BIO` reference that completes with the result
+    * Returns a new `Task` reference that completes with the result
     * of mapping that function to their successful results, or in
     * failure in case either of them fails.
     *
-    * This is a specialized [[BIO.sequence]] operation and as such
+    * This is a specialized [[Task.sequence]] operation and as such
     * the tasks are evaluated in order, one after another, the
-    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    * operation being described in terms of [[Task.flatMap .flatMap]].
     *
     * {{{
-    *   val fa1 = BIO(1)
-    *   val fa2 = BIO(2)
-    *   val fa3 = BIO(3)
+    *   val fa1 = Task(1)
+    *   val fa2 = Task(2)
+    *   val fa3 = Task(3)
     *
     *   // Yields Success(6)
-    *   BIO.map3(fa1, fa2, fa3) { (a, b, c) =>
+    *   Task.map3(fa1, fa2, fa3) { (a, b, c) =>
     *     a + b + c
     *   }
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.map3(fa1, BIO.raiseError(new RuntimeException("boo")), fa3) { (a, b: Int, c) =>
+    *   Task.map3(fa1, Task.raiseError(new RuntimeException("boo")), fa3) { (a, b: Int, c) =>
     *     a + b + c
     *   }
     * }}}
     */
-  def map3[E, A1, A2, A3, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3])(f: (A1, A2, A3) => R): BIO[E, R] =
+  def map3[E, A1, A2, A3, R](fa1: Task[E, A1], fa2: Task[E, A2], fa3: Task[E, A3])(f: (A1, A2, A3) => R): Task[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3)
       yield f(a1, a2, a3)
 
-  /** Pairs 4 `BIO` values, applying the given mapping function.
+  /** Pairs 4 `Task` values, applying the given mapping function.
     *
-    * Returns a new `BIO` reference that completes with the result
+    * Returns a new `Task` reference that completes with the result
     * of mapping that function to their successful results, or in
     * failure in case either of them fails.
     *
-    * This is a specialized [[BIO.sequence]] operation and as such
+    * This is a specialized [[Task.sequence]] operation and as such
     * the tasks are evaluated in order, one after another, the
-    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    * operation being described in terms of [[Task.flatMap .flatMap]].
     *
     * {{{
-    *   val fa1 = BIO(1)
-    *   val fa2 = BIO(2)
-    *   val fa3 = BIO(3)
-    *   val fa4 = BIO(4)
+    *   val fa1 = Task(1)
+    *   val fa2 = Task(2)
+    *   val fa3 = Task(3)
+    *   val fa4 = Task(4)
     *
     *   // Yields Success(10)
-    *   BIO.map4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
+    *   Task.map4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
     *     a + b + c + d
     *   }
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.map4(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4) {
+    *   Task.map4(fa1, Task.raiseError(new RuntimeException("boo")), fa3, fa4) {
     *     (a, b: Int, c, d) => a + b + c + d
     *   }
     * }}}
     */
-  def map4[E, A1, A2, A3, A4, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4])(
+  def map4[E, A1, A2, A3, A4, R](fa1: Task[E, A1], fa2: Task[E, A2], fa3: Task[E, A3], fa4: Task[E, A4])(
     f: (A1, A2, A3, A4) => R
-  ): BIO[E, R] =
+  ): Task[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4)
       yield f(a1, a2, a3, a4)
 
-  /** Pairs 5 `BIO` values, applying the given mapping function.
+  /** Pairs 5 `Task` values, applying the given mapping function.
     *
-    * Returns a new `BIO` reference that completes with the result
+    * Returns a new `Task` reference that completes with the result
     * of mapping that function to their successful results, or in
     * failure in case either of them fails.
     *
-    * This is a specialized [[BIO.sequence]] operation and as such
+    * This is a specialized [[Task.sequence]] operation and as such
     * the tasks are evaluated in order, one after another, the
-    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    * operation being described in terms of [[Task.flatMap .flatMap]].
     *
     * {{{
-    *   val fa1 = BIO(1)
-    *   val fa2 = BIO(2)
-    *   val fa3 = BIO(3)
-    *   val fa4 = BIO(4)
-    *   val fa5 = BIO(5)
+    *   val fa1 = Task(1)
+    *   val fa2 = Task(2)
+    *   val fa3 = Task(3)
+    *   val fa4 = Task(4)
+    *   val fa5 = Task(5)
     *
     *   // Yields Success(15)
-    *   BIO.map5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
+    *   Task.map5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
     *     a + b + c + d + e
     *   }
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.map5(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5) {
+    *   Task.map5(fa1, Task.raiseError(new RuntimeException("boo")), fa3, fa4, fa5) {
     *     (a, b: Int, c, d, e) => a + b + c + d + e
     *   }
     * }}}
     */
   def map5[E, A1, A2, A3, A4, A5, R](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4],
-    fa5: BIO[E, A5]
-  )(f: (A1, A2, A3, A4, A5) => R): BIO[E, R] =
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4],
+    fa5: Task[E, A5]
+  )(f: (A1, A2, A3, A4, A5) => R): Task[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5)
       yield f(a1, a2, a3, a4, a5)
 
-  /** Pairs 6 `BIO` values, applying the given mapping function.
+  /** Pairs 6 `Task` values, applying the given mapping function.
     *
-    * Returns a new `BIO` reference that completes with the result
+    * Returns a new `Task` reference that completes with the result
     * of mapping that function to their successful results, or in
     * failure in case either of them fails.
     *
-    * This is a specialized [[BIO.sequence]] operation and as such
+    * This is a specialized [[Task.sequence]] operation and as such
     * the tasks are evaluated in order, one after another, the
-    * operation being described in terms of [[BIO.flatMap .flatMap]].
+    * operation being described in terms of [[Task.flatMap .flatMap]].
     *
     * {{{
-    *   val fa1 = BIO(1)
-    *   val fa2 = BIO(2)
-    *   val fa3 = BIO(3)
-    *   val fa4 = BIO(4)
-    *   val fa5 = BIO(5)
-    *   val fa6 = BIO(6)
+    *   val fa1 = Task(1)
+    *   val fa2 = Task(2)
+    *   val fa3 = Task(3)
+    *   val fa4 = Task(4)
+    *   val fa5 = Task(5)
+    *   val fa6 = Task(6)
     *
     *   // Yields Success(21)
-    *   BIO.map6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
+    *   Task.map6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
     *     a + b + c + d + e + f
     *   }
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.map6(fa1, BIO.raiseError(new RuntimeException("boo")), fa3, fa4, fa5, fa6) {
+    *   Task.map6(fa1, Task.raiseError(new RuntimeException("boo")), fa3, fa4, fa5, fa6) {
     *     (a, b: Int, c, d, e, f) => a + b + c + d + e + f
     *   }
     * }}}
     */
   def map6[E, A1, A2, A3, A4, A5, A6, R](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4],
-    fa5: BIO[E, A5],
-    fa6: BIO[E, A6]
-  )(f: (A1, A2, A3, A4, A5, A6) => R): BIO[E, R] =
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4],
+    fa5: Task[E, A5],
+    fa6: Task[E, A6]
+  )(f: (A1, A2, A3, A4, A5, A6) => R): Task[E, R] =
     for (a1 <- fa1; a2 <- fa2; a3 <- fa3; a4 <- fa4; a5 <- fa5; a6 <- fa6)
       yield f(a1, a2, a3, a4, a5, a6)
 
-  /** Pairs 2 `BIO` values, applying the given mapping function,
+  /** Pairs 2 `Task` values, applying the given mapping function,
     * ordering the results, but not the side effects, the evaluation
     * being done in parallel.
     *
-    * This is a specialized [[BIO.parSequence]] operation and as such
+    * This is a specialized [[Task.parSequence]] operation and as such
     * the tasks are evaluated in parallel, ordering the results.
     * In case one of the tasks fails, then all other tasks get
     * cancelled and the final result will be a failure.
@@ -4198,14 +4162,14 @@ object BIO extends TaskInstancesLevel0 {
     *   val fa2 = UIO(2)
     *
     *   // Yields Success(3)
-    *   BIO.parMap2(fa1, fa2) { (a, b) =>
+    *   Task.parMap2(fa1, fa2) { (a, b) =>
     *     a + b
     *   }
     *
-    *   val ex: BIO.Unsafe[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *   val ex: Task.Unsafe[Int] = Task.raiseError(new RuntimeException("boo"))
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.parMap2(fa1, ex) { (a, b) =>
+    *   Task.parMap2(fa1, ex) { (a, b) =>
     *     a + b
     *   }
     * }}}
@@ -4214,16 +4178,16 @@ object BIO extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     *
-    * See [[BIO.map2]] for sequential processing.
+    * See [[Task.map2]] for sequential processing.
     */
-  def parMap2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2])(f: (A1, A2) => R): BIO[E, R] =
-    BIO.mapBoth(fa1, fa2)(f)
+  def parMap2[E, A1, A2, R](fa1: Task[E, A1], fa2: Task[E, A2])(f: (A1, A2) => R): Task[E, R] =
+    Task.mapBoth(fa1, fa2)(f)
 
-  /** Pairs 3 `BIO` values, applying the given mapping function,
+  /** Pairs 3 `Task` values, applying the given mapping function,
     * ordering the results, but not the side effects, the evaluation
     * being done in parallel.
     *
-    * This is a specialized [[BIO.parSequence]] operation and as such
+    * This is a specialized [[Task.parSequence]] operation and as such
     * the tasks are evaluated in parallel, ordering the results.
     * In case one of the tasks fails, then all other tasks get
     * cancelled and the final result will be a failure.
@@ -4234,14 +4198,14 @@ object BIO extends TaskInstancesLevel0 {
     *   val fa3 = UIO(3)
     *
     *   // Yields Success(6)
-    *   BIO.parMap3(fa1, fa2, fa3) { (a, b, c) =>
+    *   Task.parMap3(fa1, fa2, fa3) { (a, b, c) =>
     *     a + b + c
     *   }
     *
-    *   val ex: BIO.Unsafe[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *   val ex: Task.Unsafe[Int] = Task.raiseError(new RuntimeException("boo"))
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.parMap3(fa1, ex, fa3) { (a, b, c) =>
+    *   Task.parMap3(fa1, ex, fa3) { (a, b, c) =>
     *     a + b + c
     *   }
     * }}}
@@ -4250,18 +4214,20 @@ object BIO extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     *
-    * See [[BIO.map3]] for sequential processing.
+    * See [[Task.map3]] for sequential processing.
     */
-  def parMap3[E, A1, A2, A3, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3])(f: (A1, A2, A3) => R): BIO[E, R] = {
+  def parMap3[E, A1, A2, A3, R](fa1: Task[E, A1], fa2: Task[E, A2], fa3: Task[E, A3])(
+    f: (A1, A2, A3) => R
+  ): Task[E, R] = {
     val fa12 = parZip2(fa1, fa2)
     parMap2(fa12, fa3) { case ((a1, a2), a3) => f(a1, a2, a3) }
   }
 
-  /** Pairs 4 `BIO` values, applying the given mapping function,
+  /** Pairs 4 `Task` values, applying the given mapping function,
     * ordering the results, but not the side effects, the evaluation
     * being done in parallel if the tasks are async.
     *
-    * This is a specialized [[BIO.parSequence]] operation and as such
+    * This is a specialized [[Task.parSequence]] operation and as such
     * the tasks are evaluated in parallel, ordering the results.
     * In case one of the tasks fails, then all other tasks get
     * cancelled and the final result will be a failure.
@@ -4273,14 +4239,14 @@ object BIO extends TaskInstancesLevel0 {
     *   val fa4 = UIO(4)
     *
     *   // Yields Success(10)
-    *   BIO.parMap4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
+    *   Task.parMap4(fa1, fa2, fa3, fa4) { (a, b, c, d) =>
     *     a + b + c + d
     *   }
     *
-    *   val ex: BIO.Unsafe[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *   val ex: Task.Unsafe[Int] = Task.raiseError(new RuntimeException("boo"))
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.parMap4(fa1, ex, fa3, fa4) {
+    *   Task.parMap4(fa1, ex, fa3, fa4) {
     *     (a, b, c, d) => a + b + c + d
     *   }
     * }}}
@@ -4289,20 +4255,20 @@ object BIO extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     *
-    * See [[BIO.map4]] for sequential processing.
+    * See [[Task.map4]] for sequential processing.
     */
-  def parMap4[E, A1, A2, A3, A4, R](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3], fa4: BIO[E, A4])(
+  def parMap4[E, A1, A2, A3, A4, R](fa1: Task[E, A1], fa2: Task[E, A2], fa3: Task[E, A3], fa4: Task[E, A4])(
     f: (A1, A2, A3, A4) => R
-  ): BIO[E, R] = {
+  ): Task[E, R] = {
     val fa123 = parZip3(fa1, fa2, fa3)
     parMap2(fa123, fa4) { case ((a1, a2, a3), a4) => f(a1, a2, a3, a4) }
   }
 
-  /** Pairs 5 `BIO` values, applying the given mapping function,
+  /** Pairs 5 `Task` values, applying the given mapping function,
     * ordering the results, but not the side effects, the evaluation
     * being done in parallel if the tasks are async.
     *
-    * This is a specialized [[BIO.parSequence]] operation and as such
+    * This is a specialized [[Task.parSequence]] operation and as such
     * the tasks are evaluated in parallel, ordering the results.
     * In case one of the tasks fails, then all other tasks get
     * cancelled and the final result will be a failure.
@@ -4315,14 +4281,14 @@ object BIO extends TaskInstancesLevel0 {
     *   val fa5 = UIO(5)
     *
     *   // Yields Success(15)
-    *   BIO.parMap5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
+    *   Task.parMap5(fa1, fa2, fa3, fa4, fa5) { (a, b, c, d, e) =>
     *     a + b + c + d + e
     *   }
     *
-    *   val ex: BIO.Unsafe[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *   val ex: Task.Unsafe[Int] = Task.raiseError(new RuntimeException("boo"))
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.parMap5(fa1, ex, fa3, fa4, fa5) {
+    *   Task.parMap5(fa1, ex, fa3, fa4, fa5) {
     *     (a, b, c, d, e) => a + b + c + d + e
     *   }
     * }}}
@@ -4331,24 +4297,24 @@ object BIO extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     *
-    * See [[BIO.map5]] for sequential processing.
+    * See [[Task.map5]] for sequential processing.
     */
   def parMap5[E, A1, A2, A3, A4, A5, R](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4],
-    fa5: BIO[E, A5]
-  )(f: (A1, A2, A3, A4, A5) => R): BIO[E, R] = {
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4],
+    fa5: Task[E, A5]
+  )(f: (A1, A2, A3, A4, A5) => R): Task[E, R] = {
     val fa1234 = parZip4(fa1, fa2, fa3, fa4)
     parMap2(fa1234, fa5) { case ((a1, a2, a3, a4), a5) => f(a1, a2, a3, a4, a5) }
   }
 
-  /** Pairs 6 `BIO` values, applying the given mapping function,
+  /** Pairs 6 `Task` values, applying the given mapping function,
     * ordering the results, but not the side effects, the evaluation
     * being done in parallel if the tasks are async.
     *
-    * This is a specialized [[BIO.parSequence]] operation and as such
+    * This is a specialized [[Task.parSequence]] operation and as such
     * the tasks are evaluated in parallel, ordering the results.
     * In case one of the tasks fails, then all other tasks get
     * cancelled and the final result will be a failure.
@@ -4362,14 +4328,14 @@ object BIO extends TaskInstancesLevel0 {
     *   val fa6 = UIO(6)
     *
     *   // Yields Success(21)
-    *   BIO.parMap6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
+    *   Task.parMap6(fa1, fa2, fa3, fa4, fa5, fa6) { (a, b, c, d, e, f) =>
     *     a + b + c + d + e + f
     *   }
     *
-    *   val ex: BIO.Unsafe[Int] = BIO.raiseError(new RuntimeException("boo"))
+    *   val ex: Task.Unsafe[Int] = Task.raiseError(new RuntimeException("boo"))
     *
     *   // Yields Failure(e), because the second arg is a failure
-    *   BIO.parMap6(fa1, ex, fa3, fa4, fa5, fa6) {
+    *   Task.parMap6(fa1, ex, fa3, fa4, fa5, fa6) {
     *     (a, b, c, d, e, f) => a + b + c + d + e + f
     *   }
     * }}}
@@ -4378,56 +4344,56 @@ object BIO extends TaskInstancesLevel0 {
     *
     * $parallelismNote
     *
-    * See [[BIO.map6]] for sequential processing.
+    * See [[Task.map6]] for sequential processing.
     */
   def parMap6[E, A1, A2, A3, A4, A5, A6, R](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4],
-    fa5: BIO[E, A5],
-    fa6: BIO[E, A6]
-  )(f: (A1, A2, A3, A4, A5, A6) => R): BIO[E, R] = {
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4],
+    fa5: Task[E, A5],
+    fa6: Task[E, A6]
+  )(f: (A1, A2, A3, A4, A5, A6) => R): Task[E, R] = {
     val fa12345 = parZip5(fa1, fa2, fa3, fa4, fa5)
     parMap2(fa12345, fa6) { case ((a1, a2, a3, a4, a5), a6) => f(a1, a2, a3, a4, a5, a6) }
   }
 
-  /** Pairs two [[BIO]] instances using [[parMap2]]. */
-  def parZip2[E, A1, A2, R](fa1: BIO[E, A1], fa2: BIO[E, A2]): BIO[E, (A1, A2)] =
-    BIO.mapBoth(fa1, fa2)((_, _))
+  /** Pairs two [[Task]] instances using [[parMap2]]. */
+  def parZip2[E, A1, A2, R](fa1: Task[E, A1], fa2: Task[E, A2]): Task[E, (A1, A2)] =
+    Task.mapBoth(fa1, fa2)((_, _))
 
-  /** Pairs three [[BIO]] instances using [[parMap3]]. */
-  def parZip3[E, A1, A2, A3](fa1: BIO[E, A1], fa2: BIO[E, A2], fa3: BIO[E, A3]): BIO[E, (A1, A2, A3)] =
+  /** Pairs three [[Task]] instances using [[parMap3]]. */
+  def parZip3[E, A1, A2, A3](fa1: Task[E, A1], fa2: Task[E, A2], fa3: Task[E, A3]): Task[E, (A1, A2, A3)] =
     parMap3(fa1, fa2, fa3)((a1, a2, a3) => (a1, a2, a3))
 
-  /** Pairs four [[BIO]] instances using [[parMap4]]. */
+  /** Pairs four [[Task]] instances using [[parMap4]]. */
   def parZip4[E, A1, A2, A3, A4](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4]
-  ): BIO[E, (A1, A2, A3, A4)] =
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4]
+  ): Task[E, (A1, A2, A3, A4)] =
     parMap4(fa1, fa2, fa3, fa4)((a1, a2, a3, a4) => (a1, a2, a3, a4))
 
-  /** Pairs five [[BIO]] instances using [[parMap5]]. */
+  /** Pairs five [[Task]] instances using [[parMap5]]. */
   def parZip5[E, A1, A2, A3, A4, A5](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4],
-    fa5: BIO[E, A5]
-  ): BIO[E, (A1, A2, A3, A4, A5)] =
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4],
+    fa5: Task[E, A5]
+  ): Task[E, (A1, A2, A3, A4, A5)] =
     parMap5(fa1, fa2, fa3, fa4, fa5)((a1, a2, a3, a4, a5) => (a1, a2, a3, a4, a5))
 
-  /** Pairs six [[BIO]] instances using [[parMap6]]. */
+  /** Pairs six [[Task]] instances using [[parMap6]]. */
   def parZip6[E, A1, A2, A3, A4, A5, A6](
-    fa1: BIO[E, A1],
-    fa2: BIO[E, A2],
-    fa3: BIO[E, A3],
-    fa4: BIO[E, A4],
-    fa5: BIO[E, A5],
-    fa6: BIO[E, A6]
-  ): BIO[E, (A1, A2, A3, A4, A5, A6)] =
+    fa1: Task[E, A1],
+    fa2: Task[E, A2],
+    fa3: Task[E, A3],
+    fa4: Task[E, A4],
+    fa5: Task[E, A5],
+    fa6: Task[E, A6]
+  ): Task[E, (A1, A2, A3, A4, A5, A6)] =
     parMap6(fa1, fa2, fa3, fa4, fa5, fa6)((a1, a2, a3, a4, a5, a6) => (a1, a2, a3, a4, a5, a6))
 
   /**
@@ -4442,18 +4408,18 @@ object BIO extends TaskInstancesLevel0 {
     *   import java.io._
     *
     *   // Needed for converting from Task to something else, because we need
-    *   // ConcurrentEffect[BIO.Unsafe] capabilities, also provided by [[BIOApp]]
+    *   // ConcurrentEffect[Task.Unsafe] capabilities, also provided by [[TaskApp]]
     *   import monix.execution.Scheduler.Implicits.global
     *
     *   def open(file: File) =
-    *     Resource[BIO.Unsafe, InputStream](BIO {
+    *     Resource[Task.Unsafe, InputStream](Task {
     *       val in = new FileInputStream(file)
-    *       (in, BIO(in.close()))
+    *       (in, Task(in.close()))
     *     })
     *
     *   // Lifting to a Resource of IO
     *   val res: Resource[IO, InputStream] =
-    *     open(new File("sample")).mapK(BIO.liftTo[IO])
+    *     open(new File("sample")).mapK(Task.liftTo[IO])
     *
     *   // This was needed in order to process the resource
     *   // with a Task, instead of a Coeval
@@ -4463,9 +4429,8 @@ object BIO extends TaskInstancesLevel0 {
     *     }
     *   }
     * }}}
-    *
     */
-  def liftTo[F[_]](implicit F: TaskLift[F]): (BIO.Unsafe ~> F) = F
+  def liftTo[F[_]](implicit F: TaskLift[F]): (Task.Unsafe ~> F) = F
 
   /**
     * Generates `cats.FunctionK` values for converting from `Task` to
@@ -4476,7 +4441,7 @@ object BIO extends TaskInstancesLevel0 {
     * Prefer to use [[liftTo]], this alternative is provided in order to force
     * the usage of `cats.effect.Async`, since [[TaskLift]] is lawless.
     */
-  def liftToAsync[F[_]](implicit F: cats.effect.Async[F], eff: cats.effect.Effect[BIO.Unsafe]): (BIO.Unsafe ~> F) =
+  def liftToAsync[F[_]](implicit F: cats.effect.Async[F], eff: cats.effect.Effect[Task.Unsafe]): (Task.Unsafe ~> F) =
     TaskLift.toAsync[F]
 
   /**
@@ -4488,15 +4453,15 @@ object BIO extends TaskInstancesLevel0 {
     * Prefer to use [[liftTo]], this alternative is provided in order to force
     * the usage of [[cats.effect.Concurrent]], since [[TaskLift]] is lawless.
     */
-  def liftToConcurrent[F[_]](
-    implicit F: cats.effect.Concurrent[F],
-    eff: cats.effect.ConcurrentEffect[BIO.Unsafe]
-  ): (BIO.Unsafe ~> F) =
+  def liftToConcurrent[F[_]](implicit
+    F: cats.effect.Concurrent[F],
+    eff: cats.effect.ConcurrentEffect[Task.Unsafe]
+  ): (Task.Unsafe ~> F) =
     TaskLift.toConcurrent[F]
 
   /**
     * Returns a `F ~> Task` (`FunctionK`) for transforming any
-    * supported data-type into [[BIO.Unsafe]].
+    * supported data-type into [[Task.Unsafe]].
     *
     * Useful for `mapK` transformations, for example when working
     * with `Resource` or `Iterant`:
@@ -4513,16 +4478,16 @@ object BIO extends TaskInstancesLevel0 {
     *     })
     *
     *   // Lifting to a Resource of Task
-    *   val res: Resource[BIO.Unsafe, InputStream] =
-    *     open(new File("sample")).mapK(BIO.liftFrom[IO])
+    *   val res: Resource[Task.Unsafe, InputStream] =
+    *     open(new File("sample")).mapK(Task.liftFrom[IO])
     * }}}
     */
-  def liftFrom[F[_]](implicit F: TaskLike[F]): (F ~> BIO.Unsafe) = F
+  def liftFrom[F[_]](implicit F: TaskLike[F]): (F ~> Task.Unsafe) = F
 
   /**
     * Returns a `F ~> Task` (`FunctionK`) for transforming any
     * supported data-type, that implements [[cats.effect.ConcurrentEffect]],
-    * into [[BIO.Unsafe]].
+    * into [[Task.Unsafe]].
     *
     * Useful for `mapK` transformations, for example when working
     * with `Resource` or `Iterant`.
@@ -4532,12 +4497,12 @@ object BIO extends TaskInstancesLevel0 {
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html ConcurrentEffect]]
     * for where it matters.
     */
-  def liftFromConcurrentEffect[F[_]](implicit F: ConcurrentEffect[F]): (F ~> BIO.Unsafe) =
+  def liftFromConcurrentEffect[F[_]](implicit F: ConcurrentEffect[F]): (F ~> Task.Unsafe) =
     liftFrom[F]
 
   /**
     * Returns a `F ~> Task` (`FunctionK`) for transforming any
-    * supported data-type, that implements `Effect`, into [[BIO.Unsafe]].
+    * supported data-type, that implements `Effect`, into [[Task.Unsafe]].
     *
     * Useful for `mapK` transformations, for example when working
     * with `Resource` or `Iterant`.
@@ -4547,22 +4512,22 @@ object BIO extends TaskInstancesLevel0 {
     * [[https://typelevel.org/cats-effect/typeclasses/effect.html Effect]]
     * for where it matters.
     */
-  def liftFromEffect[F[_]](implicit F: Effect[F]): (F ~> BIO.Unsafe) =
+  def liftFromEffect[F[_]](implicit F: Effect[F]): (F ~> Task.Unsafe) =
     liftFrom[F]
 
-  /** Returns the current [[BIO.Options]] configuration, which determine the
+  /** Returns the current [[Task.Options]] configuration, which determine the
     * task's run-loop behavior.
     *
-    * @see [[BIO.executeWithOptions]]
+    * @see [[Task.executeWithOptions]]
     */
   val readOptions: UIO[Options] =
-    BIO
+    Task
       .Async[Nothing, Options]((ctx, cb) => cb.onSuccess(ctx.options), trampolineBefore = false, trampolineAfter = true)
 
   /** Set of options for customizing the task's behavior.
     *
-    * See [[BIO.defaultOptions]] for the default `Options` instance
-    * used by [[BIO.runAsync]] or [[BIO.runToFuture]].
+    * See [[Task.defaultOptions]] for the default `Options` instance
+    * used by [[Task.runAsync]] or [[Task.runToFuture]].
     *
     * @param autoCancelableRunLoops  should be set to `true` in
     *                                case you want `flatMap` driven loops to be
@@ -4618,7 +4583,7 @@ object BIO extends TaskInstancesLevel0 {
     }
   }
 
-  /** Default [[Options]] to use for [[BIO]] evaluation,
+  /** Default [[Options]] to use for [[Task]] evaluation,
     * thus:
     *
     *  - `autoCancelableRunLoops` is `true` by default
@@ -4633,7 +4598,7 @@ object BIO extends TaskInstancesLevel0 {
     *  - `monix.environment.localContextPropagation`
     *    (`true`, `yes` or `1` for enabling)
     *
-    * @see [[BIO.Options]]
+    * @see [[Task.Options]]
     */
   val defaultOptions: Options =
     Options(
@@ -4641,13 +4606,13 @@ object BIO extends TaskInstancesLevel0 {
       localContextPropagation = Platform.localContextPropagation
     )
 
-  /** The `AsyncBuilder` is a type used by the [[BIO.create]] builder,
+  /** The `AsyncBuilder` is a type used by the [[Task.create]] builder,
     * in order to change its behavior based on the type of the
     * cancelation token.
     *
     * In combination with the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type technique]],
-    * this ends up providing a polymorphic [[BIO.create]] that can
+    * this ends up providing a polymorphic [[Task.create]] that can
     * support multiple cancelation tokens optimally, i.e. without
     * implicit conversions and that can be optimized depending on
     * the `CancelToken` used - for example if `Unit` is returned,
@@ -4656,7 +4621,7 @@ object BIO extends TaskInstancesLevel0 {
     * increasing performance.
     */
   abstract class AsyncBuilder[CancelationToken] {
-    def create[E, A](register: (Scheduler, BiCallback[E, A]) => CancelationToken): BIO[E, A]
+    def create[E, A](register: (Scheduler, BiCallback[E, A]) => CancelationToken): Task[E, A]
   }
 
   object AsyncBuilder extends AsyncBuilder0 {
@@ -4666,7 +4631,7 @@ object BIO extends TaskInstancesLevel0 {
       */
     def apply[CancelationToken](implicit ref: AsyncBuilder[CancelationToken]): AsyncBuilder[CancelationToken] = ref
 
-    /** For partial application of type parameters in [[BIO.create]].
+    /** For partial application of type parameters in [[Task.create]].
       *
       * Read about the
       * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type Technique]].
@@ -4675,7 +4640,7 @@ object BIO extends TaskInstancesLevel0 {
 
       def apply[CancelationToken](
         register: (Scheduler, BiCallback[E, A]) => CancelationToken
-      )(implicit B: AsyncBuilder[CancelationToken]): BIO[E, A] =
+      )(implicit B: AsyncBuilder[CancelationToken]): Task[E, A] =
         B.create(register)
     }
 
@@ -4683,7 +4648,7 @@ object BIO extends TaskInstancesLevel0 {
     implicit val forUnit: AsyncBuilder[Unit] =
       new AsyncBuilder[Unit] {
 
-        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Unit): BIO[E, A] =
+        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Unit): Task[E, A] =
           TaskCreate.async0(register)
       }
 
@@ -4693,20 +4658,20 @@ object BIO extends TaskInstancesLevel0 {
       */
     implicit val forIO: AsyncBuilder[IO[Unit]] =
       new AsyncBuilder[IO[Unit]] {
-        override def create[E, A](register: (Scheduler, BiCallback[E, A]) => IO[Unit]): BIO[E, A] =
+        override def create[E, A](register: (Scheduler, BiCallback[E, A]) => IO[Unit]): Task[E, A] =
           TaskCreate.cancelableIO(register)
       }
 
     /** Implicit `AsyncBuilder` for cancelable tasks, using
-      * [[BIO]] values for specifying cancelation actions.
+      * [[Task]] values for specifying cancelation actions.
       */
-    implicit def forBIO[E]: AsyncBuilder[BIO[E, Unit]] =
-      forBIORef.asInstanceOf[AsyncBuilder[BIO[E, Unit]]]
+    implicit def forTask[E]: AsyncBuilder[Task[E, Unit]] =
+      forTaskRef.asInstanceOf[AsyncBuilder[Task[E, Unit]]]
 
-    private[this] val forBIORef: AsyncBuilder[BIO[Any, Unit]] =
-      new AsyncBuilder[BIO[Any, Unit]] {
-        override def create[E, A](register: (Scheduler, BiCallback[E, A]) => BIO[Any, Unit]): BIO[E, A] =
-          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, BiCallback[E, A]) => CancelToken[BIO[E, *]]])
+    private[this] val forTaskRef: AsyncBuilder[Task[Any, Unit]] =
+      new AsyncBuilder[Task[Any, Unit]] {
+        override def create[E, A](register: (Scheduler, BiCallback[E, A]) => Task[Any, Unit]): Task[E, A] =
+          TaskCreate.cancelable0[E, A](register.asInstanceOf[(Scheduler, BiCallback[E, A]) => CancelToken[Task[E, *]]])
       }
 
     /** Implicit `AsyncBuilder` for non-cancelable tasks built by a function
@@ -4722,12 +4687,12 @@ object BIO extends TaskInstancesLevel0 {
     private[this] val forCancelableDummyRef: AsyncBuilder[Cancelable.Empty] =
       new AsyncBuilder[Cancelable.Empty] {
 
-        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Cancelable.Empty): BIO[E, A] =
+        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Cancelable.Empty): Task[E, A] =
           TaskCreate.async0(register)
       }
   }
 
-  private[BIO] abstract class AsyncBuilder0 {
+  private[Task] abstract class AsyncBuilder0 {
 
     /**
       * Implicit `AsyncBuilder` for cancelable tasks, using
@@ -4740,12 +4705,12 @@ object BIO extends TaskInstancesLevel0 {
     private[this] val forCancelableRef =
       new AsyncBuilder[Cancelable] {
 
-        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Cancelable): BIO[E, A] =
+        def create[E, A](register: (Scheduler, BiCallback[E, A]) => Cancelable): Task[E, A] =
           TaskCreate.cancelableCancelable(register)
       }
   }
 
-  /** Internal API — The `Context` under which [[BIO.Unsafe]] is supposed to be executed.
+  /** Internal API — The `Context` under which [[Task.Unsafe]] is supposed to be executed.
     *
     * This has been hidden in version 3.0.0-RC2, becoming an internal
     * implementation detail. Soon to be removed or changed completely.
@@ -4796,24 +4761,24 @@ object BIO extends TaskInstancesLevel0 {
     }
   }
 
-  /** [[BIO]] state describing an immediate synchronous value. */
-  private[bio] final case class Now[+A](value: A) extends BIO[Nothing, A] {
+  /** [[Task]] state describing an immediate synchronous value. */
+  private[bio] final case class Now[+A](value: A) extends Task[Nothing, A] {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF(
       cb: Either[Cause[Nothing], A] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[UIO] = {
+    )(implicit s: Scheduler, opts: Task.Options): CancelToken[UIO] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callSuccess(cb, value)
-        BIO.unit
+        Task.unit
       } else {
         super.runAsyncOptF(cb)(s, opts)
       }
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt(
-      implicit s: Scheduler,
+    override def runToFutureOpt(implicit
+      s: Scheduler,
       opts: Options,
       ev: Nothing <:< Throwable
     ): CancelableFuture[A] = {
@@ -4833,8 +4798,8 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runAsyncUncancelableOpt(cb: Either[Cause[Nothing], A] => Unit)(
-      implicit s: Scheduler,
+    override def runAsyncUncancelableOpt(cb: Either[Cause[Nothing], A] => Unit)(implicit
+      s: Scheduler,
       opts: Options
     ): Unit = {
       if (s.executionModel != AlwaysAsyncExecution)
@@ -4848,24 +4813,24 @@ object BIO extends TaskInstancesLevel0 {
       ()
   }
 
-  /** [[BIO]] state describing an immediate exception. */
-  private[bio] final case class Error[E](e: E) extends BIO[E, Nothing] {
+  /** [[Task]] state describing an immediate exception. */
+  private[bio] final case class Error[E](e: E) extends Task[E, Nothing] {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF(
       cb: Either[Cause[E], Nothing] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[UIO] = {
+    )(implicit s: Scheduler, opts: Task.Options): CancelToken[UIO] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callError(cb, e)
-        BIO.unit
+        Task.unit
       } else {
         super.runAsyncOptF(cb)(s, opts)
       }
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt(
-      implicit s: Scheduler,
+    override def runToFutureOpt(implicit
+      s: Scheduler,
       opts: Options,
       ev: E <:< Throwable
     ): CancelableFuture[Nothing] = {
@@ -4893,8 +4858,8 @@ object BIO extends TaskInstancesLevel0 {
     }
 
     // Optimization to avoid the run-loop
-    override def runAsyncUncancelableOpt(cb: Either[Cause[E], Nothing] => Unit)(
-      implicit s: Scheduler,
+    override def runAsyncUncancelableOpt(cb: Either[Cause[E], Nothing] => Unit)(implicit
+      s: Scheduler,
       opts: Options
     ): Unit = {
       if (s.executionModel != AlwaysAsyncExecution)
@@ -4904,24 +4869,24 @@ object BIO extends TaskInstancesLevel0 {
     }
   }
 
-  /** [[BIO]] state describing an immediate exception. */
-  private[bio] final case class Termination(e: Throwable) extends BIO[Nothing, Nothing] {
+  /** [[Task]] state describing an immediate exception. */
+  private[bio] final case class Termination(e: Throwable) extends Task[Nothing, Nothing] {
 
     // Optimization to avoid the run-loop
     override def runAsyncOptF(
       cb: Either[Cause[Nothing], Nothing] => Unit
-    )(implicit s: Scheduler, opts: BIO.Options): CancelToken[UIO] = {
+    )(implicit s: Scheduler, opts: Task.Options): CancelToken[UIO] = {
       if (s.executionModel != AlwaysAsyncExecution) {
         BiCallback.callTermination(cb, e)
-        BIO.unit
+        Task.unit
       } else {
         super.runAsyncOptF(cb)(s, opts)
       }
     }
 
     // Optimization to avoid the run-loop
-    override def runToFutureOpt(
-      implicit s: Scheduler,
+    override def runToFutureOpt(implicit
+      s: Scheduler,
       opts: Options,
       ev: Nothing <:< Throwable
     ): CancelableFuture[Nothing] = {
@@ -4945,8 +4910,8 @@ object BIO extends TaskInstancesLevel0 {
       s.reportFailure(e)
 
     // Optimization to avoid the run-loop
-    override def runAsyncUncancelableOpt(cb: Either[Cause[Nothing], Nothing] => Unit)(
-      implicit s: Scheduler,
+    override def runAsyncUncancelableOpt(cb: Either[Cause[Nothing], Nothing] => Unit)(implicit
+      s: Scheduler,
       opts: Options
     ): Unit = {
       if (s.executionModel != AlwaysAsyncExecution)
@@ -4956,67 +4921,67 @@ object BIO extends TaskInstancesLevel0 {
     }
   }
 
-  /** [[BIO]] state describing an non-strict synchronous value. */
-  private[bio] final case class Eval[+A](thunk: () => A) extends BIO[Throwable, A]
+  /** [[Task]] state describing an non-strict synchronous value. */
+  private[bio] final case class Eval[+A](thunk: () => A) extends Task[Throwable, A]
 
-  /** [[BIO]] state describing an non-strict synchronous value which doesn't throw any expected errors. */
-  private[bio] final case class EvalTotal[+A](thunk: () => A) extends BIO[Nothing, A]
+  /** [[Task]] state describing an non-strict synchronous value which doesn't throw any expected errors. */
+  private[bio] final case class EvalTotal[+A](thunk: () => A) extends Task[Nothing, A]
 
-  /** Internal state, the result of [[BIO.defer]] */
-  private[bio] final case class Suspend[+A](thunk: () => BIO[Throwable, A]) extends BIO[Throwable, A]
+  /** Internal state, the result of [[Task.defer]] */
+  private[bio] final case class Suspend[+A](thunk: () => Task[Throwable, A]) extends Task[Throwable, A]
 
-  /** Internal state, the result of [[BIO.deferTotal]]*/
-  private[bio] final case class SuspendTotal[+E, +A](thunk: () => BIO[E, A]) extends BIO[E, A]
+  /** Internal state, the result of [[Task.deferTotal]] */
+  private[bio] final case class SuspendTotal[+E, +A](thunk: () => Task[E, A]) extends Task[E, A]
 
-  /** Internal [[BIO]] state that is the result of applying `flatMap`. */
-  private[bio] final case class FlatMap[E, E1, A, +B](source: BIO[E, A], f: A => BIO[E1, B]) extends BIO[E1, B]
+  /** Internal [[Task]] state that is the result of applying `flatMap`. */
+  private[bio] final case class FlatMap[E, E1, A, +B](source: Task[E, A], f: A => Task[E1, B]) extends Task[E1, B]
 
-  /** Internal [[BIO]] state that is the result of applying `map`. */
-  private[bio] final case class Map[S, +E, +A](source: BIO[E, S], f: S => A, index: Int)
-      extends BIO[E, A] with (S => BIO[E, A]) {
+  /** Internal [[Task]] state that is the result of applying `map`. */
+  private[bio] final case class Map[S, +E, +A](source: Task[E, S], f: S => A, index: Int)
+      extends Task[E, A] with (S => Task[E, A]) {
 
-    def apply(value: S): BIO[E, A] =
+    def apply(value: S): Task[E, A] =
       new Now[A](f(value))
 
     override def toString: String =
-      super[BIO].toString
+      super[Task].toString
   }
 
-  /** Constructs a lazy [[BIO]] instance whose result will
+  /** Constructs a lazy [[Task]] instance whose result will
     * be computed asynchronously.
     *
     * Unsafe to build directly, only use if you know what you're doing.
     * For building `Async` instances safely, see [[cancelable0]].
     *
-    * @param register is the side-effecting, callback-enabled function
-    *        that starts the asynchronous computation and registers
-    *        the callback to be called on completion
+    * @param register         is the side-effecting, callback-enabled function
+    *                         that starts the asynchronous computation and registers
+    *                         the callback to be called on completion
     * @param trampolineBefore is an optimization that instructs the
-    *        run-loop to insert a trampolined async boundary before
-    *        evaluating the `register` function
+    *                         run-loop to insert a trampolined async boundary before
+    *                         evaluating the `register` function
     */
   private[monix] final case class Async[E, +A](
     register: (Context[E], BiCallback[E, A]) => Unit,
     trampolineBefore: Boolean = false,
     trampolineAfter: Boolean = true,
     restoreLocals: Boolean = true
-  ) extends BIO[E, A]
+  ) extends Task[E, A]
 
   /** For changing the context for the rest of the run-loop.
     *
     * WARNING: this is entirely internal API and shouldn't be exposed.
     */
   private[monix] final case class ContextSwitch[E, A](
-    source: BIO[E, A],
+    source: Task[E, A],
     modify: Context[E] => Context[E],
     restore: (A, E, Context[E], Context[E]) => Context[E]
-  ) extends BIO[E, A]
+  ) extends Task[E, A]
 
   /**
     * Internal API — starts the execution of a Task with a guaranteed
     * asynchronous boundary.
     */
-  private[monix] def unsafeStartAsync[E, A](source: BIO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
+  private[monix] def unsafeStartAsync[E, A](source: Task[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     TaskRunLoop.restartAsync(source, context, cb, null, null, null)
 
   /** Internal API — a variant of [[unsafeStartAsync]] that tries to
@@ -5024,7 +4989,7 @@ object BIO extends TaskInstancesLevel0 {
     * avoids creating an extraneous async boundary.
     */
   private[monix] def unsafeStartEnsureAsync[E, A](
-    source: BIO[E, A],
+    source: Task[E, A],
     context: Context[E],
     cb: BiCallback[E, A]
   ): Unit = {
@@ -5038,7 +5003,7 @@ object BIO extends TaskInstancesLevel0 {
     * Internal API — starts the execution of a Task with a guaranteed
     * trampolined async boundary.
     */
-  private[monix] def unsafeStartTrampolined[E, A](source: BIO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
+  private[monix] def unsafeStartTrampolined[E, A](source: Task[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     context.scheduler.execute(new TrampolinedRunnable {
 
       def run(): Unit =
@@ -5046,9 +5011,9 @@ object BIO extends TaskInstancesLevel0 {
     })
 
   /**
-    * Internal API - starts the immediate execution of a BIO.
+    * Internal API - starts the immediate execution of a Task.
     */
-  private[monix] def unsafeStartNow[E, A](source: BIO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
+  private[monix] def unsafeStartNow[E, A](source: Task[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
 
   /** Internal, reusable reference. */
@@ -5059,14 +5024,14 @@ object BIO extends TaskInstancesLevel0 {
   private val nowConstructor: Any => UIO[Nothing] =
     ((a: Any) => new Now(a)).asInstanceOf[Any => UIO[Nothing]]
 
-  private def raiseConstructor[E]: E => BIO[E, Nothing] =
-    raiseConstructorRef.asInstanceOf[E => BIO[E, Nothing]]
+  private def raiseConstructor[E]: E => Task[E, Nothing] =
+    raiseConstructorRef.asInstanceOf[E => Task[E, Nothing]]
 
   /** Internal, reusable reference. */
-  private val raiseConstructorRef: Any => BIO[Any, Nothing] =
+  private val raiseConstructorRef: Any => Task[Any, Nothing] =
     e => new Error(e)
 
-  /** Used as optimization by [[BIO.failed]]. */
+  /** Used as optimization by [[Task.failed]]. */
   private object Failed extends StackFrame[Any, Any, UIO[Any]] {
 
     def apply(a: Any): UIO[Any] =
@@ -5076,25 +5041,25 @@ object BIO extends TaskInstancesLevel0 {
       Now(e)
   }
 
-  /** Used as optimization by [[BIO.bimap]]. */
-  private final case class Bimap[E, E1, A, B](fe: E => E1, fa: A => B) extends StackFrame[E, A, BIO[E1, B]] {
+  /** Used as optimization by [[Task.bimap]]. */
+  private final case class Bimap[E, E1, A, B](fe: E => E1, fa: A => B) extends StackFrame[E, A, Task[E1, B]] {
     def apply(a: A) = Now(fa(a))
     def recover(e: E) = Error(fe(e))
   }
 
-  /** Used as optimization by [[BIO.mapError]]. */
-  private final case class MapError[E, E1, A](fe: E => E1) extends StackFrame[E, A, BIO[E1, A]] {
+  /** Used as optimization by [[Task.mapError]]. */
+  private final case class MapError[E, E1, A](fe: E => E1) extends StackFrame[E, A, Task[E1, A]] {
     def apply(a: A) = Now(a)
     def recover(e: E) = Error(fe(e))
   }
 
-  /** Used as optimization by [[BIO.redeem]]. */
+  /** Used as optimization by [[Task.redeem]]. */
   private final class Redeem[E, A, B](fe: E => B, fs: A => B) extends StackFrame[E, A, UIO[B]] {
     def apply(a: A): UIO[B] = new Now(fs(a))
     def recover(e: E): UIO[B] = new Now(fe(e))
   }
 
-  /** Used as optimization by [[BIO.redeemCause]]. */
+  /** Used as optimization by [[Task.redeemCause]]. */
   private final class RedeemFatal[E, A, B](fe: Cause[E] => B, fs: A => B)
       extends StackFrame.FatalStackFrame[E, A, UIO[B]] {
     override def apply(a: A): UIO[B] = new Now(fs(a))
@@ -5102,7 +5067,7 @@ object BIO extends TaskInstancesLevel0 {
     override def recoverFatal(e: Throwable): UIO[B] = new Now(fe(Cause.Termination(e)))
   }
 
-  /** Used as optimization by [[BIO.attempt]]. */
+  /** Used as optimization by [[Task.attempt]]. */
   private object AttemptTask extends StackFrame[Any, Any, UIO[Either[Any, Any]]] {
 
     override def apply(a: Any): UIO[Either[Any, Any]] =
@@ -5112,7 +5077,7 @@ object BIO extends TaskInstancesLevel0 {
       new Now(new Left(e))
   }
 
-  /** Used as optimization by [[BIO.materialize]]. */
+  /** Used as optimization by [[Task.materialize]]. */
   private object MaterializeTask extends StackFrame[Throwable, Any, UIO[Try[Any]]] {
     override def apply(a: Any): UIO[Try[Any]] =
       new Now(new Success(a))
@@ -5132,7 +5097,7 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     * As trivia, it's named "catsAsync" and not "catsConcurrent" because
     * it represents the `cats.effect.Async` lineage, up until
     * `cats.effect.Effect`, which imposes extra restrictions, in our case
-    * the need for a `Scheduler` to be in scope (see [[BIO.catsEffect]]).
+    * the need for a `Scheduler` to be in scope (see [[Task.catsEffect]]).
     * So by naming the lineage, not the concrete sub-type implemented, we avoid
     * breaking compatibility whenever a new type class (that we can implement)
     * gets added into Cats.
@@ -5155,9 +5120,9 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     *   import cats.syntax.all._
     *   import scala.concurrent.duration._
     *
-    *   val taskA = BIO.sleep(1.seconds).map(_ => "a")
-    *   val taskB = BIO.sleep(2.seconds).map(_ => "b")
-    *   val taskC = BIO.sleep(3.seconds).map(_ => "c")
+    *   val taskA = Task.sleep(1.seconds).map(_ => "a")
+    *   val taskB = Task.sleep(2.seconds).map(_ => "b")
+    *   val taskC = Task.sleep(3.seconds).map(_ => "c")
     *
     *   // Returns "abc" after 3 seconds
     *   (taskA, taskB, taskC).parMapN { (a, b, c) =>
@@ -5170,26 +5135,26 @@ private[bio] abstract class TaskInstancesLevel0 extends TaskInstancesLevel1 {
     *  - [[https://typelevel.org/cats/ typelevel/cats]]
     *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
     */
-  implicit def catsParallel[E]: Parallel.Aux[BIO[E, *], BIO.Par[E, *]] =
-    catsParallelAny.asInstanceOf[Parallel.Aux[BIO[E, *], BIO.Par[E, *]]]
+  implicit def catsParallel[E]: Parallel.Aux[Task[E, *], Task.Par[E, *]] =
+    catsParallelAny.asInstanceOf[Parallel.Aux[Task[E, *], Task.Par[E, *]]]
 
   private[this] final lazy val catsParallelAny: CatsParallelForTask[Any] =
     new CatsParallelForTask[Any]
 
   /** Global instance for `cats.CommutativeApplicative`
     */
-  implicit def commutativeApplicative[E]: CommutativeApplicative[BIO.Par[E, *]] =
-    commutativeApplicativeAny.asInstanceOf[CommutativeApplicative[BIO.Par[E, *]]]
+  implicit def commutativeApplicative[E]: CommutativeApplicative[Task.Par[E, *]] =
+    commutativeApplicativeAny.asInstanceOf[CommutativeApplicative[Task.Par[E, *]]]
 
-  private[this] final lazy val commutativeApplicativeAny: CommutativeApplicative[BIO.Par[Any, *]] =
+  private[this] final lazy val commutativeApplicativeAny: CommutativeApplicative[Task.Par[Any, *]] =
     catsParallelAny.applicative
 
   /** Given an `A` type that has a `cats.Monoid[A]` implementation,
-    * then this provides the evidence that `BIO[E, A]` also has
-    * a `Monoid[ BIO[E, A] ]` implementation.
+    * then this provides the evidence that `Task[E, A]` also has
+    * a `Monoid[ Task[E, A] ]` implementation.
     */
-  implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[BIO[E, A]] =
-    new CatsMonadToMonoid[BIO[E, *], A]()(new CatsBaseForTask[E], A)
+  implicit def catsMonoid[E, A](implicit A: Monoid[A]): Monoid[Task[E, A]] =
+    new CatsMonadToMonoid[Task[E, *], A]()(new CatsBaseForTask[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
@@ -5201,7 +5166,7 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * `cats.MonadError`, `cats.effect.Sync` and `cats.effect.Async`.
     *
     * Note this is different from
-    * [[monix.bio.BIO.catsAsync BIO.catsAsync]] because we need an
+    * [[monix.bio.Task.catsAsync Task.catsAsync]] because we need an
     * implicit [[monix.execution.Scheduler Scheduler]] in scope in
     * order to trigger the execution of a `Task`. It's also lower
     * priority in order to not trigger conflicts, because
@@ -5222,22 +5187,22 @@ private[bio] abstract class TaskInstancesLevel1 extends TaskInstancesLevel2 {
     * @param s is a [[monix.execution.Scheduler Scheduler]] that needs
     *        to be available in scope
     */
-  implicit def catsEffect(
-    implicit s: Scheduler,
-    opts: BIO.Options = BIO.defaultOptions
+  implicit def catsEffect(implicit
+    s: Scheduler,
+    opts: Task.Options = Task.defaultOptions
   ): CatsConcurrentEffectForTask = {
     new CatsConcurrentEffectForTask
   }
 
   /** Given an `A` type that has a `cats.Semigroup[A]` implementation,
-    * then this provides the evidence that `BIO[E, A]` also has
-    * a `Semigroup[ BIO[E, A] ]` implementation.
+    * then this provides the evidence that `Task[E, A]` also has
+    * a `Semigroup[ Task[E, A] ]` implementation.
     *
-    * This has a lower-level priority than [[BIO.catsMonoid]]
+    * This has a lower-level priority than [[Task.catsMonoid]]
     * in order to avoid conflicts.
     */
-  implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[BIO[E, A]] =
-    new CatsMonadToSemigroup[BIO[E, *], A]()(monadError[E], A)
+  implicit def catsSemigroup[E, A](implicit A: Semigroup[A]): Semigroup[Task[E, A]] =
+    new CatsMonadToSemigroup[Task[E, *], A]()(monadError[E], A)
 }
 
 private[bio] abstract class TaskInstancesLevel2 extends TaskParallelNewtype {
@@ -5264,10 +5229,10 @@ private[bio] abstract class TaskParallelNewtype extends TaskContextShift {
     */
   type Par[+E, +A] = Par.Type[E, A]
 
-  /** Newtype encoding, see the [[BIO.Par]] type alias
+  /** Newtype encoding, see the [[Task.Par]] type alias
     * for more details.
     */
-  object Par extends Newtype2[BIO]
+  object Par extends Newtype2[Task]
 }
 
 private[bio] abstract class TaskContextShift extends TaskTimers {
@@ -5276,18 +5241,18 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
     * Default, pure, globally visible `cats.effect.ContextShift`
     * implementation that shifts the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
-    * (that's being injected in [[BIO.runToFuture]]).
+    * (that's being injected in [[Task.runToFuture]]).
     */
-  implicit def contextShift[E]: ContextShift[BIO[E, *]] =
-    contextShiftAny.asInstanceOf[ContextShift[BIO[E, *]]]
+  implicit def contextShift[E]: ContextShift[Task[E, *]] =
+    contextShiftAny.asInstanceOf[ContextShift[Task[E, *]]]
 
-  private[this] final val contextShiftAny: ContextShift[BIO[Any, *]] =
-    new ContextShift[BIO[Any, *]] {
+  private[this] final val contextShiftAny: ContextShift[Task[Any, *]] =
+    new ContextShift[Task[Any, *]] {
 
-      override def shift: BIO[Any, Unit] =
-        BIO.shift
+      override def shift: Task[Any, Unit] =
+        Task.shift
 
-      override def evalOn[A](ec: ExecutionContext)(fa: BIO[Any, A]): BIO[Any, A] =
+      override def evalOn[A](ec: ExecutionContext)(fa: Task[Any, A]): Task[Any, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
           case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
@@ -5298,13 +5263,13 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
   /** Builds a `cats.effect.ContextShift` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def contextShift[E](s: Scheduler): ContextShift[BIO[E, *]] =
-    new ContextShift[BIO[E, *]] {
+  def contextShift[E](s: Scheduler): ContextShift[Task[E, *]] =
+    new ContextShift[Task[E, *]] {
 
-      override def shift: BIO[E, Unit] =
-        BIO.shift(s)
+      override def shift: Task[E, Unit] =
+        Task.shift(s)
 
-      override def evalOn[A](ec: ExecutionContext)(fa: BIO[E, A]): BIO[E, A] =
+      override def evalOn[A](ec: ExecutionContext)(fa: Task[E, A]): Task[E, A] =
         ec match {
           case ref: Scheduler => fa.executeOn(ref, forceAsync = true)
           case _ => fa.executeOn(Scheduler(ec), forceAsync = true)
@@ -5319,67 +5284,67 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     * Default, pure, globally visible `cats.effect.Timer`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
-    * (that's being injected in [[BIO.runToFuture]]).
+    * (that's being injected in [[Task.runToFuture]]).
     */
-  implicit def timer[E]: Timer[BIO[E, *]] =
-    timerAny.asInstanceOf[Timer[BIO[E, *]]]
+  implicit def timer[E]: Timer[Task[E, *]] =
+    timerAny.asInstanceOf[Timer[Task[E, *]]]
 
-  private[this] final val timerAny: Timer[BIO[Any, *]] =
-    new Timer[BIO[Any, *]] {
+  private[this] final val timerAny: Timer[Task[Any, *]] =
+    new Timer[Task[Any, *]] {
 
-      override def sleep(duration: FiniteDuration): BIO[Any, Unit] =
-        BIO.sleep(duration)
+      override def sleep(duration: FiniteDuration): Task[Any, Unit] =
+        Task.sleep(duration)
 
-      override def clock: Clock[BIO[Any, *]] =
-        BIO.clock
+      override def clock: Clock[Task[Any, *]] =
+        Task.clock
     }
 
   /** Builds a `cats.effect.Timer` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def timer[E](s: Scheduler): Timer[BIO[E, *]] =
-    new Timer[BIO[E, *]] {
+  def timer[E](s: Scheduler): Timer[Task[E, *]] =
+    new Timer[Task[E, *]] {
 
-      override def sleep(duration: FiniteDuration): BIO[E, Unit] =
-        BIO.sleep(duration).executeOn(s)
+      override def sleep(duration: FiniteDuration): Task[E, Unit] =
+        Task.sleep(duration).executeOn(s)
 
-      override def clock: Clock[BIO[E, *]] =
-        BIO.clock(s)
+      override def clock: Clock[Task[E, *]] =
+        Task.clock(s)
     }
 }
 
-private[bio] abstract class TaskClocks extends BIODeprecated.Companion {
+private[bio] abstract class TaskClocks extends TaskDeprecated.Companion {
 
   /**
     * Default, pure, globally visible `cats.effect.Clock`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
-    * (that's being injected in [[BIO.runToFuture]]).
+    * (that's being injected in [[Task.runToFuture]]).
     */
-  def clock[E]: Clock[BIO[E, *]] =
-    clockAny.asInstanceOf[Clock[BIO[E, *]]]
+  def clock[E]: Clock[Task[E, *]] =
+    clockAny.asInstanceOf[Clock[Task[E, *]]]
 
-  private[this] final val clockAny: Clock[BIO[Any, *]] =
-    new Clock[BIO[Any, *]] {
+  private[this] final val clockAny: Clock[Task[Any, *]] =
+    new Clock[Task[Any, *]] {
 
-      override def realTime(unit: TimeUnit): BIO[Any, Long] =
-        BIO.deferAction(sc => BIO.now(sc.clockRealTime(unit)))
+      override def realTime(unit: TimeUnit): Task[Any, Long] =
+        Task.deferAction(sc => Task.now(sc.clockRealTime(unit)))
 
-      override def monotonic(unit: TimeUnit): BIO[Any, Long] =
-        BIO.deferAction(sc => BIO.now(sc.clockMonotonic(unit)))
+      override def monotonic(unit: TimeUnit): Task[Any, Long] =
+        Task.deferAction(sc => Task.now(sc.clockMonotonic(unit)))
     }
 
   /**
     * Builds a `cats.effect.Clock` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def clock[E](s: Scheduler): Clock[BIO[E, *]] =
-    new Clock[BIO[E, *]] {
+  def clock[E](s: Scheduler): Clock[Task[E, *]] =
+    new Clock[Task[E, *]] {
 
-      override def realTime(unit: TimeUnit): BIO[E, Long] =
-        BIO.evalTotal(s.clockRealTime(unit))
+      override def realTime(unit: TimeUnit): Task[E, Long] =
+        Task.evalTotal(s.clockRealTime(unit))
 
-      override def monotonic(unit: TimeUnit): BIO[E, Long] =
-        BIO.evalTotal(s.clockMonotonic(unit))
+      override def monotonic(unit: TimeUnit): Task[E, Long] =
+        Task.evalTotal(s.clockMonotonic(unit))
     }
 }

@@ -17,7 +17,7 @@
 
 package monix.bio
 
-/** Represent a complete cause of the failed BIO
+/** Represent a complete cause of the failed Task
   * exposing both typed and untyped error channel.
   */
 sealed abstract class Cause[+E] extends Product with Serializable {

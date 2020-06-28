@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio.internal.StackFrame.FatalStackFrame
-import monix.bio.{BIO, UIO}
+import monix.bio.{Task, UIO}
 import monix.catnap.CancelableF
 import monix.execution.internal.Platform
 import monix.execution.{Cancelable, Scheduler}
@@ -32,8 +32,8 @@ private[bio] object UnsafeCancelUtils {
   /**
     * Internal API.
     */
-  def taskToCancelable(task: BIO[Any, Unit])(implicit s: Scheduler): Cancelable = {
-    if (task == BIO.unit) Cancelable.empty
+  def taskToCancelable(task: Task[Any, Unit])(implicit s: Scheduler): Cancelable = {
+    if (task == Task.unit) Cancelable.empty
     else Cancelable(() => task.runAsyncAndForget(s))
   }
 
@@ -45,9 +45,9 @@ private[bio] object UnsafeCancelUtils {
   ): CancelToken[UIO] = {
 
     if (cursor.isEmpty)
-      BIO.unit
+      Task.unit
     else
-      BIO.suspendTotal {
+      Task.suspendTotal {
         val frame = new CancelAllFrame(cursor.iterator)
         frame.loop()
       }
@@ -67,7 +67,7 @@ private[bio] object UnsafeCancelUtils {
         ref.cancel
       case ref: Cancelable =>
         ref.cancel()
-        BIO.unit
+        Task.unit
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -79,7 +79,7 @@ private[bio] object UnsafeCancelUtils {
     * Internal API — very unsafe!
     */
   private[internal] def getToken(
-    task: AnyRef /* Cancelable | BIO.Unsafe[Unit] | CancelableF[BIO.Unsafe] */
+    task: AnyRef /* Cancelable | Task.Unsafe[Unit] | CancelableF[Task.Unsafe] */
   ): CancelToken[UIO] =
     task match {
       case ref: UIO[Unit] @unchecked =>
@@ -87,7 +87,7 @@ private[bio] object UnsafeCancelUtils {
       case ref: CancelableF[UIO] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
-        BIO.delay(ref.cancel()).hideErrors
+        Task.delay(ref.cancel()).hideErrors
       case other =>
         // $COVERAGE-OFF$
         reject(other)
@@ -102,7 +102,7 @@ private[bio] object UnsafeCancelUtils {
   )(implicit s: Scheduler): Unit = {
 
     task match {
-      case ref: BIO[Any, Unit] @unchecked =>
+      case ref: Task[Any, Unit] @unchecked =>
         ref.runAsyncAndForget
       case ref: CancelableF[UIO] @unchecked =>
         ref.cancel.runAsyncAndForget
@@ -154,7 +154,7 @@ private[bio] object UnsafeCancelUtils {
           case Nil =>
             UIO.unit
           case first :: rest =>
-            BIO.terminate(Platform.composeErrors(first, rest: _*))
+            Task.terminate(Platform.composeErrors(first, rest: _*))
         }
       }
     }

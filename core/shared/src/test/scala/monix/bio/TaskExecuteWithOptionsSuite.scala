@@ -21,12 +21,12 @@ import scala.util.Success
 
 object TaskExecuteWithOptionsSuite extends BaseTestSuite {
   test("executeWithOptions works") { implicit s =>
-    val task = BIO
+    val task = Task
       .eval(1)
-      .flatMap(_ => BIO.eval(2))
-      .flatMap(_ => BIO.readOptions)
+      .flatMap(_ => Task.eval(2))
+      .flatMap(_ => Task.readOptions)
       .executeWithOptions(_.enableLocalContextPropagation)
-      .flatMap(opt1 => BIO.readOptions.map(opt2 => (opt1, opt2)))
+      .flatMap(opt1 => Task.readOptions.map(opt2 => (opt1, opt2)))
 
     val f = task.runToFuture
     s.tick()
@@ -39,12 +39,12 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
   testAsync("local.write.executeWithOptions") { _ =>
     import monix.execution.Scheduler.Implicits.global
 
-    implicit val opts = BIO.defaultOptions.enableLocalContextPropagation
+    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- BIOLocal(10)
+      l <- TaskLocal(10)
       _ <- l.write(100).executeWithOptions(_.enableAutoCancelableRunLoops)
-      _ <- BIO.shift
+      _ <- Task.shift
       v <- l.read
     } yield v
 
@@ -55,11 +55,11 @@ object TaskExecuteWithOptionsSuite extends BaseTestSuite {
 
   test("executeWithOptions is stack safe in flatMap loops") { implicit sc =>
     def loop(n: Int, acc: Long): UIO[Long] =
-      BIO.unit.executeWithOptions(_.enableAutoCancelableRunLoops).flatMap { _ =>
+      Task.unit.executeWithOptions(_.enableAutoCancelableRunLoops).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          BIO.now(acc)
+          Task.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
