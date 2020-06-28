@@ -87,7 +87,7 @@ private[bio] object UnsafeCancelUtils {
       case ref: CancelableF[UIO] @unchecked =>
         ref.cancel
       case ref: Cancelable =>
-        Task.delay(ref.cancel()).hideErrors
+        Task.evalTotal(ref.cancel())
       case other =>
         // $COVERAGE-OFF$
         reject(other)
