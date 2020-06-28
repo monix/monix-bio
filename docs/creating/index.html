@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Creating BIO · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="As always, a full and up to date list of operators is available in the API or the companion object."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Creating BIO · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="As always, a full and up to date list of operators is available in the API or the companion object."/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/creating">Creating BIO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/execution">Executing BIO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Creating Task · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="As always, a full and up to date list of operators is available in the API or the companion object."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Creating Task · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="As always, a full and up to date list of operators is available in the API or the companion object."/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/creating">Creating Task</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/execution">Executing Task</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -54,44 +54,44 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Creating BIO</h1></header><article><div><span><p>As always, a full and up to date list of operators is available in the API or the companion object.</p>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Creating Task</h1></header><article><div><span><p>As always, a full and up to date list of operators is available in the API or the companion object.</p>
 <h2><a class="anchor" aria-hidden="true" id="simple-builders"></a><a href="#simple-builders" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Simple builders</h2>
-<h3><a class="anchor" aria-hidden="true" id="bionow"></a><a href="#bionow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.now</h3>
-<p><code>BIO.now</code> lifts an already known value in the <code>BIO</code> context, the equivalent of <code>Future.successful</code>.
+<h3><a class="anchor" aria-hidden="true" id="tasknow"></a><a href="#tasknow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.now</h3>
+<p><code>Task.now</code> lifts an already known value in the <code>Task</code> context, the equivalent of <code>Future.successful</code>.
 Do not use it with any side effects, because they will be evaluated immediately and just once:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.now { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>.now { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
 <span class="hljs-comment">//=&gt; Effect</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="bioraiseerror"></a><a href="#bioraiseerror" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.raiseError</h3>
-<p><code>BIO.raiseError</code> lifts a typed error to the context of <code>BIO</code>:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<h3><a class="anchor" aria-hidden="true" id="taskraiseerror"></a><a href="#taskraiseerror" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.raiseError</h3>
+<p><code>Task.raiseError</code> lifts a typed error to the context of <code>Task</code>:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> error: <span class="hljs-type">BIO</span>[<span class="hljs-type">DummyException</span>, <span class="hljs-type">Nothing</span>] = <span class="hljs-type">BIO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> error: <span class="hljs-type">Task</span>[<span class="hljs-type">DummyException</span>, <span class="hljs-type">Nothing</span>] = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
 
 error.runAsync(result =&gt; println(result))
 <span class="hljs-comment">//=&gt; Left(Cause.Error(DummyException("boom")))</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="bioterminate"></a><a href="#bioterminate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.terminate</h3>
-<p><code>BIO.raiseError</code> lifts a terminal error to the context of <code>BIO</code>:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">BIO</span>, <span class="hljs-type">UIO</span>}
+<h3><a class="anchor" aria-hidden="true" id="taskterminate"></a><a href="#taskterminate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.terminate</h3>
+<p><code>Task.raiseError</code> lifts a terminal error to the context of <code>Task</code>:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> error: <span class="hljs-type">UIO</span>[<span class="hljs-type">Nothing</span>] = <span class="hljs-type">BIO</span>.terminate(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> error: <span class="hljs-type">UIO</span>[<span class="hljs-type">Nothing</span>] = <span class="hljs-type">Task</span>.terminate(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
 
 error.runAsync(result =&gt; println(result))
 <span class="hljs-comment">//=&gt; Left(Cause.Termination(DummyException("boom")))</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="bioeval--bioapply"></a><a href="#bioeval--bioapply" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.eval / BIO.apply</h3>
-<p><code>BIO.eval</code> is the equivalent of <code>Function0</code>, taking a function that will always be evaluated on running, possibly on the same thread (depending on the chosen execution model):</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<h3><a class="anchor" aria-hidden="true" id="taskeval--taskapply"></a><a href="#taskeval--taskapply" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.eval / Task.apply</h3>
+<p><code>Task.eval</code> is the equivalent of <code>Function0</code>, taking a function that will always be evaluated on running, possibly on the same thread (depending on the chosen execution model):</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">String</span>] = <span class="hljs-type">BIO</span>.eval { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">String</span>] = <span class="hljs-type">Task</span>.eval { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
 
 task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Effect</span>
@@ -103,12 +103,12 @@ task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Effect</span>
 <span class="hljs-comment">//=&gt; Hello!</span>
 </code></pre>
-<p><code>BIO.eval</code> catches errors that are thrown in the passed function:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<p><code>Task.eval</code> catches errors that are thrown in the passed function:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.eval { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-keyword">throw</span> <span class="hljs-type">DummyException</span>(<span class="hljs-string">"Goodbye"</span>)}
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>.eval { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-keyword">throw</span> <span class="hljs-type">DummyException</span>(<span class="hljs-string">"Goodbye"</span>)}
 
 task.runAsync(result =&gt; println(result))
 <span class="hljs-comment">//=&gt; Effect</span>
@@ -120,13 +120,13 @@ task.runAsync(result =&gt; println(result))
 <span class="hljs-comment">//=&gt; Effect</span>
 <span class="hljs-comment">//=&gt; Left(Cause.Error(DummyException("Goodbye")))</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="bioevaltotal--uioapply"></a><a href="#bioevaltotal--uioapply" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.evalTotal / UIO.apply</h3>
-<p><code>BIO.evalTotal</code> is similar to <code>eval</code> because it also suspends side effects, but it doesn't expect any errors to be thrown, so the error type is <code>Nothing</code>.
+<h3><a class="anchor" aria-hidden="true" id="taskevaltotal--uioapply"></a><a href="#taskevaltotal--uioapply" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.evalTotal / UIO.apply</h3>
+<p><code>Task.evalTotal</code> is similar to <code>eval</code> because it also suspends side effects, but it doesn't expect any errors to be thrown, so the error type is <code>Nothing</code>.
 If there are any, they are considered terminal errors.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">BIO</span>, <span class="hljs-type">UIO</span>}
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">UIO</span>[<span class="hljs-type">String</span>] = <span class="hljs-type">BIO</span>.evalTotal { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">UIO</span>[<span class="hljs-type">String</span>] = <span class="hljs-type">Task</span>.evalTotal { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
 
 task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Effect</span>
@@ -138,14 +138,14 @@ task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Effect</span>
 <span class="hljs-comment">//=&gt; Hello!</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="bioevalonce"></a><a href="#bioevalonce" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.evalOnce</h3>
-<p><code>BIO.evalOnce</code> is the equivalent of a <code>lazy val</code>, a type that cannot be precisely expressed in Scala.
+<h3><a class="anchor" aria-hidden="true" id="taskevalonce"></a><a href="#taskevalonce" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.evalOnce</h3>
+<p><code>Task.evalOnce</code> is the equivalent of a <code>lazy val</code>, a type that cannot be precisely expressed in Scala.
 The <code>evalOnce</code> builder does memoization on the first run, such that the result of the evaluation will be available for subsequent runs.
 It also has guaranteed idempotency and thread-safety:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.evalOnce { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>.evalOnce { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
 
 task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Effect</span>
@@ -155,8 +155,8 @@ task.runToFuture.foreach(println)
 task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Hello!</span>
 </code></pre>
-<p>NOTE: this operation is effectively <code>BIO.eval(f).memoize</code>.</p>
-<h3><a class="anchor" aria-hidden="true" id="bionever"></a><a href="#bionever" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.never</h3>
+<p>NOTE: this operation is effectively <code>Task.eval(f).memoize</code>.</p>
+<h3><a class="anchor" aria-hidden="true" id="tasknever"></a><a href="#tasknever" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.never</h3>
 <p><code>Task.never</code> returns a Task instance that never completes:</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
@@ -175,31 +175,31 @@ timedOut.runAsync(r =&gt; println(r))
 </code></pre>
 <p>This instance is shared so that it can relieve some stress from the garbage collector.</p>
 <h2><a class="anchor" aria-hidden="true" id="asynchronous-builders"></a><a href="#asynchronous-builders" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Asynchronous builders</h2>
-<h3><a class="anchor" aria-hidden="true" id="bioevalasync"></a><a href="#bioevalasync" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.evalAsync</h3>
-<p>By default, <code>BIO</code> prefers to execute things on the current thread.</p>
-<p><code>BIO.evalAsync</code> will evaluate the effect asynchronously; consider it an optimized version of <code>BIO.eval.executeAsync</code>.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<h3><a class="anchor" aria-hidden="true" id="taskevalasync"></a><a href="#taskevalasync" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.evalAsync</h3>
+<p>By default, <code>Task</code> prefers to execute things on the current thread.</p>
+<p><code>Task.evalAsync</code> will evaluate the effect asynchronously; consider it an optimized version of <code>Task.eval.executeAsync</code>.</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-type">BIO</span>.eval(println(<span class="hljs-string">s"<span class="hljs-subst">${Thread.currentThread().getName}</span>: Executing eval"</span>)).runSyncUnsafe()
+<span class="hljs-type">Task</span>.eval(println(<span class="hljs-string">s"<span class="hljs-subst">${Thread.currentThread().getName}</span>: Executing eval"</span>)).runSyncUnsafe()
 <span class="hljs-comment">// =&gt; main: Executing eval</span>
 
-<span class="hljs-type">BIO</span>.evalAsync(println(<span class="hljs-string">s"<span class="hljs-subst">${Thread.currentThread().getName}</span>: Executing evalAsync"</span>)).runSyncUnsafe()
+<span class="hljs-type">Task</span>.evalAsync(println(<span class="hljs-string">s"<span class="hljs-subst">${Thread.currentThread().getName}</span>: Executing evalAsync"</span>)).runSyncUnsafe()
 <span class="hljs-comment">// =&gt; scala-execution-context-global-14: Executing evalAsync</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="biocreate"></a><a href="#biocreate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.create</h3>
-<p><code>BIO.create</code> aggregates a handful of methods that create a <code>BIO</code> from a callback.</p>
+<h3><a class="anchor" aria-hidden="true" id="taskcreate"></a><a href="#taskcreate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.create</h3>
+<p><code>Task.create</code> aggregates a handful of methods that create a <code>Task</code> from a callback.</p>
 <p>For example, let's create a utility that evaluates expressions with a given delay:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> scala.util.<span class="hljs-type">Try</span>
 <span class="hljs-keyword">import</span> concurrent.duration._
 
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">evalDelayed</span></span>[<span class="hljs-type">A</span>](delay: <span class="hljs-type">FiniteDuration</span>)
-  (f: =&gt; <span class="hljs-type">A</span>): <span class="hljs-type">BIO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">A</span>] = {
+  (f: =&gt; <span class="hljs-type">A</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">A</span>] = {
 
   <span class="hljs-comment">// On execution, we have the scheduler and</span>
   <span class="hljs-comment">// the callback injected ;-)</span>
-  <span class="hljs-type">BIO</span>.create { (scheduler, callback) =&gt;
+  <span class="hljs-type">Task</span>.create { (scheduler, callback) =&gt;
     <span class="hljs-keyword">val</span> cancelable =
       scheduler.scheduleOnce(delay) {
         callback(<span class="hljs-type">Try</span>(f))
@@ -211,11 +211,11 @@ timedOut.runAsync(r =&gt; println(r))
   }
 }
 </code></pre>
-<p><code>BIO.create</code> supports different cancelation tokens, such as:</p>
+<p><code>Task.create</code> supports different cancelation tokens, such as:</p>
 <ul>
 <li><code>Unit</code> for non-cancelable tasks</li>
 <li><code>cats.effect.IO</code></li>
-<li><code>monix.bio.BIO</code></li>
+<li><code>monix.bio.Task</code></li>
 <li><code>monix.execution.Cancelable</code></li>
 <li>And others.</li>
 </ul>
@@ -228,14 +228,14 @@ timedOut.runAsync(r =&gt; println(r))
 <li>The <a href="https://monix.io/docs/3x/execution/callback.html">Callback</a> gets injected on execution, and that callback has a contract. In particular, you need to execute <code>onSuccess</code>, <code>onError</code>, or <code>onTermination</code> or apply only once. The implementation does a reasonably good job to protect against contract violations, but if you do call it multiple times, then you’re doing it risking undefined and nondeterministic behavior.</li>
 <li>It’s OK to return a <code>Cancelable.empty</code> in case the executed process really can’t be canceled in time. Still, you should strive to produce a cancelable that does cancel your execution, if possible.</li>
 </ul>
-<h3><a class="anchor" aria-hidden="true" id="biofromfuture"></a><a href="#biofromfuture" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.fromFuture</h3>
-<p><code>BIO.fromFuture</code> can convert any Scala Future instance into a <code>BIO</code>:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<h3><a class="anchor" aria-hidden="true" id="taskfromfuture"></a><a href="#taskfromfuture" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.fromFuture</h3>
+<p><code>Task.fromFuture</code> can convert any Scala Future instance into a <code>Task</code>:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Future</span>
 
 <span class="hljs-keyword">val</span> future = <span class="hljs-type">Future</span> { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.fromFuture(future)
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>.fromFuture(future)
 <span class="hljs-comment">//=&gt; Effect</span>
 
 task.runToFuture.foreach(println)
@@ -246,15 +246,15 @@ task.runToFuture.foreach(println)
 <p>Note that <code>fromFuture</code> takes a strict argument, and that may not be what you want.
 When you receive a Future like this, whatever process that’s supposed to complete has probably started already.
 You might want a factory of Future to be able to suspend its evaluation and reuse it.
-The design of <code>BIO</code> is to have fine-grained control over the evaluation model, so in case you want a factory,
-you need to either combine it with <code>BIO.defer</code> or use <code>BIO.deferFuture</code>:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+The design of <code>Task</code> is to have fine-grained control over the evaluation model, so in case you want a factory,
+you need to either combine it with <code>Task.defer</code> or use <code>Task.deferFuture</code>:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Future</span>
 
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.defer {
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>.defer {
   <span class="hljs-keyword">val</span> future = <span class="hljs-type">Future</span> { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
-  <span class="hljs-type">BIO</span>.fromFuture(future)
+  <span class="hljs-type">Task</span>.fromFuture(future)
 }
 
 task.runToFuture.foreach(println)
@@ -265,11 +265,11 @@ task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Hello!</span>
 </code></pre>
 <p>Or use the equivalent:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">BIO</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">Future</span>
 
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">BIO</span>.deferFuture {
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>.deferFuture {
   <span class="hljs-type">Future</span> { println(<span class="hljs-string">"Effect"</span>); <span class="hljs-string">"Hello!"</span> }
 }
 
@@ -280,8 +280,8 @@ task.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Effect</span>
 <span class="hljs-comment">//=&gt; Hello!</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="biodeferfutureaction"></a><a href="#biodeferfutureaction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>BIO.deferFutureAction</h3>
-<p><code>BIO.deferFutureAction</code> wraps calls that generate Future results into Task,
+<h3><a class="anchor" aria-hidden="true" id="taskdeferfutureaction"></a><a href="#taskdeferfutureaction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.deferFutureAction</h3>
+<p><code>Task.deferFutureAction</code> wraps calls that generate Future results into Task,
 provided a callback with an injected Scheduler to act as the necessary ExecutionContext.</p>
 <p>This builder helps with wrapping Future-enabled APIs that need an implicit ExecutionContext to work.
 Consider this example:</p>
@@ -294,19 +294,19 @@ Consider this example:</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 <span class="hljs-keyword">import</span> scala.concurrent.<span class="hljs-type">ExecutionContext</span>
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">sumTask</span></span>(list: <span class="hljs-type">Seq</span>[<span class="hljs-type">Int</span>])(<span class="hljs-keyword">implicit</span> ec: <span class="hljs-type">ExecutionContext</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] =
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">sumTask</span></span>(list: <span class="hljs-type">Seq</span>[<span class="hljs-type">Int</span>])(<span class="hljs-keyword">implicit</span> ec: <span class="hljs-type">ExecutionContext</span>): <span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>[<span class="hljs-type">Int</span>] =
   <span class="hljs-type">Task</span>.deferFuture(sumFuture(list))
 </code></pre>
-<p>But this is not only superfluous but against the best practices of using <code>BIO</code>.
+<p>But this is not only superfluous but against the best practices of using <code>Task</code>.
 The difference is that Task takes a Scheduler (inheriting from ExecutionContext) only when the run gets called, but we don’t need it just for building a Task reference.
-<code>BIO</code> is aware that <code>Scheduler</code> will be supplied during execution, and it can access it any time.
+<code>Task</code> is aware that <code>Scheduler</code> will be supplied during execution, and it can access it any time.
 With <code>deferFutureAction</code> or <code>deferAction</code> we get to have an injected Scheduler in the passed callback:</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">sumTask</span></span>(list: <span class="hljs-type">Seq</span>[<span class="hljs-type">Int</span>]): <span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] =
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">sumTask</span></span>(list: <span class="hljs-type">Seq</span>[<span class="hljs-type">Int</span>]): <span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>[<span class="hljs-type">Int</span>] =
   <span class="hljs-type">Task</span>.deferFutureAction { <span class="hljs-keyword">implicit</span> scheduler =&gt;
     sumFuture(list)
   }
 </code></pre>
 <p>Voilà! No more implicit ExecutionContext passed around.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/getting-started"><span class="arrow-prev">← </span><span>Getting Started</span></a><a class="docs-next button" href="/monix-bio/docs/execution"><span>Executing BIO</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#simple-builders">Simple builders</a><ul class="toc-headings"><li><a href="#bionow">BIO.now</a></li><li><a href="#bioraiseerror">BIO.raiseError</a></li><li><a href="#bioterminate">BIO.terminate</a></li><li><a href="#bioeval--bioapply">BIO.eval / BIO.apply</a></li><li><a href="#bioevaltotal--uioapply">BIO.evalTotal / UIO.apply</a></li><li><a href="#bioevalonce">BIO.evalOnce</a></li><li><a href="#bionever">BIO.never</a></li></ul></li><li><a href="#asynchronous-builders">Asynchronous builders</a><ul class="toc-headings"><li><a href="#bioevalasync">BIO.evalAsync</a></li><li><a href="#biocreate">BIO.create</a></li><li><a href="#biofromfuture">BIO.fromFuture</a></li><li><a href="#biodeferfutureaction">BIO.deferFutureAction</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/getting-started"><span class="arrow-prev">← </span><span>Getting Started</span></a><a class="docs-next button" href="/monix-bio/docs/execution"><span>Executing Task</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#simple-builders">Simple builders</a><ul class="toc-headings"><li><a href="#tasknow">Task.now</a></li><li><a href="#taskraiseerror">Task.raiseError</a></li><li><a href="#taskterminate">Task.terminate</a></li><li><a href="#taskeval--taskapply">Task.eval / Task.apply</a></li><li><a href="#taskevaltotal--uioapply">Task.evalTotal / UIO.apply</a></li><li><a href="#taskevalonce">Task.evalOnce</a></li><li><a href="#tasknever">Task.never</a></li></ul></li><li><a href="#asynchronous-builders">Asynchronous builders</a><ul class="toc-headings"><li><a href="#taskevalasync">Task.evalAsync</a></li><li><a href="#taskcreate">Task.create</a></li><li><a href="#taskfromfuture">Task.fromFuture</a></li><li><a href="#taskdeferfutureaction">Task.deferFutureAction</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
