@@ -27,12 +27,12 @@ import scala.util.{Failure, Success}
 
 object TaskParSequenceNSuite extends BaseTestSuite {
 
-  test("Task.parSequenceN should execute in parallel bounded by parallelism") { implicit s =>
+  test("IO.parSequenceN should execute in parallel bounded by parallelism") { implicit s =>
     val num = AtomicInt(0)
-    val task = UIO.evalAsync(num.increment()) >> Task.sleep(2.seconds)
+    val task = UIO.evalAsync(num.increment()) >> IO.sleep(2.seconds)
     val seq = List.fill(100)(task)
 
-    Task.parSequenceN(5)(seq).runToFuture
+    IO.parSequenceN(5)(seq).runToFuture
 
     s.tick()
     assertEquals(num.get(), 5)
@@ -44,47 +44,47 @@ object TaskParSequenceNSuite extends BaseTestSuite {
     assertEquals(num.get(), 100)
   }
 
-  test("Task.parSequenceN should return result in order") { implicit s =>
+  test("IO.parSequenceN should return result in order") { implicit s =>
     val task = 1.until(10).toList.map(UIO.eval(_))
-    val res = Task.parSequenceN(2)(task).runToFuture
+    val res = IO.parSequenceN(2)(task).runToFuture
 
     s.tick()
     assertEquals(res.value, Some(Success(List(1, 2, 3, 4, 5, 6, 7, 8, 9))))
   }
 
-  test("Task.parSequenceN should return empty list") { implicit s =>
-    val res = Task.parSequenceN(2)(List.empty).runToFuture
+  test("IO.parSequenceN should return empty list") { implicit s =>
+    val res = IO.parSequenceN(2)(List.empty).runToFuture
 
     s.tick()
     assertEquals(res.value, Some(Success(List.empty)))
   }
 
-  test("Task.parSequenceN should handle single item") { implicit s =>
+  test("IO.parSequenceN should handle single item") { implicit s =>
     val task = List(Task.eval(1))
-    val res = Task.parSequenceN(2)(task).runToFuture
+    val res = IO.parSequenceN(2)(task).runToFuture
 
     s.tick()
     assertEquals(res.value, Some(Success(List(1))))
   }
 
-  test("Task.parSequenceN should handle parallelism bigger than list") { implicit s =>
+  test("IO.parSequenceN should handle parallelism bigger than list") { implicit s =>
     val task = 1.until(5).toList.map(UIO.eval(_))
-    val res = Task.parSequenceN(10)(task).runToFuture
+    val res = IO.parSequenceN(10)(task).runToFuture
 
     s.tick()
     assertEquals(res.value, Some(Success(List(1, 2, 3, 4))))
   }
 
-  test("Task.parSequenceN should onError if one of the tasks terminates in error") { implicit s =>
+  test("IO.parSequenceN should onError if one of the tasks terminates in error") { implicit s =>
     val ex = "dummy"
     val seq = Seq(
-      Task.evalAsync(3).delayExecution(2.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.raiseError(ex).delayExecution(2.seconds),
-      Task.evalAsync(3).delayExecution(1.seconds)
+      IO.evalAsync(3).delayExecution(2.seconds),
+      IO.evalAsync(2).delayExecution(1.second),
+      IO.raiseError(ex).delayExecution(2.seconds),
+      IO.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = Task.parSequenceN(2)(seq).attempt.runToFuture
+    val f = IO.parSequenceN(2)(seq).attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -94,7 +94,7 @@ object TaskParSequenceNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(ex))))
   }
 
-  test("Task.parSequenceN should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
+  test("IO.parSequenceN should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq(
       UIO.evalAsync(3).delayExecution(2.seconds),
@@ -103,7 +103,7 @@ object TaskParSequenceNSuite extends BaseTestSuite {
       UIO.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = Task.parSequenceN(2)(seq).runToFuture
+    val f = IO.parSequenceN(2)(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -113,13 +113,13 @@ object TaskParSequenceNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.parSequenceN should be canceled") { implicit s =>
+  test("IO.parSequenceN should be canceled") { implicit s =>
     val num = AtomicInt(0)
     val seq = Seq(
-      Task.unit.delayExecution(3.seconds).doOnCancel(UIO.eval(num.increment())),
+      IO.unit.delayExecution(3.seconds).doOnCancel(UIO.eval(num.increment())),
       UIO.evalAsync(num.increment(10))
     )
-    val f = Task.parSequenceN(1)(seq).runToFuture
+    val f = IO.parSequenceN(1)(seq).runToFuture
 
     s.tick(2.seconds)
     f.cancel()
@@ -129,22 +129,22 @@ object TaskParSequenceNSuite extends BaseTestSuite {
     assertEquals(num.get(), 1)
   }
 
-  test("Task.parSequenceN should be stack safe for synchronous tasks") { implicit s =>
+  test("IO.parSequenceN should be stack safe for synchronous tasks") { implicit s =>
     val count = if (Platform.isJVM) 200000 else 5000
     val tasks = for (_ <- 0 until count) yield Task.now(1)
-    val composite = Task.parSequenceN(count)(tasks).map(_.sum)
+    val composite = IO.parSequenceN(count)(tasks).map(_.sum)
     val result = composite.runToFuture
     s.tick()
     assertEquals(result.value, Some(Success(count)))
   }
 
-  test("Task.parSequenceN runAsync multiple times") { implicit s =>
+  test("IO.parSequenceN runAsync multiple times") { implicit s =>
     var effect = 0
     val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
     val task2 = task1 map { x =>
       effect += 1; x + 1
     }
-    val task3 = Task.parSequenceN(2)(List(task2, task2, task2))
+    val task3 = IO.parSequenceN(2)(List(task2, task2, task2))
 
     val result1 = task3.runToFuture; s.tick()
     assertEquals(result1.value, Some(Success(List(4, 4, 4))))
@@ -155,33 +155,33 @@ object TaskParSequenceNSuite extends BaseTestSuite {
     assertEquals(effect, 1 + 3 + 3)
   }
 
-  test("Task.parSequenceN should log errors if multiple errors happen") { implicit s =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+  test("IO.parSequenceN should log errors if multiple errors happen") { implicit s =>
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
     val ex = "dummy1"
     var errorsThrow = 0
 
-    val task1: Task[String, Int] = Task
+    val task1: IO[String, Int] = IO
       .raiseError(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val task2: Task[String, Int] = Task
+    val task2: IO[String, Int] = IO
       .raiseError(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val sequence = Task.parSequenceN(4)(Seq(task1, task2))
+    val sequence = IO.parSequenceN(4)(Seq(task1, task2))
     val result = sequence.attempt.runToFutureOpt
     s.tick()
 
@@ -190,33 +190,33 @@ object TaskParSequenceNSuite extends BaseTestSuite {
     assertEquals(errorsThrow, 2)
   }
 
-  test("Task.parSequenceN should log terminal errors if multiple errors happen") { implicit s =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+  test("IO.parSequenceN should log terminal errors if multiple errors happen") { implicit s =>
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
     val ex = DummyException("dummy1")
     var errorsThrow = 0
 
-    val task1: Task[String, Int] = Task
+    val task1: IO[String, Int] = IO
       .terminate(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val task2: Task[String, Int] = Task
+    val task2: IO[String, Int] = IO
       .terminate(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val sequence = Task.parSequenceN(4)(Seq(task1, task2))
+    val sequence = IO.parSequenceN(4)(Seq(task1, task2))
     val result = sequence.attempt.runToFutureOpt
     s.tick()
 

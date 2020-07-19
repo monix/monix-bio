@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.IO
+import cats.effect.{IO => CIO}
 import monix.execution.Cancelable
 import monix.execution.exceptions.DummyException
 
@@ -26,7 +26,7 @@ import scala.util.{Failure, Success}
 
 object TaskCreateSuite extends BaseTestSuite {
   test("can use Unit as return type") { implicit sc =>
-    val task = Task.create[Long, Int]((_, cb) => cb.onSuccess(1))
+    val task = IO.create[Long, Int]((_, cb) => cb.onSuccess(1))
     val f = task.attempt.runToFuture
 
     sc.tick()
@@ -34,7 +34,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("can use Cancelable.empty as return type") { implicit sc =>
-    val task = Task.create[Long, Int] { (_, cb) =>
+    val task = IO.create[Long, Int] { (_, cb) =>
       cb.onSuccess(1); Cancelable.empty
     }
     val f = task.attempt.runToFuture
@@ -44,9 +44,9 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("returning Unit yields non-cancelable tasks") { implicit sc =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
-    val task = Task.create[Long, Int] { (sc, cb) =>
+    val task = IO.create[Long, Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
       ()
     }
@@ -61,7 +61,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("can use Cancelable as return type") { implicit sc =>
-    val task = Task.create[Long, Int] { (sc, cb) =>
+    val task = IO.create[Long, Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
     }
 
@@ -74,7 +74,7 @@ object TaskCreateSuite extends BaseTestSuite {
   }
 
   test("returning Cancelable yields a cancelable task") { implicit sc =>
-    val task = Task.create[Long, Int] { (sc, cb) =>
+    val task = IO.create[Long, Int] { (sc, cb) =>
       sc.scheduleOnce(1.second)(cb.onSuccess(1))
     }
 
@@ -87,10 +87,10 @@ object TaskCreateSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("can use IO[Unit] as return type") { implicit sc =>
-    val task = Task.create[String, Int] { (sc, cb) =>
+  test("can use CIO[Unit] as return type") { implicit sc =>
+    val task = IO.create[String, Int] { (sc, cb) =>
       val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
-      IO(c.cancel())
+      CIO(c.cancel())
     }
 
     val f = task.attempt.runToFuture
@@ -101,10 +101,10 @@ object TaskCreateSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("returning IO[Unit] yields a cancelable task") { implicit sc =>
-    val task = Task.create[String, Int] { (sc, cb) =>
+  test("returning CIO[Unit] yields a cancelable task") { implicit sc =>
+    val task = IO.create[String, Int] { (sc, cb) =>
       val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
-      IO(c.cancel())
+      CIO(c.cancel())
     }
 
     val f = task.attempt.runToFuture
@@ -116,8 +116,8 @@ object TaskCreateSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("can use Task[E, Unit] as return type") { implicit sc =>
-    val task = Task.create[String, Int] { (sc, cb) =>
+  test("can use IO[E, Unit] as return type") { implicit sc =>
+    val task = IO.create[String, Int] { (sc, cb) =>
       val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
       UIO.evalAsync(c.cancel())
     }
@@ -130,8 +130,8 @@ object TaskCreateSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("returning Task[E, Unit] yields a cancelable task") { implicit sc =>
-    val task = Task.create[String, Int] { (sc, cb) =>
+  test("returning IO[E, Unit] yields a cancelable task") { implicit sc =>
+    val task = IO.create[String, Int] { (sc, cb) =>
       val c = sc.scheduleOnce(1.second)(cb.onSuccess(1))
       UIO.evalAsync(c.cancel())
     }
@@ -147,7 +147,7 @@ object TaskCreateSuite extends BaseTestSuite {
 
   test("throwing error when returning Unit") { implicit sc =>
     val dummy = DummyException("dummy")
-    val task = Task.create[Long, Int] { (_, _) =>
+    val task = IO.create[Long, Int] { (_, _) =>
       (throw dummy): Unit
     }
 
@@ -160,7 +160,7 @@ object TaskCreateSuite extends BaseTestSuite {
 
   test("throwing error when returning Cancelable") { implicit sc =>
     val dummy = DummyException("dummy")
-    val task = Task.create[Long, Int] { (_, _) =>
+    val task = IO.create[Long, Int] { (_, _) =>
       (throw dummy): Cancelable
     }
 

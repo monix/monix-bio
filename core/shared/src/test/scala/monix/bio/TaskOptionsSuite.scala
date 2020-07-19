@@ -18,16 +18,16 @@
 package monix.bio
 
 import minitest.SimpleTestSuite
-import monix.bio.Task.Options
+import monix.bio.IO.Options
 import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.Promise
 
 object TaskOptionsSuite extends SimpleTestSuite {
-  implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+  implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
-  def extractOptions[E]: Task[E, Options] =
-    Task.Async[E, Options] { (ctx, cb) =>
+  def extractOptions[E]: IO[E, Options] =
+    IO.Async[E, Options] { (ctx, cb) =>
       cb.onSuccess(ctx.options)
     }
 

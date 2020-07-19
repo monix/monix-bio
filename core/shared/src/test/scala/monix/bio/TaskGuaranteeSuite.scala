@@ -46,7 +46,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
   test("finalizer is evaluated on error") { implicit sc =>
     var input = Option.empty[Int]
     val dummy = "dummy"
-    val task = Task
+    val task = IO
       .raiseError(dummy)
       .executeAsync
       .guarantee(UIO.evalAsync {
@@ -63,7 +63,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
   test("finalizer is evaluated on terminal error") { implicit sc =>
     var input = Option.empty[Int]
     val dummy = DummyException("dummy")
-    val task = Task
+    val task = IO
       .terminate(dummy)
       .executeAsync
       .guarantee(UIO.evalAsync {
@@ -80,7 +80,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
   test("if finalizer throws, report finalizer error and signal use error") { implicit sc =>
     val useError = DummyException("useError")
     val finalizerError = DummyException("finalizerError")
-    val task = Task.raiseError(useError).guarantee(Task.terminate(finalizerError))
+    val task = Task.raiseError(useError).guarantee(IO.terminate(finalizerError))
 
     val result = task.runToFuture
     sc.tick()
@@ -110,10 +110,10 @@ object TaskGuaranteeSuite extends BaseTestSuite {
 
   test("finalizer is evaluated on cancelation (1)") { implicit sc =>
     val effect = Atomic(false)
-    val task = Task
+    val task = IO
       .sleep(10.seconds)
       .guarantee(UIO(effect.set(true)))
-      .flatMap(_ => Task.sleep(10.seconds))
+      .flatMap(_ => IO.sleep(10.seconds))
 
     val f = task.runToFuture
     sc.tick()
@@ -129,10 +129,10 @@ object TaskGuaranteeSuite extends BaseTestSuite {
 
   test("finalizer is evaluated on cancellation (2)") { implicit sc =>
     val effect = Atomic(false)
-    val task = Task.unit
+    val task = IO.unit
       .guarantee(UIO.sleep(10.seconds) *> UIO(effect.set(true)))
-      .flatMap(_ => Task.Async[Nothing, Unit]((_, cb) => cb.onSuccess(())))
-      .flatMap(_ => Task.sleep(10.seconds))
+      .flatMap(_ => IO.Async[Nothing, Unit]((_, cb) => cb.onSuccess(())))
+      .flatMap(_ => IO.sleep(10.seconds))
 
     val f = task.runToFuture
     sc.tick()
@@ -146,8 +146,8 @@ object TaskGuaranteeSuite extends BaseTestSuite {
 
   test("stack-safety (1)") { implicit sc =>
     def loop(n: Int): UIO[Unit] =
-      if (n <= 0) Task.unit
-      else Task.unit.guarantee(UIO.unit).flatMap(_ => loop(n - 1))
+      if (n <= 0) IO.unit
+      else IO.unit.guarantee(UIO.unit).flatMap(_ => loop(n - 1))
 
     val cycles = if (Platform.isJVM) 100000 else 10000
     val f = loop(cycles).runToFuture
@@ -158,8 +158,8 @@ object TaskGuaranteeSuite extends BaseTestSuite {
 
   test("stack-safety (2)") { implicit sc =>
     val cycles = if (Platform.isJVM) 100000 else 10000
-    val task = (0 until cycles).foldLeft(Task.unit) { (acc, _) =>
-      acc.flatMap(_ => Task.unit.guarantee(UIO.unit))
+    val task = (0 until cycles).foldLeft(IO.unit) { (acc, _) =>
+      acc.flatMap(_ => IO.unit.guarantee(UIO.unit))
     }
 
     val f = task.runToFuture; sc.tick()
@@ -168,7 +168,7 @@ object TaskGuaranteeSuite extends BaseTestSuite {
 
   test("stack-safety (3)") { implicit sc =>
     val cycles = if (Platform.isJVM) 100000 else 10000
-    val task = (0 until cycles).foldLeft(Task.unit) { (acc, _) =>
+    val task = (0 until cycles).foldLeft(IO.unit) { (acc, _) =>
       acc.guarantee(UIO.unit)
     }
 

@@ -25,7 +25,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   test("executeOn(forceAsync = false)") { implicit sc =>
     val sc2 = TestScheduler()
-    val fa = Task.eval(1).executeOn(sc2, forceAsync = false)
+    val fa = IO.eval(1).executeOn(sc2, forceAsync = false)
     val f = fa.runToFuture
 
     assertEquals(f.value, Some(Success(1)))
@@ -33,7 +33,7 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   test("executeOn(forceAsync = true)") { implicit sc =>
     val sc2 = TestScheduler()
-    val fa = Task.eval(1).executeOn(sc2)
+    val fa = IO.eval(1).executeOn(sc2)
     val f = fa.runToFuture
 
     assertEquals(f.value, None)
@@ -49,11 +49,11 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     val sc2 = TestScheduler()
 
     def loop(n: Int, acc: Long): UIO[Long] =
-      Task.unit.executeOn(sc2, forceAsync = false).flatMap { _ =>
+      IO.unit.executeOn(sc2, forceAsync = false).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          IO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
@@ -64,11 +64,11 @@ object TaskExecuteOnSuite extends BaseTestSuite {
     val sc2 = TestScheduler()
 
     def loop(n: Int, acc: Long): UIO[Long] =
-      Task.unit.flatMap { _ =>
+      IO.unit.flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1).executeOn(sc2, forceAsync = false)
         else
-          Task.now(acc)
+          IO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture
@@ -80,12 +80,12 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   testAsync("local.write.executeOn(forceAsync = false) works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- IOLocal(10)
       _ <- l.write(100).executeOn(global, forceAsync = false)
-      _ <- Task.shift
+      _ <- IO.shift
       v <- l.read
     } yield v
 
@@ -96,12 +96,12 @@ object TaskExecuteOnSuite extends BaseTestSuite {
 
   testAsync("local.write.executeOn(forceAsync = true) works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- IOLocal(10)
       _ <- l.write(100).executeOn(global)
-      _ <- Task.shift
+      _ <- IO.shift
       v <- l.read
     } yield v
 

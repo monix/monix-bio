@@ -23,14 +23,14 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskDeferActionSuite extends BaseTestSuite {
-  test("Task.deferAction works") { implicit s =>
-    def measureLatency[E, A](source: Task[E, A]): Task[E, (A, Long)] =
-      Task.deferAction { implicit s =>
+  test("IO.deferAction works") { implicit s =>
+    def measureLatency[E, A](source: IO[E, A]): IO[E, (A, Long)] =
+      IO.deferAction { implicit s =>
         val start = s.clockMonotonic(MILLISECONDS)
         source.map(a => (a, s.clockMonotonic(MILLISECONDS) - start))
       }
 
-    val task = measureLatency(Task.now("hello").delayExecution(1.second))
+    val task = measureLatency(IO.now("hello").delayExecution(1.second))
     val f = task.runToFuture
 
     s.tick()
@@ -40,36 +40,36 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(("hello", 1000))))
   }
 
-  test("Task.deferAction works for failed tasks") { implicit s =>
+  test("IO.deferAction works for failed tasks") { implicit s =>
     val dummy = "dummy"
-    val task = Task.deferAction(_ => Task.raiseError(dummy))
+    val task = IO.deferAction(_ => IO.raiseError(dummy))
     val f = task.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(dummy))))
   }
 
-  test("Task.deferAction protects against user error") { implicit s =>
+  test("IO.deferAction protects against user error") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = Task.deferAction(_ => throw dummy)
+    val task = IO.deferAction(_ => throw dummy)
     val f = task.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.deferAction should properly cast errors") { implicit s =>
+  test("IO.deferAction should properly cast errors") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = Task.deferAction[Int, Int](_ => throw dummy)
+    val task = IO.deferAction[Int, Int](_ => throw dummy)
     val f = task.onErrorHandle(identity).runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.deferAction is stack safe") { implicit sc =>
-    def loop(n: Int, acc: Int): Task.Unsafe[Int] =
-      Task.deferAction { _ =>
+  test("IO.deferAction is stack safe") { implicit sc =>
+    def loop(n: Int, acc: Int): Task[Int] =
+      IO.deferAction { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
@@ -80,14 +80,14 @@ object TaskDeferActionSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(10000)))
   }
 
-  testAsync("Task.deferAction(local.write) works") { _ =>
+  testAsync("IO.deferAction(local.write) works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
-      _ <- Task.deferAction(_ => l.write(100))
-      _ <- Task.shift
+      l <- IOLocal(10)
+      _ <- IO.deferAction(_ => l.write(100))
+      _ <- IO.shift
       v <- l.read
     } yield v
 

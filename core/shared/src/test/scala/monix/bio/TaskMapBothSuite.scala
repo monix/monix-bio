@@ -25,10 +25,10 @@ import scala.util.{Failure, Success}
 
 object TaskMapBothSuite extends BaseTestSuite {
   test("if both tasks are synchronous, then mapBoth forks") { implicit s =>
-    val ta = Task.eval(1)
-    val tb = Task.eval(2)
+    val ta = IO.eval(1)
+    val tb = IO.eval(2)
 
-    val r = Task.mapBoth(ta, tb)(_ + _)
+    val r = IO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture
     assertEquals(f.value, None)
     s.tick()
@@ -36,29 +36,29 @@ object TaskMapBothSuite extends BaseTestSuite {
   }
 
   test("sum two async tasks") { implicit s =>
-    val ta = Task.evalAsync(1)
-    val tb = Task.evalAsync(2)
+    val ta = IO.evalAsync(1)
+    val tb = IO.evalAsync(2)
 
-    val r = Task.mapBoth(ta, tb)(_ + _)
+    val r = IO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture; s.tick()
     assertEquals(f.value.get, Success(3))
   }
 
   test("sum two synchronous tasks") { implicit s =>
-    val ta = Task.eval(1)
-    val tb = Task.eval(2)
+    val ta = IO.eval(1)
+    val tb = IO.eval(2)
 
-    val r = Task.mapBoth(ta, tb)(_ + _)
+    val r = IO.mapBoth(ta, tb)(_ + _)
     val f = r.runToFuture; s.tick()
     assertEquals(f.value.get, Success(3))
   }
 
   test("should be stack-safe for synchronous tasks") { implicit s =>
     val count = 10000
-    val tasks = (0 until count).map(x => Task.eval(x))
-    val init = Task.eval(0L)
+    val tasks = (0 until count).map(x => IO.eval(x))
+    val init = IO.eval(0L)
 
-    val sum = tasks.foldLeft(init)((acc, t) => Task.mapBoth(acc, t)(_ + _))
+    val sum = tasks.foldLeft(init)((acc, t) => IO.mapBoth(acc, t)(_ + _))
     val result = sum.runToFuture
 
     s.tick()
@@ -67,10 +67,10 @@ object TaskMapBothSuite extends BaseTestSuite {
 
   test("should be stack-safe for asynchronous tasks") { implicit s =>
     val count = 10000
-    val tasks = (0 until count).map(x => Task.evalAsync(x))
-    val init = Task.eval(0L)
+    val tasks = (0 until count).map(x => IO.evalAsync(x))
+    val init = IO.eval(0L)
 
-    val sum = tasks.foldLeft(init)((acc, t) => Task.mapBoth(acc, t)(_ + _))
+    val sum = tasks.foldLeft(init)((acc, t) => IO.mapBoth(acc, t)(_ + _))
     val result = sum.runToFuture
 
     s.tick()
@@ -80,8 +80,8 @@ object TaskMapBothSuite extends BaseTestSuite {
   test("should have a stack safe cancelable") { implicit sc =>
     val count = if (Platform.isJVM) 10000 else 1000
 
-    val tasks = (0 until count).map(_ => Task.never[Int])
-    val all = tasks.foldLeft(Task.now(0))((acc, t) => Task.mapBoth(acc, t)(_ + _))
+    val tasks = (0 until count).map(_ => IO.never[Int])
+    val all = tasks.foldLeft(Task.now(0))((acc, t) => IO.mapBoth(acc, t)(_ + _))
     val f = all.runToFuture
 
     sc.tick()
@@ -94,25 +94,25 @@ object TaskMapBothSuite extends BaseTestSuite {
 
   test("sum random synchronous tasks") { implicit s =>
     check1 { numbers: List[Int] =>
-      val sum = numbers.foldLeft(Task.now(0))((acc, t) => Task.mapBoth(acc, UIO.eval(t))(_ + _))
+      val sum = numbers.foldLeft(Task.now(0))((acc, t) => IO.mapBoth(acc, IO.eval(t))(_ + _))
       sum <-> Task.now(numbers.sum)
     }
   }
 
   test("sum random asynchronous tasks") { implicit s =>
     check1 { numbers: List[Int] =>
-      val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => Task.mapBoth(acc, Task.evalAsync(t))(_ + _))
+      val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => IO.mapBoth(acc, IO.evalAsync(t))(_ + _))
       sum <-> Task.evalAsync(numbers.sum)
     }
   }
 
   test("both task can fail with error") { implicit s =>
     val err1 = new RuntimeException("Error 1")
-    val t1 = Task.defer[Int](Task.raiseError(err1)).executeAsync
+    val t1 = IO.defer(Task.raiseError[Int](err1)).executeAsync
     val err2 = new RuntimeException("Error 2")
-    val t2 = Task.defer[Int](Task.raiseError(err2)).executeAsync
+    val t2 = IO.defer(Task.raiseError[Int](err2)).executeAsync
 
-    val fb = Task
+    val fb = IO
       .mapBoth(t1, t2)(_ + _)
       .executeWithOptions(_.disableAutoCancelableRunLoops)
       .runToFuture
@@ -130,11 +130,11 @@ object TaskMapBothSuite extends BaseTestSuite {
 
   test("both task can fail with terminal error") { implicit s =>
     val err1 = new RuntimeException("Error 1")
-    val t1: UIO[Int] = UIO.defer(Task.terminate(err1)).executeAsync
+    val t1: UIO[Int] = UIO.defer(IO.terminate(err1)).executeAsync
     val err2 = new RuntimeException("Error 2")
-    val t2: UIO[Int] = UIO.defer(Task.terminate(err2)).executeAsync
+    val t2: UIO[Int] = UIO.defer(IO.terminate(err2)).executeAsync
 
-    val fb = Task
+    val fb = IO
       .mapBoth(t1, t2)(_ + _)
       .executeWithOptions(_.disableAutoCancelableRunLoops)
       .runToFuture

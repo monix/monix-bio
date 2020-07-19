@@ -26,11 +26,11 @@ import monix.execution.{Cancelable, Scheduler}
 
 import scala.annotation.tailrec
 
-private[bio] final class TaskConnectionRef[E] extends CancelableF[Task[E, *]] {
+private[bio] final class TaskConnectionRef[E] extends CancelableF[IO[E, *]] {
   import TaskConnectionRef._
 
   @throws(classOf[IllegalStateException])
-  def `:=`(token: CancelToken[Task[E, *]])(implicit s: Scheduler): Unit =
+  def `:=`(token: CancelToken[IO[E, *]])(implicit s: Scheduler): Unit =
     unsafeSet(token)
 
   @throws(classOf[IllegalStateException])
@@ -38,12 +38,12 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[Task[E, *]] {
     unsafeSet(cancelable)
 
   @throws(classOf[IllegalStateException])
-  def `:=`(conn: CancelableF[Task[E, *]])(implicit s: Scheduler): Unit =
+  def `:=`(conn: CancelableF[IO[E, *]])(implicit s: Scheduler): Unit =
     unsafeSet(conn.cancel)
 
   @tailrec
   private def unsafeSet(
-    ref: AnyRef /* CancelToken[Task.Unsafe] | CancelableF[Task.Unsafe] | Cancelable */
+    ref: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */
   )(implicit s: Scheduler): Unit = {
 
     if (!state.compareAndSet(Empty, IsActive(ref))) {
@@ -71,20 +71,20 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[Task[E, *]] {
     @tailrec def loop(): CancelToken[UIO] =
       state.get() match {
         case IsCanceled | IsEmptyCanceled =>
-          Task.unit
+          IO.unit
         case IsActive(task) =>
           state.set(IsCanceled)
           UnsafeCancelUtils.unsafeCancel(task)
         case Empty =>
           if (state.compareAndSet(Empty, IsEmptyCanceled)) {
-            Task.unit
+            IO.unit
           } else {
             // $COVERAGE-OFF$
             loop() // retry
             // $COVERAGE-ON$
           }
       }
-    Task.suspendTotal(loop())
+    IO.suspendTotal(loop())
   }
 
   private def raiseError(): Nothing = {
@@ -107,9 +107,8 @@ private[bio] object TaskConnectionRef {
   private sealed trait State
   private case object Empty extends State
 
-  private final case class IsActive(
-    token: AnyRef /* CancelToken[Task.Unsafe] | CancelableF[Task.Unsafe] | Cancelable */
-  ) extends State
+  private final case class IsActive(token: AnyRef /* CancelToken[Task] | CancelableF[Task] | Cancelable */ )
+      extends State
   private case object IsCanceled extends State
   private case object IsEmptyCanceled extends State
 }

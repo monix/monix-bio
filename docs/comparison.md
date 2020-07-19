@@ -3,11 +3,10 @@ id: comparison
 title: Other Effects
 ---
 
-The following section shares the author's opinion about `monix.bio.Task` in comparison to other similar solutions at the time of writing (June 2020).
+The following section shares the author's opinion about `monix.bio.IO` in comparison to other similar solutions at the time of writing (June 2020).
 
-Keep in mind it can quickly become outdated. 
-If you have any ideas for possible reasons for, or against Monix then please contribute them to this section.
-Ideally, the section would limit bias to the minimum, but it's hard without an outsider's perspective.
+Keep in mind it can quickly become outdated. If you have any ideas for possible reasons for, or against Monix then please contribute them to this section.
+It's important to me to limit bias to the minimum, and it's hard without an outsider's perspective!
 
 ## Cats-Effect IO
 
@@ -21,18 +20,18 @@ Why Monix:
 - *Fewer implicits.* Monix only needs a `Scheduler` when executing the effect. 
 Cats-Effect IO needs a `ContextShift` (for any concurrent operator) or a `Timer` (for sleeping) depending on the situation. 
 It also heavily depends on `Cats` syntax which requires basic familiarity with the library and type class hierarchy.
-- *Better Thread Management*. Cats IO is missing an operator like [executeOn](http://localhost:3000/monix-bio/api/monix/bio/BIO.html#executeOn(s:monix.execution.Scheduler,forceAsync:Boolean):monix.bio.BIO[E,A]) which
+- *Better Thread Management*. Cats IO is missing an operator like [executeOn](http://localhost:3000/monix-bio/api/monix/bio/IO.html#executeOn(s:monix.execution.Scheduler,forceAsync:Boolean):monix.bio.IO[E,A]) which
 ensures that the task will execute on a specified thread pool. 
 Cats IO can only guarantee it up to the first asynchronous boundary. 
-Monix is also safer when using Callback-based builders like `Task.async` because it can guarantee that 
-the `Task` will continue on the default `Scheduler` regardless of where the callback is called.
+Monix is also safer when using Callback-based builders like `IO.async` because it can guarantee that 
+the `IO` will continue on the default `Scheduler` regardless of where the callback is called.
 - *Local.* Monix has a way to transparently propagate context over asynchronous boundaries which is handy for tracing without polluting the business logic.
 - *Better integration with Scala's Future.* We can use the same `Scheduler` and tracing libraries for both.
 - *Slightly higher performance*. In a lot of cases, performance is the same, however Monix provides a lot of hand-optimized methods that are derived in Cats IO, and thus, slower.
 For instance, compare `monixSequence` and `catsSequence` in [benchmark results](https://github.com/monix/monix-bio/tree/master/benchmarks/results).
 
 Choose for yourself:
-- *Typed errors.* Although there is still `monix.eval.Task` if you like the rest.
+- *Typed errors.* Although there is still `Monix Task` if you like the rest.
 
 ### Summary
 
@@ -53,25 +52,24 @@ Why Monix:
 - *Cats-Effect ecosystem.*
 
 Choose for yourself:
-- *Cancellation.* Unlike `Future`, `Task` can be cancelled. It sounds awesome, but it's no magic, and it's not possible to stop an effect immediately at an arbitrary point in time. 
+- *Cancellation.* Unlike `Future`, `IO` can be cancelled. It sounds awesome, but it's no magic, and it's not possible to stop an effect immediately at an arbitrary point in time. 
 Sometimes cancellation can be tricky, and many projects don't have any use case for it at all.
 - *Typed errors.*
 
 ## Monix Task
 
-The only difference between `monix.eval.Task[A]` and `monix.bio.Task[E, A]` are typed errors - Both the API and performance are very consistent.
+The only difference between Monix `Task` and `IO` are typed errors - Both the API and performance are very consistent.
 
-If you use `Task[Either[E, A]]` or `EitherT` a lot - you might find `Task[E, A]` far more pleasant to use.
+If you use `Task[Either[E, A]]` or `EitherT` a lot - you might find `IO` far more pleasant to use.
 
-If you don't, then `Task[A]` might be simpler as well as closer to Scala's `Future`. It also has better integration with `Observable`.
+If you don't, then `Task` might be simpler as well as closer to Scala's `Future`. It also has better integration with `Observable`.
 
 ## ZIO
 
 Why ZIO:
 - *Bigger community and ZIO-specific ecosystem.*
 - *Better stack traces.* Killer feature. Hopefully it will come to Monix this year but until then it's a huge advantage for ZIO.
-- *More flexible cancellation.* Monix has an `uncancelable` operator but unlike ZIO, it doesn't have the reverse. 
-ZIO has also implemented structured concurrency for fibers.
+- *More flexible with relation to cancellation.* Monix has an `uncancelable` operator but unlike ZIO, it doesn't have the reverse. ZIO has also implemented structured concurrency for fibers.
 - *Fewer dependencies.* Monix depends on `Cats-Effect` which brings a ton of redundant syntax and instances from `Cats` which increases jar sizes and makes Monix slower to upgrade to new Scala versions.
 
 Why Monix:
@@ -84,12 +82,12 @@ This point is mostly about core Monix because `BIO` is a new thing, but it share
 
 Choose for yourself:
 - *ZIO Environment.* ZIO adds an extra type parameter (`R`) for dependency management. 
-Monix favors a classic approach (passing dependencies as parameters, any DI library, or `F[_]`).
+Monix favors the classic approach (passing dependencies as parameters, any DI library, or `F[_]`).
 If you don't like `Zlayer`, you can pretend `R` doesn't exist, but you will encounter it a lot in type signatures and all `ZIO` libraries use it.
 - *Framework experience vs pluggable library.* ZIO is more opinionated and pushes you to use `ZIO`-everything, otherwise you might have an underwhelming experience.
 Monix wants to naturally interop with both FP and non-FP ecosystem but it might have less "batteries" included. 
-ZIO can be better at forcing you to follow a specific pattern of programming, while Monix can play nicer with your team's individual preferences and mixed (e.g. using both Task and Future) codebases.
-- *Innovation.* In recent history, ZIO tends to bring many new ideas, and Monix is more conservative and puts more emphasis on stability.
+ZIO can be better at forcing you to follow a specific pattern of programming, while Monix can play nicer with your team's individual preferences and mixed (e.g. using both Monix and Future) codebases.
+- *Speed of development.* In recent history, ZIO tends to bring many new ideas, and Monix is more conservative but puts more emphasis on stability.
 At the time of writing (19th June 2020), ZIO is yet to release a stable version, but it's ahead in features.
 
 ### Summary

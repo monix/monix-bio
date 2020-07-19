@@ -25,7 +25,7 @@ import scala.util.Success
 object TaskExecuteWithModelSuite extends BaseTestSuite {
 
   def readModel: UIO[ExecutionModel] =
-    Task.deferAction(s => Task.now(s.executionModel))
+    IO.deferAction(s => IO.now(s.executionModel))
 
   test("executeWithModel works") { implicit sc =>
     assertEquals(sc.executionModel, ExecutionModel.Default)
@@ -40,10 +40,10 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
 
   testAsync("local.write.executeWithModel(AlwaysAsyncExecution) works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- IOLocal(10)
       _ <- l.write(100).executeWithModel(AlwaysAsyncExecution)
       _ <- UIO.shift
       v <- l.read
@@ -56,10 +56,10 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
 
   testAsync("local.write.executeWithModel(SynchronousExecution) works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- IOLocal(10)
       _ <- l.write(100).executeWithModel(SynchronousExecution)
       _ <- UIO.shift
       v <- l.read
@@ -72,11 +72,11 @@ object TaskExecuteWithModelSuite extends BaseTestSuite {
 
   test("executeWithModel is stack safe in flatMap loops") { implicit sc =>
     def loop(n: Int, acc: Long): UIO[Long] =
-      Task.unit.executeWithModel(SynchronousExecution).flatMap { _ =>
+      IO.unit.executeWithModel(SynchronousExecution).flatMap { _ =>
         if (n > 0)
           loop(n - 1, acc + 1)
         else
-          Task.now(acc)
+          IO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()

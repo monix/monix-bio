@@ -27,10 +27,10 @@ import scala.util.{Failure, Success}
 
 object TaskParTraverseNSuite extends BaseTestSuite {
 
-  test("Task.parTraverseN allows fully sequential execution") { implicit s =>
+  test("IO.parTraverseN allows fully sequential execution") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 1)(numbers) { num =>
-      Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 1)(numbers) { num =>
+      IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -45,10 +45,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN allows fully concurrent execution") { implicit s =>
+  test("IO.parTraverseN allows fully concurrent execution") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 5)(numbers) { num =>
-      Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 5)(numbers) { num =>
+      IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -63,10 +63,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN allows partially concurrent execution") { implicit s =>
+  test("IO.parTraverseN allows partially concurrent execution") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 2)(numbers) { num =>
-      Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 2)(numbers) { num =>
+      IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -85,11 +85,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns an error when fully sequential execution fails in a typed way") { implicit s =>
+  test("IO.parTraverseN returns an error when fully sequential execution fails in a typed way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 1)(numbers) { num =>
-      if (num == 10) Task.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
-      else Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 1)(numbers) { num =>
+      if (num == 10) IO.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
+      else IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -104,11 +104,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns an error when fully sequential execution fails in a terminal way") { implicit s =>
+  test("IO.parTraverseN returns an error when fully sequential execution fails in a terminal way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 1)(numbers) { num =>
-      if (num == 10) Task.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
-      else Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 1)(numbers) { num =>
+      if (num == 10) IO.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
+      else IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -123,11 +123,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns an error when fully concurrent execution fails in a typed way") { implicit s =>
+  test("IO.parTraverseN returns an error when fully concurrent execution fails in a typed way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 5)(numbers) { num =>
-      if (num == 10) Task.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
-      else Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 5)(numbers) { num =>
+      if (num == 10) IO.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
+      else IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -142,11 +142,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns an error when fully concurrent execution fails in a terminal way") { implicit s =>
+  test("IO.parTraverseN returns an error when fully concurrent execution fails in a terminal way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 5)(numbers) { num =>
-      if (num == 10) Task.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
-      else Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 5)(numbers) { num =>
+      if (num == 10) IO.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
+      else IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -161,11 +161,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns an error when partially concurrent execution fails in a typed way") { implicit s =>
+  test("IO.parTraverseN returns an error when partially concurrent execution fails in a typed way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 2)(numbers) { num =>
-      if (num == 10) Task.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
-      else Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 2)(numbers) { num =>
+      if (num == 10) IO.fromEither("dummy error".asLeft[Int]).delayExecution(num.seconds)
+      else IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -182,11 +182,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns an error when partially concurrent execution fails in a terminal way") { implicit s =>
+  test("IO.parTraverseN returns an error when partially concurrent execution fails in a terminal way") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 2)(numbers) { num =>
-      if (num == 10) Task.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
-      else Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 2)(numbers) { num =>
+      if (num == 10) IO.terminate(DummyException("dummy exception")).delayExecution(num.seconds)
+      else IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -203,11 +203,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "no tasks should be left")
   }
 
-  test("Task.parTraverseN returns a terminal error when an exception is thrown") { implicit s =>
+  test("IO.parTraverseN returns a terminal error when an exception is thrown") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 5)(numbers) { num =>
+    val traverse = IO.parTraverseN(parallelism = 5)(numbers) { num =>
       if (num == 10) throw DummyException("dummy exception")
-      else Task.fromEither(num.asRight[String])
+      else IO.fromEither(num.asRight[String])
     }
     val f = traverse.attempt.runToFuture
 
@@ -215,10 +215,10 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(DummyException("dummy exception"))))
   }
 
-  test("Task.parTraverseN should be cancelable") { implicit s =>
+  test("IO.parTraverseN should be cancelable") { implicit s =>
     val numbers = List(2, 5, 10, 20, 40)
-    val traverse = Task.parTraverseN(parallelism = 2)(numbers) { num =>
-      Task.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
+    val traverse = IO.parTraverseN(parallelism = 2)(numbers) { num =>
+      IO.fromEither((num * num).asRight[String]).delayExecution(num.seconds)
     }
     val f = traverse.attempt.runToFuture
 
@@ -232,11 +232,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "every task should be cancelled")
   }
 
-  test("Task.parTraverseN should be stack safe for synchronous tasks with low parallelism") { implicit s =>
+  test("IO.parTraverseN should be stack safe for synchronous tasks with low parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val traverse = Task
-      .parTraverseN(parallelism = 10)(numbers)(num => Task.fromEither(num.asRight[String]))
+    val traverse = IO
+      .parTraverseN(parallelism = 10)(numbers)(num => IO.fromEither(num.asRight[String]))
       .map(_.sum)
     val f = traverse.attempt.runToFuture
 
@@ -244,11 +244,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
   }
 
-  test("Task.parTraverseN should be stack safe for asynchronous tasks with low parallelism") { implicit s =>
+  test("IO.parTraverseN should be stack safe for asynchronous tasks with low parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val traverse = Task
-      .parTraverseN(parallelism = 10)(numbers)(num => Task.fromEither(num.asRight[String]).executeAsync)
+    val traverse = IO
+      .parTraverseN(parallelism = 10)(numbers)(num => IO.fromEither(num.asRight[String]).executeAsync)
       .map(_.sum)
     val f = traverse.attempt.runToFuture
 
@@ -256,11 +256,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
   }
 
-  test("Task.parTraverseN should be stack safe for synchronous tasks with high parallelism") { implicit s =>
+  test("IO.parTraverseN should be stack safe for synchronous tasks with high parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val traverse = Task
-      .parTraverseN(parallelism = count)(numbers)(num => Task.fromEither(num.asRight[String]))
+    val traverse = IO
+      .parTraverseN(parallelism = count)(numbers)(num => IO.fromEither(num.asRight[String]))
       .map(_.sum)
     val f = traverse.attempt.runToFuture
 
@@ -268,11 +268,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
   }
 
-  test("Task.parTraverseN should be stack safe for asynchronous tasks with high parallelism") { implicit s =>
+  test("IO.parTraverseN should be stack safe for asynchronous tasks with high parallelism") { implicit s =>
     val count = if (Platform.isJVM) 100000 else 10000
     val numbers = 1.to(count).toList
-    val traverse = Task
-      .parTraverseN(parallelism = count)(numbers)(num => Task.fromEither(num.asRight[String]).executeAsync)
+    val traverse = IO
+      .parTraverseN(parallelism = count)(numbers)(num => IO.fromEither(num.asRight[String]).executeAsync)
       .map(_.sum)
     val f = traverse.attempt.runToFuture
 
@@ -280,11 +280,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(numbers.sum))))
   }
 
-  test("Task.parTraverseN allows running the same effect multiple times") { implicit s =>
+  test("IO.parTraverseN allows running the same effect multiple times") { implicit s =>
     val counter = AtomicInt(0)
     val numbers = List(2, 5, 10, 20, 40)
-    val effect = Task.evalAsync(counter.increment())
-    val traverse = Task.parTraverseN(parallelism = 2)(numbers) { num =>
+    val effect = IO.evalAsync(counter.increment())
+    val traverse = IO.parTraverseN(parallelism = 2)(numbers) { num =>
       effect.map(_ => num * num)
     }
     val f = traverse.attempt.runToFuture
@@ -294,11 +294,11 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(List(4, 25, 100, 400, 1600)))))
   }
 
-  test("Task.parTraverseN allows reusing a memoized effect multiple times") { implicit s =>
+  test("IO.parTraverseN allows reusing a memoized effect multiple times") { implicit s =>
     val counter = AtomicInt(0)
     val numbers = List(2, 5, 10, 20, 40)
-    val effect = Task.evalAsync(counter.increment()).memoize
-    val traverse = Task.parTraverseN(parallelism = 2)(numbers) { num =>
+    val effect = IO.evalAsync(counter.increment()).memoize
+    val traverse = IO.parTraverseN(parallelism = 2)(numbers) { num =>
       effect.map(_ => num * num)
     }
     val f = traverse.attempt.runToFuture

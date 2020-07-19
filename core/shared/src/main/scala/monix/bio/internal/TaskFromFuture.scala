@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.Task.Context
-import monix.bio.{BiCallback, Task}
+import monix.bio.IO.Context
+import monix.bio.{BiCallback, IO, Task}
 import monix.execution._
 import monix.execution.cancelables.SingleAssignCancelable
 import monix.execution.schedulers.TrampolinedRunnable
@@ -30,7 +30,7 @@ import scala.util.control.NonFatal
 private[bio] object TaskFromFuture {
 
   /** Implementation for `Task.fromFuture`. */
-  def strict[A](f: Future[A]): Task.Unsafe[A] = {
+  def strict[A](f: Future[A]): Task[A] = {
     f.value match {
       case None =>
         f match {
@@ -48,7 +48,7 @@ private[bio] object TaskFromFuture {
   }
 
   /** Implementation for `Task.deferFutureAction`. */
-  def deferAction[A](f: Scheduler => Future[A]): Task.Unsafe[A] =
+  def deferAction[A](f: Scheduler => Future[A]): Task[A] =
     rawAsync[A] { (ctx, cb) =>
       implicit val sc = ctx.scheduler
       // Prevents violations of the Callback contract
@@ -75,7 +75,7 @@ private[bio] object TaskFromFuture {
       }
     }
 
-  def fromCancelablePromise[A](p: CancelablePromise[A]): Task.Unsafe[A] = {
+  def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] = {
     val start: Start[Throwable, A] = (ctx, cb) => {
       implicit val ec = ctx.scheduler
       if (p.isCompleted) {
@@ -88,7 +88,7 @@ private[bio] object TaskFromFuture {
       }
     }
 
-    Task.Async(
+    IO.Async(
       start,
       trampolineBefore = false,
       trampolineAfter = false,
@@ -96,15 +96,15 @@ private[bio] object TaskFromFuture {
     )
   }
 
-  private def rawAsync[A](start: (Context[Throwable], BiCallback[Throwable, A]) => Unit): Task.Unsafe[A] =
-    Task.Async(
+  private def rawAsync[A](start: (Context[Throwable], BiCallback[Throwable, A]) => Unit): Task[A] =
+    IO.Async(
       start,
       trampolineBefore = true,
       trampolineAfter = false,
       restoreLocals = true
     )
 
-  private def startSimple[A](ctx: Task.Context[Throwable], cb: BiCallback[Throwable, A], f: Future[A]) = {
+  private def startSimple[A](ctx: IO.Context[Throwable], cb: BiCallback[Throwable, A], f: Future[A]) = {
 
     f.value match {
       case Some(value) =>
@@ -117,7 +117,7 @@ private[bio] object TaskFromFuture {
   }
 
   private def startCancelable[A](
-    ctx: Task.Context[Throwable],
+    ctx: IO.Context[Throwable],
     cb: BiCallback[Throwable, A],
     f: Future[A],
     c: Cancelable

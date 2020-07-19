@@ -25,9 +25,9 @@ import scala.util.{Failure, Success}
 
 object TaskLikeConversionsJava8Suite extends BaseTestSuite {
 
-  test("Task.from converts successful CompletableFuture") { implicit s =>
+  test("IO.from converts successful CompletableFuture") { implicit s =>
     val future = new CompletableFuture[Int]()
-    val f = Task.from(future).runToFuture
+    val f = IO.from(future).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -37,9 +37,9 @@ object TaskLikeConversionsJava8Suite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed CompletableFuture") { implicit s =>
+  test("IO.from converts failed CompletableFuture") { implicit s =>
     val future = new CompletableFuture[Int]()
-    val f = Task.from(future).runToFuture
+    val f = IO.from(future).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -51,9 +51,9 @@ object TaskLikeConversionsJava8Suite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.from preserves cancellability of CompletableFuture") { implicit s =>
+  test("IO.from preserves cancellability of CompletableFuture") { implicit s =>
     val future = new CompletableFuture[Int]()
-    val f = Task.from(future).runToFuture
+    val f = IO.from(future).runToFuture
 
     s.tick()
     assertEquals(f.value, None)

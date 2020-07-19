@@ -19,19 +19,19 @@ package monix.bio
 
 package internal
 
-import monix.bio.Task.Context
+import monix.bio.IO.Context
 import monix.execution.Scheduler
 
 private[bio] object TaskDeferAction {
 
   /** Implementation for `Task.deferAction`. */
-  def apply[E, A](f: Scheduler => Task[E, A]): Task[E, A] = {
+  def apply[E, A](f: Scheduler => IO[E, A]): IO[E, A] = {
     val start = (context: Context[E], callback: BiCallback[E, A]) => {
       val fa = f(context.scheduler)
-      Task.unsafeStartNow(fa, context, callback)
+      IO.unsafeStartNow(fa, context, callback)
     }
 
-    Task.Async(
+    IO.Async(
       start,
       trampolineBefore = true,
       trampolineAfter = true,

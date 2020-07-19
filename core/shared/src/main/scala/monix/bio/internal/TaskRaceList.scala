@@ -19,7 +19,7 @@ package monix.bio.internal
 
 import cats.effect.CancelToken
 import monix.bio
-import monix.bio.{BiCallback, Cause, Task, UIO}
+import monix.bio.{BiCallback, Cause, IO, UIO}
 import monix.execution.Scheduler
 import monix.execution.atomic.{Atomic, PaddingStrategy}
 import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
@@ -27,18 +27,18 @@ import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
 private[bio] object TaskRaceList {
 
   /**
-    * Implementation for `Task.raceMany`
+    * Implementation for `IO.raceMany`
     */
-  def apply[E, A](tasks: Iterable[Task[E, A]]): Task[E, A] =
-    Task.Async(new Register(tasks), trampolineBefore = true, trampolineAfter = true)
+  def apply[E, A](tasks: Iterable[IO[E, A]]): IO[E, A] =
+    IO.Async(new Register(tasks), trampolineBefore = true, trampolineAfter = true)
 
   // Implementing Async's "start" via `ForkedStart` in order to signal
   // that this is a task that forks on evaluation.
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A](tasks: Iterable[Task[E, A]]) extends ForkedRegister[E, A] {
-    def apply(context: bio.Task.Context[E], callback: BiCallback[E, A]): Unit = {
+  private final class Register[E, A](tasks: Iterable[IO[E, A]]) extends ForkedRegister[E, A] {
+    def apply(context: bio.IO.Context[E], callback: BiCallback[E, A]): Unit = {
       implicit val s: Scheduler = context.scheduler
 
       val isActive = Atomic.withPadding(true, PaddingStrategy.LeftRight128)
@@ -55,7 +55,7 @@ private[bio] object TaskRaceList {
         val taskContext = context.withConnection(taskCancelable)
         index += 1
 
-        Task.unsafeStartEnsureAsync(
+        IO.unsafeStartEnsureAsync(
           task,
           taskContext,
           new BiCallback[E, A] {

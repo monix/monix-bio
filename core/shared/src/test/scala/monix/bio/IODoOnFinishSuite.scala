@@ -22,11 +22,11 @@ import monix.execution.exceptions.DummyException
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-object TaskDoOnFinishSuite extends BaseTestSuite {
-  test("Task#doOnFinish should work on successful task") { implicit s =>
+object IODoOnFinishSuite extends BaseTestSuite {
+  test("IO#doOnFinish should work on successful task") { implicit s =>
     var effect = 0
-    val successfulBIO = UIO(10).delayExecution(1.millisecond)
-    val bioWithFinisher = successfulBIO.doOnFinish {
+    val successfulIO = UIO(10).delayExecution(1.millisecond)
+    val bioWithFinisher = successfulIO.doOnFinish {
       case None => UIO.delay { effect += 2 }
       case _ => UIO.delay { effect += 3 }
     }
@@ -38,11 +38,11 @@ object TaskDoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Success(10)))
   }
 
-  test("Task#doOnFinish should work on task with raised error") { implicit s =>
+  test("IO#doOnFinish should work on task with raised error") { implicit s =>
     var effect = 0
     val errorValue = "StringError"
-    val errorProneBIO = Task.raiseError(errorValue)
-    val bioWithFinisher = errorProneBIO.doOnFinish {
+    val errorProneIO = IO.raiseError(errorValue)
+    val bioWithFinisher = errorProneIO.doOnFinish {
       case Some(Cause.Error(`errorValue`)) => UIO.delay { effect += 2 }
       case _ => UIO.delay { effect += 3 }
     }
@@ -54,14 +54,14 @@ object TaskDoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Success(Left(errorValue))))
   }
 
-  test("Task#doOnFinish should work on terminated task") { implicit s =>
+  test("IO#doOnFinish should work on terminated task") { implicit s =>
     var effect = 0
     val fatalError = DummyException("Coincidence")
-    val fatalBIO = Task
+    val fatalIO = IO
       .now(10)
       .delayExecution(1.millisecond)
       .map(_ => throw fatalError)
-    val bioWithFinisher = fatalBIO.doOnFinish {
+    val bioWithFinisher = fatalIO.doOnFinish {
       case Some(Cause.Termination(`fatalError`)) => UIO.delay { effect += 2 }
       case _ => UIO.delay { effect += 3 }
     }
@@ -73,9 +73,9 @@ object TaskDoOnFinishSuite extends BaseTestSuite {
     assertEquals(bioExec.value, Some(Failure(fatalError)))
   }
 
-  test("Task#doOnFinish should not trigger any finishing action when Task is cancelled") { implicit s =>
+  test("IO#doOnFinish should not trigger any finishing action when IO is cancelled") { implicit s =>
     var effect = 0
-    val bioToCancel = Task
+    val bioToCancel = IO
       .now(10)
       .delayExecution(10.millisecond)
       .doOnFinish(_ => UIO.delay { effect += 2 })

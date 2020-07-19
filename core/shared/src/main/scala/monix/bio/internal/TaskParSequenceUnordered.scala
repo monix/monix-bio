@@ -18,9 +18,9 @@
 package monix.bio.internal
 
 import cats.effect.CancelToken
-import monix.bio.Task.{Async, Context}
+import monix.bio.IO.{Async, Context}
 import monix.bio.compat.internal.toIterator
-import monix.bio.{BiCallback, Task, UIO}
+import monix.bio.{BiCallback, IO, UIO}
 import monix.execution.Scheduler
 import monix.execution.atomic.PaddingStrategy.LeftRight128
 import monix.execution.atomic.{Atomic, AtomicAny}
@@ -33,9 +33,9 @@ import scala.util.control.NonFatal
 private[bio] object TaskParSequenceUnordered {
 
   /**
-    * Implementation for `Task.parSequenceUnordered`
+    * Implementation for `Task.gatherUnordered`
     */
-  def apply[E, A](in: Iterable[Task[E, A]]): Task[E, List[A]] = {
+  def apply[E, A](in: Iterable[IO[E, A]]): IO[E, List[A]] = {
     Async(
       new Register(in),
       trampolineBefore = true,
@@ -49,7 +49,7 @@ private[bio] object TaskParSequenceUnordered {
   //
   // N.B. the contract is that the injected callback gets called after
   // a full async boundary!
-  private final class Register[E, A](in: Iterable[Task[E, A]]) extends ForkedRegister[E, List[A]] {
+  private final class Register[E, A](in: Iterable[IO[E, A]]) extends ForkedRegister[E, List[A]] {
 
     def maybeSignalFinal(
       ref: AtomicAny[State[A]],
@@ -159,7 +159,7 @@ private[bio] object TaskParSequenceUnordered {
           allCancelables += stacked.cancel
 
           // Light asynchronous boundary
-          Task.unsafeStartEnsureAsync(
+          IO.unsafeStartEnsureAsync(
             task,
             childCtx,
             new BiCallback[E, A] {

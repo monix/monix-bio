@@ -17,13 +17,13 @@
 
 package monix.bio
 
-import cats.effect._
+import cats.effect.{ConcurrentEffect, ContextShift, ExitCode, IOApp, Timer}
 import monix.catnap.SchedulerEffect
 import monix.bio.instances.CatsConcurrentEffectForTask
 import monix.execution.Scheduler
 
-/** Safe `App` type that executes a [[Task]].  Shutdown occurs after
-  * the `Task` completes, as follows:
+/** Safe `App` type that executes a [[IO]].  Shutdown occurs after
+  * the `IO` completes, as follows:
   *
   * - If completed with `ExitCode.Success`, the main method exits and
   *   shutdown is handled by the platform.
@@ -31,10 +31,10 @@ import monix.execution.Scheduler
   * - If completed with any other `ExitCode`, `sys.exit` is called
   *   with the specified code.
   *
-  * - If the `Task` raises an error, the stack trace is printed to
+  * - If the `IO` raises an error, the stack trace is printed to
   *   standard error and `sys.exit(1)` is called.
   *
-  * When a shutdown is requested via a signal, the `Task` is canceled and
+  * When a shutdown is requested via a signal, the `IO` is canceled and
   * we wait for the `IO` to release any resources.  The process exits
   * with the numeric value of the signal plus 128.
   *
@@ -43,7 +43,7 @@ import monix.execution.Scheduler
   *   import cats.implicits._
   *   import monix.bio._
   *
-  *   object MyApp extends TaskApp {
+  *   object MyApp extends BIOApp {
   *     def run(args: List[String]): UIO[ExitCode] =
   *       args.headOption match {
   *         case Some(name) =>
@@ -56,42 +56,42 @@ import monix.execution.Scheduler
   *
   * N.B. this is homologous with
   * [[https://typelevel.org/cats-effect/datatypes/ioapp.html cats.effect.IOApp]],
-  * but meant for usage with [[Task]].
+  * but meant for usage with [[IO]].
   *
   * Works on top of JavaScript as well ;-)
   */
-trait TaskApp {
+trait BIOApp {
   // To implement ...
   def run(args: List[String]): UIO[ExitCode]
 
-  /** Scheduler for executing the [[Task.Unsafe]] action.
+  /** Scheduler for executing the [[Task]] action.
     * Defaults to `global`, but can be overridden.
     */
   protected def scheduler: Scheduler = Scheduler.global
 
-  /** [[monix.bio.Task.Options Options]] for executing the
-    * [[Task.Unsafe]] action. The default value is defined in
-    * [[monix.bio.Task.defaultOptions defaultOptions]],
+  /** [[monix.bio.IO.Options Options]] for executing the
+    * [[Task]] action. The default value is defined in
+    * [[monix.bio.IO.defaultOptions defaultOptions]],
     * but can be overridden.
     */
-  protected def options: Task.Options = Task.defaultOptions.withSchedulerFeatures(scheduler)
+  protected def options: IO.Options = IO.defaultOptions.withSchedulerFeatures(scheduler)
 
   /** Provides the
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
     * instance of this runtime environment.
     */
-  protected implicit lazy val catsEffect: ConcurrentEffect[Task.Unsafe] =
+  protected implicit lazy val catsEffect: ConcurrentEffect[Task] =
     new CatsConcurrentEffectForTask()(scheduler, options)
 
   final def main(args: Array[String]): Unit = {
     val self = this
     val app = new IOApp {
-      override implicit lazy val contextShift: ContextShift[IO] =
-        SchedulerEffect.contextShift[IO](scheduler)(IO.ioEffect)
-      override implicit lazy val timer: Timer[IO] =
-        SchedulerEffect.timerLiftIO[IO](scheduler)(IO.ioEffect)
-      def run(args: List[String]): IO[ExitCode] =
-        self.run(args).to[IO]
+      override implicit lazy val contextShift: ContextShift[cats.effect.IO] =
+        SchedulerEffect.contextShift[cats.effect.IO](scheduler)(cats.effect.IO.ioEffect)
+      override implicit lazy val timer: Timer[cats.effect.IO] =
+        SchedulerEffect.timerLiftIO[cats.effect.IO](scheduler)(cats.effect.IO.ioEffect)
+      def run(args: List[String]): cats.effect.IO[ExitCode] =
+        self.run(args).to[cats.effect.IO]
     }
     app.main(args)
   }

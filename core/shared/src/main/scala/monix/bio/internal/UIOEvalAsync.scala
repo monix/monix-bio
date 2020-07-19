@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{BiCallback, Task, UIO}
+import monix.bio.{BiCallback, IO, UIO}
 
 import scala.util.control.NonFatal
 
@@ -27,7 +27,7 @@ private[bio] object UIOEvalAsync {
     * Implementation for `UIO.evalAsync`.
     */
   def apply[A](a: () => A): UIO[A] =
-    Task.Async[Nothing, A](
+    IO.Async[Nothing, A](
       new EvalAsyncRegister[A](a),
       trampolineAfter = false,
       trampolineBefore = false,
@@ -37,7 +37,7 @@ private[bio] object UIOEvalAsync {
   // Implementing Async's "start" via `ForkedStart` in order to signal
   // that this is a task that forks on evaluation
   private final class EvalAsyncRegister[A](a: () => A) extends ForkedRegister[Nothing, A] {
-    def apply(ctx: Task.Context[Nothing], cb: BiCallback[Nothing, A]): Unit =
+    def apply(ctx: IO.Context[Nothing], cb: BiCallback[Nothing, A]): Unit =
       ctx.scheduler.executeAsync(() => {
         ctx.frameRef.reset()
         var streamError = true

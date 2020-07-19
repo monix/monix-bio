@@ -20,11 +20,11 @@ package monix.bio
 import scala.util.Success
 
 object TaskVoidSuite extends BaseTestSuite {
-  test("Task.void should work") { implicit s =>
+  test("IO.void should work") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
-    val task = Task(trigger()).void
+    val task = IO(trigger()).void
 
     assert(!wasTriggered, "!wasTriggered")
 

@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.IO
+import cats.effect.{IO => CIO}
 import cats.effect.laws.discipline._
 import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
 import cats.kernel.laws.discipline.MonoidTests
@@ -34,7 +34,7 @@ import scala.util.Try
   */
 object TypeClassLawsForTaskRunSyncUnsafeSuite
     extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-      Task.defaultOptions.disableAutoCancelableRunLoops
+      IO.defaultOptions.disableAutoCancelableRunLoops
     )
 
 /**
@@ -44,15 +44,15 @@ object TypeClassLawsForTaskRunSyncUnsafeSuite
   */
 object TypeClassLawsForTaskAutoCancelableRunSyncUnsafeSuite
     extends BaseTypeClassLawsForTaskRunSyncUnsafeSuite()(
-      Task.defaultOptions.enableAutoCancelableRunLoops
+      IO.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: Task.Options)
+class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: IO.Options)
     extends monix.execution.BaseLawsSuite with ArbitraryInstancesBase {
 
   implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
   implicit val cs = IO.contextShift(sc)
-  implicit val ap: Applicative[Task.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
+  implicit val ap: Applicative[IO.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
 
   val timeout = {
     if (System.getenv("TRAVIS") == "true" || System.getenv("CI") == "true")
@@ -63,13 +63,13 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: Task.Options)
 
   implicit val params = Parameters(
     // Disabling non-terminating tests (that test equivalence with Task.never)
-    // because they'd behave really badly with an Eq[Task.Unsafe] that depends on
+    // because they'd behave really badly with an Eq[Task] that depends on
     // blocking threads
     allowNonTerminationLaws = false,
     stackSafeIterationsCount = 10000
   )
 
-  implicit def equalityBIO[E, A](implicit eqA: Eq[A], eqE: Eq[E]): Eq[Task[E, A]] =
+  implicit def equalityIO[E, A](implicit eqA: Eq[A], eqE: Eq[E]): Eq[IO[E, A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.attempt.runSyncUnsafeOpt(timeout))
       val tb = Try(b.attempt.runSyncUnsafeOpt(timeout))
@@ -77,41 +77,41 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: Task.Options)
       equalityTry[Either[E, A]].eqv(ta, tb)
     }
 
-  implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task.Unsafe[A]] =
+  implicit def equalityTask[A](implicit A: Eq[A]): Eq[Task[A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.runSyncUnsafeOpt(timeout))
       val tb = Try(b.runSyncUnsafeOpt(timeout))
       equalityTry[A].eqv(ta, tb)
     }
 
-  implicit def equalityTaskPar[A](implicit A: Eq[A]): Eq[Task.Par[Throwable, A]] =
+  implicit def equalityTaskPar[A](implicit A: Eq[A]): Eq[IO.Par[Throwable, A]] =
     Eq.instance { (a, b) =>
-      import Task.Par.unwrap
+      import IO.Par.unwrap
       val ta = Try(unwrap(a).runSyncUnsafeOpt(timeout))
       val tb = Try(unwrap(b).runSyncUnsafeOpt(timeout))
       equalityTry[A].eqv(ta, tb)
     }
 
-  implicit def equalityIO[A](implicit A: Eq[A]): Eq[IO[A]] =
+  implicit def equalityCIO[A](implicit A: Eq[A]): Eq[CIO[A]] =
     Eq.instance { (a, b) =>
       val ta = Try(a.unsafeRunTimed(timeout).get)
       val tb = Try(b.unsafeRunTimed(timeout).get)
       equalityTry[A].eqv(ta, tb)
     }
 
-  checkAll("CoflatMap[Task.Unsafe]", CoflatMapTests[Task.Unsafe].coflatMap[Int, Int, Int])
+  checkAll("CoflatMap[Task]", CoflatMapTests[Task].coflatMap[Int, Int, Int])
 
-  checkAll("Concurrent[Task.Unsafe]", ConcurrentTests[Task.Unsafe].concurrent[Int, Int, Int])
+  checkAll("Concurrent[Task]", ConcurrentTests[Task].concurrent[Int, Int, Int])
 
-  checkAll("ConcurrentEffect[Task.Unsafe]", ConcurrentEffectTests[Task.Unsafe].concurrentEffect[Int, Int, Int])
+  checkAll("ConcurrentEffect[Task]", ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int])
 
-  checkAll("Applicative[Task.Par]", ApplicativeTests[Task.Par[Throwable, *]].applicative[Int, Int, Int])
+  checkAll("Applicative[Task.Par]", ApplicativeTests[IO.Par[Throwable, *]].applicative[Int, Int, Int])
 
-  checkAll("Parallel[Task.Unsafe, Task.Par]", ParallelTests[Task.Unsafe, Task.Par[Throwable, *]].parallel[Int, Int])
+  checkAll("Parallel[Task, Task.Par]", ParallelTests[Task, IO.Par[Throwable, *]].parallel[Int, Int])
 
-  checkAll("Monoid[Task[Throwable, Int]]", MonoidTests[Task[Throwable, Int]].monoid)
+  checkAll("Monoid[IO[Throwable, Int]]", MonoidTests[IO[Throwable, Int]].monoid)
 
-  checkAllAsync("Bifunctor[Task[String, Int]]") { implicit ec =>
-    BifunctorTests[Task].bifunctor[String, String, String, Int, Int, Int]
+  checkAllAsync("Bifunctor[IO[String, Int]]") { implicit ec =>
+    BifunctorTests[IO].bifunctor[String, String, String, Int, Int, Int]
   }
 }

@@ -23,31 +23,31 @@ import monix.execution.internal.Platform
 import scala.util.{Failure, Success}
 
 object TaskMaterializeSuite extends BaseTestSuite {
-  test("Task.now.materialize") { implicit s =>
-    assertEquals(Task.now(10).materialize.runSyncStep, Right(Success(10)))
+  test("IO.now.materialize") { implicit s =>
+    assertEquals(IO.now(10).materialize.runSyncStep, Right(Success(10)))
   }
 
-  test("Task.error.materialize") { implicit s =>
+  test("IO.error.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    assertEquals(Task.raiseError(dummy).materialize.runToFuture.value, Some(Success(Failure(dummy))))
+    assertEquals(IO.raiseError(dummy).materialize.runToFuture.value, Some(Success(Failure(dummy))))
   }
 
-  test("Task.terminate.materialize") { implicit s =>
+  test("IO.terminate.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    assertEquals(Task.terminate(dummy).materialize.runToFuture.value, Some(Failure(dummy)))
+    assertEquals(IO.terminate(dummy).materialize.runToFuture.value, Some(Failure(dummy)))
   }
 
-//  test("Task.evalOnce.materialize") { implicit s =>
-//    assertEquals(Task.evalOnce(10).materialize.runSyncStep, Right(Success(Right(10))))
+//  test("IO.evalOnce.materialize") { implicit s =>
+//    assertEquals(IO.evalOnce(10).materialize.runSyncStep, Right(Success(Right(10))))
 //  }
 
-  test("Task.evalOnce.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task.Unsafe[Int] =
-      if (n <= 0) Task.evalOnce(n)
+  test("IO.evalOnce.materialize should be stack safe") { implicit s =>
+    def loop(n: Int): Task[Int] =
+      if (n <= 0) IO.evalOnce(n)
       else
-        Task.evalOnce(n).materialize.flatMap {
+        IO.evalOnce(n).materialize.flatMap {
           case Success(_) => loop(n - 1)
-          case Failure(ex) => Task.raiseError(ex)
+          case Failure(ex) => IO.raiseError(ex)
         }
 
     val count = if (Platform.isJVM) 50000 else 5000
@@ -55,78 +55,78 @@ object TaskMaterializeSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task.eval.materialize") { implicit s =>
-    assertEquals(Task.eval(10).materialize.runSyncStep, Right(Success(10)))
+  test("IO.eval.materialize") { implicit s =>
+    assertEquals(IO.eval(10).materialize.runSyncStep, Right(Success(10)))
   }
 
-  test("Task.defer.materialize") { implicit s =>
-    assertEquals(Task.defer(Task.now(10)).materialize.runSyncStep, Right(Success(10)))
+  test("IO.defer.materialize") { implicit s =>
+    assertEquals(IO.defer(IO.now(10)).materialize.runSyncStep, Right(Success(10)))
   }
 
-  test("Task.defer.flatMap.materialize") { implicit s =>
-    assertEquals(Task.defer(Task.now(10)).flatMap(Task.now).materialize.runSyncStep, Right(Success(10)))
+  test("IO.defer.flatMap.materialize") { implicit s =>
+    assertEquals(IO.defer(IO.now(10)).flatMap(IO.now).materialize.runSyncStep, Right(Success(10)))
   }
 
-  test("Task.flatMap.materialize") { implicit s =>
-    assertEquals(Task.eval(10).flatMap(x => Task.now(x)).materialize.runSyncStep, Right(Success(10)))
+  test("IO.flatMap.materialize") { implicit s =>
+    assertEquals(IO.eval(10).flatMap(x => IO.now(x)).materialize.runSyncStep, Right(Success(10)))
   }
 
-  test("Task.evalAsync.materialize") { implicit s =>
+  test("IO.evalAsync.materialize") { implicit s =>
     val f = UIO.evalAsync(10).materialize.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Success(10))))
   }
 
-  test("Task.evalAsync.flatMap.materialize") { implicit s =>
-    val f = Task.evalAsync(10).flatMap(Task.now).materialize.runToFuture
+  test("IO.evalAsync.flatMap.materialize") { implicit s =>
+    val f = IO.evalAsync(10).flatMap(IO.now).materialize.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Success(10))))
   }
 
-  test("Task.evalAsync(error).flatMap.materialize") { implicit s =>
+  test("IO.evalAsync(error).flatMap.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task[Int](throw dummy).flatMap(Task.now).materialize.runToFuture
+    val f = IO[Int](throw dummy).flatMap(IO.now).materialize.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
-  test("Task.now.flatMap(error).materialize") { implicit s =>
+  test("IO.now.flatMap(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.now(10).flatMap(_ => throw dummy).materialize.runToFuture
+    val f = IO.now(10).flatMap(_ => throw dummy).materialize.runToFuture
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.defer(error).materialize") { implicit s =>
+  test("IO.defer(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.defer[Int](throw dummy).materialize.runToFuture
+    val f = IO.defer[Int](throw dummy).materialize.runToFuture
     assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
-  test("Task.deferTotal(error).materialize") { implicit s =>
+  test("IO.deferTotal(error).materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.deferTotal(throw dummy).materialize.runToFuture
+    val f = IO.deferTotal(throw dummy).materialize.runToFuture
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.defer(error).flatMap.materialize") { implicit s =>
+  test("IO.defer(error).flatMap.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.defer[Int](throw dummy).flatMap(Task.now).materialize.runToFuture
+    val f = IO.defer[Int](throw dummy).flatMap(IO.now).materialize.runToFuture
     assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
-  test("Task.now.dematerialize") { implicit s =>
-    val result = Task.now(10).materialize.dematerialize.runToFuture.value
+  test("IO.now.dematerialize") { implicit s =>
+    val result = IO.now(10).materialize.dematerialize.runToFuture.value
     assertEquals(result, Some(Success(10)))
   }
 
-  test("Task.error.dematerialize") { implicit s =>
+  test("IO.error.dematerialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val result = Task.raiseError(dummy).materialize.dematerialize.attempt.runToFuture.value
+    val result = IO.raiseError(dummy).materialize.dematerialize.attempt.runToFuture.value
     assertEquals(result, Some(Success(Left(dummy))))
   }
 
-  test("Task.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task.Unsafe[Int] =
+  test("IO.materialize should be stack safe") { implicit s =>
+    def loop(n: Int): Task[Int] =
       if (n <= 0) Task.evalAsync(n)
       else
         Task.evalAsync(n).materialize.flatMap {
@@ -140,15 +140,15 @@ object TaskMaterializeSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task.eval.materialize should work for failure") { implicit s =>
+  test("IO.eval.materialize should work for failure") { implicit s =>
     val dummy = DummyException("dummy")
     val task = Task.eval[Int](throw dummy).materialize
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Failure(dummy))))
   }
 
-  test("Task.eval.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task.Unsafe[Int] =
+  test("IO.eval.materialize should be stack safe") { implicit s =>
+    def loop(n: Int): Task[Int] =
       if (n <= 0) Task.eval(n)
       else
         Task.eval(n).materialize.flatMap {
@@ -161,28 +161,28 @@ object TaskMaterializeSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task.now.materialize should work") { implicit s =>
-    val task = Task.now(1).materialize
+  test("IO.now.materialize should work") { implicit s =>
+    val task = IO.now(1).materialize
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(Success(1))))
   }
 
-  test("Task.materialize on failing flatMap") { implicit s =>
+  test("IO.materialize on failing flatMap") { implicit s =>
     val ex = DummyException("dummy")
     val task = Task.now(1).flatMap { _ =>
-      (throw ex): Task.Unsafe[Int]
+      (throw ex): Task[Int]
     }
     val materialized = task.materialize.runToFuture
     assertEquals(materialized.value, Some(Failure(ex)))
   }
 
-  test("Task.now.materialize should be stack safe") { implicit s =>
-    def loop(n: Int): Task[Throwable, Int] =
-      if (n <= 0) Task.now(n)
+  test("IO.now.materialize should be stack safe") { implicit s =>
+    def loop(n: Int): IO[Throwable, Int] =
+      if (n <= 0) IO.now(n)
       else
-        (Task.now(n): Task[Throwable, Int]).materialize.flatMap {
+        (IO.now(n): IO[Throwable, Int]).materialize.flatMap {
           case Success(v) => loop(v - 1)
-          case Failure(ex) => Task.terminate(ex)
+          case Failure(ex) => IO.terminate(ex)
         }
 
     val count = if (Platform.isJVM) 50000 else 5000
@@ -190,15 +190,15 @@ object TaskMaterializeSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(Right(0))))
   }
 
-  test("Task.raiseError.dematerialize") { implicit s =>
+  test("IO.raiseError.dematerialize") { implicit s =>
     val ex = DummyException("dummy")
-    val result = Task.raiseError(ex).materialize.dematerialize.attempt.runToFuture
+    val result = IO.raiseError(ex).materialize.dematerialize.attempt.runToFuture
     assertEquals(result.value, Some(Success(Left(ex))))
   }
 
-  test("Task.terminate.dematerialize") { implicit s =>
+  test("IO.terminate.dematerialize") { implicit s =>
     val ex = DummyException("dummy")
-    val result = Task.terminate(ex).materialize.dematerialize.runToFuture
+    val result = IO.terminate(ex).materialize.dematerialize.runToFuture
     assertEquals(result.value, Some(Failure(ex)))
   }
 

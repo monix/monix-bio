@@ -12,13 +12,13 @@
         "title": "Other Effects"
       },
       "creating": {
-        "title": "Creating Task"
+        "title": "Creating IO"
       },
       "error-handling": {
         "title": "Error Handling"
       },
       "execution": {
-        "title": "Executing Task"
+        "title": "Executing IO"
       },
       "getting-started": {
         "title": "Getting Started"

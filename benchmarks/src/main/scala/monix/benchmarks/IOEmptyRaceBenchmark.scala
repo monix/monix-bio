@@ -58,11 +58,11 @@ class IOEmptyRaceBenchmark {
 
   @Benchmark
   def monixBioEmptyRace(): Int = {
-    import monix.bio.{Task, UIO}
+    import monix.bio.{IO, UIO}
 
     def loop(i: Int): UIO[Int] =
-      if (i < size) Task.race(Task.never, UIO.eval(i + 1)).flatMap(_ => loop(i + 1))
-      else Task.pure(i)
+      if (i < size) IO.race(IO.never, UIO.eval(i + 1)).flatMap(_ => loop(i + 1))
+      else IO.pure(i)
 
     loop(0).runSyncUnsafe()
   }

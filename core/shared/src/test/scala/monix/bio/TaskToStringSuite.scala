@@ -22,58 +22,58 @@ import monix.execution.exceptions.DummyException
 
 object TaskToStringSuite extends SimpleTestSuite {
 
-  def assertContains[E, A](ref: Task[E, A], startStr: String): Unit = {
+  def assertContains[E, A](ref: IO[E, A], startStr: String): Unit = {
     val str = ref.toString
     assert(str.startsWith(startStr), s""""$str".startsWith("$startStr")""")
   }
 
-  test("Task.Now") {
-    val ref = Task.now(1)
-    assertContains(ref, "Task.Now")
+  test("IO.Now") {
+    val ref = IO.now(1)
+    assertContains(ref, "IO.Now")
   }
 
-  test("Task.Error") {
-    val ref = Task.raiseError(DummyException("dummy"))
-    assertContains(ref, "Task.Error")
+  test("IO.Error") {
+    val ref = IO.raiseError(DummyException("dummy"))
+    assertContains(ref, "IO.Error")
   }
 
-  test("Task.Termination") {
-    val ref = Task.terminate(DummyException("dummy"))
-    assertContains(ref, "Task.Termination")
+  test("IO.Termination") {
+    val ref = IO.terminate(DummyException("dummy"))
+    assertContains(ref, "IO.Termination")
   }
 
-  test("Task.Eval") {
-    val ref = Task.eval("hello")
-    assertContains(ref, "Task.Eval")
+  test("IO.Eval") {
+    val ref = IO.eval("hello")
+    assertContains(ref, "IO.Eval")
   }
 
-  test("Task.EvalTotal") {
-    val ref = Task.evalTotal("hello")
-    assertContains(ref, "Task.EvalTotal")
+  test("IO.EvalTotal") {
+    val ref = IO.evalTotal("hello")
+    assertContains(ref, "IO.EvalTotal")
   }
 
-  test("Task.Async") {
-    val ref = Task.cancelable0[Int, Int]((_, cb) => { cb.onSuccess(1); Task.unit })
-    assertContains(ref, "Task.Async")
+  test("IO.Async") {
+    val ref = IO.cancelable0[Int, Int]((_, cb) => { cb.onSuccess(1); IO.unit })
+    assertContains(ref, "IO.Async")
   }
 
-  test("Task.FlatMap") {
-    val ref = Task.now(1).flatMap(Task.now)
-    assertContains(ref, "Task.FlatMap")
+  test("IO.FlatMap") {
+    val ref = IO.now(1).flatMap(IO.now)
+    assertContains(ref, "IO.FlatMap")
   }
 
-  test("Task.Suspend") {
-    val ref = Task.defer(Task.now(1))
-    assertContains(ref, "Task.Suspend")
+  test("IO.Suspend") {
+    val ref = Task.defer(IO.now(1))
+    assertContains(ref, "IO.Suspend")
   }
 
-  test("Task.SuspendTotal") {
-    val ref = Task.suspendTotal(Task.now(1))
-    assertContains(ref, "Task.SuspendTotal")
+  test("IO.SuspendTotal") {
+    val ref = IO.suspendTotal(IO.now(1))
+    assertContains(ref, "IO.SuspendTotal")
   }
 
-  test("Task.Map") {
-    val ref = Task.now(1).map(_ + 1)
-    assertContains(ref, "Task.Map")
+  test("IO.Map") {
+    val ref = IO.now(1).map(_ + 1)
+    assertContains(ref, "IO.Map")
   }
 }
