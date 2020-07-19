@@ -17,16 +17,16 @@
 
 package monix.bio
 
-import cats.effect.IO
+import cats.effect.{IO => CIO}
 import monix.catnap.SchedulerEffect
 
 import scala.util.Success
 
 object TaskConversionsKSuite extends BaseTestSuite {
-  test("Task.liftTo[IO]") { implicit s =>
+  test("Task.liftTo[CIO]") { implicit s =>
     var effect = 0
     val task = Task { effect += 1; effect }
-    val io = Task.liftTo[IO].apply(task)
+    val io = Task.liftTo[CIO].apply(task)
 
     assertEquals(io.unsafeRunSync(), 1)
     assertEquals(io.unsafeRunSync(), 2)
@@ -35,17 +35,17 @@ object TaskConversionsKSuite extends BaseTestSuite {
   test("Task.liftToAsync[IO]") { implicit s =>
     var effect = 0
     val task = Task { effect += 1; effect }
-    val io = Task.liftToAsync[IO].apply(task)
+    val io = Task.liftToAsync[CIO].apply(task)
 
     assertEquals(io.unsafeRunSync(), 1)
     assertEquals(io.unsafeRunSync(), 2)
   }
 
   test("Task.liftToConcurrent[IO]") { implicit s =>
-    implicit val cs = SchedulerEffect.contextShift[IO](s)
+    implicit val cs = SchedulerEffect.contextShift[CIO](s)
     var effect = 0
     val task = Task { effect += 1; effect }
-    val io = Task.liftToConcurrent[IO].apply(task)
+    val io = Task.liftToConcurrent[CIO].apply(task)
 
     assertEquals(io.unsafeRunSync(), 1)
     assertEquals(io.unsafeRunSync(), 2)
@@ -53,8 +53,8 @@ object TaskConversionsKSuite extends BaseTestSuite {
 
   test("Task.liftFrom[IO]") { implicit s =>
     var effect = 0
-    val io0 = IO { effect += 1; effect }
-    val task = Task.liftFrom[IO].apply(io0)
+    val io0 = CIO { effect += 1; effect }
+    val task = Task.liftFrom[CIO].apply(io0)
 
     val f1 = task.runToFuture; s.tick()
     assertEquals(f1.value, Some(Success(1)))
@@ -64,8 +64,8 @@ object TaskConversionsKSuite extends BaseTestSuite {
 
   test("Task.liftFromEffect[IO]") { implicit s =>
     var effect = 0
-    val io0 = IO { effect += 1; effect }
-    val task = Task.liftFromEffect[IO].apply(io0)
+    val io0 = CIO { effect += 1; effect }
+    val task = Task.liftFromEffect[CIO].apply(io0)
 
     val f1 = task.runToFuture; s.tick()
     assertEquals(f1.value, Some(Success(1)))
@@ -74,11 +74,11 @@ object TaskConversionsKSuite extends BaseTestSuite {
   }
 
   test("Task.liftFromConcurrentEffect[IO]") { implicit s =>
-    implicit val cs = SchedulerEffect.contextShift[IO](s)
+    implicit val cs = SchedulerEffect.contextShift[CIO](s)
 
     var effect = 0
-    val io0 = IO { effect += 1; effect }
-    val task = Task.liftFromConcurrentEffect[IO].apply(io0)
+    val io0 = CIO { effect += 1; effect }
+    val task = Task.liftFromConcurrentEffect[CIO].apply(io0)
 
     val f1 = task.runToFuture; s.tick()
     assertEquals(f1.value, Some(Success(1)))

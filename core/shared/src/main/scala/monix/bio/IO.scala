@@ -3536,17 +3536,17 @@ object IO extends TaskInstancesLevel0 {
     *     }
     * }}}
     *
-    * Passed function can also return `IO[Unit]` as a task that
+    * Passed function can also return `cats.effect.IO[Unit]` as a task that
     * describes a cancelation action:
     *
     * {{{
-    *   import cats.effect.IO
+    *   import cats.effect.{IO => CIO}
     *
     *   def delayResult2[A](timespan: FiniteDuration)(thunk: => A): Task[A] =
     *     Task.create { (scheduler, cb) =>
     *       val c = scheduler.scheduleOnce(timespan)(cb(Try(thunk)))
     *       // We can simply return `c`, but doing this for didactic purposes!
-    *       IO(c.cancel())
+    *       CIO(c.cancel())
     *     }
     * }}}
     *
