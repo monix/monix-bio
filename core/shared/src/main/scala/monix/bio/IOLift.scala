@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect._
+import cats.effect.{IO => CIO, _}
 import cats.~>
 import monix.bio.internal.TaskConversions
 
@@ -65,9 +65,9 @@ object IOLift extends IOLiftImplicits0 {
     * Instance for converting to
     * [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]].
     */
-  implicit def toIO(implicit eff: ConcurrentEffect[Task]): IOLift[IO] =
-    new IOLift[IO] {
-      def apply[A](task: Task[A]): IO[A] = TaskConversions.toIO(task)(eff)
+  implicit def toIO(implicit eff: ConcurrentEffect[Task]): IOLift[CIO] =
+    new IOLift[CIO] {
+      def apply[A](task: Task[A]): CIO[A] = TaskConversions.toIO(task)(eff)
     }
 
 }
