@@ -4,6 +4,19 @@ addCommandAlias("ci-js",       s";clean ;coreJS/test")
 addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
 addCommandAlias("ci-jvm-mima", s";coreJVM/mimaReportBinaryIssues")
 
+inThisBuild(List(
+  organization := "io.monix",
+  homepage := Some(url("https://monix.io")),
+  licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+  developers := List(
+    Developer(
+      id="Avasil",
+      name="Piotr Gawrys",
+      email="pgawrys2@gmail.com",
+      url=url("https://github.com/Avasil")
+    ))
+))
+
 val monixVersion = "3.2.2"
 val minitestVersion = "2.8.2"
 val catsEffectVersion = "2.1.3"
@@ -140,7 +153,6 @@ lazy val doNotPublishArtifact = Seq(
 
 // General Settings
 lazy val sharedSettings = Seq(
-  organization := "io.monix",
   scalaVersion := "2.13.1",
   crossScalaVersions := Seq("2.12.10", "2.13.1"),
   scalacOptions ++= Seq(
@@ -256,26 +268,9 @@ lazy val sharedSettings = Seq(
   // -- Settings meant for deployment on oss.sonatype.org
   sonatypeProfileName := organization.value,
 
-  credentials += Credentials(
-    "Sonatype Nexus Repository Manager",
-    "oss.sonatype.org",
-    sys.env.getOrElse("SONATYPE_USERNAME", ""),
-    sys.env.getOrElse("SONATYPE_PASSWORD", "")
-  ),
-
-  publishMavenStyle := true,
-  publishTo := Some(
-    if (isSnapshot.value)
-      Opts.resolver.sonatypeSnapshots
-    else
-      Opts.resolver.sonatypeStaging
-  ),
   isSnapshot := version.value endsWith "SNAPSHOT",
   publishArtifact in Test := false,
   pomIncludeRepository := { _ => false }, // removes optional dependencies
-
-  licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-  homepage := Some(url("https://monix.io")),
 
   testFrameworks := Seq(new TestFramework("minitest.runner.Framework")),
   headerLicense := Some(HeaderLicense.Custom(
@@ -300,14 +295,6 @@ lazy val sharedSettings = Seq(
       url("https://github.com/monix/monix-bio"),
       "scm:git@github.com:monix/monix-bio.git"
     )),
-
-  developers := List(
-    Developer(
-      id="Avasil",
-      name="Piotr Gawrys",
-      email="pgawrys2@gmail.com",
-      url=url("https://github.com/Avasil")
-    ))
 )
 
 lazy val crossSettings = sharedSettings ++ Seq(
