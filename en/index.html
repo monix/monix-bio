@@ -6,4 +6,22 @@ Enhanced version of <a href="https://monix.io/api/3.1/monix/eval/Task.html">moni
 <pre><code class="hljs css language-scala">libraryDependencies += <span class="hljs-string">"io.monix"</span> %% <span class="hljs-string">"monix-bio"</span> % <span class="hljs-string">"0.1.1"</span>
 </code></pre>
 <p>Published for ScalaJS 0.6.x, 1.x, Scala 2.12 and 2.13.</p>
+<h3><a class="anchor" aria-hidden="true" id="roadmap"></a><a href="#roadmap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Roadmap</h3>
+<ul>
+<li>Complete documentation (see <a href="https://github.com/monix/monix-bio/issues/113">#133</a> for current progress)</li>
+<li><code>reactive</code> module to use <code>monix.reactive.Observable</code> with <code>monix.bio.IO</code></li>
+<li>built-in interop with <code>monix.eval.Task</code> without any imports</li>
+<li>better stack traces</li>
+<li>(?) <code>UIO</code>-friendy builders for <code>cats.effect.concurrent</code> and <code>monix-catnap</code></li>
+<li>(?) <code>Coeval</code> with typed errors</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="contributing"></a><a href="#contributing" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contributing</h3>
+<p>I will really appreciate feedback, bugs and complaints about the project.</p>
+<p>If you'd like to contribute code then look for issues tagged with <a href="https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22">good first issue</a>
+or just ask me on gitter and I should be able to find something regardless of your level of expertise. :)</p>
+<p>I'm happy to mentor anyone interested in contributing.</p>
+<h3><a class="anchor" aria-hidden="true" id="credits"></a><a href="#credits" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Credits</h3>
+<p>Most of the code comes from <a href="https://github.com/monix/monix">Monix</a> which was customized to include support for error type parameter directly in the internals.</p>
+<p>The idea of a second type parameter comes from <a href="https://github.com/zio/zio">ZIO</a>. Its implementation and API for error handling with two error channels served as an inspiration to the entire idea and some of the solutions. A lot of the benchmarks also come from their repository.</p>
+<p><a href="https://github.com/LukaJCB/cats-bio">Cats-bio</a> has been extremely useful at the beginning because of many similarities between <code>monix.eval.Task</code> and <code>cats.effect.IO</code> internals.</p>
 </span></div></div></div></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
