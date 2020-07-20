@@ -23,7 +23,7 @@ val catsEffectVersion = "2.1.3"
 
 // The Monix version with which we must keep binary compatibility.
 // https://github.com/typesafehub/migration-manager/wiki/Sbt-plugin
-val monixSeries = "0.1.0"
+val monixSeries = "1.0.0"
 
 lazy val `monix-bio` = project.in(file("."))
   .settings(skipOnPublishSettings)
