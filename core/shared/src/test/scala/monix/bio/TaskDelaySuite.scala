@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskDelaySuite extends BaseTestSuite {
-  test("Task#delayExecution should work") { implicit s =>
+  test("IO#delayExecution should work") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
@@ -44,7 +44,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success("result")))
   }
 
-  test("Task#delayExecution is stack safe, test 1") { implicit s =>
+  test("IO#delayExecution is stack safe, test 1") { implicit s =>
     def loop(n: Int): UIO[Int] =
       if (n <= 0) UIO.now(n)
       else
@@ -59,7 +59,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task#delayExecution is stack safe, test 2") { implicit s =>
+  test("IO#delayExecution is stack safe, test 2") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
     var task = UIO.now(0)
     for (_ <- 0 until count) task = task.delayExecution(1.second)
@@ -68,7 +68,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task#delayExecution is cancelable") { implicit s =>
+  test("IO#delayExecution is cancelable") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
@@ -90,7 +90,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "should cancel the scheduleOnce(delay) as well")
   }
 
-  test("Task#delayResult should work") { implicit s =>
+  test("IO#delayResult should work") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
@@ -109,7 +109,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success("result")))
   }
 
-  test("Task#delayResult is stack safe, test 1") { implicit s =>
+  test("IO#delayResult is stack safe, test 1") { implicit s =>
     def loop(n: Int): UIO[Int] =
       if (n <= 0) UIO.now(n)
       else
@@ -124,7 +124,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task#delayResult is stack safe, test 2") { implicit s =>
+  test("IO#delayResult is stack safe, test 2") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
     var task = UIO.now(0)
     for (_ <- 0 until count) task = task.delayResult(1.second)
@@ -133,7 +133,7 @@ object TaskDelaySuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(0)))
   }
 
-  test("Task#delayResult is cancelable") { implicit s =>
+  test("IO#delayResult is cancelable") { implicit s =>
     var wasTriggered = false
     def trigger(): String = { wasTriggered = true; "result" }
 
@@ -153,18 +153,18 @@ object TaskDelaySuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "should cancel the scheduleOnce(delay) as well")
   }
 
-  test("Task#delayResult should not delay in case of error") { implicit s =>
+  test("IO#delayResult should not delay in case of error") { implicit s =>
     val ex = "dummy"
-    val task = Task.raiseError(ex).delayResult(1.second)
+    val task = IO.raiseError(ex).delayResult(1.second)
     val result = task.attempt.runToFuture
 
     s.tick()
     assertEquals(result.value, Some(Success(Left(ex))))
   }
 
-  test("Task#delayResult should not delay in case of terminal error") { implicit s =>
+  test("IO#delayResult should not delay in case of terminal error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = Task.terminate(ex).delayResult(1.second)
+    val task = IO.terminate(ex).delayResult(1.second)
     val result = task.runToFuture
 
     s.tick()

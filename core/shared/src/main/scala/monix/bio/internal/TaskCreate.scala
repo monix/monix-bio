@@ -19,10 +19,10 @@ package monix.bio.internal
 
 import java.util.concurrent.RejectedExecutionException
 
-import cats.effect.{CancelToken, IO}
-import monix.bio.Task.{Async, Context}
+import cats.effect.{CancelToken, IO => CIO}
+import monix.bio.IO.{Async, Context}
 import monix.execution.exceptions.UncaughtErrorException
-import monix.bio.{BiCallback, Task}
+import monix.bio.{BiCallback, IO, Task}
 import monix.execution.atomic.AtomicInt
 import monix.execution.exceptions.CallbackCalledMultipleTimesException
 import monix.execution.internal.Platform
@@ -34,15 +34,15 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `cats.effect.Concurrent#cancelable`.
     */
-  def cancelableEffect[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task.Unsafe]): Task.Unsafe[A] =
+  def cancelableEffect[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
     cancelable0[Throwable, A]((_, cb) => k(BiCallback.toEither(cb)))
 
   /**
     * Implementation for `Task.cancelable`
     */
-  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[Task[E, *]]): Task[E, A] = {
-    val start = new Cancelable0Start[E, A, CancelToken[Task[E, *]]](fn) {
-      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[Task[E, *]])(implicit s: Scheduler): Unit =
+  def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[IO[E, *]]): IO[E, A] = {
+    val start = new Cancelable0Start[E, A, CancelToken[IO[E, *]]](fn) {
+      def setConnection(ref: TaskConnectionRef[E], token: CancelToken[IO[E, *]])(implicit s: Scheduler): Unit =
         ref := token
     }
     Async[E, A](
@@ -55,13 +55,13 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.create`, used via `TaskBuilder`.
     */
-  def cancelableIO[E, A](start: (Scheduler, BiCallback[E, A]) => CancelToken[IO]): Task[E, A] =
+  def cancelableIO[E, A](start: (Scheduler, BiCallback[E, A]) => CancelToken[CIO]): IO[E, A] =
     cancelable0[E, A]((sc, cb) => Task.from(start(sc, cb)).hideErrors)
 
   /**
     * Implementation for `Task.create`, used via `TaskBuilder`.
     */
-  def cancelableCancelable[E, A](fn: (Scheduler, BiCallback[E, A]) => Cancelable): Task[E, A] = {
+  def cancelableCancelable[E, A](fn: (Scheduler, BiCallback[E, A]) => Cancelable): IO[E, A] = {
     val start = new Cancelable0Start[E, A, Cancelable](fn) {
       def setConnection(ref: TaskConnectionRef[E], token: Cancelable)(implicit s: Scheduler): Unit =
         ref := token
@@ -72,7 +72,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.async0`
     */
-  def async0[E, A](fn: (Scheduler, BiCallback[E, A]) => Any): Task[E, A] = {
+  def async0[E, A](fn: (Scheduler, BiCallback[E, A]) => Any): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
@@ -88,7 +88,7 @@ private[bio] object TaskCreate {
     * It duplicates the implementation of `Task.async0` with the purpose
     * of avoiding extraneous callback allocations.
     */
-  def async[E, A](k: BiCallback[E, A] => Unit): Task[E, A] = {
+  def async[E, A](k: BiCallback[E, A] => Unit): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
       k(cbProtected)
@@ -99,7 +99,7 @@ private[bio] object TaskCreate {
   /**
     * Implementation for `Task.asyncF`.
     */
-  def asyncF[E, A](k: BiCallback[E, A] => Task[E, Unit]): Task[E, A] = {
+  def asyncF[E, A](k: BiCallback[E, A] => IO[E, Unit]): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val s = ctx.scheduler
       // Creating new connection, because we can have a race condition
@@ -111,7 +111,7 @@ private[bio] object TaskCreate {
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = true, cb)
       // Provided callback takes care of `conn.pop()`
       val task = k(cbProtected)
-      Task.unsafeStartNow(task, ctx2, new ForwardErrorCallback(cbProtected))
+      IO.unsafeStartNow(task, ctx2, new ForwardErrorCallback(cbProtected))
     }
     Async(start, trampolineBefore = false, trampolineAfter = false)
   }

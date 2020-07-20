@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import monix.bio.Task.Context
+import monix.bio.IO.Context
 
 package object internal {
 

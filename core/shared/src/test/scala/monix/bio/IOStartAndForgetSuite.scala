@@ -23,11 +23,11 @@ import monix.execution.internal.Platform
 import scala.concurrent.duration._
 import scala.util.Success
 
-object BIOStartAndForgetSuite extends BaseTestSuite {
+object IOStartAndForgetSuite extends BaseTestSuite {
 
-  test("Task#startAndForget triggers execution in background thread") { implicit sc =>
+  test("IO#startAndForget triggers execution in background thread") { implicit sc =>
     var counter = 0
-    val bio = Task.eval { counter += 1; counter }
+    val bio = IO.eval { counter += 1; counter }
 
     val main = for {
       _ <- bio.delayExecution(10.millisecond).startAndForget
@@ -42,13 +42,13 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     assertEquals(counter, 2)
   }
 
-  test("Task#startAndForget does not affect execution of main thread with raised errors") { implicit sc =>
-    val errorProneBIO = Task.raiseError[String]("Failed")
-    val successfulBIO = Task.now(10).delayExecution(5.millisecond)
+  test("IO#startAndForget does not affect execution of main thread with raised errors") { implicit sc =>
+    val errorProneIO = IO.raiseError[String]("Failed")
+    val successfulIO = IO.now(10).delayExecution(5.millisecond)
 
     val result = for {
-      _     <- errorProneBIO.startAndForget
-      value <- successfulBIO
+      _     <- errorProneIO.startAndForget
+      value <- successfulIO
     } yield value
 
     val f = result.runToFuture
@@ -56,14 +56,14 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(10)))
   }
 
-  test("Task#startAndForget triggers fatal errors in background thread") { implicit sc =>
+  test("IO#startAndForget triggers fatal errors in background thread") { implicit sc =>
     val fatalError = new DummyException()
-    val successfulBIO = Task.now(20)
-    val fatalBIO = Task.terminate(fatalError)
+    val successfulIO = IO.now(20)
+    val fatalIO = IO.terminate(fatalError)
 
     val result = for {
-      _     <- fatalBIO.startAndForget
-      value <- successfulBIO
+      _     <- fatalIO.startAndForget
+      value <- successfulIO
     } yield value
 
     val f = result.runToFuture
@@ -72,12 +72,12 @@ object BIOStartAndForgetSuite extends BaseTestSuite {
     assertEquals(sc.state.lastReportedError, fatalError)
   }
 
-  test("Task#startAndForget is stack safe") { implicit sc =>
+  test("IO#startAndForget is stack safe") { implicit sc =>
     val count = if (Platform.isJVM) 100000 else 5000
 
-    var bio: Task.Unsafe[Any] = Task.evalAsync(1)
+    var bio: Task[Any] = IO.evalAsync(1)
     for (_ <- 0 until count) bio = bio.startAndForget
-    for (_ <- 0 until count) bio = bio.flatMap(_ => Task.unit)
+    for (_ <- 0 until count) bio = bio.flatMap(_ => IO.unit)
 
     val f = bio.runToFuture
     sc.tick()

@@ -19,13 +19,13 @@ package monix.bio
 
 import cats.effect.CancelToken
 
-/** `Fiber` represents the (pure) result of a [[Task]] being started concurrently
+/** `Fiber` represents the (pure) result of a [[IO]] being started concurrently
   * and that can be either joined or cancelled.
   *
   * You can think of fibers as being lightweight threads, a fiber being a
   * concurrency primitive for doing cooperative multi-tasking.
   *
-  * For example a `Fiber` value is the result of evaluating [[Task.start]]:
+  * For example a `Fiber` value is the result of evaluating [[IO.start]]:
   *
   * {{{
   *   val task = UIO.evalAsync(println("Hello!"))
@@ -52,7 +52,7 @@ import cats.effect.CancelToken
   *   }
   * }}}
   */
-trait Fiber[E, A] extends cats.effect.Fiber[Task[E, *], A] {
+trait Fiber[E, A] extends cats.effect.Fiber[IO[E, *], A] {
 
   /**
     * Triggers the cancellation of the fiber.
@@ -70,7 +70,7 @@ trait Fiber[E, A] extends cats.effect.Fiber[Task[E, *], A] {
     * underlying fiber, (asynchronously) blocking the current run-loop
     * until that result is available.
     */
-  def join: Task[E, A]
+  def join: IO[E, A]
 }
 
 object Fiber {
@@ -78,8 +78,8 @@ object Fiber {
   /**
     * Builds a [[Fiber]] value out of a `task` and its cancelation token.
     */
-  def apply[E, A](task: Task[E, A], cancel: CancelToken[UIO]): Fiber[E, A] =
+  def apply[E, A](task: IO[E, A], cancel: CancelToken[UIO]): Fiber[E, A] =
     new Tuple(task, cancel)
 
-  private final case class Tuple[E, A](join: Task[E, A], cancel: CancelToken[UIO]) extends Fiber[E, A]
+  private final case class Tuple[E, A](join: IO[E, A], cancel: CancelToken[UIO]) extends Fiber[E, A]
 }

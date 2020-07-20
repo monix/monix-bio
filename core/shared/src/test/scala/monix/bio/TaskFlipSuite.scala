@@ -27,7 +27,7 @@ object TaskFlipSuite extends BaseTestSuite with ArbitraryInstances {
 
   test("flip successfully swaps the error and value parameters") { implicit s =>
     val ex = DummyException("dummy")
-    val f = Task.raiseError(ex).flip.runToFuture
+    val f = IO.raiseError(ex).flip.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(ex)))
   }
@@ -36,20 +36,20 @@ object TaskFlipSuite extends BaseTestSuite with ArbitraryInstances {
     val ex0 = DummyException("dummy0")
     val ex1 = DummyException("dummy1")
 
-    val f = Task.raiseError(ex0).flipWith(_.map(_ => ex1)).runToFuture
+    val f = IO.raiseError(ex0).flipWith(_.map(_ => ex1)).runToFuture
     s.tick()
     assertEquals(f.value, Some(Failure(ex1)))
   }
 
   test("flip should not alter original successful value") { implicit s =>
-    val f = Task(1).flip.attempt.runToFuture
+    val f = IO(1).flip.attempt.runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(Left(1))))
   }
 
   test("flipWith should not alter original successful value") { implicit s =>
-    val f = Task(1).flipWith(_.map(identity)).runToFuture
+    val f = IO(1).flipWith(_.map(identity)).runToFuture
 
     s.tick()
     assertEquals(f.value, Some(Success(1)))
@@ -58,16 +58,16 @@ object TaskFlipSuite extends BaseTestSuite with ArbitraryInstances {
   test("F.flip.map(f) <-> F.mapError(f).flip") { implicit ec =>
     val f = (_: String) => "dummy1"
 
-    check1 { F: Task[String, Int] =>
+    check1 { F: IO[String, Int] =>
       F.flip.map(f) <-> F.mapError(f).flip
     }
   }
 
   test("F.flipWith(f) <-> F.mapError(f)") { implicit s =>
-    val f0 = (ex: Task[Int, String]) => ex.map(_ => "dummy1")
+    val f0 = (ex: IO[Int, String]) => ex.map(_ => "dummy1")
     val f1 = (_: String) => "dummy1"
 
-    check1 { F: Task[String, Int] =>
+    check1 { F: IO[String, Int] =>
       F.flipWith(f0) <-> F.mapError(f1)
     }
   }

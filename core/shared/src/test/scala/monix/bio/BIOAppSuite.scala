@@ -17,17 +17,17 @@
 
 package monix.bio
 
-import cats.effect.{ExitCode, IO}
+import cats.effect.{ExitCode, IO => CIO}
 import minitest.SimpleTestSuite
-import monix.bio.Task.Options
+import monix.bio.IO.Options
 import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.Promise
 
-object TaskAppSuite extends SimpleTestSuite {
+object BIOAppSuite extends SimpleTestSuite {
   testAsync("run works") {
     val wasExecuted = Promise[Boolean]()
-    val app = new TaskApp {
+    val app = new BIOApp {
       override def run(args: List[String]) =
         UIO {
           wasExecuted.success(args.headOption.getOrElse("unknown") == "true")
@@ -42,17 +42,17 @@ object TaskAppSuite extends SimpleTestSuite {
   }
 
   testAsync("options are configurable") {
-    val opts = Task.defaultOptions
+    val opts = IO.defaultOptions
     assert(!opts.localContextPropagation, "!opts.localContextPropagation")
     val opts2 = opts.enableLocalContextPropagation
     assert(opts2.localContextPropagation, "opts2.localContextPropagation")
     val p = Promise[Options]()
 
-    val app = new TaskApp {
+    val app = new BIOApp {
       override val options = opts2
 
       def run(args: List[String]): UIO[ExitCode] =
-        for (opts <- Task.readOptions) yield {
+        for (opts <- IO.readOptions) yield {
           p.success(opts)
           ExitCode.Success
         }
@@ -64,19 +64,19 @@ object TaskAppSuite extends SimpleTestSuite {
     }
   }
 
-  testAsync("ConcurrentEffect[Task.Unsafe]") {
+  testAsync("ConcurrentEffect[Task]") {
     val wasExecuted = Promise[Boolean]()
-    val app = new TaskApp {
+    val app = new BIOApp {
       def run(args: List[String]): UIO[ExitCode] = {
         Task
           .from(
             Task
-              .async[Throwable, ExitCode] { cb =>
+              .async[ExitCode] { cb =>
                 wasExecuted.success(true)
                 cb.onSuccess(ExitCode.Success)
               }
               .executeAsync
-              .to[IO]
+              .to[CIO]
           )
           .hideErrors
       }

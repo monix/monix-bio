@@ -19,11 +19,11 @@ package monix.bio
 
 package instances
 
-import cats.effect.{Fiber => _, _}
+import cats.effect.{Fiber => _, IO => _, _}
 import monix.bio.internal.TaskEffect
 import monix.execution.Scheduler
 
-/** Cats type class instances of [[monix.bio.Task Task]] for
+/** Cats type class instances of [[monix.bio.IO IO]] for
   * `cats.effect.Effect` (and implicitly for `Applicative`, `Monad`,
   * `MonadError`, `Sync`, etc).
   *
@@ -39,8 +39,7 @@ import monix.execution.Scheduler
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsEffectForTask(implicit s: Scheduler, opts: Task.Options)
-    extends CatsBaseForTask[Throwable] with Effect[Task.Unsafe] {
+class CatsEffectForTask(implicit s: Scheduler, opts: IO.Options) extends CatsBaseForTask[Throwable] with Effect[Task] {
 
   /** We need to mixin [[CatsAsyncForTask]], because if we
     * inherit directly from it, the implicits priorities don't
@@ -48,33 +47,31 @@ class CatsEffectForTask(implicit s: Scheduler, opts: Task.Options)
     */
   private[this] val F = CatsConcurrentForTask
 
-  override def runAsync[A](fa: Task.Unsafe[A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[Unit] =
+  override def runAsync[A](fa: Task[A])(cb: Either[Throwable, A] => cats.effect.IO[Unit]): SyncIO[Unit] =
     TaskEffect.runAsync(fa)(cb)
 
-  override def delay[A](thunk: => A): Task.Unsafe[A] =
+  override def delay[A](thunk: => A): Task[A] =
     F.delay(thunk)
 
-  override def suspend[A](fa: => Task.Unsafe[A]): Task.Unsafe[A] =
+  override def suspend[A](fa: => Task[A]): Task[A] =
     F.suspend(fa)
 
-  override def async[A](k: ((Either[Throwable, A]) => Unit) => Unit): Task.Unsafe[A] =
+  override def async[A](k: ((Either[Throwable, A]) => Unit) => Unit): Task[A] =
     F.async(k)
 
-  override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task.Unsafe[Unit]): Task.Unsafe[A] =
+  override def asyncF[A](k: (Either[Throwable, A] => Unit) => Task[Unit]): Task[A] =
     F.asyncF(k)
 
-  override def bracket[A, B](
-    acquire: Task.Unsafe[A]
-  )(use: A => Task.Unsafe[B])(release: A => Task.Unsafe[Unit]): Task.Unsafe[B] =
+  override def bracket[A, B](acquire: Task[A])(use: A => Task[B])(release: A => Task[Unit]): Task[B] =
     F.bracket(acquire)(use)(release)
 
   override def bracketCase[A, B](
-    acquire: Task.Unsafe[A]
-  )(use: A => Task.Unsafe[B])(release: (A, ExitCase[Throwable]) => Task.Unsafe[Unit]): Task.Unsafe[B] =
+    acquire: Task[A]
+  )(use: A => Task[B])(release: (A, ExitCase[Throwable]) => Task[Unit]): Task[B] =
     F.bracketCase(acquire)(use)(release)
 }
 
-/** Cats type class instances of [[monix.bio.Task Task]] for
+/** Cats type class instances of [[monix.bio.IO IO]] for
   * `cats.effect.ConcurrentEffect`.
   *
   * Note this is a separate class from [[CatsConcurrentForTask]], because
@@ -89,8 +86,8 @@ class CatsEffectForTask(implicit s: Scheduler, opts: Task.Options)
   *  - [[https://typelevel.org/cats/ typelevel/cats]]
   *  - [[https://github.com/typelevel/cats-effect typelevel/cats-effect]]
   */
-class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: Task.Options)
-    extends CatsEffectForTask with ConcurrentEffect[Task.Unsafe] {
+class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: IO.Options)
+    extends CatsEffectForTask with ConcurrentEffect[Task] {
 
   /** We need to mixin [[CatsAsyncForTask]], because if we
     * inherit directly from it, the implicits priorities don't
@@ -99,25 +96,25 @@ class CatsConcurrentEffectForTask(implicit s: Scheduler, opts: Task.Options)
   private[this] val F = CatsConcurrentForTask
 
   override def runCancelable[A](
-    fa: Task.Unsafe[A]
-  )(cb: Either[Throwable, A] => IO[Unit]): SyncIO[CancelToken[Task.Unsafe]] =
+    fa: Task[A]
+  )(cb: Either[Throwable, A] => cats.effect.IO[Unit]): SyncIO[CancelToken[Task]] =
     TaskEffect.runCancelable(fa)(cb)
 
-  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task.Unsafe]): Task.Unsafe[A] =
+  override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
     F.cancelable(k)
 
-  override def uncancelable[A](fa: Task.Unsafe[A]): Task.Unsafe[A] =
+  override def uncancelable[A](fa: Task[A]): Task[A] =
     F.uncancelable(fa)
 
-  override def start[A](fa: Task.Unsafe[A]): Task.Unsafe[Fiber[Throwable, A]] =
+  override def start[A](fa: Task[A]): Task[Fiber[Throwable, A]] =
     F.start(fa)
 
   override def racePair[A, B](
-    fa: Task.Unsafe[A],
-    fb: Task.Unsafe[B]
-  ): Task.Unsafe[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
+    fa: Task[A],
+    fb: Task[B]
+  ): Task[Either[(A, Fiber[Throwable, B]), (Fiber[Throwable, A], B)]] =
     F.racePair(fa, fb)
 
-  override def race[A, B](fa: Task.Unsafe[A], fb: Task.Unsafe[B]): Task.Unsafe[Either[A, B]] =
+  override def race[A, B](fa: Task[A], fb: Task[B]): Task[Either[A, B]] =
     F.race(fa, fb)
 }

@@ -28,7 +28,7 @@ import scala.util.Success
 
 object TaskCancellationSuite extends BaseTestSuite {
   test("cancellation works for async actions") { implicit ec =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
     var wasCancelled = false
     val task = UIO
@@ -44,7 +44,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("cancellation works for autoCancelableRunLoops") { implicit ec =>
-    implicit val opts = Task.defaultOptions.enableAutoCancelableRunLoops
+    implicit val opts = IO.defaultOptions.enableAutoCancelableRunLoops
 
     var effect = 0
     val task = UIO
@@ -63,7 +63,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("task.start.flatMap(fa => fa.cancel.flatMap(_ => fa)) <-> UIO.never") { implicit ec =>
-    check1 { (task: Task[Int, Int]) =>
+    check1 { (task: IO[Int, Int]) =>
       val fa = for {
         forked <-
           task.attempt.asyncBoundary
@@ -138,25 +138,25 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("fa.onCancelRaiseError <-> fa") { implicit ec =>
     val dummy = "dummy"
-    check1 { fa: Task[String, Int] =>
+    check1 { fa: IO[String, Int] =>
       fa.onCancelRaiseError(dummy) <-> fa
     }
   }
 
   test("fa.onCancelRaiseError(e).start.flatMap(fa => fa.cancel.flatMap(_ => fa)) <-> raiseError(e)") { implicit ec =>
-    check2 { (fa: Task[Int, Int], e: Int) =>
+    check2 { (fa: IO[Int, Int], e: Int) =>
       val received = fa
         .onCancelRaiseError(e)
         .start
         .flatMap(fa => fa.cancel.flatMap(_ => fa.join))
         .executeWithOptions(_.disableAutoCancelableRunLoops)
 
-      received <-> Task.raiseError(e)
+      received <-> IO.raiseError(e)
     }
   }
 
   test("cancelBoundary happy path") { implicit ec =>
-    check1 { task: Task[Int, Int] =>
+    check1 { task: IO[Int, Int] =>
       task.flatMap { i =>
         UIO.cancelBoundary.map(_ => i)
       } <-> task
@@ -164,7 +164,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("cancelBoundary execution is immediate") { implicit ec =>
-    val task = Task.cancelBoundary >> UIO(1)
+    val task = IO.cancelBoundary >> UIO(1)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(1)))
   }
@@ -181,19 +181,19 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("cancelBoundary cancels") { implicit ec =>
     check1 { task: UIO[Int] =>
-      (Task.cancelBoundary >> task).start
-        .flatMap(f => f.cancel >> f.join) <-> Task.never
+      (IO.cancelBoundary >> task).start
+        .flatMap(f => f.cancel >> f.join) <-> IO.never
     }
   }
 
   test("onCancelRaiseError resets cancellation flag") { implicit ec =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
     val err = 1204
-    val task = Task
+    val task = IO
       .never[Int]
       .onCancelRaiseError(err)
-      .onErrorRecoverWith { case `err` => Task.cancelBoundary *> Task.evalTotal(10) }
+      .onErrorRecoverWith { case `err` => IO.cancelBoundary *> IO.evalTotal(10) }
       .start
       .flatMap(f => f.cancel >> f.join)
 
@@ -206,7 +206,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     val raisedError = 1204
     val cancelError = 1453
 
-    val task = Task
+    val task = IO
       .raiseError[Int](raisedError)
       .executeAsync
       .onCancelRaiseError(cancelError)
@@ -223,7 +223,7 @@ object TaskCancellationSuite extends BaseTestSuite {
     val raisedError = DummyException("1204")
     val cancelError = 1453
 
-    val task = Task
+    val task = IO
       .terminate(raisedError)
       .executeAsync
       .onCancelRaiseError(cancelError)
@@ -238,7 +238,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("onCancelRaiseError is stack safe in flatMap loop, take 1") { implicit ec =>
     val cancel = new RuntimeException
-    def loop(n: Int): Task.Unsafe[Int] =
+    def loop(n: Int): Task[Int] =
       Task.eval(n).flatMap { x =>
         if (x > 0)
           Task.eval(x - 1).onCancelRaiseError(cancel).flatMap(loop)
@@ -253,7 +253,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("onCancelRaiseError is stack safe in flatMap loop, take 2") { implicit ec =>
     val cancel = new RuntimeException
-    def loop(n: Int): Task.Unsafe[Int] =
+    def loop(n: Int): Task[Int] =
       Task.eval(n).flatMap { x =>
         if (x > 0)
           Task.eval(x - 1).flatMap(loop).onCancelRaiseError(cancel)
@@ -268,10 +268,10 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   testAsync("local.write.uncancelable works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- IOLocal(10)
       _ <- l.write(100).uncancelable
       _ <- Task.shift
       v <- l.read
@@ -284,11 +284,11 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   testAsync("local.write.onCancelRaiseError works") { _ =>
     import monix.execution.Scheduler.Implicits.global
-    implicit val opts = Task.defaultOptions.enableLocalContextPropagation
+    implicit val opts = IO.defaultOptions.enableLocalContextPropagation
     val error = DummyException("dummy")
 
     val task = for {
-      l <- TaskLocal(10)
+      l <- IOLocal(10)
       _ <- l.write(100).onCancelRaiseError(error)
       _ <- Task.shift
       v <- l.read

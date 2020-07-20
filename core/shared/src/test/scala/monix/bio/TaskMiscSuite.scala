@@ -26,21 +26,21 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskMiscSuite extends BaseTestSuite {
-  test("Task.attempt should succeed") { implicit s =>
-    val result = Task.now(1).attempt.runToFuture
+  test("IO.attempt should succeed") { implicit s =>
+    val result = IO.now(1).attempt.runToFuture
     assertEquals(result.value, Some(Success(Right(1))))
   }
 
-  test("Task.raiseError.attempt should expose error") { implicit s =>
+  test("IO.raiseError.attempt should expose error") { implicit s =>
     val ex = 1204
-    val result = Task.raiseError(ex).attempt.runToFuture.map(_.flatMap(identity))
+    val result = IO.raiseError(ex).attempt.runToFuture.map(_.flatMap(identity))
     s.tickOne()
     assertEquals(result.value, Some(Success(Left(ex))))
   }
 
-  test("Task.mapError should map error") { implicit s =>
+  test("IO.mapError should map error") { implicit s =>
     val ex = "not dummy"
-    val result = Task
+    val result = IO
       .raiseError("dummy")
       .mapError(_ => ex)
       .attempt
@@ -50,70 +50,70 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(result.value, Some(Success(Left(ex))))
   }
 
-  test("Task.terminate.attempt should not expose error") { implicit s =>
+  test("IO.terminate.attempt should not expose error") { implicit s =>
     val ex = DummyException("dummy")
-    val result = Task.terminate(ex).attempt.runToFuture.map(_.flatMap(identity))
+    val result = IO.terminate(ex).attempt.runToFuture.map(_.flatMap(identity))
     s.tickOne()
     assertEquals(result.value, Some(Failure(ex)))
   }
 
-  test("Task.tapError should not alter original successful value") { implicit s =>
-    val result = Task.fromEither[String, Int](1.asRight).tapError(e => Task.raiseError(e)).attempt.runToFuture
+  test("IO.tapError should not alter original successful value") { implicit s =>
+    val result = IO.fromEither[String, Int](1.asRight).tapError(e => IO.raiseError(e)).attempt.runToFuture
     assertEquals(result.value, Some(Success(Right(1))))
   }
 
-  test("Task.tapError should not alter original error value") { implicit s =>
+  test("IO.tapError should not alter original error value") { implicit s =>
     var effect = 0
-    val result = Task.fromEither[String, Int]("Error".asLeft).tapError(_ => Task.delay(effect += 1)).attempt.runToFuture
+    val result = IO.fromEither[String, Int]("Error".asLeft).tapError(_ => IO.delay(effect += 1)).attempt.runToFuture
     assertEquals(result.value, Some(Success(Left("Error"))))
     assertEquals(effect, 1)
   }
 
-  test("Task.tapError should not alter original terminal error") { implicit s =>
+  test("IO.tapError should not alter original terminal error") { implicit s =>
     var effect = 0
     val ex = DummyException("dummy")
-    val result = Task.terminate(ex).tapError(_ => Task.delay(effect += 1)).runToFuture
+    val result = IO.terminate(ex).tapError(_ => IO.delay(effect += 1)).runToFuture
     assertEquals(result.value, Some(Failure(ex)))
     assertEquals(effect, 0)
   }
 
-  test("Task.failed should expose error") { implicit s =>
+  test("IO.failed should expose error") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.raiseError(dummy).failed.runToFuture
+    val f = IO.raiseError(dummy).failed.runToFuture
     assertEquals(f.value, Some(Success(dummy)))
   }
 
-  test("Task.failed should fail for successful values") { implicit s =>
+  test("IO.failed should fail for successful values") { implicit s =>
     intercept[NoSuchElementException] {
-      Task.eval(10).failed.runSyncStep
+      IO.eval(10).failed.runSyncStep
     }
     ()
   }
 
-  test("Task.map protects against user code") { implicit s =>
+  test("IO.map protects against user code") { implicit s =>
     val ex = DummyException("dummy")
-    val result = Task.now(1).map(_ => throw ex).runToFuture
+    val result = IO.now(1).map(_ => throw ex).runToFuture
     assertEquals(result.value, Some(Failure(ex)))
   }
 
-  test("Task.forever") { implicit s =>
+  test("IO.forever") { implicit s =>
     val ex = DummyException("dummy")
     var effect = 0
-    val result = Task.eval { if (effect < 10) effect += 1 else throw ex }.loopForever
-      .onErrorFallbackTo(Task.eval(effect))
+    val result = IO.eval { if (effect < 10) effect += 1 else throw ex }.loopForever
+      .onErrorFallbackTo(IO.eval(effect))
       .runToFuture
     assertEquals(result.value.get.get, 10)
   }
 
-  test("Task.restartUntil should keep retrying Task until predicate succeeds") { implicit s =>
+  test("IO.restartUntil should keep retrying IO until predicate succeeds") { implicit s =>
     var effect = 0
-    val r = Task.evalAsync { effect += 1; effect }.restartUntil(_ >= 10).runToFuture
+    val r = IO.evalAsync { effect += 1; effect }.restartUntil(_ >= 10).runToFuture
     s.tick()
     assertEquals(r.value, Some(Success(10)))
   }
 
-  test("Task.toReactivePublisher should convert tasks with no errors") { implicit s =>
-    val publisher = Task.fromTry(Success(123)).toReactivePublisher
+  test("IO.toReactivePublisher should convert tasks with no errors") { implicit s =>
+    val publisher = IO.fromTry(Success(123)).toReactivePublisher
     var received = 0
     var wasCompleted = false
 
@@ -135,9 +135,9 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(received, 123)
   }
 
-  test("Task.toReactivePublisher should convert tasks with typed errors") { implicit s =>
+  test("IO.toReactivePublisher should convert tasks with typed errors") { implicit s =>
     val expected = DummyException("Error")
-    val publisher = Task.fromTry(Failure(expected)).toReactivePublisher
+    val publisher = IO.fromTry(Failure(expected)).toReactivePublisher
     var received: Throwable = null
 
     publisher.subscribe {
@@ -157,9 +157,9 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(received, expected)
   }
 
-  test("Task.toReactivePublisher should convert tasks with terminal errors") { implicit s =>
+  test("IO.toReactivePublisher should convert tasks with terminal errors") { implicit s =>
     val expected = DummyException("Error")
-    val publisher = Task.terminate(expected).toReactivePublisher
+    val publisher = IO.terminate(expected).toReactivePublisher
     var received: Throwable = null
 
     publisher.subscribe {
@@ -179,8 +179,8 @@ object TaskMiscSuite extends BaseTestSuite {
     assertEquals(received, expected)
   }
 
-  test("Task.toReactivePublisher should be cancelable") { implicit s =>
-    val publisher = Task.now(123).delayExecution(1.second).toReactivePublisher
+  test("IO.toReactivePublisher should be cancelable") { implicit s =>
+    val publisher = IO.now(123).delayExecution(1.second).toReactivePublisher
 
     publisher.subscribe {
       new Subscriber[Int] {
@@ -201,8 +201,8 @@ object TaskMiscSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "should not have tasks left to execute")
   }
 
-  test("Task.toReactivePublisher should throw errors on invalid requests") { implicit s =>
-    val publisher = Task.now(1).delayExecution(1.second).toReactivePublisher
+  test("IO.toReactivePublisher should throw errors on invalid requests") { implicit s =>
+    val publisher = IO.now(1).delayExecution(1.second).toReactivePublisher
 
     publisher.subscribe {
       new Subscriber[Int] {
@@ -225,13 +225,13 @@ object TaskMiscSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "should not have tasks left to execute")
   }
 
-  test("Task.pure is an alias of now") { implicit s =>
-    assertEquals(Task.pure(1), Task.now(1))
+  test("IO.pure is an alias of now") { implicit s =>
+    assertEquals(IO.pure(1), IO.now(1))
   }
 
-  test("Task.now.runAsync with Try-based callback") { implicit s =>
+  test("IO.now.runAsync with Try-based callback") { implicit s =>
     val p = Promise[Either[Int, Int]]()
-    (Task.now(1): Task[Int, Int]).runAsync {
+    (IO.now(1): IO[Int, Int]).runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -241,7 +241,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("Task.error.runAsync with Try-based callback") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.raiseError(ex).runAsync {
+    Task.raiseError[Int](ex).runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -251,7 +251,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("Task.terminate.runAsync with Try-based callback") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.terminate(ex).runAsync {
+    Task.terminate[Int](ex).runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -260,7 +260,7 @@ object TaskMiscSuite extends BaseTestSuite {
 
   test("task.executeAsync.runAsync with Try-based callback for success") { implicit s =>
     val p = Promise[Either[Int, Int]]()
-    Task.now(1).executeAsync.runAsync {
+    IO.now(1).executeAsync.runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -271,7 +271,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("task.executeAsync.runAsync with Try-based callback for error") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.raiseError(ex).executeAsync.runAsync {
+    Task.raiseError[Int](ex).executeAsync.runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }
@@ -282,7 +282,7 @@ object TaskMiscSuite extends BaseTestSuite {
   test("task.executeAsync.runAsync with Try-based callback for terminal error") { implicit s =>
     val ex = DummyException("dummy")
     val p = Promise[Either[Throwable, Int]]()
-    Task.terminate(ex).executeAsync.runAsync {
+    Task.terminate[Int](ex).executeAsync.runAsync {
       case Left(cause) => cause.fold(p.failure, t => p.success(Left(t)))
       case Right(v) => p.success(Right(v))
     }

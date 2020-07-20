@@ -35,7 +35,7 @@ object TaskRejectedExecutionSuite extends SimpleTestSuite {
       fail("Exceptions should not be reported using scheduler")
   })
 
-  def testRejected[A](task: Task.Unsafe[A]): Unit =
+  def testRejected[A](task: Task[A]): Unit =
     intercept[RejectedExecutionException] {
 
       val f = Future.traverse(1 to 10) { _ =>
@@ -50,6 +50,6 @@ object TaskRejectedExecutionSuite extends SimpleTestSuite {
     testRejected(Task.shift(limited))
     testRejected(Task.pure(0).asyncBoundary(limited))
     testRejected(Task.pure(0).executeOn(limited))
-    testRejected(Task.async0[Throwable, Unit]((_, cb) => global.executeAsync(() => cb.onSuccess(()))))
+    testRejected(Task.async0[Unit]((_, cb) => global.executeAsync(() => cb.onSuccess(()))))
   }
 }

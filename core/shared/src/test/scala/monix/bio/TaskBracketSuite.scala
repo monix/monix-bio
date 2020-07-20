@@ -28,10 +28,10 @@ import scala.concurrent.duration._
 
 object TaskBracketSuite extends BaseTestSuite {
   test("equivalence with onErrorHandleWith") { implicit sc =>
-    check2 { (task: Task[String, Int], f: String => UIO[Unit]) =>
-      val expected = task.onErrorHandleWith(e => f(e) >> Task.raiseError(e))
-      val received = task.bracketE(Task.now) {
-        case (_, Left(Some(e))) => e.fold(Task.terminate, f)
+    check2 { (task: IO[String, Int], f: String => UIO[Unit]) =>
+      val expected = task.onErrorHandleWith(e => f(e) >> IO.raiseError(e))
+      val received = task.bracketE(IO.now) {
+        case (_, Left(Some(e))) => e.fold(IO.terminate, f)
         case (_, _) => UIO.unit
       }
       received <-> expected
@@ -39,11 +39,11 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("equivalence with flatMap + redeemWith") { implicit sc =>
-    check3 { (acquire: Task[Int, Int], f: Int => Task[Int, Int], release: Int => UIO[Unit]) =>
+    check3 { (acquire: IO[Int, Int], f: Int => IO[Int, Int], release: Int => UIO[Unit]) =>
       val expected = acquire.flatMap { a =>
         f(a).redeemWith(
-          e => release(a) >> Task.raiseError(e),
-          s => release(a) >> Task.pure(s)
+          e => release(a) >> IO.raiseError(e),
+          s => release(a) >> IO.pure(s)
         )
       }
 
@@ -53,11 +53,11 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("equivalence with flatMap + redeemCauseWith") { implicit sc =>
-    check3 { (acquire: Task[Int, Int], f: Int => Task[Int, Int], release: Int => UIO[Unit]) =>
+    check3 { (acquire: IO[Int, Int], f: Int => IO[Int, Int], release: Int => UIO[Unit]) =>
       val expected = acquire.flatMap { a =>
         f(a).redeemCauseWith(
-          e => release(a) >> e.fold(Task.terminate, Task.raiseError),
-          s => release(a) >> Task.pure(s)
+          e => release(a) >> e.fold(IO.terminate, IO.raiseError),
+          s => release(a) >> IO.pure(s)
         )
       }
 
@@ -98,7 +98,7 @@ object TaskBracketSuite extends BaseTestSuite {
   test("release is evaluated on error") { implicit sc =>
     var input = Option.empty[(Int, Either[Option[Cause[Int]], Int])]
 
-    val task = UIO.evalAsync(1).bracketE(_ => Task.raiseError[Int](-99)) { (a, i) =>
+    val task = UIO.evalAsync(1).bracketE(_ => IO.raiseError[Int](-99)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
@@ -113,7 +113,7 @@ object TaskBracketSuite extends BaseTestSuite {
     val dummy = new DummyException("dummy")
     var input = Option.empty[(Int, Either[Option[Cause[Int]], Int])]
 
-    val task: Task[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => Task.terminate(dummy)) { (a, i) =>
+    val task: IO[Int, Int] = UIO.evalAsync(1).bracketE[Int, Int](_ => IO.terminate(dummy)) { (a, i) =>
       UIO.eval { input = Some((a, i)) }
     }
 
@@ -151,9 +151,9 @@ object TaskBracketSuite extends BaseTestSuite {
     val task = Task
       .evalAsync(1)
       .bracket { _ =>
-        Task.raiseError(useError)
+        Task.raiseError[Int](useError)
       } { _ =>
-        Task.terminate(releaseError)
+        IO.terminate(releaseError)
       }
 
     val f = task.runToFuture
@@ -200,7 +200,7 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("bracket is stack safe (1)") { implicit sc =>
-    def loop(n: Int): Task.Unsafe[Unit] =
+    def loop(n: Int): Task[Unit] =
       if (n > 0)
         Task(n).bracket(n => Task(n - 1))(_ => UIO.unit).flatMap(loop)
       else
@@ -270,8 +270,8 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("cancel should wait for already started finalizers on success") { implicit sc =>
     val fa = for {
-      pa    <- Deferred[Task.Unsafe, Unit]
-      fiber <- Task.unit.guarantee(pa.complete(()).hideErrors >> Task.sleep(1.second)).start
+      pa    <- Deferred[Task, Unit]
+      fiber <- IO.unit.guarantee(pa.complete(()).hideErrors >> IO.sleep(1.second)).start
       _     <- pa.get
       _     <- fiber.cancel
     } yield ()
@@ -289,8 +289,8 @@ object TaskBracketSuite extends BaseTestSuite {
     val dummy = new RuntimeException("dummy")
 
     val fa = for {
-      pa    <- Deferred[Task.Unsafe, Unit]
-      fiber <- Task.unit.guarantee(pa.complete(()).hideErrors >> Task.sleep(1.second) >> Task.terminate(dummy)).start
+      pa    <- Deferred[Task, Unit]
+      fiber <- IO.unit.guarantee(pa.complete(()).hideErrors >> IO.sleep(1.second) >> IO.terminate(dummy)).start
       _     <- pa.get
       _     <- fiber.cancel
     } yield ()
@@ -306,10 +306,10 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("cancel should wait for already started use finalizers") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task.Unsafe, Unit]
+      pa <- Deferred[Task, Unit]
       fibA <-
-        Task.unit
-          .bracket(_ => Task.unit.guarantee(pa.complete(()).hideErrors >> Task.sleep(2.second)))(_ => Task.unit)
+        IO.unit
+          .bracket(_ => IO.unit.guarantee(pa.complete(()).hideErrors >> IO.sleep(2.second)))(_ => IO.unit)
           .start
       _ <- pa.get
       _ <- fibA.cancel
@@ -326,13 +326,13 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("second cancel should wait for use finalizers") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task.Unsafe, Unit]
+      pa <- Deferred[Task, Unit]
       fiber <-
-        Task.unit
-          .bracket(_ => (pa.complete(()).hideErrors >> Task.never).guarantee(Task.sleep(2.second)))(_ => Task.unit)
+        IO.unit
+          .bracket(_ => (pa.complete(()).hideErrors >> IO.never).guarantee(IO.sleep(2.second)))(_ => IO.unit)
           .start
       _ <- pa.get
-      _ <- Task.race(fiber.cancel, fiber.cancel)
+      _ <- IO.race(fiber.cancel, fiber.cancel)
     } yield ()
 
     val f = fa.runToFuture
@@ -346,12 +346,12 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("second cancel during acquire should wait for it and finalizers to complete") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task.Unsafe, Unit]
-      fiber <- (pa.complete(()).hideErrors >> Task.sleep(1.second))
-        .bracket(_ => Task.unit)(_ => Task.sleep(1.second))
+      pa <- Deferred[Task, Unit]
+      fiber <- (pa.complete(()).hideErrors >> IO.sleep(1.second))
+        .bracket(_ => IO.unit)(_ => IO.sleep(1.second))
         .start
       _ <- pa.get
-      _ <- Task.race(fiber.cancel, fiber.cancel)
+      _ <- IO.race(fiber.cancel, fiber.cancel)
     } yield ()
 
     val f = fa.runToFuture
@@ -368,12 +368,12 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("second cancel during acquire should wait for it and finalizers to complete (non-terminating)") { implicit sc =>
     val fa = for {
-      pa <- Deferred[Task.Unsafe, Unit]
-      fiber <- (pa.complete(()).hideErrors >> Task.sleep(1.second))
-        .bracket(_ => Task.unit)(_ => Task.never)
+      pa <- Deferred[Task, Unit]
+      fiber <- (pa.complete(()).hideErrors >> IO.sleep(1.second))
+        .bracket(_ => IO.unit)(_ => IO.never)
         .start
       _ <- pa.get
-      _ <- Task.race(fiber.cancel, fiber.cancel)
+      _ <- IO.race(fiber.cancel, fiber.cancel)
     } yield ()
 
     val f = fa.runToFuture
@@ -387,7 +387,7 @@ object TaskBracketSuite extends BaseTestSuite {
 
   test("Multiple cancel should not hang") { implicit sc =>
     val fa = for {
-      fiber <- Task.sleep(1.second).start
+      fiber <- IO.sleep(1.second).start
       _     <- fiber.cancel
       _     <- fiber.cancel
     } yield ()
@@ -399,8 +399,8 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("bracket can be canceled while failing to acquire") { implicit sc =>
-    val task = (Task.sleep(2.second) >> Task.raiseError[Unit](DummyException("BOOM")))
-      .bracket(_ => Task.unit)(_ => Task.unit)
+    val task = (IO.sleep(2.second) >> IO.raiseError[Unit](DummyException("BOOM")))
+      .bracket(_ => Task.unit)(_ => IO.unit)
 
     val cancelToken = task.runAsyncF(_ => ())
 
@@ -412,8 +412,8 @@ object TaskBracketSuite extends BaseTestSuite {
   }
 
   test("bracket can be canceled while terminating") { implicit sc =>
-    val task = (Task.sleep(2.second) >> Task.terminate(DummyException("BOOM")))
-      .bracket(_ => Task.unit)(_ => Task.unit)
+    val task = (IO.sleep(2.second) >> IO.terminate(DummyException("BOOM")))
+      .bracket(_ => Task.unit)(_ => IO.unit)
 
     val cancelToken = task.runAsyncF(_ => ())
 

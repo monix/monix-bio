@@ -21,7 +21,7 @@ import cats.Eq
 import cats.effect.laws.discipline.{ConcurrentEffectTests, ConcurrentTests}
 import cats.kernel.laws.discipline.MonoidTests
 import cats.laws.discipline.{BifunctorTests, CoflatMapTests, CommutativeApplicativeTests, ParallelTests}
-import monix.bio.Task.Options
+import monix.bio.IO.Options
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.schedulers.TestScheduler
 
@@ -33,7 +33,7 @@ import scala.util.Either
   * use of Task's `runAsync(callback)`.
   */
 object TypeClassLawsForTaskWithCallbackSuite
-    extends BaseTypeClassLawsForTaskWithCallbackSuite()(Task.defaultOptions.disableAutoCancelableRunLoops)
+    extends BaseTypeClassLawsForTaskWithCallbackSuite()(IO.defaultOptions.disableAutoCancelableRunLoops)
 
 /**
   * Type class tests for Task that use an alternative `Eq`, making
@@ -42,16 +42,16 @@ object TypeClassLawsForTaskWithCallbackSuite
   */
 object TypeClassLawsForTaskAutoCancelableWithCallbackSuite
     extends BaseTypeClassLawsForTaskWithCallbackSuite()(
-      Task.defaultOptions.enableAutoCancelableRunLoops
+      IO.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: Task.Options) extends BaseLawsSuite {
-  override implicit def equalityBIO[E, A](implicit
+class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: IO.Options) extends BaseLawsSuite {
+  override implicit def equalityIO[E, A](implicit
     A: Eq[A],
     E: Eq[E],
     ec: TestScheduler,
     opts: Options
-  ): Eq[Task[E, A]] = {
+  ): Eq[IO[E, A]] = {
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       task.runAsyncOpt {
@@ -65,7 +65,7 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: Task.Options) ext
   override implicit def equalityUIO[A](implicit
     A: Eq[A],
     sc: TestScheduler,
-    opts: Task.Options = Task.defaultOptions
+    opts: IO.Options = IO.defaultOptions
   ): Eq[UIO[A]] = {
     Eq.by[UIO[A], Future[A]] { task =>
       val p = Promise[A]()
@@ -82,9 +82,9 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: Task.Options) ext
     E: Eq[E],
     ec: TestScheduler,
     opts: Options
-  ): Eq[Task.Par[E, A]] = {
+  ): Eq[IO.Par[E, A]] = {
 
-    import Task.Par.unwrap
+    import IO.Par.unwrap
     Eq.by { task =>
       val p = Promise[Either[E, A]]()
       unwrap(task).runAsyncOpt {
@@ -95,31 +95,31 @@ class BaseTypeClassLawsForTaskWithCallbackSuite(implicit opts: Task.Options) ext
     }
   }
 
-  checkAllAsync("CoflatMap[Task.Unsafe]") { implicit ec =>
-    CoflatMapTests[Task.Unsafe].coflatMap[Int, Int, Int]
+  checkAllAsync("CoflatMap[Task]") { implicit ec =>
+    CoflatMapTests[Task].coflatMap[Int, Int, Int]
   }
 
-  checkAllAsync("Concurrent[Task.Unsafe]") { implicit ec =>
-    ConcurrentTests[Task.Unsafe].async[Int, Int, Int]
+  checkAllAsync("Concurrent[Task]") { implicit ec =>
+    ConcurrentTests[Task].async[Int, Int, Int]
   }
 
-  checkAllAsync("ConcurrentEffect[Task.Unsafe]") { implicit ec =>
-    ConcurrentEffectTests[Task.Unsafe].effect[Int, Int, Int]
+  checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
+    ConcurrentEffectTests[Task].effect[Int, Int, Int]
   }
 
-  checkAllAsync("CommutativeApplicative[Task.Par]") { implicit ec =>
-    CommutativeApplicativeTests[Task.Par[String, *]].commutativeApplicative[Int, Int, Int]
+  checkAllAsync("CommutativeApplicative[IO.Par]") { implicit ec =>
+    CommutativeApplicativeTests[IO.Par[String, *]].commutativeApplicative[Int, Int, Int]
   }
 
-  checkAllAsync("Parallel[Task.Unsafe, Task.Par]") { implicit ec =>
-    ParallelTests[Task.Unsafe, Task.Par[Throwable, *]].parallel[Int, Int]
+  checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
+    ParallelTests[Task, IO.Par[Throwable, *]].parallel[Int, Int]
   }
 
-  checkAllAsync("Monoid[Task[Throwable, Int]]") { implicit ec =>
-    MonoidTests[Task[Throwable, Int]].monoid
+  checkAllAsync("Monoid[IO[Throwable, Int]]") { implicit ec =>
+    MonoidTests[IO[Throwable, Int]].monoid
   }
 
-  checkAllAsync("Bifunctor[Task[String, Int]]") { implicit ec =>
-    BifunctorTests[Task].bifunctor[String, String, String, Int, Int, Int]
+  checkAllAsync("Bifunctor[IO[String, Int]]") { implicit ec =>
+    BifunctorTests[IO].bifunctor[String, String, String, Int, Int, Int]
   }
 }

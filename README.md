@@ -14,7 +14,7 @@ An enhanced version of [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Tas
 The latest stable version, compatible with Monix 3.x, Cats 2.x and Cats-Effect 2.x:
 
 ```scala
-libraryDependencies += "io.monix" %% "monix-bio" % "0.1.1"
+libraryDependencies += "io.monix" %% "monix-bio" % "1.0.0"
 ```
 Published for ScalaJS 0.6.x, 1.x, Scala 2.12 and 2.13.
 
@@ -22,7 +22,7 @@ Published for ScalaJS 0.6.x, 1.x, Scala 2.12 and 2.13.
 
 The project maintains binary compatibility in `0.1.x` line and it is suitable for production usage.
 
-`monix.bio.Task` covers full `monix.eval.Task` API.
+`monix.bio.IO` covers full `monix.eval.Task` API.
 
 The documentation is in progress and not all scaladocs are updated.
 
@@ -33,7 +33,7 @@ Long term `1.0.0` version is expected to come around July-August 2020 once the b
 We are considering [a different encoding](https://github.com/monix/monix-bio/issues/6) but if we don't go forward with it there won't be many changes.
 
 Upcoming features (either `1.0.0` or later):
-- `reactive` module to use `monix.reactive.Observable` with `monix.bio.Task`
+- `reactive` module to use `monix.reactive.Observable` with `monix.bio.BIO`
 - built-in interop with `monix.eval.Task` without any imports
 - `Coeval` with typed errors
 - better stack traces

@@ -17,8 +17,8 @@
 
 package monix.bio.internal
 
-import monix.bio.Task.{Async, Context}
-import monix.bio.{BiCallback, Fiber, Task, UIO}
+import monix.bio.IO.{Async, Context}
+import monix.bio.{BiCallback, Fiber, IO, UIO}
 import monix.execution.CancelablePromise
 
 private[bio] object TaskStart {
@@ -26,11 +26,11 @@ private[bio] object TaskStart {
   /**
     * Implementation for `Task.fork`.
     */
-  def forked[E, A](fa: Task[E, A]): UIO[Fiber[E, A]] =
+  def forked[E, A](fa: IO[E, A]): UIO[Fiber[E, A]] =
     fa match {
       // There's no point in evaluating strict stuff
-      case Task.Now(_) | Task.Error(_) | Task.Termination(_) =>
-        Task.Now(Fiber(fa, Task.unit))
+      case IO.Now(_) | IO.Error(_) | IO.Termination(_) =>
+        IO.Now(Fiber(fa, IO.unit))
       case _ =>
         Async[Nothing, Fiber[E, A]](
           new StartForked(fa),
@@ -40,8 +40,7 @@ private[bio] object TaskStart {
         )
     }
 
-  private class StartForked[E, A](fa: Task[E, A])
-      extends ((Context[Nothing], BiCallback[Nothing, Fiber[E, A]]) => Unit) {
+  private class StartForked[E, A](fa: IO[E, A]) extends ((Context[Nothing], BiCallback[Nothing, Fiber[E, A]]) => Unit) {
 
     final def apply(ctx: Context[Nothing], cb: BiCallback[Nothing, Fiber[E, A]]): Unit = {
       // Cancelable Promise gets used for storing or waiting
@@ -49,11 +48,11 @@ private[bio] object TaskStart {
       val p = CancelablePromise[Either[E, A]]()
       // Building the Task to signal, linked to the above Promise.
       // It needs its own context, its own cancelable
-      val ctx2 = Task.Context[E](ctx.scheduler, ctx.options)
+      val ctx2 = IO.Context[E](ctx.scheduler, ctx.options)
       // Starting actual execution of our newly created task;
-      Task.unsafeStartEnsureAsync(fa, ctx2, BiCallback.fromPromise(p))
+      IO.unsafeStartEnsureAsync(fa, ctx2, BiCallback.fromPromise(p))
 
-      val task = Task.fromCancelablePromiseEither(p)
+      val task = IO.fromCancelablePromiseEither(p)
       // Signal the created fiber
       cb.onSuccess(Fiber(task, ctx2.connection.cancel))
     }

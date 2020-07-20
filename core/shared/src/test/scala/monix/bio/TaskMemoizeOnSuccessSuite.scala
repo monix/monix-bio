@@ -25,11 +25,11 @@ import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
 object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
-  test("Task.memoizeOnSuccess should work asynchronously for first subscriber") { implicit s =>
+  test("IO.memoizeOnSuccess should work asynchronously for first subscriber") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.memoizeOnSuccess
-      .flatMap(Task.now)
-      .flatMap(Task.now)
+    val task = IO.evalAsync { effect += 1; effect }.memoizeOnSuccess
+      .flatMap(IO.now)
+      .flatMap(IO.now)
 
     val f = task.attempt.runToFuture
     assertEquals(f.value, None)
@@ -37,11 +37,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
+  test("IO.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.memoizeOnSuccess
-      .flatMap(Task.now)
-      .flatMap(Task.now)
+    val task = IO.evalAsync { effect += 1; effect }.memoizeOnSuccess
+      .flatMap(IO.now)
+      .flatMap(IO.now)
 
     task.attempt.runToFuture
     s.tick()
@@ -52,9 +52,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(1))))
   }
 
-  test("Task.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.evalAsync(1)
+    var task = IO.evalAsync(1)
     for (i <- 0 until count) task = task.memoizeOnSuccess
 
     val f = task.attempt.runToFuture
@@ -63,12 +63,12 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.flatMap.memoizeOnSuccess should be stack safe, test 1") { implicit s =>
+  test("IO.flatMap.memoizeOnSuccess should be stack safe, test 1") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.evalAsync(1)
+    var task = IO.evalAsync(1)
 
     for (i <- 0 until count) {
-      task = task.memoizeOnSuccess.flatMap(x => Task.now(x))
+      task = task.memoizeOnSuccess.flatMap(x => IO.now(x))
     }
 
     val f = task.attempt.runToFuture
@@ -77,11 +77,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.flatMap.memoizeOnSuccess should be stack safe, test 2") { implicit s =>
+  test("IO.flatMap.memoizeOnSuccess should be stack safe, test 2") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.evalAsync(1)
+    var task = IO.evalAsync(1)
     for (i <- 0 until count) {
-      task = task.memoizeOnSuccess.flatMap(x => Task.evalAsync(x))
+      task = task.memoizeOnSuccess.flatMap(x => IO.evalAsync(x))
     }
 
     val f = task.attempt.runToFuture
@@ -90,14 +90,14 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.raiseError(error).memoizeOnSuccess should not be idempotent") { implicit s =>
+  test("IO.raiseError(error).memoizeOnSuccess should not be idempotent") { implicit s =>
     var effect = 0
     val dummy = "dummy"
-    val task = Task
-      .suspendTotal(Task.raiseError { effect += 1; dummy })
+    val task = IO
+      .suspendTotal(IO.raiseError { effect += 1; dummy })
       .memoizeOnSuccess
-      .flatMap(Task.now[Int])
-      .flatMap(Task.now[Int])
+      .flatMap(IO.now[Int])
+      .flatMap(IO.now[Int])
 
     val f1 = task.attempt.runToFuture; s.tick()
     assertEquals(f1.value, Some(Success(Left(dummy))))
@@ -108,14 +108,14 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 2)
   }
 
-  test("Task.terminate(error).memoizeOnSuccess should not be idempotent") { implicit s =>
+  test("IO.terminate(error).memoizeOnSuccess should not be idempotent") { implicit s =>
     var effect = 0
     val dummy = DummyException("dummy")
-    val task = Task
-      .suspendTotal(Task.terminate { effect += 1; dummy })
+    val task = IO
+      .suspendTotal(IO.terminate { effect += 1; dummy })
       .memoizeOnSuccess
-      .flatMap(Task.now[Int])
-      .flatMap(Task.now[Int])
+      .flatMap(IO.now[Int])
+      .flatMap(IO.now[Int])
 
     val f1 = task.runToFuture; s.tick()
     assertEquals(f1.value, Some(Failure(dummy)))
@@ -126,37 +126,37 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 2)
   }
 
-  test("Task.memoizeOnSuccess.materialize") { implicit s =>
-    val f = Task.evalAsync(10).memoizeOnSuccess.materialize.attempt.runToFuture
+  test("IO.memoizeOnSuccess.materialize") { implicit s =>
+    val f = IO.evalAsync(10).memoizeOnSuccess.materialize.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(Success(10)))))
   }
 
-  test("Task.raiseError(error).memoizeOnSuccess.materialize") { implicit s =>
+  test("IO.raiseError(error).memoizeOnSuccess.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.raiseError(dummy).memoizeOnSuccess.materialize.attempt.runToFuture
+    val f = IO.raiseError(dummy).memoizeOnSuccess.materialize.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Success(Right(Failure(dummy)))))
   }
 
-  test("Task.terminate(error).memoizeOnSuccess.materialize") { implicit s =>
+  test("IO.terminate(error).memoizeOnSuccess.materialize") { implicit s =>
     val dummy = DummyException("dummy")
-    val f = Task.terminate(dummy).memoizeOnSuccess.materialize.attempt.runToFuture
+    val f = IO.terminate(dummy).memoizeOnSuccess.materialize.attempt.runToFuture
     s.tick()
     assertEquals(f.value, Some(Failure(dummy)))
   }
 
-  test("Task.eval.memoizeOnSuccess should work for first subscriber") { implicit s =>
+  test("IO.eval.memoizeOnSuccess should work for first subscriber") { implicit s =>
     var effect = 0
-    val task = Task.eval { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.eval { effect += 1; effect }.memoizeOnSuccess
 
     val f = task.attempt.runToFuture; s.tick()
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.eval.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
+  test("IO.eval.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
     var effect = 0
-    val task = Task.eval { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.eval { effect += 1; effect }.memoizeOnSuccess
     task.attempt.runToFuture
     s.tick()
 
@@ -166,10 +166,10 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(1))))
   }
 
-  test("Task.eval(error).memoizeOnSuccess should not be idempotent") { implicit s =>
+  test("IO.eval(error).memoizeOnSuccess should not be idempotent") { implicit s =>
     var effect = 0
     val dummy = DummyException("dummy")
-    val task = Task.eval[Int] { effect += 1; throw dummy }.memoizeOnSuccess
+    val task = IO.eval[Int] { effect += 1; throw dummy }.memoizeOnSuccess
 
     val f1 = task.attempt.runToFuture; s.tick()
     assertEquals(f1.value, Some(Success(Left(dummy))))
@@ -180,9 +180,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 2)
   }
 
-  test("Task.eval.memoizeOnSuccess") { implicit s =>
+  test("IO.eval.memoizeOnSuccess") { implicit s =>
     var effect = 0
-    val task = Task.eval { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.eval { effect += 1; effect }.memoizeOnSuccess
 
     val r1 = task.attempt.runToFuture
     val r2 = task.attempt.runToFuture
@@ -194,9 +194,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(r3.value, Some(Success(Right(1))))
   }
 
-  test("Task.eval.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.eval.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.eval(1)
+    var task = IO.eval(1)
     for (i <- 0 until count)
       task = task.memoizeOnSuccess
 
@@ -204,11 +204,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.eval.flatMap.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.eval.flatMap.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.eval(1)
+    var task = IO.eval(1)
     for (i <- 0 until count) {
-      task = task.memoizeOnSuccess.flatMap(x => Task.eval(x))
+      task = task.memoizeOnSuccess.flatMap(x => IO.eval(x))
     }
 
     val f = task.attempt.runToFuture
@@ -217,9 +217,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.defer(evalAlways).memoizeOnSuccess") { implicit s =>
+  test("IO.defer(evalAlways).memoizeOnSuccess") { implicit s =>
     var effect = 0
-    val task = Task.defer(Task.eval { effect += 1; effect }).memoizeOnSuccess
+    val task = IO.defer(IO.eval { effect += 1; effect }).memoizeOnSuccess
 
     val r1 = task.attempt.runToFuture
     val r2 = task.attempt.runToFuture
@@ -231,17 +231,17 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(r3.value, Some(Success(Right(1))))
   }
 
-  test("Task.evalOnce.memoizeOnSuccess should work for first subscriber") { implicit s =>
+  test("IO.evalOnce.memoizeOnSuccess should work for first subscriber") { implicit s =>
     var effect = 0
-    val task = Task.evalOnce { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.evalOnce { effect += 1; effect }.memoizeOnSuccess
 
     val f = task.attempt.runToFuture; s.tick()
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.evalOnce.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
+  test("IO.evalOnce.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
     var effect = 0
-    val task = Task.evalOnce { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.evalOnce { effect += 1; effect }.memoizeOnSuccess
     task.attempt.runToFuture
     s.tick()
 
@@ -251,10 +251,10 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(1))))
   }
 
-  test("Task.evalOnce(error).memoizeOnSuccess should work") { implicit s =>
+  test("IO.evalOnce(error).memoizeOnSuccess should work") { implicit s =>
     var effect = 0
     val dummy = DummyException("dummy")
-    val task = Task.evalOnce[Int] { effect += 1; throw dummy }.memoizeOnSuccess
+    val task = IO.evalOnce[Int] { effect += 1; throw dummy }.memoizeOnSuccess
 
     val f1 = task.attempt.runToFuture; s.tick()
     assertEquals(f1.value, Some(Success(Left(dummy))))
@@ -265,9 +265,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("Task.evalOnce.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.evalOnce.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.eval(1)
+    var task = IO.eval(1)
     for (i <- 0 until count) {
       task = task.memoizeOnSuccess
     }
@@ -276,11 +276,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.evalOnce.flatMap.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.evalOnce.flatMap.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.eval(1)
+    var task = IO.eval(1)
     for (i <- 0 until count) {
-      task = task.memoizeOnSuccess.flatMap(x => Task.evalOnce(x))
+      task = task.memoizeOnSuccess.flatMap(x => IO.evalOnce(x))
     }
 
     val f = task.attempt.runToFuture
@@ -289,17 +289,17 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.now.memoizeOnSuccess should work synchronously for first subscriber") { implicit s =>
+  test("IO.now.memoizeOnSuccess should work synchronously for first subscriber") { implicit s =>
     var effect = 0
-    val task = Task.now { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.now { effect += 1; effect }.memoizeOnSuccess
 
     val f = task.attempt.runToFuture
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.now.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
+  test("IO.now.memoizeOnSuccess should work synchronously for next subscribers") { implicit s =>
     var effect = 0
-    val task = Task.now { effect += 1; effect }.memoizeOnSuccess
+    val task = IO.now { effect += 1; effect }.memoizeOnSuccess
 
     task.attempt.runToFuture
     s.tick()
@@ -310,9 +310,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Right(1))))
   }
 
-  test("Task.raiseError.memoizeOnSuccess should work") { implicit s =>
+  test("IO.raiseError.memoizeOnSuccess should work") { implicit s =>
     val dummy = "dummy"
-    val task = Task.raiseError(dummy).memoizeOnSuccess
+    val task = IO.raiseError(dummy).memoizeOnSuccess
 
     val f1 = task.attempt.runToFuture
     assertEquals(f1.value, Some(Success(Left(dummy))))
@@ -320,9 +320,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Success(Left(dummy))))
   }
 
-  test("Task.terminate.memoizeOnSuccess should work") { implicit s =>
+  test("IO.terminate.memoizeOnSuccess should work") { implicit s =>
     val dummy = DummyException("dummy")
-    val task = Task.terminate(dummy).memoizeOnSuccess
+    val task = IO.terminate(dummy).memoizeOnSuccess
 
     val f1 = task.runToFuture
     assertEquals(f1.value, Some(Failure(dummy)))
@@ -330,9 +330,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f2.value, Some(Failure(dummy)))
   }
 
-  test("Task.now.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.now.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.now(1)
+    var task = IO.now(1)
     for (i <- 0 until count) {
       task = task.memoizeOnSuccess
     }
@@ -341,11 +341,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.now.flatMap.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.now.flatMap.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.now(1)
+    var task = IO.now(1)
     for (i <- 0 until count) {
-      task = task.memoizeOnSuccess.flatMap(x => Task.now(x))
+      task = task.memoizeOnSuccess.flatMap(x => IO.now(x))
     }
 
     val f = task.attempt.runToFuture
@@ -354,9 +354,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.suspend.memoizeOnSuccess should be stack safe") { implicit s =>
+  test("IO.suspend.memoizeOnSuccess should be stack safe") { implicit s =>
     val count = if (Platform.isJVM) 50000 else 5000
-    var task = Task.defer(Task.now(1))
+    var task = IO.defer(IO.now(1))
     for (i <- 0 until count) {
       task = task.memoizeOnSuccess.map(x => x)
     }
@@ -365,9 +365,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.memoizeOnSuccess effects, sequential") { implicit s =>
+  test("IO.memoizeOnSuccess effects, sequential") { implicit s =>
     var effect = 0
-    val task1 = Task.evalAsync { effect += 1; 3 }.memoizeOnSuccess
+    val task1 = IO.evalAsync { effect += 1; 3 }.memoizeOnSuccess
     val task2 = task1.map { x =>
       effect += 1; x + 1
     }
@@ -381,9 +381,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(result2.value, Some(Success(Right(4))))
   }
 
-  test("Task.memoizeOnSuccess effects, parallel") { implicit s =>
+  test("IO.memoizeOnSuccess effects, parallel") { implicit s =>
     var effect = 0
-    val task1 = Task.evalAsync { effect += 1; 3 }.memoizeOnSuccess
+    val task1 = IO.evalAsync { effect += 1; 3 }.memoizeOnSuccess
     val task2 = task1.map { x =>
       effect += 1; x + 1
     }
@@ -400,9 +400,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(result2.value, Some(Success(Right(4))))
   }
 
-  test("Task.suspend.memoizeOnSuccess effects") { implicit s =>
+  test("IO.suspend.memoizeOnSuccess effects") { implicit s =>
     var effect = 0
-    val task1 = Task.defer { effect += 1; Task.now(3) }.memoizeOnSuccess
+    val task1 = IO.defer { effect += 1; IO.now(3) }.memoizeOnSuccess
     val task2 = task1.map { x =>
       effect += 1; x + 1
     }
@@ -416,10 +416,10 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(result2.value, Some(Success(Right(4))))
   }
 
-  test("Task.suspend.flatMap.memoizeOnSuccess effects") { implicit s =>
+  test("IO.suspend.flatMap.memoizeOnSuccess effects") { implicit s =>
     var effect = 0
-    val task1 = Task.defer { effect += 1; Task.now(2) }
-      .flatMap(x => Task.now(x + 1))
+    val task1 = IO.defer { effect += 1; IO.now(2) }
+      .flatMap(x => IO.now(x + 1))
       .memoizeOnSuccess
     val task2 = task1.map { x =>
       effect += 1; x + 1
@@ -438,9 +438,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(result3.value, Some(Success(Right(4))))
   }
 
-  test("Task.memoizeOnSuccess should make subsequent subscribers wait for the result, as future") { implicit s =>
+  test("IO.memoizeOnSuccess should make subsequent subscribers wait for the result, as future") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
     val first = task.attempt.runToFuture
     s.tick()
@@ -459,9 +459,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(third.value, Some(Success(Right(2))))
   }
 
-  test("Task.memoizeOnSuccess should make subsequent subscribers wait for the result, as callback") { implicit s =>
+  test("IO.memoizeOnSuccess should make subsequent subscribers wait for the result, as callback") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
     val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
@@ -484,9 +484,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(third.future.value, Some(Success(Right(2))))
   }
 
-  test("Task.memoizeOnSuccess should be synchronous for subsequent subscribers, as callback") { implicit s =>
+  test("IO.memoizeOnSuccess should be synchronous for subsequent subscribers, as callback") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
     val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
@@ -505,9 +505,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(third.future.value, Some(Success(Right(2))))
   }
 
-  test("Task.memoizeOnSuccess should be cancellable (future)") { implicit s =>
+  test("IO.memoizeOnSuccess should be cancellable (future)") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
     val first = task.attempt.runToFuture
     s.tick()
@@ -531,9 +531,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("Task.memoizeOnSuccess should be cancellable (callback #1)") { implicit s =>
+  test("IO.memoizeOnSuccess should be cancellable (callback #1)") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
     val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
@@ -561,9 +561,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("Task.memoizeOnSuccess should be cancellable (callback #2)") { implicit s =>
+  test("IO.memoizeOnSuccess should be cancellable (callback #2)") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess.map(x => x)
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess.map(x => x)
 
     val first = Promise[Either[Throwable, Int]]()
     task.runAsync(BiCallback.fromPromise(first))
@@ -591,9 +591,9 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 1)
   }
 
-  test("Task.memoizeOnSuccess should not be cancelable") { implicit s =>
+  test("IO.memoizeOnSuccess should not be cancelable") { implicit s =>
     var effect = 0
-    val task = Task.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO.evalAsync { effect += 1; effect }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
     val first = task.attempt.runToFuture
     val second = task.attempt.runToFuture
 
@@ -620,11 +620,11 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assert(s.state.tasks.isEmpty, "tasks.isEmpty")
   }
 
-  test("Task.evalAsync(error).memoizeOnSuccess can register multiple listeners") { implicit s =>
+  test("IO.evalAsync(error).memoizeOnSuccess can register multiple listeners") { implicit s =>
     val dummy = DummyException("dummy")
     var effect = 0
 
-    val task = Task[Int] { effect += 1; throw dummy }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
+    val task = IO[Int] { effect += 1; throw dummy }.delayExecution(1.second).map(_ + 1).memoizeOnSuccess
 
     val first = task.attempt.runToFuture
     s.tick()
@@ -656,38 +656,38 @@ object TaskMemoizeOnSuccessSuite extends BaseTestSuite {
     assertEquals(effect, 2)
   }
 
-  test("Task.evalOnce eq Task.evalOnce.memoizeOnSuccess") { implicit s =>
-    val task = Task.evalOnce(1)
+  test("IO.evalOnce eq IO.evalOnce.memoizeOnSuccess") { implicit s =>
+    val task = IO.evalOnce(1)
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("Task.eval.memoizeOnSuccess eq Task.eval.memoizeOnSuccess.memoizeOnSuccess") { implicit s =>
-    val task = Task.eval(1).memoizeOnSuccess
+  test("IO.eval.memoizeOnSuccess eq IO.eval.memoizeOnSuccess.memoizeOnSuccess") { implicit s =>
+    val task = IO.eval(1).memoizeOnSuccess
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("Task.eval.memoize eq Task.eval.memoize.memoizeOnSuccess") { implicit s =>
-    val task = Task.eval(1).memoize
+  test("IO.eval.memoize eq IO.eval.memoize.memoizeOnSuccess") { implicit s =>
+    val task = IO.eval(1).memoize
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("Task.eval.map.memoize eq Task.eval.map.memoize.memoizeOnSuccess") { implicit s =>
-    val task = Task.eval(1).map(_ + 1).memoize
+  test("IO.eval.map.memoize eq IO.eval.map.memoize.memoizeOnSuccess") { implicit s =>
+    val task = IO.eval(1).map(_ + 1).memoize
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("Task.now.memoizeOnSuccess eq Task.now") { implicit s =>
-    val task = Task.now(1)
+  test("IO.now.memoizeOnSuccess eq IO.now") { implicit s =>
+    val task = IO.now(1)
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("Task.raiseError.memoizeOnSuccess eq Task.raiseError") { implicit s =>
-    val task = Task.raiseError("dummy")
+  test("IO.raiseError.memoizeOnSuccess eq IO.raiseError") { implicit s =>
+    val task = IO.raiseError("dummy")
     assertEquals(task, task.memoizeOnSuccess)
   }
 
-  test("Task.terminate.memoizeOnSuccess eq Task.terminate") { implicit s =>
-    val task = Task.terminate(DummyException("dummy"))
+  test("IO.terminate.memoizeOnSuccess eq IO.terminate") { implicit s =>
+    val task = IO.terminate(DummyException("dummy"))
     assertEquals(task, task.memoizeOnSuccess)
   }
 }

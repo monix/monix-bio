@@ -20,7 +20,7 @@ package monix.bio
 package internal
 
 import cats.effect.CancelToken
-import monix.bio.Task.{Async, Context}
+import monix.bio.IO.{Async, Context}
 import monix.execution.Scheduler
 import monix.execution.atomic.{Atomic, AtomicBoolean}
 import monix.execution.exceptions.UncaughtErrorException
@@ -31,13 +31,13 @@ private[bio] object TaskCancellation {
   /**
     * Implementation for `Task.uncancelable`.
     */
-  def uncancelable[E, A](fa: Task[E, A]): Task[E, A] =
-    Task.ContextSwitch[E, A](fa, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], restoreConnection)
+  def uncancelable[E, A](fa: IO[E, A]): IO[E, A] =
+    IO.ContextSwitch[E, A](fa, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], restoreConnection)
 
   /**
     * Implementation for `Task.onCancelRaiseError`.
     */
-  def raiseError[E, A](fa: Task[E, A], e: E): Task[E, A] = {
+  def raiseError[E, A](fa: IO[E, A], e: E): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
       implicit val sc = ctx.scheduler
       val canCall = Atomic(true)
@@ -51,7 +51,7 @@ private[bio] object TaskCancellation {
       // Registering a callback that races against the cancelable we
       // registered above
       val cb2 = new RaiseCallback[E, A](canCall, conn, cb)
-      Task.unsafeStartNow(fa, ctx, cb2)
+      IO.unsafeStartNow(fa, ctx, cb2)
     }
     Async(start, trampolineBefore = true, trampolineAfter = false, restoreLocals = false)
   }
@@ -107,14 +107,14 @@ private[bio] object TaskCancellation {
     e: E
   ): CancelToken[UIO] = {
 
-    Task.suspendTotal {
+    IO.suspendTotal {
       if (waitsForResult.getAndSet(false))
         conn2.cancel.map { _ =>
           conn.tryReactivate()
           cb.onError(e)
         }
       else
-        Task.unit
+        IO.unit
     }
   }
 

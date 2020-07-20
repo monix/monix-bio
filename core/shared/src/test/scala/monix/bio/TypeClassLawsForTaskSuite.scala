@@ -29,45 +29,45 @@ import cats.laws.discipline.{
 
 object TypeClassLawsForTaskSuite
     extends BaseTypeClassLawsForTaskSuite()(
-      Task.defaultOptions.disableAutoCancelableRunLoops
+      IO.defaultOptions.disableAutoCancelableRunLoops
     )
 
 object TypeClassLawsForTaskAutoCancelableSuite
     extends BaseTypeClassLawsForTaskSuite()(
-      Task.defaultOptions.enableAutoCancelableRunLoops
+      IO.defaultOptions.enableAutoCancelableRunLoops
     )
 
-class BaseTypeClassLawsForTaskSuite(implicit opts: Task.Options) extends BaseLawsSuite {
+class BaseTypeClassLawsForTaskSuite(implicit opts: IO.Options) extends BaseLawsSuite {
 
-  checkAllAsync("CoflatMap[Task.Unsafe]") { implicit ec =>
-    CoflatMapTests[Task.Unsafe].coflatMap[Int, Int, Int]
+  checkAllAsync("CoflatMap[Task]") { implicit ec =>
+    CoflatMapTests[Task].coflatMap[Int, Int, Int]
   }
 
-  checkAllAsync("Concurrent[Task.Unsafe]") { implicit ec =>
-    ConcurrentTests[Task[Throwable, *]].concurrent[Int, Int, Int]
+  checkAllAsync("Concurrent[Task]") { implicit ec =>
+    ConcurrentTests[IO[Throwable, *]].concurrent[Int, Int, Int]
   }
 
-  checkAllAsync("ConcurrentEffect[Task.Unsafe]") { implicit ec =>
-    ConcurrentEffectTests[Task.Unsafe].concurrentEffect[Int, Int, Int]
+  checkAllAsync("ConcurrentEffect[Task]") { implicit ec =>
+    ConcurrentEffectTests[Task].concurrentEffect[Int, Int, Int]
   }
 
-  checkAllAsync("CommutativeApplicative[Task.Par]") { implicit ec =>
-    CommutativeApplicativeTests[Task.Par[Throwable, *]].commutativeApplicative[Int, Int, Int]
+  checkAllAsync("CommutativeApplicative[IO.Par]") { implicit ec =>
+    CommutativeApplicativeTests[IO.Par[Throwable, *]].commutativeApplicative[Int, Int, Int]
   }
 
-  checkAllAsync("Parallel[Task, Task.Par]") { implicit ec =>
-    ParallelTests[Task.Unsafe, Task.Par[Throwable, *]].parallel[Int, Int]
+  checkAllAsync("Parallel[IO, IO.Par]") { implicit ec =>
+    ParallelTests[Task, IO.Par[Throwable, *]].parallel[Int, Int]
   }
 
-  checkAllAsync("Monoid[Task[String, Int]]") { implicit ec =>
-    MonoidTests[Task[String, Int]].monoid
+  checkAllAsync("Monoid[IO[String, Int]]") { implicit ec =>
+    MonoidTests[IO[String, Int]].monoid
   }
 
-  checkAllAsync("SemigroupK[Task.Unsafe[Int]]") { implicit ec =>
-    SemigroupKTests[Task.Unsafe].semigroupK[Int]
+  checkAllAsync("SemigroupK[Task[Int]]") { implicit ec =>
+    SemigroupKTests[Task].semigroupK[Int]
   }
 
-  checkAllAsync("Bifunctor[Task[String, Int]]") { implicit ec =>
-    BifunctorTests[Task].bifunctor[String, String, String, Int, Int, Int]
+  checkAllAsync("Bifunctor[IO[String, Int]]") { implicit ec =>
+    BifunctorTests[IO].bifunctor[String, String, String, Int, Int, Int]
   }
 }

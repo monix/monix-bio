@@ -27,13 +27,13 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 object TaskParSequenceUnorderedSuite extends BaseTestSuite {
-  test("Task.parSequenceUnordered should execute in parallel") { implicit s =>
+  test("IO.parSequenceUnordered should execute in parallel") { implicit s =>
     val seq = Seq(
-      Task.evalAsync(1).delayExecution(2.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(3).delayExecution(3.seconds)
+      IO.evalAsync(1).delayExecution(2.seconds),
+      IO.evalAsync(2).delayExecution(1.second),
+      IO.evalAsync(3).delayExecution(3.seconds)
     )
-    val f = Task.parSequenceUnordered(seq).runToFuture
+    val f = IO.parSequenceUnordered(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -43,16 +43,16 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(List(3, 1, 2))))
   }
 
-  test("Task.parSequenceUnordered should onError if one of the tasks terminates in error") { implicit s =>
+  test("IO.parSequenceUnordered should onError if one of the tasks terminates in error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq(
-      Task.evalAsync(3).delayExecution(3.seconds),
-      Task.evalAsync(2).delayExecution(1.second),
-      Task.evalAsync(throw ex).delayExecution(2.seconds),
-      Task.evalAsync(3).delayExecution(1.seconds)
+      IO.evalAsync(3).delayExecution(3.seconds),
+      IO.evalAsync(2).delayExecution(1.second),
+      IO.evalAsync(throw ex).delayExecution(2.seconds),
+      IO.evalAsync(3).delayExecution(1.seconds)
     )
 
-    val f = Task.parSequenceUnordered(seq).runToFuture
+    val f = IO.parSequenceUnordered(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -60,7 +60,7 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.parSequenceUnordered should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
+  test("IO.parSequenceUnordered should onTerminate if one of the tasks terminates in a fatal error") { implicit s =>
     val ex = DummyException("dummy")
     val seq = Seq(
       UIO.evalAsync(3).delayExecution(3.seconds),
@@ -77,13 +77,13 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.parSequenceUnordered should be canceled") { implicit s =>
+  test("IO.parSequenceUnordered should be canceled") { implicit s =>
     val seq = Seq(
       UIO.evalAsync(1).delayExecution(2.seconds),
       UIO.evalAsync(2).delayExecution(1.second),
       UIO.evalAsync(3).delayExecution(3.seconds)
     )
-    val f = Task.parSequenceUnordered(seq).runToFuture
+    val f = IO.parSequenceUnordered(seq).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -95,27 +95,27 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("Task.parSequenceUnordered should run over an iterable") { implicit s =>
+  test("IO.parSequenceUnordered should run over an iterable") { implicit s =>
     val count = 10
     val seq = 0 until count
-    val it = seq.map(x => Task.eval(x + 1))
-    val sum = Task.parSequenceUnordered(it).map(_.sum)
+    val it = seq.map(x => IO.eval(x + 1))
+    val sum = IO.parSequenceUnordered(it).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
     assertEquals(result.value.get, Success((count + 1) * count / 2))
   }
 
-  test("Task.parSequenceUnordered should be stack-safe on handling many tasks") { implicit s =>
+  test("IO.parSequenceUnordered should be stack-safe on handling many tasks") { implicit s =>
     val count = 10000
-    val tasks = (0 until count).map(x => Task.eval(x))
-    val sum = Task.parSequenceUnordered(tasks).map(_.sum)
+    val tasks = (0 until count).map(x => IO.eval(x))
+    val sum = IO.parSequenceUnordered(tasks).map(_.sum)
 
     val result = sum.runToFuture; s.tick()
     assertEquals(result.value.get, Success(count * (count - 1) / 2))
   }
 
-  test("Task.parSequenceUnordered should be stack safe on success") { implicit s =>
-    def fold[A, B](ta: Task.Unsafe[ListBuffer[A]], tb: Task.Unsafe[A]): Task.Unsafe[ListBuffer[A]] =
+  test("IO.parSequenceUnordered should be stack safe on success") { implicit s =>
+    def fold[A, B](ta: Task[ListBuffer[A]], tb: Task[A]): Task[ListBuffer[A]] =
       Task.parSequenceUnordered(List(ta, tb)).map {
         case a :: b :: Nil =>
           val (accR, valueR) = if (a.isInstanceOf[ListBuffer[_]]) (a, b) else (b, a)
@@ -126,7 +126,7 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
           throw new RuntimeException("Oops!")
       }
 
-    def gatherSpecial[A](in: Seq[Task.Unsafe[A]]): Task.Unsafe[List[A]] = {
+    def gatherSpecial[A](in: Seq[Task[A]]): Task[List[A]] = {
       val init = Task.eval(ListBuffer.empty[A])
       val r = in.foldLeft(init)(fold)
       r.map(_.result())
@@ -150,33 +150,33 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(result, Some(Success(count * (count - 1) / 2)))
   }
 
-  test("Task.parSequenceUnordered should log errors if multiple errors happen") { implicit s =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+  test("IO.parSequenceUnordered should log errors if multiple errors happen") { implicit s =>
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
     val ex = "dummy1"
     var errorsThrow = 0
 
-    val task1: Task[String, Int] = Task
+    val task1: IO[String, Int] = IO
       .raiseError(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val task2: Task[String, Int] = Task
+    val task2: IO[String, Int] = IO
       .raiseError(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val sequence = Task.parSequenceUnordered(Seq(task1, task2))
+    val sequence = IO.parSequenceUnordered(Seq(task1, task2))
     val result = sequence.attempt.runToFutureOpt
     s.tick()
 
@@ -185,33 +185,33 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(errorsThrow, 2)
   }
 
-  test("Task.parSequenceUnordered should log terminal errors if multiple errors happen") { implicit s =>
-    implicit val opts = Task.defaultOptions.disableAutoCancelableRunLoops
+  test("IO.parSequenceUnordered should log terminal errors if multiple errors happen") { implicit s =>
+    implicit val opts = IO.defaultOptions.disableAutoCancelableRunLoops
 
     val ex = DummyException("dummy1")
     var errorsThrow = 0
 
-    val task1: Task[String, Int] = Task
+    val task1: IO[String, Int] = IO
       .terminate(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val task2: Task[String, Int] = Task
+    val task2: IO[String, Int] = IO
       .terminate(ex)
       .executeAsync
       .guaranteeCase {
-        case ExitCase.Completed => Task.unit
+        case ExitCase.Completed => IO.unit
         case ExitCase.Error(_) => UIO(errorsThrow += 1)
-        case ExitCase.Canceled => Task.unit
+        case ExitCase.Canceled => IO.unit
       }
       .uncancelable
 
-    val sequence = Task.parSequenceUnordered(Seq(task1, task2))
+    val sequence = IO.parSequenceUnordered(Seq(task1, task2))
     val result = sequence.attempt.runToFutureOpt
     s.tick()
 
@@ -220,13 +220,13 @@ object TaskParSequenceUnorderedSuite extends BaseTestSuite {
     assertEquals(errorsThrow, 2)
   }
 
-  test("Task.parSequenceUnordered runAsync multiple times") { implicit s =>
+  test("IO.parSequenceUnordered runAsync multiple times") { implicit s =>
     var effect = 0
     val task1 = UIO.evalAsync { effect += 1; 3 }.memoize
     val task2 = task1 map { x =>
       effect += 1; x + 1
     }
-    val task3 = Task.parSequenceUnordered(List(task2, task2, task2))
+    val task3 = IO.parSequenceUnordered(List(task2, task2, task2))
 
     val result1 = task3.runToFuture; s.tick()
     assertEquals(result1.value, Some(Success(List(4, 4, 4))))

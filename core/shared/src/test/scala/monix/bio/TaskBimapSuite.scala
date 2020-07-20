@@ -20,8 +20,8 @@ package monix.bio
 import scala.util.Success
 
 object TaskBimapSuite extends BaseTestSuite {
-  test("Task.bimap should map the success channel") { implicit s =>
-    val f = Task
+  test("IO.bimap should map the success channel") { implicit s =>
+    val f = IO
       .now(1)
       .bimap(_ => "Error", _ => "Success")
       .attempt
@@ -30,8 +30,8 @@ object TaskBimapSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right("Success"))))
   }
 
-  test("Task.bimap should map the error channel") { implicit s =>
-    val f = Task
+  test("IO.bimap should map the error channel") { implicit s =>
+    val f = IO
       .raiseError(1)
       .bimap(_ => "Error", _ => "Success")
       .attempt

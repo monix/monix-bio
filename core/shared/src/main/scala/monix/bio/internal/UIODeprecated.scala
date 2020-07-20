@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.{Task, UIO}
+import monix.bio.{IO, UIO}
 
 private[bio] object UIODeprecated {
 
@@ -64,13 +64,13 @@ private[bio] object UIODeprecated {
     @deprecated("Use parTraverseN", "0.1.0")
     def wanderN[A, B](parallelism: Int)(in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] = {
       // $COVERAGE-OFF$
-      Task.parTraverseN(parallelism)(in)(f)
+      IO.parTraverseN(parallelism)(in)(f)
       // $COVERAGE-ON$
     }
 
-    /** DEPRECATED — renamed to [[Task.parTraverseUnordered]] */
+    /** DEPRECATED — renamed to [[IO.parTraverseUnordered]] */
     @deprecated("Use parTraverseUnordered", "3.2.0")
-    def wanderUnordered[A, B, M[X] <: Iterable[X]](in: M[A])(f: A => UIO[B]): UIO[List[B]] = {
+    def wanderUnordered[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] = {
       // $COVERAGE-OFF$
       UIO.parTraverseUnordered(in)(f)
       // $COVERAGE-ON$

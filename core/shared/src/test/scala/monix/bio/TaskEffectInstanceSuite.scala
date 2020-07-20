@@ -17,34 +17,34 @@
 
 package monix.bio
 
-import cats.effect.{Effect, IO}
-import monix.bio.Task.Options
+import cats.effect.{Effect, IO => CIO}
+import monix.bio.IO.Options
 import monix.execution.schedulers.TracingScheduler
 
 import scala.concurrent.duration._
 
 object TaskEffectInstanceSuite extends BaseTestSuite {
 
-  val readOptions: UIO[Task.Options] =
-    Task.Async[Nothing, Options] { (ctx, cb) =>
+  val readOptions: UIO[IO.Options] =
+    IO.Async[Nothing, Options] { (ctx, cb) =>
       cb.onSuccess(ctx.options)
     }
 
   test("Effect instance should make use of implicit TaskOptions") { implicit sc =>
-    implicit val customOptions: Task.Options = Task.Options(
+    implicit val customOptions: IO.Options = IO.Options(
       autoCancelableRunLoops = true,
       localContextPropagation = true
     )
 
-    var received: Task.Options = null
+    var received: IO.Options = null
 
-    val io = Effect[Task.Unsafe].runAsync(readOptions) {
+    val io = Effect[Task].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
-        IO.unit
+        CIO.unit
       case _ =>
         fail()
-        IO.unit
+        CIO.unit
     }
 
     io.unsafeRunSync()
@@ -53,38 +53,38 @@ object TaskEffectInstanceSuite extends BaseTestSuite {
   }
 
   test("Effect instance should use Task.defaultOptions with default TestScheduler") { implicit sc =>
-    var received: Task.Options = null
-    val io = Effect[Task.Unsafe].runAsync(readOptions) {
+    var received: IO.Options = null
+    val io = Effect[Task].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
-        IO.unit
+        CIO.unit
       case _ =>
         fail()
-        IO.unit
+        CIO.unit
     }
 
     io.unsafeRunSync()
     sc.tick(1.day)
-    assertEquals(received, Task.defaultOptions)
+    assertEquals(received, IO.defaultOptions)
     assert(!received.localContextPropagation)
   }
 
   test("Effect instance should use Task.defaultOptions.withSchedulerFeatures") { sc =>
     implicit val tracing = TracingScheduler(sc)
 
-    var received: Task.Options = null
-    val io = Effect[Task.Unsafe].runAsync(readOptions) {
+    var received: IO.Options = null
+    val io = Effect[Task].runAsync(readOptions) {
       case Right(opts) =>
         received = opts
-        IO.unit
+        CIO.unit
       case _ =>
         fail()
-        IO.unit
+        CIO.unit
     }
 
     io.unsafeRunSync()
     sc.tick(1.day)
-    assertEquals(received, Task.defaultOptions.withSchedulerFeatures)
+    assertEquals(received, IO.defaultOptions.withSchedulerFeatures)
     assert(received.localContextPropagation)
   }
 }

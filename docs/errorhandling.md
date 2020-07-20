@@ -3,16 +3,16 @@ id: error-handling
 title: Error Handling
 ---
 
-When `Task` fails with an error it short-circuits the computation and returns the error as a result:
+When `IO` fails with an error it short-circuits the computation and returns the error as a result:
 
 ```scala
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val fa = Task(println("A"))
-val fb = Task.raiseError(DummyException("boom"))
-val fc = Task(println("C"))
+val fa = IO(println("A"))
+val fb = IO.raiseError(DummyException("boom"))
+val fc = IO(println("C"))
 
 val task = fa.flatMap(_ => fb).flatMap(_ => fc)
 
@@ -25,19 +25,19 @@ We can handle the error to prevent it with one of many available methods.
 For better discoverability, they are often prefixed with `onError`.
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val fa = Task(println("A"))
-val fb = Task.raiseError(DummyException("boom"))
-val fc = Task(println("C"))
+val fa = IO(println("A"))
+val fb = IO.raiseError(DummyException("boom"))
+val fc = IO(println("C"))
 
 val task = fa
   .flatMap(_ => fb)
-  .onErrorHandleWith(_ => Task(println("B recovered")))
+  .onErrorHandleWith(_ => IO(println("B recovered")))
   .flatMap(_ => fc)
-  .onErrorHandleWith(_ => Task(println("C recovered")))
+  .onErrorHandleWith(_ => IO(println("C recovered")))
 
 task.runSyncUnsafe()
 //=> A
@@ -53,7 +53,7 @@ Many applications divide errors into two types:
 - Non-Recoverable errors which are often fatal or it is not sensible to try to recover from them.
   Examples: `StackOverflow`, throwing an exception in a pure function (programmer's error).
   
-`Task[E, A]` follow this pattern and can fail with two kind of errors:
+`IO[E, A]` follow this pattern and can fail with two kind of errors:
 - Errors of type `E` which represents recoverable errors. Other common names are "typed" or "expected" errors.
 - Errors of type `Throwable` for non-recoverable errors. We call them "terminal" or "unexpected" errors. You might also see terminology like "defect" or "unchecked failure" in other libraries.
 
@@ -72,17 +72,17 @@ Furthermore, if there is a change, and it introduces new errors, we might easily
 Consider the following example:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.{IO, Task}
   
 case class ForbiddenNumber() extends Exception
 
-def numberService(i: Int): Task.Unsafe[Int] =
-  if (i == 0) Task.raiseError(ForbiddenNumber())
-  else Task.now(i * 2)
+def numberService(i: Int): Task[Int] =
+  if (i == 0) IO.raiseError(ForbiddenNumber())
+  else IO.now(i * 2)
 
-def callNumberService(i: Int): Task.Unsafe[Int] = numberService(i).onErrorHandleWith {
+def callNumberService(i: Int): Task[Int] = numberService(i).onErrorHandleWith {
   case ForbiddenNumber() => callNumberService(i + 1) // try with a different number
-  case other => Task.raiseError(other) // propagate error
+  case other => IO.raiseError(other) // propagate error
 }
 ```
 
@@ -93,7 +93,7 @@ On top of that, we might have to add `case other => ...` to be safe in case we m
 At some point, the implementation might change:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.{IO, Task}
 import scala.concurrent.duration._
 
 sealed trait NumberServiceErrors extends Exception
@@ -102,27 +102,27 @@ case class ForbiddenNumber() extends NumberServiceErrors
   
 case class ServiceTimeout(duration: FiniteDuration) extends NumberServiceErrors
 
-def numberService(i: Int): Task.Unsafe[Int] =
+def numberService(i: Int): Task[Int] =
   // Check if we should timeout the caller
-  if (i == 5) Task.raiseError(ServiceTimeout(10.second))
-  else if (i == 0) Task.raiseError(ForbiddenNumber())
-  else Task.now(i * 2)
+  if (i == 5) IO.raiseError(ServiceTimeout(10.second))
+  else if (i == 0) IO.raiseError(ForbiddenNumber())
+  else IO.now(i * 2)
 ```
 
 We introduced a `ServiceTimeout` error which tells the users that their requests will be accepted after it passes.
 It's easy to forget to update `callNumberService` to support the new behavior and if we didn't have `case other => ...` then we would end up with errors at runtime.
 The method `callNumberService` would also compile if we changed error class of `ForbiddenNumber()` leading to more issues.
 
-Now let's see how it would look like if we leverage `Task` capabilities:
+Now let's see how it would look like if we leverage `IO` capabilities:
 
 ```scala mdoc:silent:reset
-import monix.bio.{Task, UIO}
+import monix.bio.{IO, UIO}
   
 case class ForbiddenNumber()
 
-def numberService(i: Int): Task[ForbiddenNumber, Int] =
-  if (i == 0) Task.raiseError(ForbiddenNumber())
-  else Task.now(i * 2)
+def numberService(i: Int): IO[ForbiddenNumber, Int] =
+  if (i == 0) IO.raiseError(ForbiddenNumber())
+  else IO.now(i * 2)
 
 def callNumberService(i: Int): UIO[Int] = numberService(i).onErrorHandleWith {
   case ForbiddenNumber() => callNumberService(i + 1) // try with a different number
@@ -131,12 +131,12 @@ def callNumberService(i: Int): UIO[Int] = numberService(i).onErrorHandleWith {
 
 Now `numberService` specifies possible errors in the type signature, so it is immediately apparent to us and the compiler what the expected failures are.
 We don't need `case other => ...` because there are no other possible errors and if they appear in the future the code will stop compiling.
-As a nice bonus, `callNumberService` returns `UIO[Int]` (type alias of `Task[Nothing, Int]`) which tells whoever uses `callNumberService` that they don't have to expect any errors.
+As a nice bonus, `callNumberService` returns `UIO[Int]` (type alias of `IO[Nothing, Int]`) which tells whoever uses `callNumberService` that they don't have to expect any errors.
 
 If we change `numberService` errors then we will have to change the signature as well:
 
 ```scala mdoc:silent:reset
-import monix.bio.{Task, UIO}  
+import monix.bio.{IO, UIO}  
 import scala.concurrent.duration._
 
 sealed trait NumberServiceErrors
@@ -145,11 +145,11 @@ case class ForbiddenNumber() extends NumberServiceErrors
 
 case class ServiceTimeout(duration: FiniteDuration) extends NumberServiceErrors
 
-def numberService(i: Int): Task[NumberServiceErrors, Int] =
+def numberService(i: Int): IO[NumberServiceErrors, Int] =
   // Check if we should timeout the caller
-  if (i == 5) Task.raiseError(ServiceTimeout(10.second))
-  else if (i == 0) Task.raiseError(ForbiddenNumber())
-  else Task.now(i * 2)
+  if (i == 5) IO.raiseError(ServiceTimeout(10.second))
+  else if (i == 0) IO.raiseError(ForbiddenNumber())
+  else IO.now(i * 2)
 
 def callNumberService(i: Int): UIO[Int] = numberService(i).onErrorHandleWith {
   case ForbiddenNumber() => callNumberService(i + 1) // try with a different number
@@ -172,75 +172,75 @@ A similar approach is often used with single parameter effects in combination wi
 def numberService(i: Int): IO[Either[NumberServiceErrors, Int]]
 ```
 
-`IO` can fail with `Throwable` (`Task`'s terminal error channel) and `Either` can return `Left` of any `E` (`Task`'s typed error channel).
-`Task[E, A]` forces this convention which makes it more convenient and safer to follow it but if you are familiar with `IO` of `Either`, know that the technique is the same in spirit.
+`IO` can fail with `Throwable` (`IO`'s terminal error channel) and `Either` can return `Left` of any `E` (`IO`'s typed error channel).
+`IO` forces this convention which makes it more convenient and safer to follow it but if you are familiar with `IO` of `Either` then the spirit is the same.
 
 I recommend [this article by John De Goes](https://degoes.net/articles/bifunctor-io) if you are interested in the original motivations behind the idea of embedding this pattern directly in the data type.
 
-## Producing a failed Task
+## Producing a failed IO
 
 An error can occur when an `Exception` is thrown or we can construct it ourselves with dedicated builder methods.
 
-### Task.raiseError
+### IO.raiseError
 
-Use `Task.raiseError` if you already have an error value:
+Use `IO.raiseError` if you already have an error value:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.Scheduler.Implicits.global
 
 val error = "error"
-val task: Task[String, Int] = Task.raiseError(error)
+val task: IO[String, Int] = IO.raiseError(error)
 
 // Left("error")
 task.attempt.runSyncUnsafe()
 ```
 
-### Task.terminate
+### IO.terminate
 
-`Task.terminate` can raise a terminal error (second channel with `Throwable`):
+`IO.terminate` can raise a terminal error (second channel with `Throwable`):
 
 ```scala
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
 
 val error = DummyException("error")
 // It doesn't affect the signature
-val task: Task[String, Int] = Task.terminate(error)
+val task: IO[String, Int] = IO.terminate(error)
 
 task.attempt.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: error
 ```
 
-### Catching errors in Task.eval
+### Catching errors in IO.eval
 
-`Task.eval` (and `Task.apply`) will catch any errors that are thrown in the method's body and expose them as typed errors:
+`IO.eval` (and `IO.apply`) will catch any errors that are thrown in the method's body and expose them as typed errors:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.{IO, Task}
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
 
 val error = DummyException("error")
-val task: Task.Unsafe[Int] = Task.eval { throw error }
+val task: Task[Int] = IO.eval { throw error }
 
 // Left(DummyException("error"))
 task.attempt.runSyncUnsafe()
 ```
 
-### Catching errors in Task.evalTotal
+### Catching errors in IO.evalTotal
 
-If we are sure that our side-effecting code won't have any surprises we can use `Task.evalTotal` but if we are wrong, the error
+If we are sure that our side-effecting code won't have any surprises we can use `IO.evalTotal` but if we are wrong, the error
 will be caught in the internal error channel:
 
 ```scala
-import monix.bio.{Task, UIO}
+import monix.bio.{IO, UIO}
 import monix.execution.Scheduler.Implicits.global
 import monix.execution.exceptions.DummyException
 
 val error = DummyException("error")
-val task: UIO[Int] = Task.evalTotal { throw error }
+val task: UIO[Int] = IO.evalTotal { throw error }
 
 task.attempt.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: error
@@ -250,11 +250,11 @@ Other methods which return `UIO` or use a generic `E` (not fixed to `Throwable`)
 
 ## Recovering from Errors
 
-When `Task` fails, it will skip all subsequent operations until the error is handled.
+When `IO` fails, it will skip all subsequent operations until the error is handled.
 Typed and terminal errors are in different categories - handling typed errors will not do anything to unexpected errors but
 error handling functions for terminal errors handle "normal" errors as well. 
 
-The section only covers the main error handling operators, refer to [API Documentation](https://monix.github.io/monix-bio/api/monix/bio/Task.html) for the full list.
+The section only covers the main error handling operators, refer to [API Documentation](https://monix.github.io/monix-bio/api/monix/bio/IO.html) for the full list.
 
 ### Typed Errors
 
@@ -270,11 +270,11 @@ final def materialize(implicit ev: E <:< Throwable): UIO[Try[A]]
 Note that the return type is `UIO` indicating that there are no more expected errors to handle.
 
 ```scala mdoc:silent:reset
-import monix.bio.{Task, UIO}
+import monix.bio.{IO, UIO}
 import monix.execution.Scheduler.Implicits.global
 
 val error = "error"
-val task: Task[String, Int] = Task.raiseError(error)
+val task: IO[String, Int] = IO.raiseError(error)
 val attempted: UIO[Either[String, Int]] = task.attempt
 
 // Left("error")
@@ -287,50 +287,50 @@ The typed error will be exposed as a `Left` and the terminal error will result i
 Both methods have corresponding reverse operations:
 
 ```scala 
-final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): Task[E1, B]
+final def rethrow[E1 >: E, B](implicit ev: A <:< Either[E1, B]): IO[E1, B]
 final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B]
 ```
 
 Example:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 
 val error = "error"
-// same as Task.raiseError
-val task: Task[String, Int] = Task.raiseError(error).attempt.rethrow 
+// same as IO.raiseError
+val task: IO[String, Int] = IO.raiseError(error).attempt.rethrow 
 ```
 
 #### onErrorHandle & onErrorHandleWith
 
-`Task.onErrorHandleWith` is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:
+`IO.onErrorHandleWith` is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:
 
 ```scala mdoc:silent:reset
-import monix.bio.{Task, UIO}
+import monix.bio.{IO, UIO}
 import monix.execution.Scheduler.Implicits.global
 
 import scala.concurrent.duration._
 
 case class TimeoutException()
 
-val source: Task[TimeoutException, String] =
-  Task.evalTotal("Hello!")
+val source: IO[TimeoutException, String] =
+  IO.evalTotal("Hello!")
     .delayExecution(10.seconds)
     .timeoutWith(3.seconds, TimeoutException())
 
 val recovered: UIO[String] = source.onErrorHandleWith {
-  _: TimeoutException => Task.now("Recovered!")
+  _: TimeoutException => IO.now("Recovered!")
 }
 
 recovered.attempt.runToFuture.foreach(println)
 //=> Recovered!
 ```
 
-`Task.onErrorHandle` is a variant which takes a pure recovery function `E => B` instead of an effectful `E => Task[E1, B]` which could also fail.
+`IO.onErrorHandle` is a variant which takes a pure recovery function `E => B` instead of an effectful `E => IO[E1, B]` which could also fail.
 
 #### redeem & redeemWith
 
-`Task.redeem` and `Task.redeemWith` are a combination of `map` + `onErrorHandle` and `flatMap` + `onErrorHandleWith` respectively.
+`IO.redeem` and `IO.redeemWith` are a combination of `map` + `onErrorHandle` and `flatMap` + `onErrorHandleWith` respectively.
 
 If `task` is successful then:
 
@@ -343,16 +343,16 @@ And when `task` is failed:
 Instead of:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val f1 = Task.raiseError(DummyException("boom"))
-val f2 = Task(println("A"))
+val f1 = IO.raiseError(DummyException("boom"))
+val f2 = IO(println("A"))
 
 val task = f1
   .flatMap(_ => f2)
-  .onErrorHandleWith(_ => Task(println("Recovered!")))
+  .onErrorHandleWith(_ => IO(println("Recovered!")))
 
 task.runSyncUnsafe()
 //=> Recovered!
@@ -361,15 +361,15 @@ task.runSyncUnsafe()
 You can do this:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val f1 = Task.raiseError(DummyException("boom"))
-val f2 = Task(println("A"))
+val f1 = IO.raiseError(DummyException("boom"))
+val f2 = IO(println("A"))
 
 val task = f1
-  .redeemWith(_ => Task(println("Recovered!")), _ => f2)
+  .redeemWith(_ => IO(println("Recovered!")), _ => f2)
 
 task.runSyncUnsafe()
 //=> Recovered!
@@ -384,24 +384,24 @@ Terminal errors ignore all typed error handlers and can only be caught by more p
 The example below shows how `redeemWith` does nothing to handle unexpected errors even if it uses the same type:
 
 ```scala
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-// Note Task.termiante instead of Task.raiseError
-val f1 = Task.terminate(DummyException("boom"))
-val f2 = Task(println("A"))
+// Note IO.termiante instead of IO.raiseError
+val f1 = IO.terminate(DummyException("boom"))
+val f2 = IO(println("A"))
 
 val task = f1
-  .redeemWith(_ => Task(println("Recovered!")), _ => f2)
+  .redeemWith(_ => IO(println("Recovered!")), _ => f2)
 
 task.runSyncUnsafe()
 //=> Exception in thread "main" monix.execution.exceptions.DummyException: boom
 ```
 
 There are special variants of `redeem` and `redeemWith` which are called `redeemCause` and `redeemCauseWith` respectively.
-`Task.redeemCause` takes a `Cause[E] => B` function instead of `E => B` to recover and
-`Task.redeemCauseWith` uses a `Cause[E] => Task[E1, B]`.
+`IO.redeemCause` takes a `Cause[E] => B` function instead of `E => B` to recover and
+`IO.redeemCauseWith` uses a `Cause[E] => IO[E1, B]`.
 
 `Cause` is defined as follows:
 
@@ -420,16 +420,16 @@ object Cause {
 Let's modify the previous example to use `redeemCause`:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-// Note Task.termiante instead of Task.raiseError
-val f1 = Task.terminate(DummyException("boom"))
-val f2 = Task(println("A"))
+// Note IO.termiante instead of IO.raiseError
+val f1 = IO.terminate(DummyException("boom"))
+val f2 = IO(println("A"))
 
 val task = f1
-  .redeemCauseWith(_ => Task(println("Recovered!")), _ => f2)
+  .redeemCauseWith(_ => IO(println("Recovered!")), _ => f2)
 
 task.runSyncUnsafe()
 //=> Recovered!
@@ -437,43 +437,43 @@ task.runSyncUnsafe()
 
 Basically it is a more powerful version which can access both error channels.
 In your actual application you might find yourself using typed error handlers (`onErrorHandle`, `redeem` etc.) almost all of the time 
-and only use `Cause` variants when absolutely necessary like at the edges of the application if you don't want to pass failed `Task` / `Future` to your HTTP library.
+and only use `Cause` variants when absolutely necessary like at the edges of the application if you don't want to pass failed `IO` / `Future` to your HTTP library.
 
 ## Mapping Errors
 
 ### mapError
 
-`Task.mapError` will not handle any error but it can transform it to something else.
+`IO.mapError` will not handle any error but it can transform it to something else.
 
 It can be useful to convert an error from a smaller type to a bigger type:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import java.time.Instant
 
 case class ErrorA(i: Int)
 case class ErrorB(errA: ErrorA, createdAt: Instant)
 
-val task1: Task[ErrorA, String] = Task.raiseError(ErrorA(10))
-val task2: Task[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
+val task1: IO[ErrorA, String] = IO.raiseError(ErrorA(10))
+val task2: IO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
 ```
 
 ### tapError
 
-`Task.tapError` can peek at the error value and execute provided `E => Task[E1, B]` function without handling the original error.
+`IO.tapError` can peek at the error value and execute provided `E => IO[E1, B]` function without handling the original error.
 
 For instance, we might want to log the error without handling it:
 
 ```scala
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val f1 = Task.raiseError(DummyException("boom"))
-val f2 = Task(println("A"))
+val f1 = IO.raiseError(DummyException("boom"))
+val f2 = IO(println("A"))
 
 val task = f1
-  .tapError(e => Task(println("Incoming error: " + e)))
+  .tapError(e => IO(println("Incoming error: " + e)))
 
 task.runSyncUnsafe()
 //=> Incoming error: monix.execution.exceptions.DummyException: boom
@@ -482,15 +482,15 @@ task.runSyncUnsafe()
 
 ### Moving errors from the typed error channel
 
-If you are sure that your `Task` shouldn't have any errors and if there are any they should shutdown the task as soon as possible
+If you are sure that your `IO` shouldn't have any errors and if there are any they should shutdown the task as soon as possible
 there is `hideErrors` and `hideErrorsWith` which will hide the error from the type signature and raise it as a terminal error.
 
 ```scala mdoc:silent:reset
-import monix.bio.{Task, UIO}
+import monix.bio.{IO, UIO}
 import monix.execution.exceptions.DummyException
 import monix.execution.Scheduler.Implicits.global
 
-val task: UIO[Int] = Task
+val task: UIO[Int] = IO
   .raiseError(DummyException("boom!"))
   .hideErrors
   .map(_ => 10)
@@ -504,11 +504,11 @@ If your `E` is not `Throwable` you can use `hideErrorsWith` which takes a `E => 
 This method is handy if you are using generic Cats-Effect based libraries, for example:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.{IO, Task}
 import monix.catnap.ConcurrentQueue
 
-val queueExample: Task[Throwable, String] = for {
-  queue <- ConcurrentQueue[Task.Unsafe].bounded[String](10)
+val queueExample: IO[Throwable, String] = for {
+  queue <- ConcurrentQueue[Task].bounded[String](10)
   _ <- queue.offer("Message")
   msg <- queue.poll
 } yield msg
@@ -524,7 +524,7 @@ import monix.bio.{Task, UIO}
 import monix.catnap.ConcurrentQueue
 
 val queueExample: UIO[String] = (for {
-  queue <- ConcurrentQueue[Task.Unsafe].bounded[String](10)
+  queue <- ConcurrentQueue[Task].bounded[String](10)
   _ <- queue.offer("Message")
   msg <- queue.poll
 } yield msg).hideErrors
@@ -532,17 +532,17 @@ val queueExample: UIO[String] = (for {
 
 ## Restarting on Error
 
-`Task` type represents a specification of a computation so it can be freely restarted if we wish to do so.
+`IO` type represents a specification of a computation so it can be freely restarted if we wish to do so.
 
 There are few retry combinators available but in general it is quite simple to write a custom recursive function.
 For instance, retry with exponential backoff would look like as follows:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import scala.concurrent.duration._
 
-def retryBackoff[E, A](source: Task[E, A],
-  maxRetries: Int, firstDelay: FiniteDuration): Task[E, A] = {
+def retryBackoff[E, A](source: IO[E, A],
+  maxRetries: Int, firstDelay: FiniteDuration): IO[E, A] = {
 
   source.onErrorHandleWith { ex =>
       if (maxRetries > 0)
@@ -550,7 +550,7 @@ def retryBackoff[E, A](source: Task[E, A],
         retryBackoff(source, maxRetries - 1, firstDelay * 2)
           .delayExecution(firstDelay)
       else
-        Task.raiseError(ex)
+        IO.raiseError(ex)
   }
 }
 ```
@@ -560,18 +560,18 @@ In more complicated cases it's worth taking a look at [cats-retry](https://githu
 ## Reporting Uncaught Errors
 
 Losing errors is unacceptable.
-We can't always return them as a `Task` result because sometimes the failure could happen concurrently and `Task` could already be finished with a different value. 
+We can't always return them as a `IO` result because sometimes the failure could happen concurrently and `IO` could already be finished with a different value. 
 In this case the error is reported with `Scheduler.reportFailure` which by default logs uncaught errors to `System.err`:
 
 ```scala
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.Scheduler.Implicits.global
 import scala.concurrent.duration._
 
 // Ensures asynchronous execution, just to show
 // that the action doesn't happen on the
 // current thread
-val task = Task(2).delayExecution(1.second)
+val task = IO(2).delayExecution(1.second)
 
 task.runAsync { r =>
   throw new IllegalStateException(r.toString)
@@ -592,7 +592,7 @@ task.runAsync { r =>
 We can customize the behavior to use anything we'd like:
 
 ```scala
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.Scheduler
 import monix.execution.UncaughtExceptionReporter
 import scala.concurrent.duration._
@@ -604,7 +604,7 @@ val reporter = UncaughtExceptionReporter { ex =>
 
 implicit val s = Scheduler(Scheduler.global, reporter)
 
-val task = Task(2).delayExecution(1.second)
+val task = IO(2).delayExecution(1.second)
 
 task.runAsync { r =>
   throw new IllegalStateException(r.toString)
@@ -616,9 +616,9 @@ task.runAsync { r =>
 
 ## Cats Instances
 
-If you are a [Cats](https://github.com/typelevel/cats) user then `Task` provides [`ApplicativeError`](https://typelevel.org/cats/api/cats/ApplicativeError.html) and 
+If you are a [Cats](https://github.com/typelevel/cats) user then `IO` provides [`ApplicativeError`](https://typelevel.org/cats/api/cats/ApplicativeError.html) and 
 [`MonadError`](https://typelevel.org/cats/api/cats/MonadError.html) instances.
 
 If you import `cats.syntax.monadError._`, `cats.syntax.applicativeError` or just `cats.syntax.all._` you will have access to all the methods provided by library.
 
-The main gotcha is that anything requiring [`Sync`](https://typelevel.org/cats-effect/typeclasses/sync.html) and above will only work for `Task[Throwable, A]`
+The main gotcha is that anything requiring [`Sync`](https://typelevel.org/cats-effect/typeclasses/sync.html) and above will only work for `IO[Throwable, A]`

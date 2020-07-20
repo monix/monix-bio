@@ -18,11 +18,11 @@
 package monix.bio
 
 import cats.Eval
-import cats.effect.{ContextShift, IO, SyncIO}
+import cats.effect.{ContextShift, IO => CIO, SyncIO}
 import cats.laws._
 import cats.laws.discipline._
 import cats.syntax.all._
-import monix.bio.TaskConversionsSuite.{CIO, CustomConcurrentEffect, CustomEffect}
+import monix.bio.TaskConversionsSuite.{CEIO, CustomConcurrentEffect, CustomEffect}
 import monix.catnap.SchedulerEffect
 import monix.execution.CancelablePromise
 import monix.execution.exceptions.DummyException
@@ -33,15 +33,15 @@ import scala.util.{Failure, Success, Try}
 
 object TaskLikeConversionsSuite extends BaseTestSuite {
 
-  test("Task.from(task.to[IO]) <-> task") { implicit s =>
-    check1 { task: Task.Unsafe[Int] =>
-      Task.from(task.to[IO]) <-> task
+  test("IO.from(task.to[IO]) <-> task") { implicit s =>
+    check1 { task: Task[Int] =>
+      IO.from(task.to[CIO]) <-> task
     }
   }
 
-  test("Task.from converts successful Future") { implicit s =>
+  test("IO.from converts successful Future") { implicit s =>
     val p = Promise[Int]()
-    val f = Task.from(p.future).runToFuture
+    val f = IO.from(p.future).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -51,10 +51,10 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed Future") { implicit s =>
+  test("IO.from converts failed Future") { implicit s =>
     val p = Promise[Int]()
     val ex = DummyException("dummy")
-    val f = Task.from(p.future).runToFuture
+    val f = IO.from(p.future).runToFuture
 
     s.tick()
     assertEquals(f.value, None)
@@ -64,16 +64,16 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts successful sync IO") { implicit s =>
-    val task = Task.from(IO(123))
+  test("IO.from converts successful sync IO") { implicit s =>
+    val task = IO.from(CIO(123))
     assertEquals(task.runToFuture.value, Some(Success(123)))
   }
 
-  test("Task.from converts successful async IO") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from converts successful async IO") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
 
-    val io = IO.shift >> IO(123)
-    val task = Task.from(io)
+    val io = CIO.shift >> CIO(123)
+    val task = IO.from(io)
     val f = task.runToFuture
 
     assertEquals(f.value, None)
@@ -81,18 +81,18 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed sync IO") { implicit s =>
+  test("IO.from converts failed sync CIO") { implicit s =>
     val ex = DummyException("dummy")
-    val task = Task.from(IO.raiseError(ex))
+    val task = IO.from(CIO.raiseError(ex))
     assertEquals(task.runToFuture.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts failed async IO") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from converts failed async IO") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
 
     val ex = DummyException("dummy")
-    val io = IO.shift >> IO.raiseError(ex)
-    val task = Task.from(io)
+    val io = CIO.shift >> CIO.raiseError(ex)
+    val task = IO.from(io)
     val f = task.runToFuture
 
     assertEquals(f.value, None)
@@ -100,12 +100,12 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.from preserves cancellability of an IO") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from preserves cancellability of an IO") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
 
-    val timer = SchedulerEffect.timer[IO](s)
+    val timer = SchedulerEffect.timer[CIO](s)
     val io = timer.sleep(10.seconds)
-    val f = Task.from(io).runToFuture
+    val f = IO.from(io).runToFuture
 
     s.tick()
     assert(s.state.tasks.nonEmpty, "tasks.nonEmpty")
@@ -120,10 +120,10 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, None)
   }
 
-  test("Task.from converts successful Eval") { implicit s =>
+  test("IO.from converts successful Eval") { implicit s =>
     var executed = false
     val source = Eval.always { executed = true; 123 }
-    val task = Task.from(source)
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -131,11 +131,11 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed Eval") { implicit s =>
+  test("IO.from converts failed Eval") { implicit s =>
     var executed = false
     val ex = DummyException("dummy")
     val source = Eval.always[Int] { executed = true; throw ex }
-    val task = Task.from(source)
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -143,19 +143,19 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.from preserves Eval laziness") { implicit s =>
+  test("IO.from preserves Eval laziness") { implicit s =>
     var result = 0
-    val task = Task.from(Eval.always { result += 1; result })
+    val task = IO.from(Eval.always { result += 1; result })
 
     assertEquals(task.runToFuture.value, Some(Success(1)))
     assertEquals(task.runToFuture.value, Some(Success(2)))
     assertEquals(task.runToFuture.value, Some(Success(3)))
   }
 
-  test("Task.from converts successful SyncIO") { implicit s =>
+  test("IO.from converts successful SyncIO") { implicit s =>
     var executed = false
     val source = SyncIO { executed = true; 123 }
-    val task = Task.from(source)
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -163,11 +163,11 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed SyncIO") { implicit s =>
+  test("IO.from converts failed SyncIO") { implicit s =>
     var executed = false
     val ex = DummyException("dummy")
     val source = SyncIO.suspend[Int] { executed = true; SyncIO.raiseError(ex) }
-    val task = Task.from(source)
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -175,39 +175,39 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts successful Try") { implicit s =>
+  test("IO.from converts successful Try") { implicit s =>
     val source: Try[Int] = Success(123)
-    val task = Task.from(source)
+    val task = IO.from(source)
     assertEquals(task.runToFuture.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed Try") { implicit s =>
+  test("IO.from converts failed Try") { implicit s =>
     val ex = DummyException("dummy")
     val source: Try[Int] = Failure(ex)
-    val task = Task.from(source)
+    val task = IO.from(source)
     assertEquals(task.runToFuture.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts right Either") { implicit s =>
+  test("IO.from converts right Either") { implicit s =>
     val source = 123.asRight[Throwable]
-    val task = Task.from(source)
+    val task = IO.from(source)
     assertEquals(task.runToFuture.value, Some(Success(123)))
   }
 
-  test("Task.from converts left Either") { implicit s =>
+  test("IO.from converts left Either") { implicit s =>
     val ex = DummyException("dummy")
     val source = ex.asLeft[Int]
-    val task = Task.from(source)
+    val task = IO.from(source)
     assertEquals(task.runToFuture.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts successful custom Effect") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from converts successful custom Effect") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
     implicit val effect: CustomEffect = new CustomEffect()
 
     var executed = false
-    val source = CIO(IO { executed = true; 123 })
-    val task = Task.from(source)
+    val source = CEIO(CIO { executed = true; 123 })
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -215,14 +215,14 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed custom Effect") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from converts failed custom Effect") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
     implicit val effect: CustomEffect = new CustomEffect()
 
     var executed = false
     val ex = DummyException("dummy")
-    val source = CIO(IO { executed = true; throw ex })
-    val task = Task.from(source)
+    val source = CEIO(CIO { executed = true; throw ex })
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -230,13 +230,13 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts successful custom ConcurrentEffect") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from converts successful custom ConcurrentEffect") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
     implicit val effect: CustomConcurrentEffect = new CustomConcurrentEffect()
 
     var executed = false
-    val source = CIO(IO { executed = true; 123 })
-    val task = Task.from(source)
+    val source = CEIO(CIO { executed = true; 123 })
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -244,14 +244,14 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts failed custom ConcurrentEffect") { implicit s =>
-    implicit val cs: ContextShift[IO] = IO.contextShift(s)
+  test("IO.from converts failed custom ConcurrentEffect") { implicit s =>
+    implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
     implicit val effect: CustomConcurrentEffect = new CustomConcurrentEffect()
 
     var executed = false
     val ex = DummyException("dummy")
-    val source = CIO(IO { executed = true; throw ex })
-    val task = Task.from(source)
+    val source = CEIO(CIO { executed = true; throw ex })
+    val task = IO.from(source)
 
     assert(!executed)
     val f = task.runToFuture
@@ -259,15 +259,15 @@ object TaskLikeConversionsSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(ex)))
   }
 
-  test("Task.from converts Function0") { implicit s =>
-    val task = Task.from(() => 123)
+  test("IO.from converts Function0") { implicit s =>
+    val task = IO.from(() => 123)
     val f = task.runToFuture
     assertEquals(f.value, Some(Success(123)))
   }
 
-  test("Task.from converts CancelablePromise") { implicit s =>
+  test("IO.from converts CancelablePromise") { implicit s =>
     val p = CancelablePromise[Int]()
-    val task = Task.from(p)
+    val task = IO.from(p)
 
     val token1 = task.runToFuture
     val token2 = task.runToFuture

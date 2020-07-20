@@ -107,7 +107,7 @@ updateSiteVariables in ThisBuild := {
     Map[String, String](
       "organization" -> (organization in LocalRootProject).value,
       "coreModuleName" -> (moduleName in coreJVM).value,
-      "latestVersion" -> version.value.takeWhile(_ != '-'),
+      "latestVersion" -> version.value.takeWhile(_ != '+'),
       "scalaPublishVersions" -> {
         val minorVersions = (crossScalaVersions in coreJVM).value.map(minorVersion)
         if (minorVersions.size <= 2) minorVersions.mkString(" and ")

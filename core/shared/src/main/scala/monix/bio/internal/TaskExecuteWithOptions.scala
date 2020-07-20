@@ -17,15 +17,15 @@
 
 package monix.bio.internal
 
-import monix.bio.Task
-import monix.bio.Task.{Context, ContextSwitch, Options}
+import monix.bio.IO
+import monix.bio.IO.{Context, ContextSwitch, Options}
 
 private[bio] object TaskExecuteWithOptions {
 
   /**
     * Implementation for `Task.executeWithOptions`
     */
-  def apply[E, A](self: Task[E, A], f: Options => Options): Task[E, A] =
+  def apply[E, A](self: IO[E, A], f: Options => Options): IO[E, A] =
     ContextSwitch[E, A](self, enable(f), disable.asInstanceOf[(A, E, Context[E], Context[E]) => Context[E]])
 
   private[this] def enable[E](f: Options => Options): Context[E] => Context[E] =

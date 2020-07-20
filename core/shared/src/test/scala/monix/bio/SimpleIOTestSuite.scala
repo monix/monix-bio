@@ -22,7 +22,7 @@ import monix.execution.exceptions.UncaughtErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait SimpleBIOTestSuite extends AbstractTestSuite with Asserts {
+trait SimpleIOTestSuite extends AbstractTestSuite with Asserts {
   def test(name: String)(f: => Void): Unit =
     synchronized {
       if (isInitialized) throw initError()

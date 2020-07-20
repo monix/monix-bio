@@ -17,9 +17,9 @@
 
 package monix.bio.internal
 
-import monix.bio.Task.{Context, Error, Now, Termination}
+import monix.bio.IO.{Context, Error, Now, Termination}
 import monix.bio.internal.TaskRunLoop.startFull
-import monix.bio.{BiCallback, Task}
+import monix.bio.{BiCallback, IO}
 import monix.execution.Scheduler
 import monix.execution.atomic.Atomic
 
@@ -32,19 +32,19 @@ private[bio] object TaskMemoize {
   /**
     * Implementation for `.memoize` and `.memoizeOnSuccess`.
     */
-  def apply[E, A](source: Task[E, A], cacheErrors: Boolean): Task[E, A] =
+  def apply[E, A](source: IO[E, A], cacheErrors: Boolean): IO[E, A] =
     source match {
       case Now(_) | Error(_) | Termination(_) =>
         source
 
 //      TODO: implement this optimization once `Coeval` is implemented
-//      case Task.Eval(Coeval.Suspend(f: LazyVal[A @unchecked])) if !cacheErrors || f.cacheErrors =>
+//      case IO.Eval(Coeval.Suspend(f: LazyVal[A @unchecked])) if !cacheErrors || f.cacheErrors =>
 //        source
 
-      case Task.Async(r: Register[E, A] @unchecked, _, _, _) if !cacheErrors || r.cacheErrors =>
+      case IO.Async(r: Register[E, A] @unchecked, _, _, _) if !cacheErrors || r.cacheErrors =>
         source
       case _ =>
-        Task.Async(
+        IO.Async(
           new Register(source, cacheErrors),
           trampolineBefore = false,
           trampolineAfter = true,
@@ -53,8 +53,8 @@ private[bio] object TaskMemoize {
     }
 
   /** Registration function, used in `Task.Async`. */
-  private final class Register[E, A](source: Task[E, A], val cacheErrors: Boolean)
-      extends ((Task.Context[E], BiCallback[E, A]) => Unit) { self =>
+  private final class Register[E, A](source: IO[E, A], val cacheErrors: Boolean)
+      extends ((IO.Context[E], BiCallback[E, A]) => Unit) { self =>
 
     // N.B. keeps state!
     private[this] var thunk = source
@@ -137,7 +137,7 @@ private[bio] object TaskMemoize {
         // Listener is cancelable: we simply ensure that the result isn't streamed
         if (!context.connection.isCanceled) {
           context.frameRef.reset()
-          startFull(Task.fromTryEither(r), context, cb, null, null, null, 1)
+          startFull(IO.fromTryEither(r), context, cb, null, null, null, 1)
         }
       }
     }
@@ -165,7 +165,7 @@ private[bio] object TaskMemoize {
               .withConnection(TaskConnection.uncancelable)
 
             // Start with light async boundary to prevent stack-overflows!
-            Task.unsafeStartTrampolined(self.thunk, ctx2, self.complete)
+            IO.unsafeStartTrampolined(self.thunk, ctx2, self.complete)
           }
 
         case ref: Promise[Either[E, A]] @unchecked =>

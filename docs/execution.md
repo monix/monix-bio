@@ -1,23 +1,23 @@
 ---
 id: execution
-title: Executing Task
+title: Executing IO
 ---
 
-As mentioned in other sections, `Task` is lazily evaluated - it needs to be executed to start doing anything.
+As mentioned in other sections, `IO` is lazily evaluated - it needs to be executed to start doing anything.
 
-## TaskApp
+## BIOApp
 
-The ideal way to use `Task` is to run it only once at the edge of your program, in Main.
+The ideal way to use `IO` is to run it only once at the edge of your program, in Main.
 
-You can go a step further and use `TaskApp` to run the effect for you and prepare a basic environment.
-`TaskApp` piggybacks on [IOApp from Cats-Effect](https://typelevel.org/cats-effect/datatypes/ioapp.html) which brings
+You can go a step further and use `BIOApp` to run the effect for you and prepare a basic environment.
+`BIOApp` piggybacks on [IOApp from Cats-Effect](https://typelevel.org/cats-effect/datatypes/ioapp.html) which brings
 convenient features like safely releasing resources in case of `Ctrl-C` or `kill` command.
 
 ```scala mdoc:silent
 import cats.effect._
 import monix.bio._
 
-object Main extends TaskApp {
+object Main extends BIOApp {
   def run(args: List[String]): UIO[ExitCode] =
     args.headOption match {
       case Some(name) =>
@@ -32,17 +32,17 @@ object Main extends TaskApp {
 
 If you'd prefer to run manually, there are plenty of options.
 This section will cover just a few ones - all variants are prefixed with "run" and should be easy to find in API.
-As an optimization, `Task` will run on the current thread up to the first asynchronous boundary.
+As an optimization, `IO` will run on the current thread up to the first asynchronous boundary.
 You can use `executeAsync` to make sure entire task will run asynchronously.
 
-Note that all methods to run `Task` require [Scheduler](https://monix.io/docs/3x/execution/scheduler.html).
+Note that all methods to run `IO` require [Scheduler](https://monix.io/docs/3x/execution/scheduler.html).
 Examples will use `Scheduler.global`, which is a good default for most applications.
 
 ### Running to Future
 
-`Task.runToFuture` starts the execution and returns a `CancelableFuture`, which will complete when the task finishes.
+`IO.runToFuture` starts the execution and returns a `CancelableFuture`, which will complete when the task finishes.
 `CancelableFuture` extends standard `scala.concurrent.Future` and adds an ability to cancel it. 
-Calling `cancel` will plug into `Task` cancelation.
+Calling `cancel` will plug into `IO` cancelation.
 
 ```scala mdoc:silent
 import monix.bio.Task
@@ -62,16 +62,16 @@ result.cancel()
 
 All potential errors will be exposed as a failed `Future`.
 One gotcha is that `runToFuture` requires error type to be `E <:< Throwable`.
-Thankfully, it also applies to `Nothing`, so if we work with typed errors, we can handle error just before running `Task`.
+Thankfully, it also applies to `Nothing`, so if we work with typed errors, we can handle error just before running `IO`.
 Probably the most convenient way is to use `attempt`:
 
 ```scala mdoc:silent:reset
-import monix.bio.Task
+import monix.bio.IO
 import monix.execution.CancelableFuture
 
 implicit val s = monix.execution.Scheduler.global
 
-val task: Task[Int, Int] = Task.raiseError(20)
+val task: IO[Int, Int] = IO.raiseError(20)
 
 val result: CancelableFuture[Either[Int, Int]] =
   task.attempt.runToFuture
@@ -105,7 +105,7 @@ val cancelable = task.runAsync {
 cancelable.cancel()
 ```
 
-If your needs are even more modest, use `runAsyncAndForget`, which will run `Task` in "fire-and-forget" fashion.
+If your needs are even more modest, use `runAsyncAndForget`, which will run `IO` in "fire-and-forget" fashion.
 
 ### Blocking for a result
 

@@ -26,91 +26,91 @@ import scala.concurrent.duration.FiniteDuration
 object UIO extends UIODeprecated.Companion {
 
   /**
-    * @see See [[monix.bio.Task.apply]]
+    * @see See [[monix.bio.IO.apply]]
     */
   def apply[A](a: => A): UIO[A] =
-    Task.EvalTotal(a _)
+    IO.EvalTotal(a _)
 
   /**
-    * @see See [[monix.bio.Task.now]]
+    * @see See [[monix.bio.IO.now]]
     */
   def now[A](a: A): UIO[A] =
-    Task.now(a)
+    IO.now(a)
 
   /**
-    * @see See [[monix.bio.Task.pure]]
+    * @see See [[monix.bio.IO.pure]]
     */
   def pure[A](a: A): UIO[A] =
-    Task.pure(a)
+    IO.pure(a)
 
   /**
-    * @see See [[monix.bio.Task.terminate]]
+    * @see See [[monix.bio.IO.terminate]]
     */
   def terminate(ex: Throwable): UIO[Nothing] =
-    Task.terminate(ex)
+    IO.terminate(ex)
 
   /**
-    * @see See [[monix.bio.Task.defer]]
+    * @see See [[monix.bio.IO.defer]]
     */
   def defer[A](fa: => UIO[A]): UIO[A] =
-    Task.deferTotal(fa)
+    IO.deferTotal(fa)
 
   /**
-    * @see See [[monix.bio.Task.deferTotal]]
+    * @see See [[monix.bio.IO.deferTotal]]
     */
   def deferTotal[A](fa: => UIO[A]): UIO[A] =
-    Task.deferTotal(fa)
+    IO.deferTotal(fa)
 
   /**
-    * @see See [[monix.bio.Task.deferAction]]
+    * @see See [[monix.bio.IO.deferAction]]
     */
   def deferAction[A](f: Scheduler => UIO[A]): UIO[A] =
-    Task.deferAction(f)
+    IO.deferAction(f)
 
   /**
-    * @see See [[monix.bio.Task.suspend]]
+    * @see See [[monix.bio.IO.suspend]]
     */
   def suspend[A](fa: => UIO[A]): UIO[A] =
-    Task.suspendTotal(fa)
+    IO.suspendTotal(fa)
 
   /**
-    * @see See [[monix.bio.Task.suspendTotal]]
+    * @see See [[monix.bio.IO.suspendTotal]]
     */
   def suspendTotal[A](fa: => UIO[A]): UIO[A] =
-    Task.suspendTotal(fa)
+    IO.suspendTotal(fa)
 
   /**
-    * @see See [[monix.bio.Task.eval]]
+    * @see See [[monix.bio.IO.eval]]
     */
   def eval[A](a: => A): UIO[A] =
-    Task.EvalTotal(a _)
+    IO.EvalTotal(a _)
 
   /**
-    * @see See [[monix.bio.Task.evalTotal]]
+    * @see See [[monix.bio.IO.evalTotal]]
     */
   def evalTotal[A](a: => A): UIO[A] =
-    Task.EvalTotal(a _)
+    IO.EvalTotal(a _)
 
   /**
-    * @see See [[monix.bio.Task.evalAsync]]
+    * @see See [[monix.bio.IO.evalAsync]]
     */
   def evalAsync[A](a: => A): UIO[A] =
     UIOEvalAsync(a _)
 
   /**
-    * @see See [[monix.bio.Task.delay]]
+    * @see See [[monix.bio.IO.delay]]
     */
   def delay[A](a: => A): UIO[A] =
     eval(a)
 
   /**
-    * @see See [[monix.bio.Task.never]]
+    * @see See [[monix.bio.IO.never]]
     */
   val never: UIO[Nothing] =
-    Task.never
+    IO.never
 
   /**
-    * @see See [[monix.bio.Task.tailRecM]]
+    * @see See [[monix.bio.IO.tailRecM]]
     */
   def tailRecM[A, B](a: A)(f: A => UIO[Either[A, B]]): UIO[B] =
     defer(f(a)).flatMap {
@@ -119,151 +119,151 @@ object UIO extends UIODeprecated.Companion {
     }
 
   /**
-    * @see See [[monix.bio.Task.unit]]
+    * @see See [[monix.bio.IO.unit]]
     */
   val unit: UIO[Unit] =
-    Task.unit
+    IO.unit
 
   /**
-    * @see See [[monix.bio.Task.cancelBoundary]]
+    * @see See [[monix.bio.IO.cancelBoundary]]
     */
   val cancelBoundary: UIO[Unit] =
-    Task.cancelBoundary
+    IO.cancelBoundary
 
   /**
-    * @see See [[monix.bio.Task.fromCancelablePromiseEither]]
+    * @see See [[monix.bio.IO.fromCancelablePromiseEither]]
     */
   def fromCancelablePromiseEither[A](p: CancelablePromise[Either[Nothing, A]]): UIO[A] =
-    Task.fromCancelablePromiseEither(p)
+    IO.fromCancelablePromiseEither(p)
 
   /**
-    * @see See [[monix.bio.Task.race]]
+    * @see See [[monix.bio.IO.race]]
     */
   def race[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[A, B]] =
     TaskRace(fa, fb)
 
   /**
-    * @see See [[monix.bio.Task.raceMany]]
+    * @see See [[monix.bio.IO.raceMany]]
     */
   def raceMany[A](tasks: Iterable[UIO[A]]): UIO[A] =
     TaskRaceList(tasks)
 
   /**
-    * @see See [[monix.bio.Task.racePair]]
+    * @see See [[monix.bio.IO.racePair]]
     */
   def racePair[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
     TaskRacePair(fa, fb)
 
   /**
-    * @see See [[monix.bio.Task.rethrow]]
+    * @see See [[monix.bio.IO.rethrow]]
     */
   def rethrow[A](fa: UIO[Either[Nothing, A]]): UIO[A] =
     fa.rethrow
 
   /**
-    * @see See [[[monix.bio.Task$.shift:monix\.bio\.UIO*]]]
+    * @see See [[[monix.bio.IO$.shift:monix\.bio\.UIO*]]]
     */
   val shift: UIO[Unit] =
-    Task.shift
+    IO.shift
 
   /**
-    * @see See [[[monix.bio.Task$.shift(ec:scala\.concurrent\.ExecutionContext*]]]
+    * @see See [[[monix.bio.IO$.shift(ec:scala\.concurrent\.ExecutionContext*]]]
     */
   def shift(ec: ExecutionContext): UIO[Unit] =
-    Task.shift(ec)
+    IO.shift(ec)
 
   /**
-    * @see See [[monix.bio.Task.sleep]]
+    * @see See [[monix.bio.IO.sleep]]
     */
   def sleep(timespan: FiniteDuration): UIO[Unit] =
-    Task.sleep(timespan)
+    IO.sleep(timespan)
 
   /**
-    * @see See [[monix.bio.Task.sequence]]
+    * @see See [[monix.bio.IO.sequence]]
     */
   def sequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
     TaskSequence.list[Nothing, A](in)
 
   /**
-    * @see See [[monix.bio.Task.traverse]]
+    * @see See [[monix.bio.IO.traverse]]
     */
   def traverse[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
     TaskSequence.traverse(in, f)
 
   /**
-    * @see See [[monix.bio.Task.parSequence]]
+    * @see See [[monix.bio.IO.parSequence]]
     */
   def parSequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
     TaskParSequence[Nothing, A](in)
 
   /**
-    * @see [[monix.bio.Task.parTraverse]]
+    * @see [[monix.bio.IO.parTraverse]]
     */
   def parTraverse[A, B](
     in: Iterable[A]
   )(f: A => UIO[B]): UIO[List[B]] =
-    Task.parTraverse(in)(f)
+    IO.parTraverse(in)(f)
 
   /**
-    * @see See [[monix.bio.Task.parSequenceN]]
+    * @see See [[monix.bio.IO.parSequenceN]]
     */
   def parSequenceN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
     TaskParSequenceN[Nothing, A](parallelism, in)
 
   /**
-    * @see See [[monix.bio.Task.parTraverseN]]
+    * @see See [[monix.bio.IO.parTraverseN]]
     */
   def parTraverseN[A, B](parallelism: Int)(in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
-    Task.parTraverseN(parallelism)(in)(f)
+    IO.parTraverseN(parallelism)(in)(f)
 
   /**
-    * @see See [[monix.bio.Task.parSequenceUnordered]]
+    * @see See [[monix.bio.IO.parSequenceUnordered]]
     */
   def parSequenceUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
     TaskParSequenceUnordered[Nothing, A](in)
 
   /**
-    * @see [[monix.bio.Task.parTraverseUnordered]]
+    * @see [[monix.bio.IO.parTraverseUnordered]]
     */
   def parTraverseUnordered[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
-    Task.parTraverseUnordered(in)(f)
+    IO.parTraverseUnordered(in)(f)
 
   /**
-    * @see See [[monix.bio.Task.mapBoth]]
+    * @see See [[monix.bio.IO.mapBoth]]
     */
   def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
     TaskMapBoth(fa1, fa2)(f)
 
   /**
-    * @see See [[monix.bio.Task.map2]]
+    * @see See [[monix.bio.IO.map2]]
     */
   def map2[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
-    Task.map2(fa1, fa2)(f)
+    IO.map2(fa1, fa2)(f)
 
   /**
-    * @see See [[monix.bio.Task.map3]]
+    * @see See [[monix.bio.IO.map3]]
     */
   def map3[A1, A2, A3, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3])(f: (A1, A2, A3) => R): UIO[R] =
-    Task.map3(fa1, fa2, fa3)(f)
+    IO.map3(fa1, fa2, fa3)(f)
 
   /**
-    * @see See [[monix.bio.Task.map4]]
+    * @see See [[monix.bio.IO.map4]]
     */
   def map4[A1, A2, A3, A4, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4])(
     f: (A1, A2, A3, A4) => R
   ): UIO[R] =
-    Task.map4(fa1, fa2, fa3, fa4)(f)
+    IO.map4(fa1, fa2, fa3, fa4)(f)
 
   /**
-    * @see See [[monix.bio.Task.map5]]
+    * @see See [[monix.bio.IO.map5]]
     */
   def map5[A1, A2, A3, A4, A5, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4], fa5: UIO[A5])(
     f: (A1, A2, A3, A4, A5) => R
   ): UIO[R] =
-    Task.map5(fa1, fa2, fa3, fa4, fa5)(f)
+    IO.map5(fa1, fa2, fa3, fa4, fa5)(f)
 
   /**
-    * @see See [[monix.bio.Task.map6]]
+    * @see See [[monix.bio.IO.map6]]
     */
   def map6[A1, A2, A3, A4, A5, A6, R](
     fa1: UIO[A1],
@@ -273,16 +273,16 @@ object UIO extends UIODeprecated.Companion {
     fa5: UIO[A5],
     fa6: UIO[A6]
   )(f: (A1, A2, A3, A4, A5, A6) => R): UIO[R] =
-    Task.map6(fa1, fa2, fa3, fa4, fa5, fa6)(f)
+    IO.map6(fa1, fa2, fa3, fa4, fa5, fa6)(f)
 
   /**
-    * @see See [[monix.bio.Task.parMap2]]
+    * @see See [[monix.bio.IO.parMap2]]
     */
   def parMap2[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
     UIO.mapBoth(fa1, fa2)(f)
 
   /**
-    * @see See [[monix.bio.Task.parMap3]]
+    * @see See [[monix.bio.IO.parMap3]]
     */
   def parMap3[A1, A2, A3, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3])(f: (A1, A2, A3) => R): UIO[R] = {
     val fa12 = parZip2(fa1, fa2)
@@ -290,7 +290,7 @@ object UIO extends UIODeprecated.Companion {
   }
 
   /**
-    * @see See [[monix.bio.Task.parMap4]]
+    * @see See [[monix.bio.IO.parMap4]]
     */
   def parMap4[A1, A2, A3, A4, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4])(
     f: (A1, A2, A3, A4) => R
@@ -300,7 +300,7 @@ object UIO extends UIODeprecated.Companion {
   }
 
   /**
-    * @see See [[monix.bio.Task.parMap5]]
+    * @see See [[monix.bio.IO.parMap5]]
     */
   def parMap5[A1, A2, A3, A4, A5, R](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4], fa5: UIO[A5])(
     f: (A1, A2, A3, A4, A5) => R
@@ -310,7 +310,7 @@ object UIO extends UIODeprecated.Companion {
   }
 
   /**
-    * @see See [[Task.parMap6]]
+    * @see See [[IO.parMap6]]
     */
   def parMap6[A1, A2, A3, A4, A5, A6, R](
     fa1: UIO[A1],
@@ -325,25 +325,25 @@ object UIO extends UIODeprecated.Companion {
   }
 
   /**
-    * @see See [[Task.parZip2]]
+    * @see See [[IO.parZip2]]
     */
   def parZip2[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2]): UIO[(A1, A2)] =
-    Task.mapBoth(fa1, fa2)((_, _))
+    IO.mapBoth(fa1, fa2)((_, _))
 
   /**
-    * @see See [[Task.parZip3]]
+    * @see See [[IO.parZip3]]
     */
   def parZip3[A1, A2, A3](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3]): UIO[(A1, A2, A3)] =
     parMap3(fa1, fa2, fa3)((a1, a2, a3) => (a1, a2, a3))
 
   /**
-    * @see See [[Task.parZip4]]
+    * @see See [[IO.parZip4]]
     */
   def parZip4[A1, A2, A3, A4](fa1: UIO[A1], fa2: UIO[A2], fa3: UIO[A3], fa4: UIO[A4]): UIO[(A1, A2, A3, A4)] =
     parMap4(fa1, fa2, fa3, fa4)((a1, a2, a3, a4) => (a1, a2, a3, a4))
 
   /**
-    * @see See [[Task.parZip5]]
+    * @see See [[IO.parZip5]]
     */
   def parZip5[A1, A2, A3, A4, A5](
     fa1: UIO[A1],
@@ -355,7 +355,7 @@ object UIO extends UIODeprecated.Companion {
     parMap5(fa1, fa2, fa3, fa4, fa5)((a1, a2, a3, a4, a5) => (a1, a2, a3, a4, a5))
 
   /**
-    * @see See [[Task.parZip6]]
+    * @see See [[IO.parZip6]]
     */
   def parZip6[A1, A2, A3, A4, A5, A6](
     fa1: UIO[A1],

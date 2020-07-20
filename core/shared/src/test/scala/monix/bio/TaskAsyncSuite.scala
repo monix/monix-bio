@@ -23,15 +23,15 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 object TaskAsyncSuite extends BaseTestSuite {
-  test("Task.never should never complete") { implicit s =>
-    val t = Task.never[Int]
+  test("IO.never should never complete") { implicit s =>
+    val t = IO.never[Int]
     val f = t.runToFuture
     s.tick(365.days)
     assertEquals(f.value, None)
   }
 
-  test("Task.async should execute") { implicit s =>
-    val task = Task.async0[String, Int] { (ec, cb) =>
+  test("IO.async should execute") { implicit s =>
+    val task = IO.async0[String, Int] { (ec, cb) =>
       ec.executeAsync { () =>
         cb.onSuccess(1)
       }
@@ -43,63 +43,63 @@ object TaskAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.async should signal errors in register") { implicit s =>
+  test("IO.async should signal errors in register") { implicit s =>
     val ex = DummyException("dummy")
-    val task = Task.async0[String, Int]((_, _) => throw ex)
+    val task = IO.async0[String, Int]((_, _) => throw ex)
     val result = task.attempt.runToFuture; s.tick()
     assertEquals(result.value, Some(Failure(ex)))
     assertEquals(s.state.lastReportedError, null)
   }
 
-  test("Task.async should be stack safe") { implicit s =>
-    def signal(n: Int) = Task.async0[String, Int]((_, cb) => cb.onSuccess(n))
-    def loop(n: Int, acc: Int): Task[String, Int] =
+  test("IO.async should be stack safe") { implicit s =>
+    def signal(n: Int) = IO.async0[String, Int]((_, cb) => cb.onSuccess(n))
+    def loop(n: Int, acc: Int): IO[String, Int] =
       signal(1).flatMap { x =>
         if (n > 0) loop(n - 1, acc + x)
-        else Task.now(acc)
+        else IO.now(acc)
       }
 
     val f = loop(10000, 0).attempt.runToFuture; s.tick()
     assertEquals(f.value, Some(Success(Right(10000))))
   }
 
-  test("Task.async works for immediate successful value") { implicit sc =>
-    val task = Task.async[String, Int](_.onSuccess(1))
+  test("IO.async works for immediate successful value") { implicit sc =>
+    val task = IO.async[String, Int](_.onSuccess(1))
     assertEquals(task.attempt.runToFuture.value, Some(Success(Right(1))))
   }
 
-  test("Task.async works for immediate error") { implicit sc =>
+  test("IO.async works for immediate error") { implicit sc =>
     val e = "dummy"
-    val task = Task.async[String, Int](_.onError(e))
+    val task = IO.async[String, Int](_.onError(e))
     assertEquals(task.attempt.runToFuture.value, Some(Success(Left(e))))
   }
 
-  test("Task.async works for immediate terminate error") { implicit sc =>
+  test("IO.async works for immediate terminate error") { implicit sc =>
     val e = DummyException("dummy")
-    val task = Task.async[Int, Int](_.onTermination(e))
+    val task = IO.async[Int, Int](_.onTermination(e))
     assertEquals(task.attempt.runToFuture.value, Some(Failure(e)))
   }
 
-  test("Task.async is memory safe in flatMap loops") { implicit sc =>
-    def signal(n: Int): UIO[Int] = Task.async(_.onSuccess(n))
+  test("IO.async is memory safe in flatMap loops") { implicit sc =>
+    def signal(n: Int): UIO[Int] = IO.async(_.onSuccess(n))
 
     def loop(n: Int, acc: Int): UIO[Int] =
       signal(n).flatMap { n =>
         if (n > 0) loop(n - 1, acc + 1)
-        else Task.now(acc)
+        else IO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(10000)))
   }
 
-  test("Task.async0 works for immediate successful value") { implicit sc =>
-    val task = Task.async0[String, Int]((_, cb) => cb.onSuccess(1))
+  test("IO.async0 works for immediate successful value") { implicit sc =>
+    val task = IO.async0[String, Int]((_, cb) => cb.onSuccess(1))
     assertEquals(task.attempt.runToFuture.value, Some(Success(Right(1))))
   }
 
-  test("Task.async0 works for async successful value") { implicit sc =>
-    val f = Task
+  test("IO.async0 works for async successful value") { implicit sc =>
+    val f = IO
       .async0[String, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
       .attempt
       .runToFuture
@@ -108,9 +108,9 @@ object TaskAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Right(1))))
   }
 
-  test("Task.async0 works for async error") { implicit sc =>
+  test("IO.async0 works for async error") { implicit sc =>
     val e = "dummy"
-    val f = Task
+    val f = IO
       .async0[String, Int]((s, cb) => s.executeAsync(() => cb.onError(e)))
       .attempt
       .runToFuture
@@ -119,9 +119,9 @@ object TaskAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(Left(e))))
   }
 
-  test("Task.async0 works for async terminate error") { implicit sc =>
+  test("IO.async0 works for async terminate error") { implicit sc =>
     val e = DummyException("dummy")
-    val f = Task
+    val f = IO
       .async0[Int, Int]((s, cb) => s.executeAsync(() => cb.onTermination(e)))
       .attempt
       .runToFuture
@@ -130,27 +130,27 @@ object TaskAsyncSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Failure(e)))
   }
 
-  test("Task.async0 is memory safe in synchronous flatMap loops") { implicit sc =>
-    def signal(n: Int): UIO[Int] = Task.async0((_, cb) => cb.onSuccess(n))
+  test("IO.async0 is memory safe in synchronous flatMap loops") { implicit sc =>
+    def signal(n: Int): UIO[Int] = IO.async0((_, cb) => cb.onSuccess(n))
 
     def loop(n: Int, acc: Int): UIO[Int] =
       signal(n).flatMap { n =>
         if (n > 0) loop(n - 1, acc + 1)
-        else Task.now(acc)
+        else IO.now(acc)
       }
 
     val f = loop(10000, 0).runToFuture; sc.tick()
     assertEquals(f.value, Some(Success(10000)))
   }
 
-  test("Task.async0 is memory safe in async flatMap loops") { implicit sc =>
-    def signal(n: Int): Task[String, Int] =
-      Task.async0((s, cb) => s.executeAsync(() => cb.onSuccess(n)))
+  test("IO.async0 is memory safe in async flatMap loops") { implicit sc =>
+    def signal(n: Int): IO[String, Int] =
+      IO.async0((s, cb) => s.executeAsync(() => cb.onSuccess(n)))
 
-    def loop(n: Int, acc: Int): Task[String, Int] =
+    def loop(n: Int, acc: Int): IO[String, Int] =
       signal(n).flatMap { n =>
         if (n > 0) loop(n - 1, acc + 1)
-        else Task.now(acc)
+        else IO.now(acc)
       }
 
     val f = loop(10000, 0).attempt.runToFuture; sc.tick()

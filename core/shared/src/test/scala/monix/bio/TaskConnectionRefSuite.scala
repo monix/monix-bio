@@ -54,7 +54,7 @@ object TaskConnectionRefSuite extends BaseTestSuite {
     assert(effect == 1)
   }
 
-  test("assign and cancel a CancelToken[Task.Unsafe]") { implicit s =>
+  test("assign and cancel a CancelToken[Task]") { implicit s =>
     var effect = 0
     val cr = TaskConnectionRef[Throwable]()
     val b = Task { effect += 1 }
