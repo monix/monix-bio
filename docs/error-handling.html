@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Error Handling · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="When `Task` fails with an error it short-circuits the computation and returns the error as a result:"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Error Handling · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="When `Task` fails with an error it short-circuits the computation and returns the error as a result:"/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/creating">Creating Task</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/execution">Executing Task</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Error Handling · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="When `IO` fails with an error it short-circuits the computation and returns the error as a result:"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Error Handling · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://monix.github.io/monix-bio/monix-bio/"/><meta property="og:description" content="When `IO` fails with an error it short-circuits the computation and returns the error as a result:"/><meta name="twitter:card" content="summary"/><link rel="shortcut icon" href="/monix-bio/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/monix-bio/js/scrollSpy.js"></script><link rel="stylesheet" href="/monix-bio/css/main.css"/><script src="/monix-bio/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/monix-bio/"><img class="logo" src="/monix-bio/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/monix-bio/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/monix-bio/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/monix-bio/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/getting-started">Getting Started</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/creating">Creating IO</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/execution">Executing IO</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/monix-bio/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem"><a class="navItem" href="/monix-bio/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -54,14 +54,14 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Error Handling</h1></header><article><div><span><p>When <code>Task</code> fails with an error it short-circuits the computation and returns the error as a result:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Error Handling</h1></header><article><div><span><p>When <code>IO</code> fails with an error it short-circuits the computation and returns the error as a result:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> fa = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
-<span class="hljs-keyword">val</span> fb = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> fc = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"C"</span>))
+<span class="hljs-keyword">val</span> fa = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> fb = <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> fc = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"C"</span>))
 
 <span class="hljs-keyword">val</span> task = fa.flatMap(_ =&gt; fb).flatMap(_ =&gt; fc)
 
@@ -71,19 +71,19 @@ task.runSyncUnsafe()
 </code></pre>
 <p>We can handle the error to prevent it with one of many available methods.
 For better discoverability, they are often prefixed with <code>onError</code>.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> fa = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
-<span class="hljs-keyword">val</span> fb = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> fc = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"C"</span>))
+<span class="hljs-keyword">val</span> fa = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> fb = <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> fc = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"C"</span>))
 
 <span class="hljs-keyword">val</span> task = fa
   .flatMap(_ =&gt; fb)
-  .onErrorHandleWith(_ =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"B recovered"</span>)))
+  .onErrorHandleWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"B recovered"</span>)))
   .flatMap(_ =&gt; fc)
-  .onErrorHandleWith(_ =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"C recovered"</span>)))
+  .onErrorHandleWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"C recovered"</span>)))
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; A</span>
@@ -98,7 +98,7 @@ Examples: Insufficient permissions for a given action, temporary network failure
 <li>Non-Recoverable errors which are often fatal or it is not sensible to try to recover from them.
 Examples: <code>StackOverflow</code>, throwing an exception in a pure function (programmer's error).</li>
 </ul>
-<p><code>Task[E, A]</code> follow this pattern and can fail with two kind of errors:</p>
+<p><code>IO[E, A]</code> follow this pattern and can fail with two kind of errors:</p>
 <ul>
 <li>Errors of type <code>E</code> which represents recoverable errors. Other common names are &quot;typed&quot; or &quot;expected&quot; errors.</li>
 <li>Errors of type <code>Throwable</code> for non-recoverable errors. We call them &quot;terminal&quot; or &quot;unexpected&quot; errors. You might also see terminology like &quot;defect&quot; or &quot;unchecked failure&quot; in other libraries.</li>
@@ -113,24 +113,24 @@ For instance, we can choose <code>E</code> to be an ADT reflecting errors in our
 Possible errors are provided in the type signature which serves as always up-to-date documentation and allows us to easily statically check if all errors are handled.
 Furthermore, if there is a change, and it introduces new errors, we might easily miss it.</p>
 <p>Consider the following example:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">Task</span>}
   
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForbiddenNumber</span>(<span class="hljs-params"></span>) <span class="hljs-keyword">extends</span> <span class="hljs-title">Exception</span></span>
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>[<span class="hljs-type">Int</span>] =
-  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
-  <span class="hljs-keyword">else</span> <span class="hljs-type">Task</span>.now(i * <span class="hljs-number">2</span>)
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] =
+  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
+  <span class="hljs-keyword">else</span> <span class="hljs-type">IO</span>.now(i * <span class="hljs-number">2</span>)
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">callNumberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>[<span class="hljs-type">Int</span>] = numberService(i).onErrorHandleWith {
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">callNumberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] = numberService(i).onErrorHandleWith {
   <span class="hljs-keyword">case</span> <span class="hljs-type">ForbiddenNumber</span>() =&gt; callNumberService(i + <span class="hljs-number">1</span>) <span class="hljs-comment">// try with a different number</span>
-  <span class="hljs-keyword">case</span> other =&gt; <span class="hljs-type">Task</span>.raiseError(other) <span class="hljs-comment">// propagate error</span>
+  <span class="hljs-keyword">case</span> other =&gt; <span class="hljs-type">IO</span>.raiseError(other) <span class="hljs-comment">// propagate error</span>
 }
 </code></pre>
 <p>When writing <code>callNumberService</code> method we have to check the implementation of <code>numberService</code> to see what kind of
 errors can we expect because the type signature only specifies <code>Throwable</code> - so it can be pretty much anything.
 On top of that, we might have to add <code>case other =&gt; ...</code> to be safe in case we missed any error and to make our pattern matching exhaustive.</p>
 <p>At some point, the implementation might change:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">Task</span>}
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
 <span class="hljs-keyword">sealed</span> <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">NumberServiceErrors</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Exception</span></span>
@@ -139,23 +139,23 @@ On top of that, we might have to add <code>case other =&gt; ...</code> to be saf
   
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ServiceTimeout</span>(<span class="hljs-params">duration: <span class="hljs-type">FiniteDuration</span></span>) <span class="hljs-keyword">extends</span> <span class="hljs-title">NumberServiceErrors</span></span>
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>[<span class="hljs-type">Int</span>] =
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] =
   <span class="hljs-comment">// Check if we should timeout the caller</span>
-  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">5</span>) <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ServiceTimeout</span>(<span class="hljs-number">10.</span>second))
-  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
-  <span class="hljs-keyword">else</span> <span class="hljs-type">Task</span>.now(i * <span class="hljs-number">2</span>)
+  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">5</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ServiceTimeout</span>(<span class="hljs-number">10.</span>second))
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
+  <span class="hljs-keyword">else</span> <span class="hljs-type">IO</span>.now(i * <span class="hljs-number">2</span>)
 </code></pre>
 <p>We introduced a <code>ServiceTimeout</code> error which tells the users that their requests will be accepted after it passes.
 It's easy to forget to update <code>callNumberService</code> to support the new behavior and if we didn't have <code>case other =&gt; ...</code> then we would end up with errors at runtime.
 The method <code>callNumberService</code> would also compile if we changed error class of <code>ForbiddenNumber()</code> leading to more issues.</p>
-<p>Now let's see how it would look like if we leverage <code>Task</code> capabilities:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<p>Now let's see how it would look like if we leverage <code>IO</code> capabilities:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">UIO</span>}
   
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ForbiddenNumber</span>(<span class="hljs-params"></span>)</span>
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">ForbiddenNumber</span>, <span class="hljs-type">Int</span>] =
-  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
-  <span class="hljs-keyword">else</span> <span class="hljs-type">Task</span>.now(i * <span class="hljs-number">2</span>)
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">IO</span>[<span class="hljs-type">ForbiddenNumber</span>, <span class="hljs-type">Int</span>] =
+  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
+  <span class="hljs-keyword">else</span> <span class="hljs-type">IO</span>.now(i * <span class="hljs-number">2</span>)
 
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">callNumberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">UIO</span>[<span class="hljs-type">Int</span>] = numberService(i).onErrorHandleWith {
   <span class="hljs-keyword">case</span> <span class="hljs-type">ForbiddenNumber</span>() =&gt; callNumberService(i + <span class="hljs-number">1</span>) <span class="hljs-comment">// try with a different number</span>
@@ -163,9 +163,9 @@ The method <code>callNumberService</code> would also compile if we changed error
 </code></pre>
 <p>Now <code>numberService</code> specifies possible errors in the type signature, so it is immediately apparent to us and the compiler what the expected failures are.
 We don't need <code>case other =&gt; ...</code> because there are no other possible errors and if they appear in the future the code will stop compiling.
-As a nice bonus, <code>callNumberService</code> returns <code>UIO[Int]</code> (type alias of <code>Task[Nothing, Int]</code>) which tells whoever uses <code>callNumberService</code> that they don't have to expect any errors.</p>
+As a nice bonus, <code>callNumberService</code> returns <code>UIO[Int]</code> (type alias of <code>IO[Nothing, Int]</code>) which tells whoever uses <code>callNumberService</code> that they don't have to expect any errors.</p>
 <p>If we change <code>numberService</code> errors then we will have to change the signature as well:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}  
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">UIO</span>}  
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
 <span class="hljs-keyword">sealed</span> <span class="hljs-class"><span class="hljs-keyword">trait</span> <span class="hljs-title">NumberServiceErrors</span></span>
@@ -174,11 +174,11 @@ As a nice bonus, <code>callNumberService</code> returns <code>UIO[Int]</code> (t
 
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ServiceTimeout</span>(<span class="hljs-params">duration: <span class="hljs-type">FiniteDuration</span></span>) <span class="hljs-keyword">extends</span> <span class="hljs-title">NumberServiceErrors</span></span>
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">NumberServiceErrors</span>, <span class="hljs-type">Int</span>] =
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">IO</span>[<span class="hljs-type">NumberServiceErrors</span>, <span class="hljs-type">Int</span>] =
   <span class="hljs-comment">// Check if we should timeout the caller</span>
-  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">5</span>) <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ServiceTimeout</span>(<span class="hljs-number">10.</span>second))
-  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
-  <span class="hljs-keyword">else</span> <span class="hljs-type">Task</span>.now(i * <span class="hljs-number">2</span>)
+  <span class="hljs-keyword">if</span> (i == <span class="hljs-number">5</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ServiceTimeout</span>(<span class="hljs-number">10.</span>second))
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (i == <span class="hljs-number">0</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ForbiddenNumber</span>())
+  <span class="hljs-keyword">else</span> <span class="hljs-type">IO</span>.now(i * <span class="hljs-number">2</span>)
 
 <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">callNumberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">UIO</span>[<span class="hljs-type">Int</span>] = numberService(i).onErrorHandleWith {
   <span class="hljs-keyword">case</span> <span class="hljs-type">ForbiddenNumber</span>() =&gt; callNumberService(i + <span class="hljs-number">1</span>) <span class="hljs-comment">// try with a different number</span>
@@ -194,66 +194,66 @@ It would fail on the following input: <span class="hljs-constructor">ServiceTime
 <p>A similar approach is often used with single parameter effects in combination with <code>Either</code> or <code>EitherT</code>, that is:</p>
 <pre><code class="hljs css language-scala"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">numberService</span></span>(i: <span class="hljs-type">Int</span>): <span class="hljs-type">IO</span>[<span class="hljs-type">Either</span>[<span class="hljs-type">NumberServiceErrors</span>, <span class="hljs-type">Int</span>]]
 </code></pre>
-<p><code>IO</code> can fail with <code>Throwable</code> (<code>Task</code>'s terminal error channel) and <code>Either</code> can return <code>Left</code> of any <code>E</code> (<code>Task</code>'s typed error channel).
-<code>Task[E, A]</code> forces this convention which makes it more convenient and safer to follow it but if you are familiar with <code>IO</code> of <code>Either</code>, know that the technique is the same in spirit.</p>
+<p><code>IO</code> can fail with <code>Throwable</code> (<code>IO</code>'s terminal error channel) and <code>Either</code> can return <code>Left</code> of any <code>E</code> (<code>IO</code>'s typed error channel).
+<code>IO</code> forces this convention which makes it more convenient and safer to follow it but if you are familiar with <code>IO</code> of <code>Either</code> then the spirit is the same.</p>
 <p>I recommend <a href="https://degoes.net/articles/bifunctor-io">this article by John De Goes</a> if you are interested in the original motivations behind the idea of embedding this pattern directly in the data type.</p>
-<h2><a class="anchor" aria-hidden="true" id="producing-a-failed-task"></a><a href="#producing-a-failed-task" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Producing a failed Task</h2>
+<h2><a class="anchor" aria-hidden="true" id="producing-a-failed-io"></a><a href="#producing-a-failed-io" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Producing a failed IO</h2>
 <p>An error can occur when an <code>Exception</code> is thrown or we can construct it ourselves with dedicated builder methods.</p>
-<h3><a class="anchor" aria-hidden="true" id="taskraiseerror"></a><a href="#taskraiseerror" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.raiseError</h3>
-<p>Use <code>Task.raiseError</code> if you already have an error value:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<h3><a class="anchor" aria-hidden="true" id="ioraiseerror"></a><a href="#ioraiseerror" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>IO.raiseError</h3>
+<p>Use <code>IO.raiseError</code> if you already have an error value:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
 <span class="hljs-keyword">val</span> error = <span class="hljs-string">"error"</span>
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>.raiseError(error)
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">IO</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>.raiseError(error)
 
 <span class="hljs-comment">// Left("error")</span>
 task.attempt.runSyncUnsafe()
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="taskterminate"></a><a href="#taskterminate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Task.terminate</h3>
-<p><code>Task.terminate</code> can raise a terminal error (second channel with <code>Throwable</code>):</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<h3><a class="anchor" aria-hidden="true" id="ioterminate"></a><a href="#ioterminate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>IO.terminate</h3>
+<p><code>IO.terminate</code> can raise a terminal error (second channel with <code>Throwable</code>):</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 
 <span class="hljs-keyword">val</span> error = <span class="hljs-type">DummyException</span>(<span class="hljs-string">"error"</span>)
 <span class="hljs-comment">// It doesn't affect the signature</span>
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>.terminate(error)
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">IO</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>.terminate(error)
 
 task.attempt.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Exception in thread "main" monix.execution.exceptions.DummyException: error</span>
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="catching-errors-in-taskeval"></a><a href="#catching-errors-in-taskeval" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Catching errors in Task.eval</h3>
-<p><code>Task.eval</code> (and <code>Task.apply</code>) will catch any errors that are thrown in the method's body and expose them as typed errors:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<h3><a class="anchor" aria-hidden="true" id="catching-errors-in-ioeval"></a><a href="#catching-errors-in-ioeval" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Catching errors in IO.eval</h3>
+<p><code>IO.eval</code> (and <code>IO.apply</code>) will catch any errors that are thrown in the method's body and expose them as typed errors:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">Task</span>}
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 
 <span class="hljs-keyword">val</span> error = <span class="hljs-type">DummyException</span>(<span class="hljs-string">"error"</span>)
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>[<span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>.eval { <span class="hljs-keyword">throw</span> error }
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>[<span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>.eval { <span class="hljs-keyword">throw</span> error }
 
 <span class="hljs-comment">// Left(DummyException("error"))</span>
 task.attempt.runSyncUnsafe()
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="catching-errors-in-taskevaltotal"></a><a href="#catching-errors-in-taskevaltotal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Catching errors in Task.evalTotal</h3>
-<p>If we are sure that our side-effecting code won't have any surprises we can use <code>Task.evalTotal</code> but if we are wrong, the error
+<h3><a class="anchor" aria-hidden="true" id="catching-errors-in-ioevaltotal"></a><a href="#catching-errors-in-ioevaltotal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Catching errors in IO.evalTotal</h3>
+<p>If we are sure that our side-effecting code won't have any surprises we can use <code>IO.evalTotal</code> but if we are wrong, the error
 will be caught in the internal error channel:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">UIO</span>}
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 
 <span class="hljs-keyword">val</span> error = <span class="hljs-type">DummyException</span>(<span class="hljs-string">"error"</span>)
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">UIO</span>[<span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>.evalTotal { <span class="hljs-keyword">throw</span> error }
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">UIO</span>[<span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>.evalTotal { <span class="hljs-keyword">throw</span> error }
 
 task.attempt.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Exception in thread "main" monix.execution.exceptions.DummyException: error</span>
 </code></pre>
 <p>Other methods which return <code>UIO</code> or use a generic <code>E</code> (not fixed to <code>Throwable</code>) like <code>map</code> / <code>flatMap</code> will behave in the same way when throwing an exception.</p>
 <h2><a class="anchor" aria-hidden="true" id="recovering-from-errors"></a><a href="#recovering-from-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Recovering from Errors</h2>
-<p>When <code>Task</code> fails, it will skip all subsequent operations until the error is handled.
+<p>When <code>IO</code> fails, it will skip all subsequent operations until the error is handled.
 Typed and terminal errors are in different categories - handling typed errors will not do anything to unexpected errors but
 error handling functions for terminal errors handle &quot;normal&quot; errors as well.</p>
-<p>The section only covers the main error handling operators, refer to <a href="https://monix.github.io/monix-bio/api/monix/bio/Task.html">API Documentation</a> for the full list.</p>
+<p>The section only covers the main error handling operators, refer to <a href="https://monix.github.io/monix-bio/api/monix/bio/IO.html">API Documentation</a> for the full list.</p>
 <h3><a class="anchor" aria-hidden="true" id="typed-errors"></a><a href="#typed-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Typed Errors</h3>
 <h4><a class="anchor" aria-hidden="true" id="exposing-errors"></a><a href="#exposing-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Exposing Errors</h4>
 <p><code>attempt</code> and <code>materialize</code> take the error away and return it as a normal value:</p>
@@ -261,11 +261,11 @@ error handling functions for terminal errors handle &quot;normal&quot; errors as
 <span class="hljs-keyword">final</span> <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">materialize</span></span>(<span class="hljs-keyword">implicit</span> ev: <span class="hljs-type">E</span> &lt;:&lt; <span class="hljs-type">Throwable</span>): <span class="hljs-type">UIO</span>[<span class="hljs-type">Try</span>[<span class="hljs-type">A</span>]]
 </code></pre>
 <p>Note that the return type is <code>UIO</code> indicating that there are no more expected errors to handle.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">UIO</span>}
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
 <span class="hljs-keyword">val</span> error = <span class="hljs-string">"error"</span>
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>.raiseError(error)
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">IO</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>.raiseError(error)
 <span class="hljs-keyword">val</span> attempted: <span class="hljs-type">UIO</span>[<span class="hljs-type">Either</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>]] = task.attempt
 
 <span class="hljs-comment">// Left("error")</span>
@@ -274,69 +274,69 @@ attempted.runSyncUnsafe()
 <p>It is common to use <code>attempt</code> before <code>runToFuture</code> or <code>runSyncUnsafe</code>.
 The typed error will be exposed as a <code>Left</code> and the terminal error will result in a failed <code>Future</code> or an exception thrown (in <code>runSyncUnsafe</code>).</p>
 <p>Both methods have corresponding reverse operations:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">final</span> <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">rethrow</span></span>[<span class="hljs-type">E1</span> &gt;: <span class="hljs-type">E</span>, <span class="hljs-type">B</span>](<span class="hljs-keyword">implicit</span> ev: <span class="hljs-type">A</span> &lt;:&lt; <span class="hljs-type">Either</span>[<span class="hljs-type">E1</span>, <span class="hljs-type">B</span>]): <span class="hljs-type">Task</span>[<span class="hljs-type">E1</span>, <span class="hljs-type">B</span>]
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">final</span> <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">rethrow</span></span>[<span class="hljs-type">E1</span> &gt;: <span class="hljs-type">E</span>, <span class="hljs-type">B</span>](<span class="hljs-keyword">implicit</span> ev: <span class="hljs-type">A</span> &lt;:&lt; <span class="hljs-type">Either</span>[<span class="hljs-type">E1</span>, <span class="hljs-type">B</span>]): <span class="hljs-type">IO</span>[<span class="hljs-type">E1</span>, <span class="hljs-type">B</span>]
 <span class="hljs-keyword">final</span> <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">dematerialize</span></span>[<span class="hljs-type">B</span>](<span class="hljs-keyword">implicit</span> evE: <span class="hljs-type">E</span> &lt;:&lt; <span class="hljs-type">Nothing</span>, evA: <span class="hljs-type">A</span> &lt;:&lt; <span class="hljs-type">Try</span>[<span class="hljs-type">B</span>]): <span class="hljs-type">Task</span>[<span class="hljs-type">B</span>]
 </code></pre>
 <p>Example:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 
 <span class="hljs-keyword">val</span> error = <span class="hljs-string">"error"</span>
-<span class="hljs-comment">// same as Task.raiseError</span>
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">Task</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>.raiseError(error).attempt.rethrow 
+<span class="hljs-comment">// same as IO.raiseError</span>
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">IO</span>[<span class="hljs-type">String</span>, <span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>.raiseError(error).attempt.rethrow 
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="onerrorhandle--onerrorhandlewith"></a><a href="#onerrorhandle--onerrorhandlewith" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>onErrorHandle &amp; onErrorHandleWith</h4>
-<p><code>Task.onErrorHandleWith</code> is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<p><code>IO.onErrorHandleWith</code> is an operation which takes a function, mapping possible exceptions to a desired fallback outcome, so we could do this:</p>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">UIO</span>}
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TimeoutException</span>(<span class="hljs-params"></span>)</span>
 
-<span class="hljs-keyword">val</span> source: <span class="hljs-type">Task</span>[<span class="hljs-type">TimeoutException</span>, <span class="hljs-type">String</span>] =
-  <span class="hljs-type">Task</span>.evalTotal(<span class="hljs-string">"Hello!"</span>)
+<span class="hljs-keyword">val</span> source: <span class="hljs-type">IO</span>[<span class="hljs-type">TimeoutException</span>, <span class="hljs-type">String</span>] =
+  <span class="hljs-type">IO</span>.evalTotal(<span class="hljs-string">"Hello!"</span>)
     .delayExecution(<span class="hljs-number">10.</span>seconds)
     .timeoutWith(<span class="hljs-number">3.</span>seconds, <span class="hljs-type">TimeoutException</span>())
 
 <span class="hljs-keyword">val</span> recovered: <span class="hljs-type">UIO</span>[<span class="hljs-type">String</span>] = source.onErrorHandleWith {
-  _: <span class="hljs-type">TimeoutException</span> =&gt; <span class="hljs-type">Task</span>.now(<span class="hljs-string">"Recovered!"</span>)
+  _: <span class="hljs-type">TimeoutException</span> =&gt; <span class="hljs-type">IO</span>.now(<span class="hljs-string">"Recovered!"</span>)
 }
 
 recovered.attempt.runToFuture.foreach(println)
 <span class="hljs-comment">//=&gt; Recovered!</span>
 </code></pre>
-<p><code>Task.onErrorHandle</code> is a variant which takes a pure recovery function <code>E =&gt; B</code> instead of an effectful <code>E =&gt; Task[E1, B]</code> which could also fail.</p>
+<p><code>IO.onErrorHandle</code> is a variant which takes a pure recovery function <code>E =&gt; B</code> instead of an effectful <code>E =&gt; IO[E1, B]</code> which could also fail.</p>
 <h4><a class="anchor" aria-hidden="true" id="redeem--redeemwith"></a><a href="#redeem--redeemwith" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>redeem &amp; redeemWith</h4>
-<p><code>Task.redeem</code> and <code>Task.redeemWith</code> are a combination of <code>map</code> + <code>onErrorHandle</code> and <code>flatMap</code> + <code>onErrorHandleWith</code> respectively.</p>
+<p><code>IO.redeem</code> and <code>IO.redeemWith</code> are a combination of <code>map</code> + <code>onErrorHandle</code> and <code>flatMap</code> + <code>onErrorHandleWith</code> respectively.</p>
 <p>If <code>task</code> is successful then:</p>
 <p><code>task.redeemWith(fe, fb) &lt;-&gt; task.flatMap(fb)</code></p>
 <p>And when <code>task</code> is failed:</p>
 <p><code>task.redeemWith(fe, fb) &lt;-&gt; task.onErrorHandleWith(fe)</code></p>
 <p>Instead of:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
 
 <span class="hljs-keyword">val</span> task = f1
   .flatMap(_ =&gt; f2)
-  .onErrorHandleWith(_ =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"Recovered!"</span>)))
+  .onErrorHandleWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Recovered!"</span>)))
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Recovered!</span>
 </code></pre>
 <p>You can do this:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
 
 <span class="hljs-keyword">val</span> task = f1
-  .redeemWith(_ =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"Recovered!"</span>)), _ =&gt; f2)
+  .redeemWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Recovered!"</span>)), _ =&gt; f2)
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Recovered!</span>
@@ -345,23 +345,23 @@ task.runSyncUnsafe()
 <h3><a class="anchor" aria-hidden="true" id="terminal-errors"></a><a href="#terminal-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Terminal Errors</h3>
 <p>Terminal errors ignore all typed error handlers and can only be caught by more powerful methods.</p>
 <p>The example below shows how <code>redeemWith</code> does nothing to handle unexpected errors even if it uses the same type:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-comment">// Note Task.termiante instead of Task.raiseError</span>
-<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">Task</span>.terminate(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-comment">// Note IO.termiante instead of IO.raiseError</span>
+<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">IO</span>.terminate(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
 
 <span class="hljs-keyword">val</span> task = f1
-  .redeemWith(_ =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"Recovered!"</span>)), _ =&gt; f2)
+  .redeemWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Recovered!"</span>)), _ =&gt; f2)
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Exception in thread "main" monix.execution.exceptions.DummyException: boom</span>
 </code></pre>
 <p>There are special variants of <code>redeem</code> and <code>redeemWith</code> which are called <code>redeemCause</code> and <code>redeemCauseWith</code> respectively.
-<code>Task.redeemCause</code> takes a <code>Cause[E] =&gt; B</code> function instead of <code>E =&gt; B</code> to recover and
-<code>Task.redeemCauseWith</code> uses a <code>Cause[E] =&gt; Task[E1, B]</code>.</p>
+<code>IO.redeemCause</code> takes a <code>Cause[E] =&gt; B</code> function instead of <code>E =&gt; B</code> to recover and
+<code>IO.redeemCauseWith</code> uses a <code>Cause[E] =&gt; IO[E1, B]</code>.</p>
 <p><code>Cause</code> is defined as follows:</p>
 <pre><code class="hljs css language-scala"><span class="hljs-keyword">sealed</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Cause</span>[+<span class="hljs-type">E</span>] <span class="hljs-keyword">extends</span> <span class="hljs-title">Product</span> <span class="hljs-keyword">with</span> <span class="hljs-title">Serializable</span> </span>{
   <span class="hljs-comment">// few methods</span>
@@ -374,61 +374,61 @@ task.runSyncUnsafe()
 }
 </code></pre>
 <p>Let's modify the previous example to use <code>redeemCause</code>:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-comment">// Note Task.termiante instead of Task.raiseError</span>
-<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">Task</span>.terminate(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-comment">// Note IO.termiante instead of IO.raiseError</span>
+<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">IO</span>.terminate(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
 
 <span class="hljs-keyword">val</span> task = f1
-  .redeemCauseWith(_ =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"Recovered!"</span>)), _ =&gt; f2)
+  .redeemCauseWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Recovered!"</span>)), _ =&gt; f2)
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Recovered!</span>
 </code></pre>
 <p>Basically it is a more powerful version which can access both error channels.
 In your actual application you might find yourself using typed error handlers (<code>onErrorHandle</code>, <code>redeem</code> etc.) almost all of the time
-and only use <code>Cause</code> variants when absolutely necessary like at the edges of the application if you don't want to pass failed <code>Task</code> / <code>Future</code> to your HTTP library.</p>
+and only use <code>Cause</code> variants when absolutely necessary like at the edges of the application if you don't want to pass failed <code>IO</code> / <code>Future</code> to your HTTP library.</p>
 <h2><a class="anchor" aria-hidden="true" id="mapping-errors"></a><a href="#mapping-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mapping Errors</h2>
 <h3><a class="anchor" aria-hidden="true" id="maperror"></a><a href="#maperror" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>mapError</h3>
-<p><code>Task.mapError</code> will not handle any error but it can transform it to something else.</p>
+<p><code>IO.mapError</code> will not handle any error but it can transform it to something else.</p>
 <p>It can be useful to convert an error from a smaller type to a bigger type:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> java.time.<span class="hljs-type">Instant</span>
 
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ErrorA</span>(<span class="hljs-params">i: <span class="hljs-type">Int</span></span>)</span>
 <span class="hljs-keyword">case</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ErrorB</span>(<span class="hljs-params">errA: <span class="hljs-type">ErrorA</span>, createdAt: <span class="hljs-type">Instant</span></span>)</span>
 
-<span class="hljs-keyword">val</span> task1: <span class="hljs-type">Task</span>[<span class="hljs-type">ErrorA</span>, <span class="hljs-type">String</span>] = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">ErrorA</span>(<span class="hljs-number">10</span>))
-<span class="hljs-keyword">val</span> task2: <span class="hljs-type">Task</span>[<span class="hljs-type">ErrorB</span>, <span class="hljs-type">String</span>] = task1.mapError(errA =&gt; <span class="hljs-type">ErrorB</span>(errA, <span class="hljs-type">Instant</span>.now()))
+<span class="hljs-keyword">val</span> task1: <span class="hljs-type">IO</span>[<span class="hljs-type">ErrorA</span>, <span class="hljs-type">String</span>] = <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">ErrorA</span>(<span class="hljs-number">10</span>))
+<span class="hljs-keyword">val</span> task2: <span class="hljs-type">IO</span>[<span class="hljs-type">ErrorB</span>, <span class="hljs-type">String</span>] = task1.mapError(errA =&gt; <span class="hljs-type">ErrorB</span>(errA, <span class="hljs-type">Instant</span>.now()))
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="taperror"></a><a href="#taperror" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>tapError</h3>
-<p><code>Task.tapError</code> can peek at the error value and execute provided <code>E =&gt; Task[E1, B]</code> function without handling the original error.</p>
+<p><code>IO.tapError</code> can peek at the error value and execute provided <code>E =&gt; IO[E1, B]</code> function without handling the original error.</p>
 <p>For instance, we might want to log the error without handling it:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">Task</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
-<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">Task</span>(println(<span class="hljs-string">"A"</span>))
+<span class="hljs-keyword">val</span> f1 = <span class="hljs-type">IO</span>.raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom"</span>))
+<span class="hljs-keyword">val</span> f2 = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
 
 <span class="hljs-keyword">val</span> task = f1
-  .tapError(e =&gt; <span class="hljs-type">Task</span>(println(<span class="hljs-string">"Incoming error: "</span> + e)))
+  .tapError(e =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Incoming error: "</span> + e)))
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Incoming error: monix.execution.exceptions.DummyException: boom</span>
 <span class="hljs-comment">//=&gt; Exception in thread "main" monix.execution.exceptions.DummyException: boom</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="moving-errors-from-the-typed-error-channel"></a><a href="#moving-errors-from-the-typed-error-channel" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Moving errors from the typed error channel</h3>
-<p>If you are sure that your <code>Task</code> shouldn't have any errors and if there are any they should shutdown the task as soon as possible
+<p>If you are sure that your <code>IO</code> shouldn't have any errors and if there are any they should shutdown the task as soon as possible
 there is <code>hideErrors</code> and <code>hideErrorsWith</code> which will hide the error from the type signature and raise it as a terminal error.</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">UIO</span>}
 <span class="hljs-keyword">import</span> monix.execution.exceptions.<span class="hljs-type">DummyException</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 
-<span class="hljs-keyword">val</span> task: <span class="hljs-type">UIO</span>[<span class="hljs-type">Int</span>] = <span class="hljs-type">Task</span>
+<span class="hljs-keyword">val</span> task: <span class="hljs-type">UIO</span>[<span class="hljs-type">Int</span>] = <span class="hljs-type">IO</span>
   .raiseError(<span class="hljs-type">DummyException</span>(<span class="hljs-string">"boom!"</span>))
   .hideErrors
   .map(_ =&gt; <span class="hljs-number">10</span>)
@@ -438,11 +438,11 @@ task.runToFuture.value
 </code></pre>
 <p>If your <code>E</code> is not <code>Throwable</code> you can use <code>hideErrorsWith</code> which takes a <code>E =&gt; Throwable</code> function.</p>
 <p>This method is handy if you are using generic Cats-Effect based libraries, for example:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">Task</span>}
 <span class="hljs-keyword">import</span> monix.catnap.<span class="hljs-type">ConcurrentQueue</span>
 
-<span class="hljs-keyword">val</span> queueExample: <span class="hljs-type">Task</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">String</span>] = <span class="hljs-keyword">for</span> {
-  queue &lt;- <span class="hljs-type">ConcurrentQueue</span>[<span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>].bounded[<span class="hljs-type">String</span>](<span class="hljs-number">10</span>)
+<span class="hljs-keyword">val</span> queueExample: <span class="hljs-type">IO</span>[<span class="hljs-type">Throwable</span>, <span class="hljs-type">String</span>] = <span class="hljs-keyword">for</span> {
+  queue &lt;- <span class="hljs-type">ConcurrentQueue</span>[<span class="hljs-type">Task</span>].bounded[<span class="hljs-type">String</span>](<span class="hljs-number">10</span>)
   _ &lt;- queue.offer(<span class="hljs-string">"Message"</span>)
   msg &lt;- queue.poll
 } <span class="hljs-keyword">yield</span> msg
@@ -454,20 +454,20 @@ in terms of type classes which unfortunately don't support two channels of error
 <span class="hljs-keyword">import</span> monix.catnap.<span class="hljs-type">ConcurrentQueue</span>
 
 <span class="hljs-keyword">val</span> queueExample: <span class="hljs-type">UIO</span>[<span class="hljs-type">String</span>] = (<span class="hljs-keyword">for</span> {
-  queue &lt;- <span class="hljs-type">ConcurrentQueue</span>[<span class="hljs-type">Task</span>.<span class="hljs-type">Unsafe</span>].bounded[<span class="hljs-type">String</span>](<span class="hljs-number">10</span>)
+  queue &lt;- <span class="hljs-type">ConcurrentQueue</span>[<span class="hljs-type">Task</span>].bounded[<span class="hljs-type">String</span>](<span class="hljs-number">10</span>)
   _ &lt;- queue.offer(<span class="hljs-string">"Message"</span>)
   msg &lt;- queue.poll
 } <span class="hljs-keyword">yield</span> msg).hideErrors
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="restarting-on-error"></a><a href="#restarting-on-error" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Restarting on Error</h2>
-<p><code>Task</code> type represents a specification of a computation so it can be freely restarted if we wish to do so.</p>
+<p><code>IO</code> type represents a specification of a computation so it can be freely restarted if we wish to do so.</p>
 <p>There are few retry combinators available but in general it is quite simple to write a custom recursive function.
 For instance, retry with exponential backoff would look like as follows:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
-<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">retryBackoff</span></span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>](source: <span class="hljs-type">Task</span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>],
-  maxRetries: <span class="hljs-type">Int</span>, firstDelay: <span class="hljs-type">FiniteDuration</span>): <span class="hljs-type">Task</span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>] = {
+<span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">retryBackoff</span></span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>](source: <span class="hljs-type">IO</span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>],
+  maxRetries: <span class="hljs-type">Int</span>, firstDelay: <span class="hljs-type">FiniteDuration</span>): <span class="hljs-type">IO</span>[<span class="hljs-type">E</span>, <span class="hljs-type">A</span>] = {
 
   source.onErrorHandleWith { ex =&gt;
       <span class="hljs-keyword">if</span> (maxRetries &gt; <span class="hljs-number">0</span>)
@@ -475,23 +475,23 @@ For instance, retry with exponential backoff would look like as follows:</p>
         retryBackoff(source, maxRetries - <span class="hljs-number">1</span>, firstDelay * <span class="hljs-number">2</span>)
           .delayExecution(firstDelay)
       <span class="hljs-keyword">else</span>
-        <span class="hljs-type">Task</span>.raiseError(ex)
+        <span class="hljs-type">IO</span>.raiseError(ex)
   }
 }
 </code></pre>
 <p>In more complicated cases it's worth taking a look at <a href="https://github.com/cb372/cats-retry">cats-retry</a> library and/or use a stream (e.g. <a href="https://github.com/functional-streams-for-scala/fs2">fs2</a>, <a href="https://monix.io/docs/3x/reactive/observable.html">Monix Observable</a>) instead of recursive functions.</p>
 <h2><a class="anchor" aria-hidden="true" id="reporting-uncaught-errors"></a><a href="#reporting-uncaught-errors" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Reporting Uncaught Errors</h2>
 <p>Losing errors is unacceptable.
-We can't always return them as a <code>Task</code> result because sometimes the failure could happen concurrently and <code>Task</code> could already be finished with a different value.
+We can't always return them as a <code>IO</code> result because sometimes the failure could happen concurrently and <code>IO</code> could already be finished with a different value.
 In this case the error is reported with <code>Scheduler.reportFailure</code> which by default logs uncaught errors to <code>System.err</code>:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>.<span class="hljs-type">Implicits</span>.global
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
 
 <span class="hljs-comment">// Ensures asynchronous execution, just to show</span>
 <span class="hljs-comment">// that the action doesn't happen on the</span>
 <span class="hljs-comment">// current thread</span>
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>(<span class="hljs-number">2</span>).delayExecution(<span class="hljs-number">1.</span>second)
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">IO</span>(<span class="hljs-number">2</span>).delayExecution(<span class="hljs-number">1.</span>second)
 
 task.runAsync { r =&gt;
   <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-type">IllegalStateException</span>(r.toString)
@@ -509,7 +509,7 @@ task.runAsync { r =&gt;
 <span class="hljs-comment">//=&gt; ....</span>
 </code></pre>
 <p>We can customize the behavior to use anything we'd like:</p>
-<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">Task</span>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">import</span> monix.bio.<span class="hljs-type">IO</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>
 <span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">UncaughtExceptionReporter</span>
 <span class="hljs-keyword">import</span> scala.concurrent.duration._
@@ -521,7 +521,7 @@ task.runAsync { r =&gt;
 
 <span class="hljs-keyword">implicit</span> <span class="hljs-keyword">val</span> s = <span class="hljs-type">Scheduler</span>(<span class="hljs-type">Scheduler</span>.global, reporter)
 
-<span class="hljs-keyword">val</span> task = <span class="hljs-type">Task</span>(<span class="hljs-number">2</span>).delayExecution(<span class="hljs-number">1.</span>second)
+<span class="hljs-keyword">val</span> task = <span class="hljs-type">IO</span>(<span class="hljs-number">2</span>).delayExecution(<span class="hljs-number">1.</span>second)
 
 task.runAsync { r =&gt;
   <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-type">IllegalStateException</span>(r.toString)
@@ -531,8 +531,8 @@ task.runAsync { r =&gt;
 <span class="hljs-comment">//=&gt; Customized printing of uncaught exception: java.lang.IllegalStateException: Right(2)</span>
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="cats-instances"></a><a href="#cats-instances" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cats Instances</h2>
-<p>If you are a <a href="https://github.com/typelevel/cats">Cats</a> user then <code>Task</code> provides <a href="https://typelevel.org/cats/api/cats/ApplicativeError.html"><code>ApplicativeError</code></a> and
+<p>If you are a <a href="https://github.com/typelevel/cats">Cats</a> user then <code>IO</code> provides <a href="https://typelevel.org/cats/api/cats/ApplicativeError.html"><code>ApplicativeError</code></a> and
 <a href="https://typelevel.org/cats/api/cats/MonadError.html"><code>MonadError</code></a> instances.</p>
 <p>If you import <code>cats.syntax.monadError._</code>, <code>cats.syntax.applicativeError</code> or just <code>cats.syntax.all._</code> you will have access to all the methods provided by library.</p>
-<p>The main gotcha is that anything requiring <a href="https://typelevel.org/cats-effect/typeclasses/sync.html"><code>Sync</code></a> and above will only work for <code>Task[Throwable, A]</code></p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/execution"><span class="arrow-prev">← </span><span>Executing Task</span></a><a class="docs-next button" href="/monix-bio/docs/resource-safety"><span>Resource Safety</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#error-channels">Error Channels</a></li><li><a href="#producing-a-failed-task">Producing a failed Task</a><ul class="toc-headings"><li><a href="#taskraiseerror">Task.raiseError</a></li><li><a href="#taskterminate">Task.terminate</a></li><li><a href="#catching-errors-in-taskeval">Catching errors in Task.eval</a></li><li><a href="#catching-errors-in-taskevaltotal">Catching errors in Task.evalTotal</a></li></ul></li><li><a href="#recovering-from-errors">Recovering from Errors</a><ul class="toc-headings"><li><a href="#typed-errors">Typed Errors</a></li><li><a href="#terminal-errors">Terminal Errors</a></li></ul></li><li><a href="#mapping-errors">Mapping Errors</a><ul class="toc-headings"><li><a href="#maperror">mapError</a></li><li><a href="#taperror">tapError</a></li><li><a href="#moving-errors-from-the-typed-error-channel">Moving errors from the typed error channel</a></li></ul></li><li><a href="#restarting-on-error">Restarting on Error</a></li><li><a href="#reporting-uncaught-errors">Reporting Uncaught Errors</a></li><li><a href="#cats-instances">Cats Instances</a></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
+<p>The main gotcha is that anything requiring <a href="https://typelevel.org/cats-effect/typeclasses/sync.html"><code>Sync</code></a> and above will only work for <code>IO[Throwable, A]</code></p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/monix-bio/docs/execution"><span class="arrow-prev">← </span><span>Executing IO</span></a><a class="docs-next button" href="/monix-bio/docs/resource-safety"><span>Resource Safety</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#error-channels">Error Channels</a></li><li><a href="#producing-a-failed-io">Producing a failed IO</a><ul class="toc-headings"><li><a href="#ioraiseerror">IO.raiseError</a></li><li><a href="#ioterminate">IO.terminate</a></li><li><a href="#catching-errors-in-ioeval">Catching errors in IO.eval</a></li><li><a href="#catching-errors-in-ioevaltotal">Catching errors in IO.evalTotal</a></li></ul></li><li><a href="#recovering-from-errors">Recovering from Errors</a><ul class="toc-headings"><li><a href="#typed-errors">Typed Errors</a></li><li><a href="#terminal-errors">Terminal Errors</a></li></ul></li><li><a href="#mapping-errors">Mapping Errors</a><ul class="toc-headings"><li><a href="#maperror">mapError</a></li><li><a href="#taperror">tapError</a></li><li><a href="#moving-errors-from-the-typed-error-channel">Moving errors from the typed error channel</a></li></ul></li><li><a href="#restarting-on-error">Restarting on Error</a></li><li><a href="#reporting-uncaught-errors">Reporting Uncaught Errors</a></li><li><a href="#cats-instances">Cats Instances</a></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
