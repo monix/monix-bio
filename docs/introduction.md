@@ -11,7 +11,7 @@ All of this makes it simple to write good, high-level code that solves problems 
 
 There are two type aliases:
 - `type UIO[A] = IO[Nothing, A]` which represents an effect that can only fail with terminal errors due to abnormal circumstances.
-- `type Task[A] = IO[Throwable, A]` - an effect that can fail with a `Throwable` and is analogous to `monix.eval.Task`.
+- `type Task[A] = IO[Throwable, A]` - an effect that can fail with a `Throwable` and is similar to `monix.eval.Task`.
 
 `Monix IO` builds upon [Monix Task](https://monix.io/api/3.2/monix/eval/Task.html) and enhances it with typed error capabilities.
 If you are already familiar with `Task` - learning `IO` is straightforward because the only difference is in

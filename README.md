@@ -18,25 +18,14 @@ libraryDependencies += "io.monix" %% "monix-bio" % "1.0.0"
 ```
 Published for ScalaJS 0.6.x, 1.x, Scala 2.12 and 2.13.
 
-## Current Status
+## Roadmap
 
-The project maintains binary compatibility in `0.1.x` line and it is suitable for production usage.
-
-`monix.bio.IO` covers full `monix.eval.Task` API.
-
-The documentation is in progress and not all scaladocs are updated.
-
-## Plans for the future
-
-Long term `1.0.0` version is expected to come around July-August 2020 once the basic documentation is complete.
-
-We are considering [a different encoding](https://github.com/monix/monix-bio/issues/6) but if we don't go forward with it there won't be many changes.
-
-Upcoming features (either `1.0.0` or later):
-- `reactive` module to use `monix.reactive.Observable` with `monix.bio.BIO`
+- Complete documentation (see [#133](https://github.com/monix/monix-bio/issues/113) for current progress)
+- `reactive` module to use `monix.reactive.Observable` with `monix.bio.IO`
 - built-in interop with `monix.eval.Task` without any imports
-- `Coeval` with typed errors
 - better stack traces
+- (?) `UIO`-friendy builders for `cats.effect.concurrent` and `monix-catnap`
+- (?) `Coeval` with typed errors
 
 ## Contributing
 

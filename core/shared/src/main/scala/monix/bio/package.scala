@@ -18,6 +18,16 @@
 package monix
 
 package object bio {
+  /** Type alias that represents `IO` in which all expected errors were handled.
+    */
   type UIO[+A] = IO[Nothing, A]
+
+  /** Type alias that represents `IO` which is expected to fail with any `Throwable.`
+    * Similar to `monix.eval.Task` and `cats.effect.IO`.
+    *
+    * WARNING: There are still two error channels (both `Throwable`) so use with care.
+    *          If error is thrown from what was expected to be a pure function (map, flatMap, finalizers, etc.)
+    *          then it will terminate the Task, instead of a normal failure.
+    */
   type Task[+A] = IO[Throwable, A]
 }

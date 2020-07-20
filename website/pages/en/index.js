@@ -108,6 +108,33 @@ libraryDependencies += "${organization}" %% "${coreModuleName}" % "${latestVersi
 \`\`\`
 
 Published for ScalaJS 0.6.x, 1.x, Scala ${scalaPublishVersions}.
+
+### Roadmap
+
+- Complete documentation (see [#133](https://github.com/monix/monix-bio/issues/113) for current progress)
+- \`reactive\` module to use \`monix.reactive.Observable\` with \`monix.bio.IO\`
+- built-in interop with \`monix.eval.Task\` without any imports
+- better stack traces
+- (?) \`UIO\`-friendy builders for \`cats.effect.concurrent\` and \`monix-catnap\`
+- (?) \`Coeval\` with typed errors
+
+### Contributing
+
+I will really appreciate feedback, bugs and complaints about the project.
+
+If you\'d like to contribute code then look for issues tagged with [good first issue](https://github.com/monix/monix-bio/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
+or just ask me on gitter and I should be able to find something regardless of your level of expertise. :)
+
+I\'m happy to mentor anyone interested in contributing.
+
+### Credits
+
+Most of the code comes from [Monix](https://github.com/monix/monix) which was customized to include support for error type parameter directly in the internals.
+
+The idea of a second type parameter comes from [ZIO](https://github.com/zio/zio). Its implementation and API for error handling with two error channels served as an inspiration to the entire idea and some of the solutions. A lot of the benchmarks also come from their repository.
+
+[Cats-bio](https://github.com/LukaJCB/cats-bio) has been extremely useful at the beginning because of many similarities between \`monix.eval.Task\` and \`cats.effect.IO\` internals.
+
 `.trim();
 
     return (

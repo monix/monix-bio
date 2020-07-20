@@ -23,7 +23,7 @@ import monix.execution.misc.Local
 /** A `IOLocal` is like a
   * [[monix.execution.misc.ThreadLocal ThreadLocal]]
   * that is pure and with a flexible scope, being processed in the
-  * context of the [[Task]] data type.
+  * context of the [[IO]] data type.
   *
   * This data type wraps [[monix.execution.misc.Local]].
   *
