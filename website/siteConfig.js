@@ -5,8 +5,9 @@ const apiUrl = "/monix-bio/api/monix/bio/index.html"
 const siteConfig = {
   title: "Monix BIO",
   tagline: "Asynchronous Programming for Scala and Scala.js",
-  url: "https://monix.github.io/monix-bio",
-  baseUrl: "/monix-bio/",
+  url: "https://bio.monix.io",
+  baseUrl: "/",
+  cname: "bio.monix.io",
 
   customDocsPath: "monix-bio-docs/target/mdoc",
 
