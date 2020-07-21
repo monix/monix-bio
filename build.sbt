@@ -19,7 +19,7 @@ inThisBuild(List(
 
 val monixVersion = "3.2.2"
 val minitestVersion = "2.8.2"
-val catsEffectVersion = "2.1.3"
+val catsEffectVersion = "2.1.4"
 
 // The Monix version with which we must keep binary compatibility.
 // https://github.com/typesafehub/migration-manager/wiki/Sbt-plugin
