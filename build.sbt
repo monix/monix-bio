@@ -229,7 +229,7 @@ lazy val sharedSettings = Seq(
 
   // ScalaDoc settings
   autoAPIMappings := true,
-  apiURL := Some(url("https://monix.github.io/monix-bio/api/")),
+  apiURL := Some(url("https://bio.monix.io/api/monix/bio/index.html")),
   apiMappings ++= {
     val cp: Seq[Attributed[File]] = (fullClasspath in Compile).value
     def findManagedDependency(organization: String, name: String): File = {
