@@ -8,9 +8,7 @@ const siteConfig = {
   url: "https://bio.monix.io",
   baseUrl: "/",
   cname: "bio.monix.io",
-
   customDocsPath: "monix-bio-docs/target/mdoc",
-
   projectName: "monix-bio",
   organizationName: "monix",
 
@@ -23,6 +21,7 @@ const siteConfig = {
   headerIcon: "img/monix-logo.svg",
   titleIcon: "img/monix-logo.svg",
   favicon: "img/monix-logo.png",
+  twitterImage: "img/monix-logo.png",
 
   colors: {
     primaryColor: "#122932",
