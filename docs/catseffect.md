@@ -97,10 +97,11 @@ without requiring any implicit in scope, if we use `deferAction`:
 
 ```scala mdoc:silent:reset
 import monix.bio.IO
+import monix.eval.Task
 
-val task = monix.eval.Task(20)
+val task = Task(20)
 val bio: IO[Throwable, Int] = IO.deferAction(implicit s => IO.from(task))
-val taskAgain: monix.eval.Task[Int] = monix.eval.Task.deferAction(implicit s => bio.to[monix.eval.Task])
+val taskAgain: Task[Int] = Task.deferAction(implicit s => bio.to[Task])
 ```
 
 In the future, we might introduce a type class in `monix-execution`, which will allow this conversion without any tricks with `deferAction`.
