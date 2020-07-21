@@ -1,6 +1,6 @@
 const repoUrl = "https://github.com/monix/monix-bio";
 
-const apiUrl = "/monix-bio/api/monix/bio/index.html"
+const apiUrl = "/api/monix/bio/index.html"
 
 const siteConfig = {
   title: "Monix BIO",
