@@ -36,7 +36,7 @@ error.runAsync(result => println(result))
 
 ### IO.terminate
 
-`IO.raiseError` lifts a terminal error to the context of `IO`:
+`IO.terminate` lifts a terminal error to the context of `IO`:
 
 ```scala mdoc:silent:reset
 import monix.bio.{IO, UIO}
