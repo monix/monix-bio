@@ -331,6 +331,7 @@ recovered.attempt.runToFuture.foreach(println)
 #### redeem & redeemWith
 
 `IO.redeem` and `IO.redeemWith` are a combination of `map` + `onErrorHandle` and `flatMap` + `onErrorHandleWith` respectively.
+Conceptually, it is a `fold` operation.
 
 If `task` is successful then:
 
@@ -351,8 +352,11 @@ val f1 = IO.raiseError(DummyException("boom"))
 val f2 = IO(println("A"))
 
 val task = f1
-  .flatMap(_ => f2)
-  .onErrorHandleWith(_ => IO(println("Recovered!")))
+  .attempt
+  .flatMap {
+    case Left(_) => IO(println("Recovered!"))
+    case Right(_) => f2
+  }
 
 task.runSyncUnsafe()
 //=> Recovered!
