@@ -307,7 +307,8 @@ recovered.attempt.runToFuture.foreach(println)
 </code></pre>
 <p><code>IO.onErrorHandle</code> is a variant which takes a pure recovery function <code>E =&gt; B</code> instead of an effectful <code>E =&gt; IO[E1, B]</code> which could also fail.</p>
 <h4><a class="anchor" aria-hidden="true" id="redeem--redeemwith"></a><a href="#redeem--redeemwith" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>redeem &amp; redeemWith</h4>
-<p><code>IO.redeem</code> and <code>IO.redeemWith</code> are a combination of <code>map</code> + <code>onErrorHandle</code> and <code>flatMap</code> + <code>onErrorHandleWith</code> respectively.</p>
+<p><code>IO.redeem</code> and <code>IO.redeemWith</code> are a combination of <code>map</code> + <code>onErrorHandle</code> and <code>flatMap</code> + <code>onErrorHandleWith</code> respectively.
+Conceptually, it is a <code>fold</code> operation.</p>
 <p>If <code>task</code> is successful then:</p>
 <p><code>task.redeemWith(fe, fb) &lt;-&gt; task.flatMap(fb)</code></p>
 <p>And when <code>task</code> is failed:</p>
@@ -321,8 +322,11 @@ recovered.attempt.runToFuture.foreach(println)
 <span class="hljs-keyword">val</span> f2 = <span class="hljs-type">IO</span>(println(<span class="hljs-string">"A"</span>))
 
 <span class="hljs-keyword">val</span> task = f1
-  .flatMap(_ =&gt; f2)
-  .onErrorHandleWith(_ =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Recovered!"</span>)))
+  .attempt
+  .flatMap {
+    <span class="hljs-keyword">case</span> <span class="hljs-type">Left</span>(_) =&gt; <span class="hljs-type">IO</span>(println(<span class="hljs-string">"Recovered!"</span>))
+    <span class="hljs-keyword">case</span> <span class="hljs-type">Right</span>(_) =&gt; f2
+  }
 
 task.runSyncUnsafe()
 <span class="hljs-comment">//=&gt; Recovered!</span>
