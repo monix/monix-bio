@@ -46,11 +46,13 @@ Although there is still `Monix Task` if you like the rest of the differences.
 ### Summary
 
 Until recently, Monix was `cats.effect.IO` with more stuff, better `Future` interop and optional typed errors.
-Since [2.2.0 relase](https://github.com/typelevel/cats-effect/releases/tag/v2.2.0) Cats IO includes better stack traces 
-that might take few months before coming to Monix as well.
+
+Since [2.2.0 release](https://github.com/typelevel/cats-effect/releases/tag/v2.2.0), Cats IO includes better stack traces 
+that might take few months before coming to Monix.
 
 Also note that many features that are missing in `cats.effect.IO` will come in CE3 release and the design of both
 libraries will most likely stay very consistent. 
+
 I expect that the main differences will come from the approach to `Future` support and mixed codebases, 
 and an option for the extra type parameter.
 
