@@ -3800,7 +3800,7 @@ object IO extends TaskInstancesLevel0 {
     * IO.raiseWhen(x >= tooMany)(new IllegalArgumentException("Too many"))
     * }}}
     */
-  def raiseWhen(cond: Boolean)(e: => Throwable): Task[Unit] =
+  def raiseWhen[E](cond: Boolean)(e: => E): IO[E, Unit] =
     IO.when(cond)(IO.raiseError(e))
 
   /**
@@ -3812,7 +3812,7 @@ object IO extends TaskInstancesLevel0 {
     * IO.raiseUnless(x < tooMany)(new IllegalArgumentException("Too many"))
     * }}}
     */
-  def raiseUnsless(cond: Boolean)(e: => Throwable): Task[Unit] =
+  def raiseUnless[E](cond: Boolean)(e: => E): IO[E, Unit] =
     IO.unless(cond)(IO.raiseError(e))
 
   /** Executes the given sequence of tasks in parallel, non-deterministically

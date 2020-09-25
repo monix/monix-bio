@@ -298,6 +298,18 @@ object Task extends TaskDeprecated.Companion {
     IO.unless(cond)(action)
 
   /**
+    * @see See [[monix.bio.IO.raiseWhen]]
+    */
+  def raiseWhen(cond: Boolean)(e: => Throwable): Task[Unit] =
+    IO.raiseWhen(cond)(e)
+
+  /**
+    * @see See [[monix.bio.IO.raiseUnless]]
+    */
+  def raiseUnless(cond: Boolean)(e: => Throwable): Task[Unit] =
+    IO.raiseUnless(cond)(e)
+
+  /**
     * @see See [[monix.bio.IO.parSequence]]
     */
   def parSequence[A](in: Iterable[Task[A]]): Task[List[A]] =
