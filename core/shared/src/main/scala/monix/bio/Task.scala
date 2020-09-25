@@ -286,6 +286,18 @@ object Task extends TaskDeprecated.Companion {
     IO.traverse(in)(f)
 
   /**
+    * @see See [[monix.bio.IO.when]]
+    */
+  def when(cond: Boolean)(action: => Task[Unit]): Task[Unit] =
+    IO.when(cond)(action)
+
+  /**
+    * @see See [[monix.bio.IO.unless]]
+    */
+  def unless(cond: Boolean)(action: => Task[Unit]): Task[Unit] =
+    IO.unless(cond)(action)
+
+  /**
     * @see See [[monix.bio.IO.parSequence]]
     */
   def parSequence[A](in: Iterable[Task[A]]): Task[List[A]] =
