@@ -1832,6 +1832,15 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def flatMap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, B] =
     FlatMap(this, f)
 
+  /** Creates a new Task by applying a monadic function to the successful result
+    * of the source Task, and discard the result.
+    */
+  final def flatTap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, A] = {
+    this.flatMap { a =>
+      f(a).map(_ => a)
+    }
+  }
+
   /**  Describes flatMap-driven loops, as an alternative to recursive functions.
     *
     * Sample:
