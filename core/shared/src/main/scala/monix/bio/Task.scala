@@ -286,6 +286,26 @@ object Task extends TaskDeprecated.Companion {
     IO.traverse(in)(f)
 
   /**
+    * @see See [[monix.bio.IO.none]]
+    */
+  def none[A]: UIO[Option[A]] = IO.none
+
+  /**
+    * @see See [[monix.bio.IO.some]]
+    */
+  def some[A](a: A): UIO[Option[A]] = IO.some(a)
+
+  /**
+    * @see See [[monix.bio.IO.left]]
+    */
+  def left[A, B](a: A): UIO[Either[A, B]] = IO.left(a)
+
+  /**
+    * @see See [[monix.bio.IO.right]]
+    */
+  def right[A, B](b: B): UIO[Either[A, B]] = IO.right(b)
+
+  /**
     * @see See [[monix.bio.IO.parSequence]]
     */
   def parSequence[A](in: Iterable[Task[A]]): Task[List[A]] =

@@ -1196,6 +1196,12 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def attempt: UIO[Either[E, A]] =
     FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
 
+  /**
+    * Replaces the `A` value in `F[A]` with the supplied value.
+    */
+  final def as[B](value: B): IO[E, B] =
+    this.map(_ => value)
+
   /** Inverse of `attempt`. Creates a new [[IO]] that absorbs `Either`.
     *
     * `IO.now(Right(42)).rethrow <-> IO.now(42)`
@@ -3726,6 +3732,18 @@ object IO extends TaskInstancesLevel0 {
     */
   def shift(ec: ExecutionContext): UIO[Unit] =
     TaskShift(ec)
+
+  /** Returns a `IO` that on execution is always successful, emitting None. */
+  def none[A]: UIO[Option[A]] = IO.pure(Option.empty[A])
+
+  /** Returns a `IO` that on execution is always successful, emitting some value. */
+  def some[A](a: A): UIO[Option[A]] = IO.pure(Some(a))
+
+  /** Returns a `IO` that on execution is always successful, emitting left value. */
+  def left[A, B](a: A): UIO[Either[A, B]] = IO.pure(Left(a))
+
+  /** Returns a `IO` that on execution is always successful, emitting right value. */
+  def right[A, B](b: B): UIO[Either[A, B]] = IO.pure(Right(b))
 
   /** Creates a new `Task` that will sleep for the given duration,
     * emitting a tick when that time span is over.
