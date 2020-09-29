@@ -211,6 +211,18 @@ object UIO extends UIODeprecated.Companion {
   def right[A, B](b: B): UIO[Either[A, B]] = IO.right(b)
 
   /**
+    * @see See [[monix.bio.IO.when]]
+    */
+  def when(cond: Boolean)(action: => UIO[Unit]): UIO[Unit] =
+    IO.when(cond)(action)
+
+  /**
+    * @see See [[monix.bio.IO.unless]]
+    */
+  def unless(cond: Boolean)(action: => UIO[Unit]): UIO[Unit] =
+    IO.unless(cond)(action)
+
+  /**
     * @see See [[monix.bio.IO.parSequence]]
     */
   def parSequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =

@@ -1838,6 +1838,15 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def flatMap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, B] =
     FlatMap(this, f)
 
+  /** Creates a new `IO` that will run a provided effect on the success
+    * and return the original value.
+    */
+  final def flatTap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, A] = {
+    this.flatMap { a =>
+      f(a).map(_ => a)
+    }
+  }
+
   /**  Describes flatMap-driven loops, as an alternative to recursive functions.
     *
     * Sample:
@@ -3792,6 +3801,46 @@ object IO extends TaskInstancesLevel0 {
     in: Iterable[A]
   )(f: A => IO[E, B]): IO[E, List[B]] =
     TaskSequence.traverse(in, f)
+
+  /**
+    * Returns the given argument if `cond` is true, otherwise `IO.Unit`
+    *
+    * @see [[IO.unless]] for the inverse
+    * @see [[IO.raiseWhen]] for conditionally raising an error
+    */
+  def when[E](cond: Boolean)(action: => IO[E, Unit]): IO[E, Unit] = if (cond) action else IO.unit
+
+  /**
+    * Returns the given argument if `cond` is false, otherwise `IO.Unit`
+    *
+    * @see [[IO.when]] for the inverse
+    * @see [[IO.raiseWhen]] for conditionally raising an error
+    */
+  def unless[E](cond: Boolean)(action: => IO[E, Unit]): IO[E, Unit] = if (cond) IO.unit else action
+
+  /**
+    * Returns `raiseError` when the `cond` is true, otherwise `IO.unit`
+    *
+    * @example {{{
+    * val tooMany = 5
+    * val x: Int = ???
+    * IO.raiseWhen(x >= tooMany)(new IllegalArgumentException("Too many"))
+    * }}}
+    */
+  def raiseWhen[E](cond: Boolean)(e: => E): IO[E, Unit] =
+    IO.when(cond)(IO.raiseError(e))
+
+  /**
+    * Returns `raiseError` when `cond` is false, otherwise IO.unit
+    *
+    * @example {{{
+    * val tooMany = 5
+    * val x: Int = ???
+    * IO.raiseUnless(x < tooMany)(new IllegalArgumentException("Too many"))
+    * }}}
+    */
+  def raiseUnless[E](cond: Boolean)(e: => E): IO[E, Unit] =
+    IO.unless(cond)(IO.raiseError(e))
 
   /** Executes the given sequence of tasks in parallel, non-deterministically
     * gathering their results, returning a task that will signal the sequence
