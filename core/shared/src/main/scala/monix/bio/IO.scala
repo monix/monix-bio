@@ -2673,6 +2673,20 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def redeemCauseWith[E1, B](recover: Cause[E] => IO[E1, B], bind: A => IO[E1, B]): IO[E1, B] =
     IO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 
+  /**
+    * Returns a new value that convert defects into a failure,
+    * throwing away all information about the cause of the failure.
+    */
+  final def absorb(implicit ev: E <:< Throwable): Task[A] =
+    redeemCauseWith(c => IO.raiseError(c.toThrowable), x => IO.now(x))
+
+  /**
+    * Returns a new value that convert defects into a failure,
+    * throwing away all information about the cause of the failure.
+    */
+  final def absorbWith(f: E => Throwable): Task[A] =
+    redeemCauseWith(c => IO.raiseError(c.fold(identity, e => f(e))), x => IO.now(x))
+
   /** Returns this task mapped to unit
     */
   final def void: IO[E, Unit] =
