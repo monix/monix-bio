@@ -2673,6 +2673,44 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def redeemCauseWith[E1, B](recover: Cause[E] => IO[E1, B], bind: A => IO[E1, B]): IO[E1, B] =
     IO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
 
+  /**
+    * Absorbs all unexpected errors to typed error channel.
+    *
+    * {{{
+    *   import monix.execution.exceptions.DummyException
+    *   import monix.execution.Scheduler.Implicits.global
+    *
+    *   val task: UIO[Either[Throwable, Int]] = IO
+    *     .terminate(DummyException("boom!"))
+    *     .absorb
+    *     .attempt
+    *
+    *     // Some(Success(Left(DummyException(boom!))))
+    *     task.runToFuture.value
+    * }}}
+    */
+  final def absorb(implicit ev: E <:< Throwable): Task[A] =
+    redeemCauseWith(c => IO.raiseError(c.toThrowable), x => IO.now(x))
+
+  /**
+    * Absorbs all unexpected errors to typed error channel.
+    *
+    * {{{
+    *   import monix.execution.exceptions.DummyException
+    *   import monix.execution.Scheduler.Implicits.global
+    *
+    *   val task: UIO[Either[Throwable, Int]] = IO
+    *     .raiseError("boom!")
+    *     .absorbWith(e => DummyException(e))
+    *     .attempt
+    *
+    *     // Some(Success(Left(DummyException(boom!))))
+    *     task.runToFuture.value
+    * }}}
+    */
+  final def absorbWith(f: E => Throwable): Task[A] =
+    redeemCauseWith(c => IO.raiseError(c.fold(identity, e => f(e))), x => IO.now(x))
+
   /** Returns this task mapped to unit
     */
   final def void: IO[E, Unit] =
