@@ -1841,7 +1841,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   /** Creates a new `IO` that will run a provided effect on the success
     * and return the original value.
     */
-  final def flatTap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, A] = {
+  final def tapEval[E1 >: E, B](f: A => IO[E1, B]): IO[E1, A] = {
     this.flatMap { a =>
       f(a).map(_ => a)
     }
