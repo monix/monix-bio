@@ -163,12 +163,11 @@ private[bio] object TaskRunSyncUnsafe {
     val context = Context[Any](scheduler, opts)
 
     // Starting actual execution
-    val rcb = TaskRestartCallback(context, cb)
     source match {
       case async: Async[Any, Any] @unchecked =>
-        executeAsyncTask(async, context, cb, rcb, bFirst, bRest, 1)
+        executeAsyncTask(async, context, cb, null, bFirst, bRest, 1)
       case _ =>
-        startFull(source, context, cb, rcb, bFirst, bRest, 1)
+        startFull(source, context, cb, null, bFirst, bRest, 1)
     }
 
     val isFinished = limit match {
