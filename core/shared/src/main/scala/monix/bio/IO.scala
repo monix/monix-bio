@@ -1224,6 +1224,37 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def >>[E1 >: E, B](tb: => IO[E1, B]): IO[E1, B] =
     this.flatMap(_ => tb)
 
+  /** Runs this IO first and then, when successful, the given IO.
+    * Returns the result of the given IO.
+    *
+    * Example:
+    * {{{
+    *   val combined = IO{println("first"); "first"} *> IO{println("second"); "second"}
+    *   // Prints "first" and then "second"
+    *   // Result value will be "second"
+    * }}}
+    *
+    * As this method is strict, it can lead to an infinite loop / stack overflow for self-referring tasks.
+    * @see [[>>]] for the version with a non-strict parameter
+    */
+  @inline final def *>[E1 >: E, B](tb: IO[E1, B]): IO[E1, B] =
+    this.flatMap(_ => tb)
+
+  /** Runs this IO first and then, when successful, the given IO.
+    * Returns the result of this IO.
+    *
+    * Example:
+    * {{{
+    *   val combined = IO{println("first"); "first"} <* IO{println("second"); "second"}
+    *   // Prints "first" and then "second"
+    *   // Result value will be "first"
+    * }}}
+    *
+    * As this method is strict, it can lead to an infinite loop / stack overflow for self-referring tasks.
+    */
+  @inline final def <*[E1 >: E, B](tb: IO[E1, B]): IO[E1, A] =
+    this.flatMap(a => tb.map(_ => a))
+
   /** Introduces an asynchronous boundary at the current stage in the
     * asynchronous processing pipeline.
     *
