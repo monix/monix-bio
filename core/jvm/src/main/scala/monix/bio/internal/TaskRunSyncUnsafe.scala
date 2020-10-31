@@ -21,7 +21,9 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
 import monix.bio.{BiCallback, IO}
-import monix.bio.IO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination}
+import monix.bio.IO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination, Trace}
+import monix.bio.internal.TracingPlatform.{enhancedExceptions, isStackTracing}
+import monix.bio.tracing.TaskEvent
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
 import monix.execution.exceptions.UncaughtErrorException
@@ -44,9 +46,18 @@ private[bio] object TaskRunSyncUnsafe {
     var hasUnboxed: Boolean = false
     var unboxed: AnyRef = null
 
+    // we might not need to initialize full Task.Context
+    var tracingCtx: StackTracedContext = null
+
     do {
       current match {
-        case FlatMap(fa, bindNext) =>
+        case bind @ FlatMap(fa, bindNext, _) =>
+          if (isStackTracing) {
+            val trace = bind.trace
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+          }
+
           if (bFirst ne null) {
             if (bRest eq null) bRest = ChunkedArrayStack()
             bRest.push(bFirst)
@@ -78,6 +89,11 @@ private[bio] object TaskRunSyncUnsafe {
           }
 
         case bindNext @ Map(fa, _, _) =>
+          if (isStackTracing) {
+            val trace = bindNext.trace
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+          }
           if (bFirst ne null) {
             if (bRest eq null) bRest = ChunkedArrayStack()
             bRest.push(bFirst)
@@ -102,6 +118,12 @@ private[bio] object TaskRunSyncUnsafe {
           }
 
         case Error(error) =>
+          if (isStackTracing && enhancedExceptions) {
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            if (error.isInstanceOf[Throwable]) {
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
+          }
           findErrorHandler[Any](bFirst, bRest) match {
             case null => throw UncaughtErrorException.wrap(error)
             case bind =>
@@ -123,8 +145,14 @@ private[bio] object TaskRunSyncUnsafe {
               bFirst = null
           }
 
+        case Trace(sourceTask, frame) =>
+          if (tracingCtx eq null) tracingCtx = new StackTracedContext
+          tracingCtx.pushEvent(frame)
+          current = sourceTask
+
         case async =>
-          return blockForResult(async, timeout, scheduler, opts, bFirst, bRest)
+          if (tracingCtx eq null) tracingCtx = new StackTracedContext
+          return blockForResult(async, timeout, scheduler, opts, bFirst, bRest, tracingCtx)
       }
 
       if (hasUnboxed) {
@@ -155,12 +183,13 @@ private[bio] object TaskRunSyncUnsafe {
     scheduler: Scheduler,
     opts: IO.Options,
     bFirst: Bind,
-    bRest: CallStack
+    bRest: CallStack,
+    tracingCtx: StackTracedContext
   ): A = {
 
     val latch = new OneShotLatch
     val cb = new BlockingCallback[Any, Any](latch)
-    val context = Context[Any](scheduler, opts)
+    val context = Context[Any](scheduler, opts, TaskConnection[Any](), tracingCtx)
 
     // Starting actual execution
     source match {

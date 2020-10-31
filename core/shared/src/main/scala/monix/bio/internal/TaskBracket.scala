@@ -35,11 +35,12 @@ private[monix] object TaskBracket {
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
   def guaranteeCase[E, A](task: IO[E, A], finalizer: ExitCase[Cause[E]] => UIO[Unit]): IO[E, A] =
-    IO.Async(
+    TracedAsync(
       new ReleaseStart(task, finalizer),
       trampolineBefore = true,
       trampolineAfter = true,
-      restoreLocals = true
+      restoreLocals = true,
+      traceKey = task
     )
 
   private final class ReleaseStart[E, A](source: IO[E, A], release: ExitCase[Cause[E]] => UIO[Unit])
@@ -91,11 +92,12 @@ private[monix] object TaskBracket {
     release: (A, Either[Option[Cause[E]], B]) => UIO[Unit]
   ): IO[E, B] = {
 
-    IO.Async(
+    TracedAsync(
       new StartE(acquire, use, release),
       trampolineBefore = true,
       trampolineAfter = true,
-      restoreLocals = true
+      restoreLocals = true,
+      traceKey = use
     )
   }
 
@@ -137,11 +139,12 @@ private[monix] object TaskBracket {
     use: A => IO[E, B],
     release: (A, ExitCase[Cause[E]]) => UIO[Unit]
   ): IO[E, B] =
-    IO.Async(
+    TracedAsync(
       new StartCase(acquire, use, release),
       trampolineBefore = true,
       trampolineAfter = true,
-      restoreLocals = true
+      restoreLocals = true,
+      traceKey = use
     )
 
   private final class StartCase[E, A, B](

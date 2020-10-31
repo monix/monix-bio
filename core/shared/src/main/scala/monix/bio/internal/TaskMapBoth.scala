@@ -18,7 +18,7 @@
 package monix.bio.internal
 
 import monix.bio.{BiCallback, IO}
-import monix.bio.IO.{Async, Context}
+import monix.bio.IO.Context
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.Ack.Stop
 import monix.execution.Scheduler
@@ -34,7 +34,7 @@ private[bio] object TaskMapBoth {
     * Implementation for `Task.mapBoth`.
     */
   def apply[E, A1, A2, R](fa1: IO[E, A1], fa2: IO[E, A2])(f: (A1, A2) => R): IO[E, R] = {
-    Async(new Register(fa1, fa2, f), trampolineBefore = true, trampolineAfter = true, restoreLocals = true)
+    TracedAsync(new Register(fa1, fa2, f), trampolineBefore = true, trampolineAfter = true, restoreLocals = true, traceKey = f)
   }
 
   // Implementing Async's "start" via `ForkedStart` in order to signal

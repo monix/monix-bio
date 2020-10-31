@@ -1,7 +1,7 @@
 import sbt.url
 
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
-addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test")
+addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test ;tracingTests/test")
 addCommandAlias("ci-jvm-mima", s";coreJVM/mimaReportBinaryIssues")
 
 inThisBuild(List(
@@ -75,6 +75,33 @@ lazy val docs = project
       "dev.zio" %% "zio-interop-cats" % "2.1.3.0-RC16",
       "io.monix" %% "monix-eval" % monixVersion
     ))
+
+// monix-tracing-tests (not published)
+
+lazy val FullTracingTest = config("fulltracing").extend(Test)
+
+lazy val tracingTests = project.in(file("tracingTests"))
+  .dependsOn(coreJVM % "compile->compile; test->test")
+  .settings(sharedSettings)
+  .configs(FullTracingTest)
+  .settings(testFrameworks := Seq(new TestFramework("minitest.runner.Framework")))
+  .settings(inConfig(FullTracingTest)(Defaults.testSettings): _*)
+  .settings(
+    unmanagedSourceDirectories in FullTracingTest += {
+      baseDirectory.value.getParentFile / "src" / "fulltracing" / "scala"
+    },
+    test in Test := (test in Test).dependsOn(test in FullTracingTest).value,
+    fork in Test := true,
+    fork in FullTracingTest := true,
+    javaOptions in Test ++= Seq(
+      "-Dmonix.bio.tracing=true",
+      "-Dmonix.bio.stackTracingMode=cached"
+    ),
+    javaOptions in FullTracingTest ++= Seq(
+      "-Dmonix.bio.tracing=true",
+      "-Dmonix.bio.stackTracingMode=full"
+    )
+  )
 
 lazy val mdocSettings = Seq(
   scalacOptions --= Seq("-Xfatal-warnings", "-Ywarn-unused"),
