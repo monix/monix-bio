@@ -17,7 +17,7 @@
 
 package monix.bio.internal
 
-import monix.bio.tracing.{TaskEvent, TaskTrace}
+import monix.bio.tracing.{IOEvent, IOTrace}
 import monix.bio.internal.TracingPlatform.traceBufferLogSize
 import monix.execution.internal.RingBuffer
 
@@ -25,18 +25,18 @@ import monix.execution.internal.RingBuffer
   * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
 private[bio] final class StackTracedContext {
-  private[this] val events: RingBuffer[TaskEvent] = new RingBuffer(traceBufferLogSize)
+  private[this] val events: RingBuffer[IOEvent] = new RingBuffer(traceBufferLogSize)
   private[this] var captured: Int = 0
   private[this] var omitted: Int = 0
 
-  def pushEvent(fr: TaskEvent): Unit = {
+  def pushEvent(fr: IOEvent): Unit = {
     captured += 1
     if (events.push(fr) != null) omitted += 1
   }
 
-  def trace(): TaskTrace =
-    TaskTrace(events.toList, captured, omitted)
+  def trace(): IOTrace =
+    IOTrace(events.toList, captured, omitted)
 
-  def getStackTraces(): List[TaskEvent.StackTrace] =
-    events.toList.collect { case ev: TaskEvent.StackTrace => ev }
+  def getStackTraces(): List[IOEvent.StackTrace] =
+    events.toList.collect { case ev: IOEvent.StackTrace => ev }
 }

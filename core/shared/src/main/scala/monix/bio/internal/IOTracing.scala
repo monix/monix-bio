@@ -21,23 +21,40 @@ import java.util.concurrent.ConcurrentHashMap
 
 import monix.bio.IO
 import monix.bio.IO.Trace
-import monix.bio.tracing.TaskEvent
+import monix.bio.tracing.IOEvent
+import monix.bio.internal.TracingPlatform.{isCachedStackTracing, isFullStackTracing}
 
 /**
   * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
-private[bio] object TaskTracing {
+private[bio] object IOTracing {
 
   def decorated[E, A](source: IO[E, A]): IO[E, A] =
     Trace(source, buildFrame())
 
-  def uncached(): TaskEvent =
+  def getTrace(ref: Class[_]): IOEvent = {
+    if (isCachedStackTracing) {
+      IOTracing.cached(ref)
+    } else if (isFullStackTracing) {
+      IOTracing.uncached()
+    } else {
+      null
+    }
+  }
+
+  def decorateIfNeeded[E, A](source: IO[E, A]): IO[E, A] = {
+    val nextTask = source
+    if (isFullStackTracing) IOTracing.decorated(nextTask)
+    else nextTask
+  }
+
+  def uncached(): IOEvent =
     buildFrame()
 
-  def cached(clazz: Class[_]): TaskEvent =
+  def cached(clazz: Class[_]): IOEvent =
     buildCachedFrame(clazz)
 
-  private def buildCachedFrame(clazz: Class[_]): TaskEvent = {
+  private def buildCachedFrame(clazz: Class[_]): IOEvent = {
     val currentFrame = frameCache.get(clazz)
     if (currentFrame eq null) {
       val newFrame = buildFrame()
@@ -48,13 +65,13 @@ private[bio] object TaskTracing {
     }
   }
 
-  private def buildFrame(): TaskEvent =
-    TaskEvent.StackTrace(new Throwable().getStackTrace.toList)
+  private def buildFrame(): IOEvent =
+    IOEvent.StackTrace(new Throwable().getStackTrace.toList)
 
   /**
     * Global cache for trace frames. Keys are references to lambda classes.
     * Should converge to the working set of traces very quickly for hot code paths.
     */
-  private[this] val frameCache: ConcurrentHashMap[Class[_], TaskEvent] = new ConcurrentHashMap()
+  private[this] val frameCache: ConcurrentHashMap[Class[_], IOEvent] = new ConcurrentHashMap()
 
 }

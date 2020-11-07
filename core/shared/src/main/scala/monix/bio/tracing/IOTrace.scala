@@ -24,9 +24,9 @@ import scala.reflect.NameTransformer
 /**
   * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
-final case class TaskTrace(events: List[TaskEvent], captured: Int, omitted: Int) {
+final case class IOTrace(events: List[IOEvent], captured: Int, omitted: Int) {
 
-  import TaskTrace._
+  import IOTrace._
 
   def printFiberTrace(options: PrintingOptions = PrintingOptions.Default): UIO[Unit] =
     UIO(System.err.println(showFiberTrace(options)))
@@ -39,7 +39,7 @@ final case class TaskTrace(events: List[TaskEvent], captured: Int, omitted: Int)
 
     val acc0 = s"TaskTrace: $captured frames captured\n"
     if (options.showFullStackTraces) {
-      val stackTraces = events.collect { case e: TaskEvent.StackTrace => e }
+      val stackTraces = events.collect { case e: IOEvent.StackTrace => e }
 
       val acc1 = stackTraces.zipWithIndex
         .map {
@@ -77,7 +77,7 @@ final case class TaskTrace(events: List[TaskEvent], captured: Int, omitted: Int)
           case (event, index) =>
             val junc = if (index == events.length - 1 && omitted == 0) TurnRight else Junction
             val message = event match {
-              case ev: TaskEvent.StackTrace => {
+              case ev: IOEvent.StackTrace => {
                 getOpAndCallSite(ev.stackTrace)
                   .map {
                     case (methodSite, callSite) =>
@@ -101,7 +101,7 @@ final case class TaskTrace(events: List[TaskEvent], captured: Int, omitted: Int)
   }
 }
 
-private[bio] object TaskTrace {
+private[bio] object IOTrace {
 
   def getOpAndCallSite(frames: List[StackTraceElement]): Option[(StackTraceElement, StackTraceElement)] =
     frames

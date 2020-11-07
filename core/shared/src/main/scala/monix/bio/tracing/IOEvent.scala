@@ -20,10 +20,10 @@ package monix.bio.tracing
 /**
   * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
-sealed abstract class TaskEvent
+sealed abstract class IOEvent
 
-object TaskEvent {
+object IOEvent {
 
-  final case class StackTrace(stackTrace: List[StackTraceElement]) extends TaskEvent
+  final case class StackTrace(stackTrace: List[StackTraceElement]) extends IOEvent
 
 }

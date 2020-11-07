@@ -30,8 +30,8 @@ object StackTracedContextSuite extends BaseTestSuite {
   test("push traces") { _ =>
     val ctx = new StackTracedContext()
 
-    val t1 = TaskEvent.StackTrace(stackTrace)
-    val t2 = TaskEvent.StackTrace(stackTrace)
+    val t1 = IOEvent.StackTrace(stackTrace)
+    val t2 = IOEvent.StackTrace(stackTrace)
 
     ctx.pushEvent(t1)
     ctx.pushEvent(t2)
@@ -46,7 +46,7 @@ object StackTracedContextSuite extends BaseTestSuite {
     val ctx = new StackTracedContext()
 
     for (_ <- 0 until (traceBufferSize + 10)) {
-      ctx.pushEvent(TaskEvent.StackTrace(stackTrace))
+      ctx.pushEvent(IOEvent.StackTrace(stackTrace))
     }
 
     val trace = ctx.trace()

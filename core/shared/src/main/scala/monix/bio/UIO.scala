@@ -22,7 +22,7 @@ import monix.execution.{CancelablePromise, Scheduler}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-import monix.bio.tracing.TaskTrace
+import monix.bio.tracing.IOTrace
 
 object UIO extends UIODeprecated.Companion {
 
@@ -403,5 +403,5 @@ object UIO extends UIODeprecated.Companion {
   /**
     * @see See [[monix.bio.IO.liftFromEffect]]
     */
-  val trace: UIO[TaskTrace] = IO.trace
+  val trace: UIO[IOTrace] = IO.trace
 }

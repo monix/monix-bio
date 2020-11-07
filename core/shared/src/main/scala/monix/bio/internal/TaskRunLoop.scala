@@ -42,7 +42,7 @@ import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 import monix.bio.internal.TracingPlatform.{enhancedExceptions, isStackTracing}
-import monix.bio.tracing.{TaskEvent, TaskTrace}
+import monix.bio.tracing.{IOEvent, IOTrace}
 
 import scala.reflect.NameTransformer
 
@@ -86,7 +86,7 @@ private[bio] object TaskRunLoop {
           case bind @ FlatMap(fa, bindNext, _) =>
             if (isStackTracing) {
               val trace = bind.trace
-              if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirstRef ne null) {
               if (bRestRef eq null) bRestRef = ChunkedArrayStack()
@@ -123,7 +123,7 @@ private[bio] object TaskRunLoop {
           case bindNext @ Map(fa, _, _) =>
             if (isStackTracing) {
               val trace = bindNext.trace
-              if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirstRef ne null) {
               if (bRestRef eq null) bRestRef = ChunkedArrayStack()
@@ -169,6 +169,9 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              augmentException(error, context.stackTracedContext)
+            }
             findTerminationHandler[Any](bFirstRef, bRestRef) match {
               case null =>
                 if (!cba.tryOnTermination(error)) context.scheduler.reportFailure(error)
@@ -333,7 +336,7 @@ private[bio] object TaskRunLoop {
             if (isStackTracing) {
               val trace = bind.trace
               if (tracingCtx eq null) tracingCtx = new StackTracedContext
-              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -371,7 +374,7 @@ private[bio] object TaskRunLoop {
             if (isStackTracing) {
               val trace = bindNext.trace
               if (tracingCtx eq null) tracingCtx = new StackTracedContext
-              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -517,7 +520,7 @@ private[bio] object TaskRunLoop {
             if (isStackTracing) {
               val trace = bind.trace
               if (tracingCtx eq null) tracingCtx = new StackTracedContext
-              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -556,7 +559,7 @@ private[bio] object TaskRunLoop {
             if (isStackTracing) {
               val trace = bindNext.trace
               if (tracingCtx eq null) tracingCtx = new StackTracedContext
-              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -678,7 +681,7 @@ private[bio] object TaskRunLoop {
             if (isStackTracing) {
               val trace = bind.trace
               if (tracingCtx eq null) tracingCtx = new StackTracedContext
-              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -717,7 +720,7 @@ private[bio] object TaskRunLoop {
             if (isStackTracing) {
               val trace = bindNext.trace
               if (tracingCtx eq null) tracingCtx = new StackTracedContext
-              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
             }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
@@ -835,7 +838,7 @@ private[bio] object TaskRunLoop {
 
     if (isStackTracing) {
       val trace = task.trace
-      if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[TaskEvent])
+      if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[IOEvent])
     }
 
     // We are going to resume the frame index from where we left,
@@ -1039,7 +1042,7 @@ private[bio] object TaskRunLoop {
         val prefix = dropRunLoopFrames(stackTrace)
         val suffix = ctx
           .getStackTraces()
-          .flatMap(t => TaskTrace.getOpAndCallSite(t.stackTrace))
+          .flatMap(t => IOTrace.getOpAndCallSite(t.stackTrace))
           .map {
             case (methodSite, callSite) =>
               val op = NameTransformer.decode(methodSite.getMethodName)

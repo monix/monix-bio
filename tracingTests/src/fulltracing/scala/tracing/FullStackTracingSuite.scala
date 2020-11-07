@@ -1,6 +1,6 @@
 package tracing
 
-import monix.bio.tracing.{TaskEvent, TaskTrace}
+import monix.bio.tracing.{IOEvent, IOTrace}
 import monix.bio.{BaseTestSuite, IO, UIO, Task}
 
 /**
@@ -8,7 +8,7 @@ import monix.bio.{BaseTestSuite, IO, UIO, Task}
   */
 object FullStackTracingSuite extends BaseTestSuite {
 
-  def traced[E, A](io: IO[E, A]): IO[E, TaskTrace] =
+  def traced[E, A](io: IO[E, A]): IO[E, IOTrace] =
     io.flatMap(_ => IO.trace)
 
   testAsync("captures map frames") { implicit s =>
@@ -18,7 +18,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 5)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "map")),
+          r.events.collect { case e: IOEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "map")),
           3)
       }
 
@@ -32,7 +32,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 7)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }
+          r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "flatMap")),
           3
         ) // the extra one is used to capture the trace
@@ -48,7 +48,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 7)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "async")),
+          r.events.collect { case e: IOEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "async")),
           1)
       }
 
@@ -62,7 +62,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 5)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "pure")),
+          r.events.collect { case e: IOEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "pure")),
           2)
       }
 
@@ -76,7 +76,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 5)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "eval")),
+          r.events.collect { case e: IOEvent.StackTrace => e }.count(_.stackTrace.exists(_.getMethodName == "eval")),
           2)
       }
 
@@ -90,7 +90,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 7)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }
+          r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "suspend")),
           2)
       }
@@ -105,7 +105,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 6)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }
+          r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "raiseError")),
           1)
       }
@@ -120,7 +120,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 12)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }
+          r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "bracket")),
           1)
       }
@@ -136,7 +136,7 @@ object FullStackTracingSuite extends BaseTestSuite {
       for (r <- traced(task)) yield {
         assertEquals(r.captured, 12)
         assertEquals(
-          r.events.collect { case e: TaskEvent.StackTrace => e }
+          r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "bracketCase")),
           1)
       }

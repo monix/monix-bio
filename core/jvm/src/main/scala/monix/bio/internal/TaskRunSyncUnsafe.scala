@@ -23,7 +23,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer
 import monix.bio.{BiCallback, IO}
 import monix.bio.IO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination, Trace}
 import monix.bio.internal.TracingPlatform.{enhancedExceptions, isStackTracing}
-import monix.bio.tracing.TaskEvent
+import monix.bio.tracing.IOEvent
 import monix.bio.internal.TaskRunLoop._
 import monix.execution.Scheduler
 import monix.execution.exceptions.UncaughtErrorException
@@ -55,7 +55,7 @@ private[bio] object TaskRunSyncUnsafe {
           if (isStackTracing) {
             val trace = bind.trace
             if (tracingCtx eq null) tracingCtx = new StackTracedContext
-            if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+            if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
           }
 
           if (bFirst ne null) {
@@ -92,7 +92,7 @@ private[bio] object TaskRunSyncUnsafe {
           if (isStackTracing) {
             val trace = bindNext.trace
             if (tracingCtx eq null) tracingCtx = new StackTracedContext
-            if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[TaskEvent])
+            if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
           }
           if (bFirst ne null) {
             if (bRest eq null) bRest = ChunkedArrayStack()
@@ -135,6 +135,10 @@ private[bio] object TaskRunSyncUnsafe {
           }
 
         case Termination(error) =>
+          if (isStackTracing && enhancedExceptions) {
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            augmentException(error.asInstanceOf[Throwable], tracingCtx)
+          }
           findTerminationHandler[Any](bFirst, bRest) match {
             case null => throw error
             case bind =>

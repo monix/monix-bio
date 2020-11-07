@@ -28,7 +28,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-import monix.bio.tracing.TaskTrace
+import monix.bio.tracing.IOTrace
 
 object Task extends TaskDeprecated.Companion {
 
@@ -549,5 +549,5 @@ object Task extends TaskDeprecated.Companion {
   /**
     * @see See [[monix.bio.IO.liftFromEffect]]
     */
-  val trace: UIO[TaskTrace] = IO.trace
+  val trace: UIO[IOTrace] = IO.trace
 }

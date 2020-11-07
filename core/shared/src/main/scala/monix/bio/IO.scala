@@ -47,8 +47,7 @@ import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUni
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-import monix.bio.tracing.{TaskEvent, TaskTrace}
-import monix.bio.internal.TracingPlatform.{isCachedStackTracing, isFullStackTracing}
+import monix.bio.tracing.{IOEvent, IOTrace}
 
 /** `Task` represents a specification for a possibly lazy or
   * asynchronous computation, which when executed will produce an `A`
@@ -1838,14 +1837,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * of the function.
     */
   final def flatMap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, B] = {
-    val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(f.getClass)
-    } else if (isFullStackTracing) {
-      TaskTracing.uncached()
-    } else {
-      null
-    }
-
+    val trace = IOTracing.getTrace(f.getClass)
     FlatMap(this, f, trace)
   }
 
@@ -2072,13 +2064,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
     */
   final def map[B](f: A => B): IO[E, B] = {
-    val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(f.getClass)
-    } else if (isFullStackTracing) {
-      TaskTracing.uncached()
-    } else {
-      null
-    }
+    val trace = IOTracing.getTrace(f.getClass)
     Map(this, f, trace)
   }
 
@@ -2207,13 +2193,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * success channel and `fe` to the error channel.
     */
   final def bimap[E1, B](fe: E => E1, fa: A => B): IO[E1, B] = {
-    val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(fa.getClass)
-    } else if (isFullStackTracing) {
-      TaskTracing.uncached()
-    } else {
-      null
-    }
+    val trace = IOTracing.getTrace(fa.getClass)
     IO.FlatMap(this, IO.Bimap(fe, fa), trace)
   }
 
@@ -2232,13 +2212,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * }}}
     */
   final def mapError[E1](f: E => E1): IO[E1, A] = {
-    val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(f.getClass)
-    } else if (isFullStackTracing) {
-      TaskTracing.uncached()
-    } else {
-      null
-    }
+    val trace = IOTracing.getTrace(f.getClass)
     IO.FlatMap(this, IO.MapError[E, E1, A](f), trace)
   }
 
@@ -2680,13 +2654,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * @see [[IO.redeem]] for a version which works on typed errors
     */
   final def redeemCause[B](recover: Cause[E] => B, map: A => B): UIO[B] = {
-    val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(map.getClass)
-    } else if (isFullStackTracing) {
-      TaskTracing.uncached()
-    } else {
-      null
-    }
+    val trace = IOTracing.getTrace(map.getClass)
     IO.FlatMap(this, new IO.RedeemFatal(recover, map), trace)
   }
 
@@ -2705,13 +2673,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * @see [[IO.redeemWith]] for a version which only works on typed errors
     */
   final def redeemCauseWith[E1, B](recover: Cause[E] => IO[E1, B], bind: A => IO[E1, B]): IO[E1, B] = {
-    val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(bind.getClass)
-    } else if (isFullStackTracing) {
-      TaskTracing.uncached()
-    } else {
-      null
-    }
+    val trace = IOTracing.getTrace(bind.getClass)
     IO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind), trace)
   }
 
@@ -2843,13 +2805,8 @@ object IO extends TaskInstancesLevel0 {
   /** Returns a `IO` that on execution is always successful, emitting
     * the given strict value.
     */
-  def now[A](a: A): UIO[A] = {
-    val nextTask = IO.Now(a)
-    if (isFullStackTracing) {
-      TaskTracing.decorated(nextTask)
-    }
-    else nextTask
-  }
+  def now[A](a: A): UIO[A] =
+    IOTracing.decorateIfNeeded(IO.Now(a))
 
   /** Lifts a value into the task context. Alias for [[now]]. */
   def pure[A](a: A): UIO[A] = now(a)
@@ -2857,11 +2814,8 @@ object IO extends TaskInstancesLevel0 {
   /** Returns a task that on execution is always finishing in error
     * emitting the specified value in a typed error channel.
     */
-  def raiseError[E](ex: E): IO[E, Nothing] = {
-    val nextTask = Error(ex)
-    if (isFullStackTracing) TaskTracing.decorated(nextTask)
-    else nextTask
-  }
+  def raiseError[E](ex: E): IO[E, Nothing] =
+    IOTracing.decorateIfNeeded(Error(ex))
 
   /** Returns a task that on execution is always finishing in a fatal (unexpected) error
     * emitting the specified exception.
@@ -2870,7 +2824,7 @@ object IO extends TaskInstancesLevel0 {
     * error handlers, except for [[IO.redeemCause]] and [[IO.redeemCauseWith]].
     */
   def terminate(ex: Throwable): UIO[Nothing] =
-    Termination(ex)
+    IOTracing.decorateIfNeeded(Termination(ex))
 
   /** Defers the creation of a `Task` in case it is effectful.
     *
@@ -2888,7 +2842,7 @@ object IO extends TaskInstancesLevel0 {
     *      like to expose them as typed errors.
     */
   def deferTotal[E, A](fa: => IO[E, A]): IO[E, A] =
-    SuspendTotal(fa _)
+    IOTracing.decorateIfNeeded(SuspendTotal(fa _))
 
   /** Defers the creation of a `Task` by using the provided
     * function, which has the ability to inject a needed
@@ -2975,15 +2929,12 @@ object IO extends TaskInstancesLevel0 {
     TaskFromFuture.deferAction(f)
 
   /** Alias for [[defer]]. */
-  def suspend[A](fa: => Task[A]): Task[A] = {
-    val nextTask = Suspend(() => fa)
-    if (isFullStackTracing) TaskTracing.decorated(nextTask)
-    else nextTask
-  }
+  def suspend[A](fa: => Task[A]): Task[A] =
+    IOTracing.decorateIfNeeded(Suspend(() => fa))
 
   /** Alias for [[deferTotal]]. */
   def suspendTotal[E, A](fa: => IO[E, A]): IO[E, A] =
-    SuspendTotal(fa _)
+    IOTracing.decorateIfNeeded(SuspendTotal(fa _))
 
   /** Promote a non-strict value to a `IO` that is memoized on the first
     * evaluation, the result being then available on subsequent evaluations.
@@ -3001,11 +2952,8 @@ object IO extends TaskInstancesLevel0 {
     *
     * @see [[evalTotal]] if `a` is not expected to throw any exceptions.
     */
-  def eval[A](a: => A): Task[A] = {
-    val nextTask = Eval(() => a)
-    if (isFullStackTracing) TaskTracing.decorated(nextTask)
-    else nextTask
-  }
+  def eval[A](a: => A): Task[A] =
+    IOTracing.decorateIfNeeded(Eval(() => a))
 
   /** Promote a non-strict value which does not throw any unexpected errors to `UIO`.
     *
@@ -3018,7 +2966,7 @@ object IO extends TaskInstancesLevel0 {
     *      in a typed error channel.
     */
   def evalTotal[A](a: => A): UIO[A] =
-    EvalTotal(a _)
+    IOTracing.decorateIfNeeded(EvalTotal(a _))
 
   /** Lifts a non-strict value, a thunk, to a `Task` that will trigger a logical
     * fork before evaluation.
@@ -3030,11 +2978,8 @@ object IO extends TaskInstancesLevel0 {
     *
     * @param a is the thunk to process on evaluation
     */
-  def evalAsync[A](a: => A): Task[A] = {
-    val nextTask = TaskEvalAsync(() => a)
-    if (isFullStackTracing) TaskTracing.decorated(nextTask)
-    else nextTask
-  }
+  def evalAsync[A](a: => A): Task[A] =
+    IOTracing.decorateIfNeeded(TaskEvalAsync(() => a))
 
   /** Alias for [[eval]]. */
   def delay[A](a: => A): Task[A] = eval(a)
@@ -3891,8 +3836,8 @@ object IO extends TaskInstancesLevel0 {
   /**
     * Returns the accumulated trace of the currently active fiber.
     */
-  val trace: UIO[TaskTrace] =
-    Async[Nothing, TaskTrace] { (ctx, cb) =>
+  val trace: UIO[IOTrace] =
+    Async[Nothing, IOTrace] { (ctx, cb) =>
       cb.onSuccess(ctx.stackTracedContext.trace())
     }
 
@@ -5141,7 +5086,7 @@ object IO extends TaskInstancesLevel0 {
     restore: (A, E, Context[E], Context[E]) => Context[E]
   ) extends IO[E, A]
 
-  private[monix] final case class Trace[E, A](source: IO[E, A], trace: TaskEvent) extends IO[E, A]
+  private[monix] final case class Trace[E, A](source: IO[E, A], trace: IOEvent) extends IO[E, A]
 
   /**
     * Internal API — starts the execution of a Task with a guaranteed

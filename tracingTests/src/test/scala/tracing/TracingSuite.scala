@@ -17,7 +17,7 @@
 
 package tracing
 
-import monix.bio.tracing.TaskTrace
+import monix.bio.tracing.IOTrace
 import monix.bio.{BaseTestSuite, Task, IO}
 
 import scala.util.control.NoStackTrace
@@ -30,7 +30,7 @@ object TracingSuite extends BaseTestSuite {
 
   implicit val s: Scheduler = Scheduler.global
 
-  def traced[E, A](io: IO[E, A]): IO[E, TaskTrace] =
+  def traced[E, A](io: IO[E, A]): IO[E, IOTrace] =
     io.flatMap(_ => IO.trace)
 
   testAsync("traces are preserved across asynchronous boundaries") { _ =>

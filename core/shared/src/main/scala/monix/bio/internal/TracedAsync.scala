@@ -36,9 +36,9 @@ private[bio] object TracedAsync {
     traceKey: AnyRef): IO[E, A] = {
 
     val trace = if (isCachedStackTracing) {
-      TaskTracing.cached(traceKey.getClass)
+      IOTracing.cached(traceKey.getClass)
     } else if (isFullStackTracing) {
-      TaskTracing.uncached()
+      IOTracing.uncached()
     } else {
       null
     }
