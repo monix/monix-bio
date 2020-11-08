@@ -94,11 +94,11 @@ lazy val tracingTests = project.in(file("tracingTests"))
     fork in Test := true,
     fork in FullTracingTest := true,
     javaOptions in Test ++= Seq(
-      "-Dmonix.bio.tracing=true",
+      "-Dmonix.bio.enhancedExceptions=true",
       "-Dmonix.bio.stackTracingMode=cached"
     ),
     javaOptions in FullTracingTest ++= Seq(
-      "-Dmonix.bio.tracing=true",
+      "-Dmonix.bio.enhancedExceptions=true",
       "-Dmonix.bio.stackTracingMode=full"
     )
   )

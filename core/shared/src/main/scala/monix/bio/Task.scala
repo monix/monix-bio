@@ -549,5 +549,5 @@ object Task extends TaskDeprecated.Companion {
   /**
     * @see See [[monix.bio.IO.liftFromEffect]]
     */
-  val trace: UIO[IOTrace] = IO.trace
+  val trace: Task[IOTrace] = IO.trace
 }

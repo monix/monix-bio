@@ -422,6 +422,10 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
             findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
                 if (!cb.tryOnTermination(error)) scheduler.reportFailure(error)
@@ -604,6 +608,10 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
             findTerminationHandler[Any](bFirst, bRest) match {
               case null => throw error
               case bind =>
@@ -766,6 +774,10 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
             findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
                 return CancelableFuture.failed(error)

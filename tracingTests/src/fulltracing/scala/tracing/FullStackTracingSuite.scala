@@ -1,7 +1,8 @@
 package tracing
 
 import monix.bio.tracing.{IOEvent, IOTrace}
-import monix.bio.{BaseTestSuite, IO, UIO, Task}
+import monix.bio.{BaseTestSuite, IO, Task, UIO}
+import scala.util.{Success, Failure}
 
 /**
   * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
@@ -118,7 +119,7 @@ object FullStackTracingSuite extends BaseTestSuite {
 
     val test =
       for (r <- traced(task)) yield {
-        assertEquals(r.captured, 12)
+        assertEquals(r.captured, 13)
         assertEquals(
           r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "bracket")),
@@ -134,7 +135,7 @@ object FullStackTracingSuite extends BaseTestSuite {
 
     val test =
       for (r <- traced(task)) yield {
-        assertEquals(r.captured, 12)
+        assertEquals(r.captured, 13)
         assertEquals(
           r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "bracketCase")),
@@ -142,5 +143,49 @@ object FullStackTracingSuite extends BaseTestSuite {
       }
 
     test.runToFuture
+  }
+
+  testAsync("captures evalTotal frames") { implicit s =>
+    val task = IO.evalTotal(1).flatMap(_ => Task.pure(1))
+
+    val test =
+      for (r <- traced(task)) yield {
+        assertEquals(r.captured, 5)
+        assertEquals(
+          r.events.collect { case e: IOEvent.StackTrace => e }
+            .count(_.stackTrace.exists(_.getMethodName == "evalTotal")),
+          1)
+      }
+
+    test.runToFuture
+  }
+
+  testAsync("captures suspendTotal frames") { implicit s =>
+    val task = IO.suspendTotal(IO.pure(1)).flatMap(_ => Task.pure(1))
+
+    val test =
+      for (r <- traced(task)) yield {
+        assertEquals(r.captured, 6)
+        assertEquals(
+          r.events.collect { case e: IOEvent.StackTrace => e }
+            .count(_.stackTrace.exists(_.getMethodName == "suspendTotal")),
+          1)
+      }
+
+    test.runToFuture
+  }
+
+  testAsync("captures terminate frames") { implicit s =>
+    val task = IO.unit.flatMap(_ => IO.terminate(new Exception("error")))
+
+    val future = task.runToFuture.transform {
+      case Failure(ex) =>
+        assertEquals(ex.getStackTrace.length, 4)
+        Success(assertEquals(ex.getStackTrace.exists(_.getClassName.contains("terminate")), true))
+      case Success(_) => Failure(new Exception("terminate should not result in success"))
+    }
+
+    s.tick()
+    future
   }
 }
