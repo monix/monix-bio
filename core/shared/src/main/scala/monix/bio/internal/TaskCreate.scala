@@ -20,7 +20,7 @@ package monix.bio.internal
 import java.util.concurrent.RejectedExecutionException
 
 import cats.effect.{CancelToken, IO => CIO}
-import monix.bio.IO.{Async, Context}
+import monix.bio.IO.Context
 import monix.execution.exceptions.UncaughtErrorException
 import monix.bio.{BiCallback, IO, Task}
 import monix.execution.atomic.AtomicInt
@@ -45,11 +45,7 @@ private[bio] object TaskCreate {
       def setConnection(ref: TaskConnectionRef[E], token: CancelToken[IO[E, *]])(implicit s: Scheduler): Unit =
         ref := token
     }
-    Async[E, A](
-      start,
-      trampolineBefore = false,
-      trampolineAfter = false
-    )
+    TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = fn)
   }
 
   /**
@@ -66,7 +62,7 @@ private[bio] object TaskCreate {
       def setConnection(ref: TaskConnectionRef[E], token: Cancelable)(implicit s: Scheduler): Unit =
         ref := token
     }
-    Async(start, trampolineBefore = false, trampolineAfter = false)
+    TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = fn)
   }
 
   /**
@@ -79,7 +75,7 @@ private[bio] object TaskCreate {
       fn(s, cbProtected)
       ()
     }
-    Async(start, trampolineBefore = false, trampolineAfter = false)
+    TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = fn)
   }
 
   /**
@@ -93,7 +89,7 @@ private[bio] object TaskCreate {
       val cbProtected = new CallbackForCreate[E, A](ctx, shouldPop = false, cb)
       k(cbProtected)
     }
-    Async(start, trampolineBefore = false, trampolineAfter = false)
+    TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = k)
   }
 
   /**
@@ -113,7 +109,7 @@ private[bio] object TaskCreate {
       val task = k(cbProtected)
       IO.unsafeStartNow(task, ctx2, new ForwardErrorCallback(cbProtected))
     }
-    Async(start, trampolineBefore = false, trampolineAfter = false)
+    TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = k)
   }
 
   private abstract class Cancelable0Start[E, A, Token](fn: (Scheduler, BiCallback[E, A]) => Token)

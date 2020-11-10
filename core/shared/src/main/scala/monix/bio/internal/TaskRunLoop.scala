@@ -31,7 +31,8 @@ import monix.bio.IO.{
   Now,
   Suspend,
   SuspendTotal,
-  Termination
+  Termination,
+  Trace
 }
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.collection.ChunkedArrayStack
@@ -40,6 +41,10 @@ import monix.execution.{CancelableFuture, ExecutionModel, Scheduler}
 
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
+import monix.bio.internal.TracingPlatform.{enhancedExceptions, isStackTracing}
+import monix.bio.tracing.{IOEvent, IOTrace}
+
+import scala.reflect.NameTransformer
 
 private[bio] object TaskRunLoop {
   type Current = IO[Any, Any]
@@ -78,7 +83,11 @@ private[bio] object TaskRunLoop {
     do {
       if (currentIndex != 0) {
         current match {
-          case FlatMap(fa, bindNext) =>
+          case bind @ FlatMap(fa, bindNext, _) =>
+            if (isStackTracing) {
+              val trace = bind.trace
+              if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirstRef ne null) {
               if (bRestRef eq null) bRestRef = ChunkedArrayStack()
               bRestRef.push(bFirstRef)
@@ -112,6 +121,10 @@ private[bio] object TaskRunLoop {
             }
 
           case bindNext @ Map(fa, _, _) =>
+            if (isStackTracing) {
+              val trace = bindNext.trace
+              if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirstRef ne null) {
               if (bRestRef eq null) bRestRef = ChunkedArrayStack()
               bRestRef.push(bFirstRef)
@@ -137,6 +150,11 @@ private[bio] object TaskRunLoop {
             }
 
           case Error(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (error.isInstanceOf[Throwable]) {
+                augmentException(error.asInstanceOf[Throwable], context.stackTracedContext)
+              }
+            }
             findErrorHandler[Any](bFirstRef, bRestRef) match {
               case null =>
                 cba.onError(error)
@@ -151,6 +169,9 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              augmentException(error, context.stackTracedContext)
+            }
             findTerminationHandler[Any](bFirstRef, bRestRef) match {
               case null =>
                 if (!cba.tryOnTermination(error)) context.scheduler.reportFailure(error)
@@ -164,7 +185,7 @@ private[bio] object TaskRunLoop {
                 bFirstRef = null
             }
 
-          case async @ Async(_, _, _, _) =>
+          case async @ Async(_, _, _, _, _) =>
             executeAsyncTask(async, context, cba, rcb, bFirstRef, bRestRef, currentIndex)
             return
 
@@ -181,7 +202,7 @@ private[bio] object TaskRunLoop {
                 if (rcb ne null) rcb.contextSwitch(context)
                 if (restore ne null) {
                   /*_*/
-                  current = FlatMap(next, new RestoreContext(old, restore))
+                  current = FlatMap(next, new RestoreContext(old, restore), null)
                   /*_*/
                 }
               }
@@ -205,6 +226,9 @@ private[bio] object TaskRunLoop {
               case e if NonFatal(e) && catchError =>
                 current = Termination(e)
             }
+          case Trace(sourceTask, frame) =>
+            context.stackTracedContext.pushEvent(frame)
+            current = sourceTask
         }
 
         if (hasUnboxed) {
@@ -302,10 +326,18 @@ private[bio] object TaskRunLoop {
     val em = scheduler.executionModel
     var frameIndex = frameStart(em)
 
+    // we might not need to initialize full Task.Context
+    var tracingCtx: StackTracedContext = null
+
     do {
       if (frameIndex != 0) {
         current match {
-          case FlatMap(fa, bindNext) =>
+          case bind @ FlatMap(fa, bindNext, _) =>
+            if (isStackTracing) {
+              val trace = bind.trace
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
@@ -339,6 +371,11 @@ private[bio] object TaskRunLoop {
             }
 
           case bindNext @ Map(fa, _, _) =>
+            if (isStackTracing) {
+              val trace = bindNext.trace
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
@@ -365,6 +402,12 @@ private[bio] object TaskRunLoop {
             }
 
           case Error(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (error.isInstanceOf[Throwable]) {
+                augmentException(error.asInstanceOf[Throwable], tracingCtx)
+              }
+            }
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
                 cb.onError(error)
@@ -379,6 +422,10 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
             findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
                 if (!cb.tryOnTermination(error)) scheduler.reportFailure(error)
@@ -392,7 +439,13 @@ private[bio] object TaskRunLoop {
                 bFirst = null
             }
 
+          case Trace(sourceTask, frame) =>
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            tracingCtx.pushEvent(frame)
+            current = sourceTask
+
           case async =>
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
             return goAsyncForLightCB(
               async,
               scheduler,
@@ -402,7 +455,8 @@ private[bio] object TaskRunLoop {
               bRest,
               frameIndex,
               forceFork = false,
-              isCancelable = isCancelable
+              isCancelable = isCancelable,
+              tracingCtx = tracingCtx
             )
         }
 
@@ -425,6 +479,7 @@ private[bio] object TaskRunLoop {
           }
         }
       } else {
+        if (tracingCtx eq null) tracingCtx = new StackTracedContext
         // Force async boundary
         return goAsyncForLightCB(
           current,
@@ -435,7 +490,8 @@ private[bio] object TaskRunLoop {
           bRest,
           frameIndex,
           forceFork = true,
-          isCancelable = true
+          isCancelable = true,
+          tracingCtx = tracingCtx
         )
       }
     } while (true)
@@ -458,10 +514,18 @@ private[bio] object TaskRunLoop {
     val em = scheduler.executionModel
     var frameIndex = frameStart(em)
 
+    // we might not need to initialize full Task.Context
+    var tracingCtx: StackTracedContext = null
+
     do {
       if (frameIndex != 0) {
         current match {
-          case FlatMap(fa, bindNext) =>
+          case bind @ FlatMap(fa, bindNext, _) =>
+            if (isStackTracing) {
+              val trace = bind.trace
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
@@ -496,6 +560,11 @@ private[bio] object TaskRunLoop {
             }
 
           case bindNext @ Map(fa, _, _) =>
+            if (isStackTracing) {
+              val trace = bindNext.trace
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
@@ -521,6 +590,12 @@ private[bio] object TaskRunLoop {
             }
 
           case Error(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (error.isInstanceOf[Throwable]) {
+                augmentException(error.asInstanceOf[Throwable], tracingCtx)
+              }
+            }
             findErrorHandler[Any](bFirst, bRest) match {
               case null => throw UncaughtErrorException.wrap(error)
               case bind =>
@@ -533,6 +608,10 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
             findTerminationHandler[Any](bFirst, bRest) match {
               case null => throw error
               case bind =>
@@ -544,8 +623,15 @@ private[bio] object TaskRunLoop {
                 bFirst = null
             }
 
+          case Trace(sourceTask, frame) =>
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            tracingCtx.pushEvent(frame)
+            current = sourceTask
+
           case async =>
-            return goAsync4Step(async, scheduler, opts, bFirst, bRest, frameIndex, forceFork = false)
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+
+            return goAsync4Step(async, scheduler, opts, bFirst, bRest, frameIndex, forceFork = false, tracingCtx = tracingCtx)
         }
 
         if (hasUnboxed) {
@@ -566,8 +652,9 @@ private[bio] object TaskRunLoop {
           }
         }
       } else {
+        if (tracingCtx eq null) tracingCtx = new StackTracedContext
         // Force async boundary
-        return goAsync4Step(current, scheduler, opts, bFirst, bRest, frameIndex, forceFork = true)
+        return goAsync4Step(current, scheduler, opts, bFirst, bRest, frameIndex, forceFork = true, tracingCtx = tracingCtx)
       }
     } while (true)
     // $COVERAGE-OFF$
@@ -592,10 +679,18 @@ private[bio] object TaskRunLoop {
     val em = scheduler.executionModel
     var frameIndex = frameStart(em)
 
+    // we might not need to initialize full Task.Context
+    var tracingCtx: StackTracedContext = null
+
     do {
       if (frameIndex != 0) {
         current match {
-          case FlatMap(fa, bindNext) =>
+          case bind @ FlatMap(fa, bindNext, _) =>
+            if (isStackTracing) {
+              val trace = bind.trace
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
@@ -630,6 +725,11 @@ private[bio] object TaskRunLoop {
             }
 
           case bindNext @ Map(fa, _, _) =>
+            if (isStackTracing) {
+              val trace = bindNext.trace
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (trace ne null) tracingCtx.pushEvent(trace.asInstanceOf[IOEvent])
+            }
             if (bFirst ne null) {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
@@ -655,6 +755,12 @@ private[bio] object TaskRunLoop {
             }
 
           case Error(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              if (error.isInstanceOf[Throwable]) {
+                augmentException(error.asInstanceOf[Throwable], tracingCtx)
+              }
+            }
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
                 return CancelableFuture.failed(UncaughtErrorException.wrap(error))
@@ -668,6 +774,10 @@ private[bio] object TaskRunLoop {
             }
 
           case Termination(error) =>
+            if (isStackTracing && enhancedExceptions) {
+              if (tracingCtx eq null) tracingCtx = new StackTracedContext
+              augmentException(error.asInstanceOf[Throwable], tracingCtx)
+            }
             findTerminationHandler[Any](bFirst, bRest) match {
               case null =>
                 return CancelableFuture.failed(error)
@@ -680,7 +790,14 @@ private[bio] object TaskRunLoop {
                 bFirst = null
             }
 
+          case Trace(sourceTask, frame) =>
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+            tracingCtx.pushEvent(frame)
+            current = sourceTask
+
           case async =>
+            if (tracingCtx eq null) tracingCtx = new StackTracedContext
+
             return goAsync4Future(
               async,
               scheduler,
@@ -688,7 +805,8 @@ private[bio] object TaskRunLoop {
               bFirst,
               bRest,
               frameIndex,
-              forceFork = false
+              forceFork = false,
+              tracingCtx = tracingCtx
             )
         }
 
@@ -710,8 +828,9 @@ private[bio] object TaskRunLoop {
           }
         }
       } else {
+        if (tracingCtx eq null) tracingCtx = new StackTracedContext
         // Force async boundary
-        return goAsync4Future(current, scheduler, opts, bFirst, bRest, frameIndex, forceFork = true)
+        return goAsync4Future(current, scheduler, opts, bFirst, bRest, frameIndex, forceFork = true, tracingCtx = tracingCtx)
       }
     } while (true)
     // $COVERAGE-OFF$
@@ -728,6 +847,11 @@ private[bio] object TaskRunLoop {
     bRest: CallStack,
     nextFrame: FrameIndex
   ): Unit = {
+
+    if (isStackTracing) {
+      val trace = task.trace
+      if (trace ne null) context.stackTracedContext.pushEvent(trace.asInstanceOf[IOEvent])
+    }
 
     // We are going to resume the frame index from where we left,
     // but only if no real asynchronous execution happened. So in order
@@ -757,14 +881,16 @@ private[bio] object TaskRunLoop {
     bRest: CallStack,
     nextFrame: FrameIndex,
     isCancelable: Boolean,
-    forceFork: Boolean
+    forceFork: Boolean,
+    tracingCtx: StackTracedContext
   ): CancelToken[UIO] = {
 
     val context = Context(
       scheduler,
       opts,
       if (isCancelable) TaskConnection[E]()
-      else TaskConnection.uncancelable[E]
+      else TaskConnection.uncancelable[E],
+      tracingCtx
     )
 
     if (!forceFork) source match {
@@ -787,12 +913,13 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean
+    forceFork: Boolean,
+    tracingCtx: StackTracedContext
   ): CancelableFuture[A] = {
 
     val p = Promise[A]()
     val cb = BiCallback.fromTry(p.complete).asInstanceOf[BiCallback[Any, Any]]
-    val context = Context[Any](scheduler, opts)
+    val context = Context(scheduler, opts, TaskConnection[Any](), tracingCtx)
     val current = source.asInstanceOf[IO[E, A]]
 
     if (!forceFork) source match {
@@ -816,10 +943,12 @@ private[bio] object TaskRunLoop {
     bFirst: Bind,
     bRest: CallStack,
     nextFrame: FrameIndex,
-    forceFork: Boolean
+    forceFork: Boolean,
+    tracingCtx: StackTracedContext
+
   ): Either[IO[E, A], A] = {
 
-    val ctx = Context[Any](scheduler, opts)
+    val ctx = Context(scheduler, opts, TaskConnection[E](), tracingCtx)
     val start: Start[Any, Any] =
       if (!forceFork) {
         ctx.frameRef := nextFrame
@@ -911,4 +1040,41 @@ private[bio] object TaskRunLoop {
     def recover(e: Any): IO[Any, Any] =
       ContextSwitch[Any, Any](Error(e), current => restore(null, e, old, current), null)
   }
+
+  /**
+    * If stack tracing and contextual exceptions are enabled, this
+    * function will rewrite the stack trace of a captured exception
+    * to include the async stack trace.
+    */
+  private[internal] def augmentException(ex: Throwable, ctx: StackTracedContext): Unit = {
+    val stackTrace = ex.getStackTrace
+    if (stackTrace.nonEmpty) {
+      val augmented = stackTrace(stackTrace.length - 1).getClassName.indexOf('@') != -1
+      if (!augmented) {
+        val prefix = dropRunLoopFrames(stackTrace)
+        val suffix = ctx
+          .getStackTraces()
+          .flatMap(t => IOTrace.getOpAndCallSite(t.stackTrace))
+          .map {
+            case (methodSite, callSite) =>
+              val op = NameTransformer.decode(methodSite.getMethodName)
+
+              new StackTraceElement(op + " @ " + callSite.getClassName,
+                callSite.getMethodName,
+                callSite.getFileName,
+                callSite.getLineNumber)
+          }
+          .toArray
+        ex.setStackTrace(prefix ++ suffix)
+      }
+    }
+  }
+
+  private def dropRunLoopFrames(frames: Array[StackTraceElement]): Array[StackTraceElement] =
+    frames.takeWhile(ste => !runLoopFilter.exists(ste.getClassName.startsWith(_)))
+
+  private[this] val runLoopFilter = List(
+    "monix.bio.",
+    "scala."
+  )
 }

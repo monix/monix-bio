@@ -19,9 +19,10 @@ package monix.bio
 
 import monix.bio.internal._
 import monix.execution.{CancelablePromise, Scheduler}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
+
+import monix.bio.tracing.IOTrace
 
 object UIO extends UIODeprecated.Companion {
 
@@ -398,4 +399,9 @@ object UIO extends UIODeprecated.Companion {
     fa6: UIO[A6]
   ): UIO[(A1, A2, A3, A4, A5, A6)] =
     parMap6(fa1, fa2, fa3, fa4, fa5, fa6)((a1, a2, a3, a4, a5, a6) => (a1, a2, a3, a4, a5, a6))
+
+  /**
+    * @see See [[monix.bio.IO.liftFromEffect]]
+    */
+  val trace: UIO[IOTrace] = IO.trace
 }

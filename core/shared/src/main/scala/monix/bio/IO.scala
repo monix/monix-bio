@@ -37,7 +37,6 @@ import monix.execution.ExecutionModel.AlwaysAsyncExecution
 import monix.execution.annotations.{UnsafeBecauseBlocking, UnsafeBecauseImpure}
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.internal.Platform
-import monix.execution.internal.Platform.fusionMaxStackDepth
 import monix.execution.misc.Local
 import monix.execution.schedulers.{CanBlock, TracingScheduler, TrampolinedRunnable}
 import monix.execution.{Scheduler, _}
@@ -47,6 +46,8 @@ import scala.annotation.unchecked.{uncheckedVariance => uV}
 import scala.concurrent.duration.{Duration, FiniteDuration, NANOSECONDS, TimeUnit}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+
+import monix.bio.tracing.{IOEvent, IOTrace}
 
 /** `Task` represents a specification for a possibly lazy or
   * asynchronous computation, which when executed will produce an `A`
@@ -1194,7 +1195,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * errors from the source.
     */
   final def attempt: UIO[Either[E, A]] =
-    FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]])
+    FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]], null)
 
   /**
     * Replaces the `A` value in `IO[E, A]` with the supplied value.
@@ -1799,7 +1800,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * `NoSuchElementException`.
     */
   final def failed: UIO[E] =
-    FlatMap(this, IO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]])
+    FlatMap(this, IO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]], null)
 
   /**
     * Creates a new IO by swapping the error and value parameters. This allows you to
@@ -1866,8 +1867,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * of the source Task, and returns a task equivalent to the result
     * of the function.
     */
-  final def flatMap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, B] =
-    FlatMap(this, f)
+  final def flatMap[E1 >: E, B](f: A => IO[E1, B]): IO[E1, B] = {
+    val trace = IOTracing.getTrace(f.getClass)
+    FlatMap(this, f, trace)
+  }
 
   /** Creates a new `IO` that will run a provided effect on the success
     * and return the original value.
@@ -2001,7 +2004,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * the source.
     */
   final def materialize(implicit ev: E <:< Throwable): UIO[Try[A]] =
-    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[A]]])
+    FlatMap(this, MaterializeTask.asInstanceOf[A => UIO[Try[A]]], null)
 
   /** Dematerializes the source's result from a `Try`. */
   final def dematerialize[B](implicit evE: E <:< Nothing, evA: A <:< Try[B]): Task[B] =
@@ -2067,7 +2070,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     * See [[onErrorRecoverWith]] for the version that takes a partial function.
     */
   final def onErrorHandleWith[E1, B >: A](f: E => IO[E1, B]): IO[E1, B] =
-    FlatMap(this, new StackFrame.ErrorHandler(f, nowConstructor))
+    FlatMap(this, new StackFrame.ErrorHandler(f, nowConstructor), null)
 
   /** Creates a new task that in case of error will fallback to the
     * given backup task.
@@ -2091,17 +2094,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *
     * `fa.map(f) <-> fa.flatMap(x => Task.pure(f(x)))`
     */
-  final def map[B](f: A => B): IO[E, B] =
-    this match {
-      case Map(source, g, index) =>
-        // Allowed to do a fixed number of map operations fused before
-        // resetting the counter in order to avoid stack overflows;
-        // See `monix.execution.internal.Platform` for details.
-        if (index != fusionMaxStackDepth) Map(source, g.andThen(f), index + 1)
-        else Map(this, f, 0)
-      case _ =>
-        Map(this, f, 0)
-    }
+  final def map[B](f: A => B): IO[E, B] = {
+    val trace = IOTracing.getTrace(f.getClass)
+    Map(this, f, trace)
+  }
 
   /** Creates a new task that will run a provided effect in case of a typed error
     * and raise the original error in case the provided function is successful.
@@ -2227,8 +2223,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
   /** Returns a new `IO` that applies the mapping function `fa` to the
     * success channel and `fe` to the error channel.
     */
-  final def bimap[E1, B](fe: E => E1, fa: A => B): IO[E1, B] =
-    IO.FlatMap(this, IO.Bimap(fe, fa))
+  final def bimap[E1, B](fe: E => E1, fa: A => B): IO[E1, B] = {
+    val trace = IOTracing.getTrace(fa.getClass)
+    IO.FlatMap(this, IO.Bimap(fe, fa), trace)
+  }
 
   /** Creates a new task that will will transform errors
     * using supplied function `f`.
@@ -2244,8 +2242,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *   val task2: IO[ErrorB, String] = task1.mapError(errA => ErrorB(errA, Instant.now()))
     * }}}
     */
-  final def mapError[E1](f: E => E1): IO[E1, A] =
-    IO.FlatMap(this, IO.MapError[E, E1, A](f))
+  final def mapError[E1](f: E => E1): IO[E1, A] = {
+    val trace = IOTracing.getTrace(f.getClass)
+    IO.FlatMap(this, IO.MapError[E, E1, A](f), trace)
+  }
 
   /** Creates a new task that will handle any matching throwable that
     * this task might emit.
@@ -2476,7 +2476,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *        in case it ends in success
     */
   def redeem[B](recover: E => B, map: A => B): UIO[B] =
-    IO.FlatMap(this, new IO.Redeem(recover, map))
+    IO.FlatMap(this, new IO.Redeem(recover, map), null)
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `bind` functions, which get executed depending
@@ -2501,7 +2501,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *        in case of success
     */
   def redeemWith[E1, B](recover: E => IO[E1, B], bind: A => IO[E1, B]): IO[E1, B] =
-    IO.FlatMap(this, new StackFrame.RedeemWith(recover, bind))
+    IO.FlatMap(this, new StackFrame.RedeemWith(recover, bind), null)
 
   /** Makes the source `Task` uninterruptible such that a `cancel` signal
     * (e.g. [[Fiber.cancel]]) has no effect.
@@ -2684,8 +2684,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *        in case it ends in success
     * @see [[IO.redeem]] for a version which works on typed errors
     */
-  final def redeemCause[B](recover: Cause[E] => B, map: A => B): UIO[B] =
-    IO.FlatMap(this, new IO.RedeemFatal(recover, map))
+  final def redeemCause[B](recover: Cause[E] => B, map: A => B): UIO[B] = {
+    val trace = IOTracing.getTrace(map.getClass)
+    IO.FlatMap(this, new IO.RedeemFatal(recover, map), trace)
+  }
 
   /** Returns a new value that transforms the result of the source,
     * given the `recover` or `bind` functions, which get executed depending
@@ -2701,8 +2703,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *        in case of success
     * @see [[IO.redeemWith]] for a version which only works on typed errors
     */
-  final def redeemCauseWith[E1, B](recover: Cause[E] => IO[E1, B], bind: A => IO[E1, B]): IO[E1, B] =
-    IO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind))
+  final def redeemCauseWith[E1, B](recover: Cause[E] => IO[E1, B], bind: A => IO[E1, B]): IO[E1, B] = {
+    val trace = IOTracing.getTrace(bind.getClass)
+    IO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind), trace)
+  }
 
   /**
     * Absorbs all unexpected errors to typed error channel.
@@ -2833,7 +2837,7 @@ object IO extends TaskInstancesLevel0 {
     * the given strict value.
     */
   def now[A](a: A): UIO[A] =
-    IO.Now(a)
+    IOTracing.decorateIfNeeded(IO.Now(a))
 
   /** Lifts a value into the task context. Alias for [[now]]. */
   def pure[A](a: A): UIO[A] = now(a)
@@ -2842,7 +2846,7 @@ object IO extends TaskInstancesLevel0 {
     * emitting the specified value in a typed error channel.
     */
   def raiseError[E](ex: E): IO[E, Nothing] =
-    Error(ex)
+    IOTracing.decorateIfNeeded(Error(ex))
 
   /** Returns a task that on execution is always finishing in a fatal (unexpected) error
     * emitting the specified exception.
@@ -2851,7 +2855,7 @@ object IO extends TaskInstancesLevel0 {
     * error handlers, except for [[IO.redeemCause]] and [[IO.redeemCauseWith]].
     */
   def terminate(ex: Throwable): UIO[Nothing] =
-    Termination(ex)
+    IOTracing.decorateIfNeeded(Termination(ex))
 
   /** Defers the creation of a `Task` in case it is effectful.
     *
@@ -2861,7 +2865,7 @@ object IO extends TaskInstancesLevel0 {
     * @see [[deferTotal]] if `fa` is not expected to throw any exceptions.
     */
   def defer[A](fa: => Task[A]): Task[A] =
-    Suspend(fa _)
+    suspend(fa)
 
   /** Defers the creation of a `IO` in case it is effectful.
     *
@@ -2869,7 +2873,7 @@ object IO extends TaskInstancesLevel0 {
     *      like to expose them as typed errors.
     */
   def deferTotal[E, A](fa: => IO[E, A]): IO[E, A] =
-    SuspendTotal(fa _)
+    IOTracing.decorateIfNeeded(SuspendTotal(fa _))
 
   /** Defers the creation of a `Task` by using the provided
     * function, which has the ability to inject a needed
@@ -2957,11 +2961,11 @@ object IO extends TaskInstancesLevel0 {
 
   /** Alias for [[defer]]. */
   def suspend[A](fa: => Task[A]): Task[A] =
-    Suspend(fa _)
+    IOTracing.decorateIfNeeded(Suspend(() => fa))
 
   /** Alias for [[deferTotal]]. */
   def suspendTotal[E, A](fa: => IO[E, A]): IO[E, A] =
-    SuspendTotal(fa _)
+    IOTracing.decorateIfNeeded(SuspendTotal(fa _))
 
   /** Promote a non-strict value to a `IO` that is memoized on the first
     * evaluation, the result being then available on subsequent evaluations.
@@ -2980,7 +2984,7 @@ object IO extends TaskInstancesLevel0 {
     * @see [[evalTotal]] if `a` is not expected to throw any exceptions.
     */
   def eval[A](a: => A): Task[A] =
-    Eval(a _)
+    IOTracing.decorateIfNeeded(Eval(() => a))
 
   /** Promote a non-strict value which does not throw any unexpected errors to `UIO`.
     *
@@ -2993,7 +2997,7 @@ object IO extends TaskInstancesLevel0 {
     *      in a typed error channel.
     */
   def evalTotal[A](a: => A): UIO[A] =
-    EvalTotal(a _)
+    IOTracing.decorateIfNeeded(EvalTotal(a _))
 
   /** Lifts a non-strict value, a thunk, to a `Task` that will trigger a logical
     * fork before evaluation.
@@ -3006,7 +3010,7 @@ object IO extends TaskInstancesLevel0 {
     * @param a is the thunk to process on evaluation
     */
   def evalAsync[A](a: => A): Task[A] =
-    TaskEvalAsync(a _)
+    IOTracing.decorateIfNeeded(TaskEvalAsync(() => a))
 
   /** Alias for [[eval]]. */
   def delay[A](a: => A): Task[A] = eval(a)
@@ -3206,7 +3210,7 @@ object IO extends TaskInstancesLevel0 {
     }
 
   /** A `Task[Unit]` provided for convenience. */
-  val unit: UIO[Unit] = Now(())
+  val unit: UIO[Unit] = pure(())
 
   /** Create a non-cancelable `Task` from an asynchronous computation,
     * which takes the form of a function with which we can register a
@@ -3859,6 +3863,14 @@ object IO extends TaskInstancesLevel0 {
     in: Iterable[IO[E, A]]
   ): IO[E, List[A]] =
     TaskSequence.list(in)
+
+  /**
+    * Returns the accumulated trace of the currently active fiber.
+    */
+  val trace: UIO[IOTrace] =
+    Async[Nothing, IOTrace] { (ctx, cb) =>
+      cb.onSuccess(ctx.stackTracedContext.trace())
+    }
 
   /** Given a `Iterable[A]` and a function `A => Task[B]`, sequentially
     * apply the function to each element of the collection and gather their
@@ -4844,7 +4856,8 @@ object IO extends TaskInstancesLevel0 {
     private val schedulerRef: Scheduler,
     options: Options,
     connection: TaskConnection[E],
-    frameRef: FrameIndexRef
+    frameRef: FrameIndexRef,
+    stackTracedContext: StackTracedContext
   ) {
 
     val scheduler: Scheduler = {
@@ -4862,27 +4875,28 @@ object IO extends TaskInstancesLevel0 {
       schedulerRef.executionModel
 
     def withScheduler(s: Scheduler): Context[E] =
-      new Context(s, options, connection, frameRef)
+      new Context(s, options, connection, frameRef, stackTracedContext)
 
     def withExecutionModel(em: ExecutionModel): Context[E] =
-      new Context(schedulerRef.withExecutionModel(em), options, connection, frameRef)
+      new Context(schedulerRef.withExecutionModel(em), options, connection, frameRef, stackTracedContext)
 
     def withOptions(opts: Options): Context[E] =
-      new Context(schedulerRef, opts, connection, frameRef)
+      new Context(schedulerRef, opts, connection, frameRef, stackTracedContext)
 
     def withConnection[E1 >: E](conn: TaskConnection[E1]): Context[E1] =
-      new Context(schedulerRef, options, conn, frameRef)
+      new Context(schedulerRef, options, conn, frameRef, stackTracedContext)
   }
 
   private[bio] object Context {
+    // TODO: Should Task.start / startAndForget start a new stack trace?
 
     def apply[E](scheduler: Scheduler, options: Options): Context[E] =
-      apply(scheduler, options, TaskConnection[E]())
+      apply(scheduler, options, TaskConnection(), new StackTracedContext)
 
-    def apply[E](scheduler: Scheduler, options: Options, connection: TaskConnection[E]): Context[E] = {
+    def apply[E](scheduler: Scheduler, options: Options, connection: TaskConnection[E], stackTracedContext: StackTracedContext): Context[E] = {
       val em = scheduler.executionModel
       val frameRef = FrameIndexRef(em)
-      new Context(scheduler, options, connection, frameRef)
+      new Context(scheduler, options, connection, frameRef, stackTracedContext)
     }
   }
 
@@ -5059,10 +5073,10 @@ object IO extends TaskInstancesLevel0 {
   private[bio] final case class SuspendTotal[+E, +A](thunk: () => IO[E, A]) extends IO[E, A]
 
   /** Internal [[IO]] state that is the result of applying `flatMap`. */
-  private[bio] final case class FlatMap[E, E1, A, +B](source: IO[E, A], f: A => IO[E1, B]) extends IO[E1, B]
+  private[bio] final case class FlatMap[E, E1, A, +B](source: IO[E, A], f: A => IO[E1, B], trace: AnyRef) extends IO[E1, B]
 
   /** Internal [[IO]] state that is the result of applying `map`. */
-  private[bio] final case class Map[S, +E, +A](source: IO[E, S], f: S => A, index: Int)
+  private[bio] final case class Map[S, +E, +A](source: IO[E, S], f: S => A, trace: AnyRef)
       extends IO[E, A] with (S => IO[E, A]) {
 
     def apply(value: S): IO[E, A] =
@@ -5089,7 +5103,8 @@ object IO extends TaskInstancesLevel0 {
     register: (Context[E], BiCallback[E, A]) => Unit,
     trampolineBefore: Boolean = false,
     trampolineAfter: Boolean = true,
-    restoreLocals: Boolean = true
+    restoreLocals: Boolean = true,
+    trace: AnyRef = null
   ) extends IO[E, A]
 
   /** For changing the context for the rest of the run-loop.
@@ -5101,6 +5116,8 @@ object IO extends TaskInstancesLevel0 {
     modify: Context[E] => Context[E],
     restore: (A, E, Context[E], Context[E]) => Context[E]
   ) extends IO[E, A]
+
+  private[monix] final case class Trace[E, A](source: IO[E, A], trace: IOEvent) extends IO[E, A]
 
   /**
     * Internal API — starts the execution of a Task with a guaranteed

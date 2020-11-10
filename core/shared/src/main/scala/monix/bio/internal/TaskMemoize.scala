@@ -41,7 +41,7 @@ private[bio] object TaskMemoize {
 //      case IO.Eval(Coeval.Suspend(f: LazyVal[A @unchecked])) if !cacheErrors || f.cacheErrors =>
 //        source
 
-      case IO.Async(r: Register[E, A] @unchecked, _, _, _) if !cacheErrors || r.cacheErrors =>
+      case IO.Async(r: Register[E, A] @unchecked, _, _, _, _) if !cacheErrors || r.cacheErrors =>
         source
       case _ =>
         IO.Async(

@@ -24,10 +24,11 @@ import monix.bio.internal.{TaskCreate, TaskDeprecated, TaskFromFuture}
 import monix.catnap.FutureLift
 import monix.execution.{CancelablePromise, Scheduler}
 import org.reactivestreams.Publisher
-
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+
+import monix.bio.tracing.IOTrace
 
 object Task extends TaskDeprecated.Companion {
 
@@ -544,4 +545,9 @@ object Task extends TaskDeprecated.Companion {
     */
   def liftFromEffect[F[_]](implicit F: Effect[F]): (F ~> Task) =
     IO.liftFromEffect[F]
+
+  /**
+    * @see See [[monix.bio.IO.liftFromEffect]]
+    */
+  val trace: Task[IOTrace] = IO.trace
 }

@@ -35,7 +35,7 @@ private[bio] object TaskToReactivePublisher {
           new Subscription {
             private[this] var isActive = true
             private[this] val conn = TaskConnection[Throwable]()
-            private[this] val context = IO.Context(s, IO.defaultOptions.withSchedulerFeatures, conn)
+            private[this] val context = IO.Context(s, IO.defaultOptions.withSchedulerFeatures, conn, new StackTracedContext)
 
             def request(n: Long): Unit = {
               require(n > 0, "n must be strictly positive, according to the Reactive Streams contract, rule 3.9")
