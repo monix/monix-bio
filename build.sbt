@@ -126,7 +126,7 @@ lazy val mdocSettings = Seq(
     "-groups"
   ),
   // Exclude monix.*.internal from ScalaDoc
-  sources in (ScalaUnidoc, unidoc) ~= (_ filterNot { file =>
+  sources in (Compile, doc) ~= (_ filterNot { file =>
     // Exclude all internal Java files from documentation
     file.getCanonicalPath matches "^.*monix.+?internal.*?\\.java$"
   }),
