@@ -29,7 +29,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.apply]]
     */
   def apply[A](a: => A): UIO[A] =
-    IO.EvalTotal(a _)
+    IO.evalTotal(a)
 
   /** @see See [[monix.bio.IO.now]]
     */
@@ -74,22 +74,22 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.eval]]
     */
   def eval[A](a: => A): UIO[A] =
-    IO.EvalTotal(a _)
+    IO.evalTotal(a)
 
   /** @see See [[monix.bio.IO.evalTotal]]
     */
   def evalTotal[A](a: => A): UIO[A] =
-    IO.EvalTotal(a _)
+    IO.evalTotal(a)
 
   /** @see See [[monix.bio.IO.evalAsync]]
     */
   def evalAsync[A](a: => A): UIO[A] =
-    UIOEvalAsync(a _)
+    IOTracing.decorateIfNeeded(UIOEvalAsync(a _))
 
   /** @see See [[monix.bio.IO.delay]]
     */
   def delay[A](a: => A): UIO[A] =
-    eval(a)
+    IO.evalTotal(a)
 
   /** @see See [[monix.bio.IO.never]]
     */
@@ -122,17 +122,17 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.race]]
     */
   def race[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[A, B]] =
-    TaskRace(fa, fb)
+    IO.race(fa, fb)
 
   /** @see See [[monix.bio.IO.raceMany]]
     */
   def raceMany[A](tasks: Iterable[UIO[A]]): UIO[A] =
-    TaskRaceList(tasks)
+    IO.raceMany(tasks)
 
   /** @see See [[monix.bio.IO.racePair]]
     */
   def racePair[A, B](fa: UIO[A], fb: UIO[B]): UIO[Either[(A, Fiber[Nothing, B]), (Fiber[Nothing, A], B)]] =
-    TaskRacePair(fa, fb)
+    IO.racePair(fa, fb)
 
   /** @see See [[monix.bio.IO.rethrow]]
     */
@@ -157,12 +157,12 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.sequence]]
     */
   def sequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
-    TaskSequence.list[Nothing, A](in)
+   IO.sequence(in)
 
   /** @see See [[monix.bio.IO.traverse]]
     */
   def traverse[A, B](in: Iterable[A])(f: A => UIO[B]): UIO[List[B]] =
-    TaskSequence.traverse(in, f)
+    IO.traverse(in)(f)
 
   /** @see See [[monix.bio.IO.none]]
     */
@@ -193,7 +193,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.parSequence]]
     */
   def parSequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
-    TaskParSequence[Nothing, A](in)
+    IO.parSequence[Nothing, A](in)
 
   /** @see [[monix.bio.IO.parTraverse]]
     */
@@ -205,7 +205,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.parSequenceN]]
     */
   def parSequenceN[A](parallelism: Int)(in: Iterable[UIO[A]]): UIO[List[A]] =
-    TaskParSequenceN[Nothing, A](parallelism, in)
+    IO.parSequenceN[Nothing, A](parallelism)(in)
 
   /** @see See [[monix.bio.IO.parTraverseN]]
     */
@@ -215,7 +215,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.parSequenceUnordered]]
     */
   def parSequenceUnordered[A](in: Iterable[UIO[A]]): UIO[List[A]] =
-    TaskParSequenceUnordered[Nothing, A](in)
+    IO.parSequenceUnordered[Nothing, A](in)
 
   /** @see [[monix.bio.IO.parTraverseUnordered]]
     */
@@ -225,7 +225,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.mapBoth]]
     */
   def mapBoth[A1, A2, R](fa1: UIO[A1], fa2: UIO[A2])(f: (A1, A2) => R): UIO[R] =
-    TaskMapBoth(fa1, fa2)(f)
+    IO.mapBoth(fa1, fa2)(f)
 
   /** @see See [[monix.bio.IO.map2]]
     */

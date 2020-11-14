@@ -70,12 +70,12 @@ object Task extends TaskDeprecated.Companion {
   /** @see See [[monix.bio.IO.deferFuture]]
     */
   def deferFuture[A](fa: => Future[A]): Task[A] =
-    defer(fromFuture(fa))
+    IO.deferFuture(fa)
 
   /** @see See [[monix.bio.IO.deferFutureAction]]
     */
   def deferFutureAction[A](f: Scheduler => Future[A]): Task[A] =
-    TaskFromFuture.deferAction(f)
+    IO.deferFutureAction(f)
 
   /** @see See [[monix.bio.IO.suspend]]
     */
@@ -150,17 +150,17 @@ object Task extends TaskDeprecated.Companion {
   /** @see See [[monix.bio.IO.async]]
     */
   def async[A](register: BiCallback[Throwable, A] => Unit): Task[A] =
-    TaskCreate.async(register)
+    IO.async(register)
 
   /** @see See [[monix.bio.IO.async0]]
     */
   def async0[A](register: (Scheduler, BiCallback[Throwable, A]) => Unit): Task[A] =
-    TaskCreate.async0(register)
+    IO.async0(register)
 
   /** @see See [[monix.bio.IO.asyncF]]
     */
   def asyncF[A](register: BiCallback[Throwable, A] => Task[Unit]): Task[A] =
-    TaskCreate.asyncF(register)
+    IO.asyncF(register)
 
   /** @see See [[monix.bio.IO.cancelable]]
     */
@@ -170,7 +170,7 @@ object Task extends TaskDeprecated.Companion {
   /** @see See [[monix.bio.IO.cancelable0]]
     */
   def cancelable0[A](register: (Scheduler, BiCallback[Throwable, A]) => CancelToken[Task]): Task[A] =
-    TaskCreate.cancelable0(register)
+    IO.cancelable0(register)
 
   /** @see See [[monix.bio.IO.cancelBoundary]]
     */
