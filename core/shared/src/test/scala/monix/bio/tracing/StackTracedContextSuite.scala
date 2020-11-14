@@ -20,8 +20,7 @@ package monix.bio.tracing
 
 import monix.bio.BaseTestSuite
 import monix.bio.internal.StackTracedContext
-/**
-  * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
+/** All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
 object StackTracedContextSuite extends BaseTestSuite {
   val traceBufferSize: Int = 1 << monix.bio.internal.TracingPlatform.traceBufferLogSize

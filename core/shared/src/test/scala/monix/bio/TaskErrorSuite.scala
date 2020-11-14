@@ -85,8 +85,8 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("IO#onErrorRecover should recover typed error") { implicit s =>
     val ex = "dummy"
-    val task = (IO.raiseError(ex): IO[String, Int]).onErrorRecover {
-      case "dummy" => 99
+    val task = (IO.raiseError(ex): IO[String, Int]).onErrorRecover { case "dummy" =>
+      99
     }
 
     val f = task.attempt.runToFuture
@@ -96,8 +96,8 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("IO#onErrorRecover should not recover unexpected error") { implicit s =>
     val ex = DummyException("dummy")
-    val task = (IO.terminate(ex): IO[String, Int]).onErrorRecover {
-      case _ => 99
+    val task = (IO.terminate(ex): IO[String, Int]).onErrorRecover { case _ =>
+      99
     }
 
     val f = task.attempt.runToFuture
@@ -326,8 +326,8 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("IO#onErrorRecoverWith should recover") { implicit s =>
     val ex = DummyException("dummy")
-    val task = IO[Int](throw ex).onErrorRecoverWith {
-      case _: DummyException => IO.evalAsync(99)
+    val task = IO[Int](throw ex).onErrorRecoverWith { case _: DummyException =>
+      IO.evalAsync(99)
     }
 
     val f = task.runToFuture
@@ -346,8 +346,8 @@ object TaskErrorSuite extends BaseTestSuite {
   }
 
   test("IO#onErrorRecoverWith has a cancelable fallback") { implicit s =>
-    val task = IO[Int](throw DummyException("dummy")).onErrorRecoverWith {
-      case _: DummyException => IO.evalAsync(99).delayExecution(1.second)
+    val task = IO[Int](throw DummyException("dummy")).onErrorRecoverWith { case _: DummyException =>
+      IO.evalAsync(99).delayExecution(1.second)
     }
 
     val f = task.runToFuture

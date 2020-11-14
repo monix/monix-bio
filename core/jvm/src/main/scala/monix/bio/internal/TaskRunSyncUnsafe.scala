@@ -21,7 +21,20 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.AbstractQueuedSynchronizer
 
 import monix.bio.{BiCallback, IO}
-import monix.bio.IO.{Async, Context, Error, Eval, EvalTotal, FlatMap, Map, Now, Suspend, SuspendTotal, Termination, Trace}
+import monix.bio.IO.{
+  Async,
+  Context,
+  Error,
+  Eval,
+  EvalTotal,
+  FlatMap,
+  Map,
+  Now,
+  Suspend,
+  SuspendTotal,
+  Termination,
+  Trace
+}
 import monix.bio.internal.TracingPlatform.{enhancedExceptions, isStackTracing}
 import monix.bio.tracing.IOEvent
 import monix.bio.internal.TaskRunLoop._

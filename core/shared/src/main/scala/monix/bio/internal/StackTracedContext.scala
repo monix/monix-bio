@@ -21,8 +21,7 @@ import monix.bio.tracing.{IOEvent, IOTrace}
 import monix.bio.internal.TracingPlatform.traceBufferLogSize
 import monix.execution.internal.RingBuffer
 
-/**
-  * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
+/** All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
 private[bio] final class StackTracedContext {
   private[this] val events: RingBuffer[IOEvent] = new RingBuffer(traceBufferLogSize)

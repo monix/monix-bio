@@ -25,8 +25,7 @@ import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Callback type which supports two channels of errors.
+/** Callback type which supports two channels of errors.
   *
   * @define safetyIssues Can be called at most once by contract.
   *         Not necessarily thread-safe, depends on implementation.
@@ -57,29 +56,25 @@ import scala.util.{Failure, Success, Try}
   *                 first in signaling a result
   */
 abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
-  /**
-    * Signals a successful value.
+  /** Signals a successful value.
     *
     * $safetyIssues
     */
   def onSuccess(value: A): Unit
 
-  /**
-    * Signals an error.
+  /** Signals an error.
     *
     * $safetyIssues
     */
   def onError(e: E): Unit
 
-  /**
-    * Signals a a terminal error which will not be reflected in the type signature.
+  /** Signals a a terminal error which will not be reflected in the type signature.
     *
     * $safetyIssues
     */
   def onTermination(e: Throwable): Unit
 
-  /**
-    * Signals a value via Scala's `Either` where
+  /** Signals a value via Scala's `Either` where
     * - `Left`is a typed error
     * - `Right` is a successful value
     *
@@ -92,8 +87,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case Left(Cause.Termination(e)) => onTermination(e)
     }
 
-  /**
-    * Signals a value via Scala's `Try` of `Either` where
+  /** Signals a value via Scala's `Try` of `Either` where
     * - `Left` is a typed error
     * - `Right` is a successful value
     * - `Failure` is a terminal error (a defect))
@@ -113,8 +107,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
   def contramap[B](f: B => A): BiCallback[E, B] =
     new BiCallback.Contramap(this, f)
 
-  /**
-    * Attempts to call [[BiCallback.onSuccess]].
+  /** Attempts to call [[BiCallback.onSuccess]].
     *
     * $tryMethodDescription
     */
@@ -126,8 +119,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case _: CallbackCalledMultipleTimesException => false
     }
 
-  /**
-    * Attempts to call [[BiCallback.onError]].
+  /** Attempts to call [[BiCallback.onError]].
     *
     * $tryMethodDescription
     */
@@ -139,8 +131,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case _: CallbackCalledMultipleTimesException => false
     }
 
-  /**
-    * Attempts to call [[BiCallback.onTermination]].
+  /** Attempts to call [[BiCallback.onTermination]].
     *
     * $tryMethodDescription
     */
@@ -152,8 +143,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case _: CallbackCalledMultipleTimesException => false
     }
 
-  /**
-    * Attempts to call [[BiCallback.apply(result:Either[monix\.bio\.Cause[E],A])* BiCallback.apply]].
+  /** Attempts to call [[BiCallback.apply(result:Either[monix\.bio\.Cause[E],A])* BiCallback.apply]].
     *
     * $tryMethodDescription
     */
@@ -164,8 +154,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case Left(Cause.Termination(t)) => tryOnTermination(t)
     }
 
-  /**
-    * Signals a value via Scala's `Try`.
+  /** Signals a value via Scala's `Try`.
     *
     * $safetyIssues
     */
@@ -175,8 +164,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
       case Failure(e) => onError(e)
     }
 
-  /**
-    * Attempts to call [[BiCallback.apply BiCallback.apply]].
+  /** Attempts to call [[BiCallback.apply BiCallback.apply]].
     *
     * $tryMethodDescription
     */
@@ -187,8 +175,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
     }
 }
 
-/**
-  * @define isThreadSafe '''THREAD-SAFETY''': the returned callback is
+/** @define isThreadSafe '''THREAD-SAFETY''': the returned callback is
   *         thread-safe.
   *
   *         In case `onSuccess` and `onError` get called multiple times,
@@ -197,8 +184,7 @@ abstract class BiCallback[-E, -A] extends (Either[Cause[E], A] => Unit) {
   *         [[monix.execution.exceptions.CallbackCalledMultipleTimesException CallbackCalledMultipleTimesException]].
   */
 object BiCallback {
-  /**
-    * For building [[BiCallback]] objects using the
+  /** For building [[BiCallback]] objects using the
     * [[https://typelevel.org/cats/guidelines.html#partially-applied-type-params Partially-Applied Type]]
     * technique.
     *

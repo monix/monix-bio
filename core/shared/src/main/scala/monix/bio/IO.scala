@@ -578,10 +578,9 @@ sealed abstract class IO[+E, +A] extends Serializable {
   @UnsafeBecauseImpure
   def runToFutureOpt(implicit s: Scheduler, opts: Options, ev: E <:< Throwable): CancelableFuture[A] = {
     val opts2 = opts.withSchedulerFeatures
-    Local
-      .bindCurrentIf(opts2.localContextPropagation) {
-        TaskRunLoop.startFuture(this, s, opts2)
-      }
+
+    if (opts2.localContextPropagation) IORunToFutureWithLocal.startFuture(this, s, opts2)
+    else TaskRunLoop.startFuture(this, s, opts2)
   }
 
   /** Triggers the asynchronous execution, with a provided callback
@@ -1197,8 +1196,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def attempt: UIO[Either[E, A]] =
     FlatMap(this, AttemptTask.asInstanceOf[A => UIO[Either[E, A]]], null)
 
-  /**
-    * Replaces the `A` value in `IO[E, A]` with the supplied value.
+  /** Replaces the `A` value in `IO[E, A]` with the supplied value.
     */
   final def as[B](value: B): IO[E, B] =
     this.map(_ => value)
@@ -1481,8 +1479,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   )(release: (A, Either[Option[Cause[E1]], B]) => UIO[Unit]): IO[E1, B] =
     TaskBracket.either(this, use, release)
 
-  /**
-    * Executes the given `finalizer` when the source is finished,
+  /** Executes the given `finalizer` when the source is finished,
     * either in success or in error, or if canceled.
     *
     * This variant of [[guaranteeCase]] evaluates the given `finalizer`
@@ -1503,8 +1500,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def guarantee(finalizer: UIO[Unit]): IO[E, A] =
     guaranteeCase(_ => finalizer)
 
-  /**
-    * Executes the given `finalizer` when the source is finished,
+  /** Executes the given `finalizer` when the source is finished,
     * either in success or in error, or if canceled, allowing
     * for differentiating between exit conditions.
     *
@@ -1802,8 +1798,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def failed: UIO[E] =
     FlatMap(this, IO.Failed.asInstanceOf[StackFrame[E, A, UIO[E]]], null)
 
-  /**
-    * Creates a new IO by swapping the error and value parameters. This allows you to
+  /** Creates a new IO by swapping the error and value parameters. This allows you to
     * work with the error in a right-biased context, allowing you to apply a series of
     * operations that may depend on the error thrown by this task.
     *
@@ -2612,14 +2607,13 @@ sealed abstract class IO[+E, +A] extends Serializable {
     */
   final def timeoutToL[E1 >: E, B >: A](after: UIO[FiniteDuration], backup: IO[E1, B]): IO[E1, B] = {
     val timeoutTask: UIO[Unit] =
-      after.timed.flatMap {
-        case (took, need) =>
-          val left = need - took
-          if (left.length <= 0) {
-            UIO.unit
-          } else {
-            sleep(left)
-          }
+      after.timed.flatMap { case (took, need) =>
+        val left = need - took
+        if (left.length <= 0) {
+          UIO.unit
+        } else {
+          sleep(left)
+        }
       }
 
     race(this, timeoutTask).flatMap {
@@ -2708,8 +2702,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     IO.FlatMap(this, new StackFrame.RedeemFatalWith(recover, bind), trace)
   }
 
-  /**
-    * Absorbs all unexpected errors to typed error channel.
+  /** Absorbs all unexpected errors to typed error channel.
     *
     * {{{
     *   import monix.execution.exceptions.DummyException
@@ -2727,8 +2720,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def absorb(implicit ev: E <:< Throwable): Task[A] =
     redeemCauseWith(c => IO.raiseError(c.toThrowable), x => IO.now(x))
 
-  /**
-    * Absorbs all unexpected errors to typed error channel.
+  /** Absorbs all unexpected errors to typed error channel.
     *
     * {{{
     *   import monix.execution.exceptions.DummyException
@@ -3115,8 +3107,7 @@ object IO extends TaskInstancesLevel0 {
   def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
     TaskConversions.fromEffect(fa)
 
-  /**
-    * Builds a [[IO]] instance out of a Scala `Option`.
+  /** Builds a [[IO]] instance out of a Scala `Option`.
     * If the Option is empty, the task fails with Unit.
     *
     * Example:
@@ -3132,8 +3123,7 @@ object IO extends TaskInstancesLevel0 {
       case Some(v) => Now(v)
     }
 
-  /**
-    * Builds a [[IO]] instance out of a Scala `Option`.
+  /** Builds a [[IO]] instance out of a Scala `Option`.
     * If the Option is empty, the task fails with the provided fallback.
     *
     * @see [[IO.fromOptionEval]] for a version that takes a `IO[E, Option[A]]`
@@ -3153,8 +3143,7 @@ object IO extends TaskInstancesLevel0 {
       case Some(v) => Now(v)
     }
 
-  /**
-    * Builds a new [[IO]] instance out of a `IO[E, Option[A]]`.
+  /** Builds a new [[IO]] instance out of a `IO[E, Option[A]]`.
     * If the inner Option is empty, the task fails with the provided fallback.
     *
     * Example:
@@ -3684,8 +3673,7 @@ object IO extends TaskInstancesLevel0 {
   def fromCancelablePromiseEither[E, A](p: CancelablePromise[Either[E, A]]): IO[E, A] =
     TaskFromFutureEither.fromCancelablePromise(p)
 
-  /**
-    * Converts any Future-like data-type into a `Task`, via [[monix.catnap.FutureLift]].
+  /** Converts any Future-like data-type into a `Task`, via [[monix.catnap.FutureLift]].
     */
   def fromFutureLike[F[_], A](tfa: Task[F[A]])(implicit F: FutureLift[Task, F]): Task[A] =
     F.apply(tfa)
@@ -3864,8 +3852,7 @@ object IO extends TaskInstancesLevel0 {
   ): IO[E, List[A]] =
     TaskSequence.list(in)
 
-  /**
-    * Returns the accumulated trace of the currently active fiber.
+  /** Returns the accumulated trace of the currently active fiber.
     */
   val trace: UIO[IOTrace] =
     Async[Nothing, IOTrace] { (ctx, cb) =>
@@ -3883,24 +3870,21 @@ object IO extends TaskInstancesLevel0 {
   )(f: A => IO[E, B]): IO[E, List[B]] =
     TaskSequence.traverse(in, f)
 
-  /**
-    * Returns the given argument if `cond` is true, otherwise `IO.Unit`
+  /** Returns the given argument if `cond` is true, otherwise `IO.Unit`
     *
     * @see [[IO.unless]] for the inverse
     * @see [[IO.raiseWhen]] for conditionally raising an error
     */
   def when[E](cond: Boolean)(action: => IO[E, Unit]): IO[E, Unit] = if (cond) action else IO.unit
 
-  /**
-    * Returns the given argument if `cond` is false, otherwise `IO.Unit`
+  /** Returns the given argument if `cond` is false, otherwise `IO.Unit`
     *
     * @see [[IO.when]] for the inverse
     * @see [[IO.raiseWhen]] for conditionally raising an error
     */
   def unless[E](cond: Boolean)(action: => IO[E, Unit]): IO[E, Unit] = if (cond) IO.unit else action
 
-  /**
-    * Returns `raiseError` when the `cond` is true, otherwise `IO.unit`
+  /** Returns `raiseError` when the `cond` is true, otherwise `IO.unit`
     *
     * @example {{{
     * val tooMany = 5
@@ -3911,8 +3895,7 @@ object IO extends TaskInstancesLevel0 {
   def raiseWhen[E](cond: Boolean)(e: => E): IO[E, Unit] =
     IO.when(cond)(IO.raiseError(e))
 
-  /**
-    * Returns `raiseError` when `cond` is false, otherwise IO.unit
+  /** Returns `raiseError` when `cond` is false, otherwise IO.unit
     *
     * @example {{{
     * val tooMany = 5
@@ -4533,8 +4516,7 @@ object IO extends TaskInstancesLevel0 {
   ): IO[E, (A1, A2, A3, A4, A5, A6)] =
     parMap6(fa1, fa2, fa3, fa4, fa5, fa6)((a1, a2, a3, a4, a5, a6) => (a1, a2, a3, a4, a5, a6))
 
-  /**
-    * Generates `cats.FunctionK` values for converting from `Task` to
+  /** Generates `cats.FunctionK` values for converting from `Task` to
     * supporting types (for which we have a [[IOLift]] instance).
     *
     * See [[cats.arrow.FunctionK https://typelevel.org/cats/datatypes/functionk.html]].
@@ -4569,8 +4551,7 @@ object IO extends TaskInstancesLevel0 {
     */
   def liftTo[F[_]](implicit F: IOLift[F]): (Task ~> F) = F
 
-  /**
-    * Generates `cats.FunctionK` values for converting from `Task` to
+  /** Generates `cats.FunctionK` values for converting from `Task` to
     * supporting types (for which we have a `cats.effect.Async`) instance.
     *
     * See [[https://typelevel.org/cats/datatypes/functionk.html]].
@@ -4581,8 +4562,7 @@ object IO extends TaskInstancesLevel0 {
   def liftToAsync[F[_]](implicit F: cats.effect.Async[F], eff: cats.effect.Effect[Task]): (Task ~> F) =
     IOLift.toAsync[F]
 
-  /**
-    * Generates `cats.FunctionK` values for converting from `Task` to
+  /** Generates `cats.FunctionK` values for converting from `Task` to
     * supporting types (for which we have a [[cats.effect.Concurrent]]) instance.
     *
     * See [[https://typelevel.org/cats/datatypes/functionk.html]].
@@ -4596,8 +4576,7 @@ object IO extends TaskInstancesLevel0 {
   ): (Task ~> F) =
     IOLift.toConcurrent[F]
 
-  /**
-    * Returns a `F ~> Task` (`FunctionK`) for transforming any
+  /** Returns a `F ~> Task` (`FunctionK`) for transforming any
     * supported data-type into [[Task]].
     *
     * Useful for `mapK` transformations, for example when working
@@ -4621,8 +4600,7 @@ object IO extends TaskInstancesLevel0 {
     */
   def liftFrom[F[_]](implicit F: IOLike[F]): (F ~> Task) = F
 
-  /**
-    * Returns a `F ~> Task` (`FunctionK`) for transforming any
+  /** Returns a `F ~> Task` (`FunctionK`) for transforming any
     * supported data-type, that implements [[cats.effect.ConcurrentEffect]],
     * into [[Task]].
     *
@@ -4637,8 +4615,7 @@ object IO extends TaskInstancesLevel0 {
   def liftFromConcurrentEffect[F[_]](implicit F: ConcurrentEffect[F]): (F ~> Task) =
     liftFrom[F]
 
-  /**
-    * Returns a `F ~> Task` (`FunctionK`) for transforming any
+  /** Returns a `F ~> Task` (`FunctionK`) for transforming any
     * supported data-type, that implements `Effect`, into [[Task]].
     *
     * Useful for `mapK` transformations, for example when working
@@ -4703,8 +4680,7 @@ object IO extends TaskInstancesLevel0 {
     def disableLocalContextPropagation: Options =
       copy(localContextPropagation = false)
 
-    /**
-      * Enhances the options set with the features of the underlying
+    /** Enhances the options set with the features of the underlying
       * [[monix.execution.Scheduler Scheduler]].
       *
       * This enables for example the [[Options.localContextPropagation]]
@@ -4831,8 +4807,7 @@ object IO extends TaskInstancesLevel0 {
 
   private[IO] abstract class AsyncBuilder0 {
 
-    /**
-      * Implicit `AsyncBuilder` for cancelable tasks, using
+    /** Implicit `AsyncBuilder` for cancelable tasks, using
       * [[monix.execution.Cancelable Cancelable]] values for
       * specifying cancelation actions.
       */
@@ -4893,7 +4868,12 @@ object IO extends TaskInstancesLevel0 {
     def apply[E](scheduler: Scheduler, options: Options): Context[E] =
       apply(scheduler, options, TaskConnection(), new StackTracedContext)
 
-    def apply[E](scheduler: Scheduler, options: Options, connection: TaskConnection[E], stackTracedContext: StackTracedContext): Context[E] = {
+    def apply[E](
+      scheduler: Scheduler,
+      options: Options,
+      connection: TaskConnection[E],
+      stackTracedContext: StackTracedContext
+    ): Context[E] = {
       val em = scheduler.executionModel
       val frameRef = FrameIndexRef(em)
       new Context(scheduler, options, connection, frameRef, stackTracedContext)
@@ -5073,7 +5053,8 @@ object IO extends TaskInstancesLevel0 {
   private[bio] final case class SuspendTotal[+E, +A](thunk: () => IO[E, A]) extends IO[E, A]
 
   /** Internal [[IO]] state that is the result of applying `flatMap`. */
-  private[bio] final case class FlatMap[E, E1, A, +B](source: IO[E, A], f: A => IO[E1, B], trace: AnyRef) extends IO[E1, B]
+  private[bio] final case class FlatMap[E, E1, A, +B](source: IO[E, A], f: A => IO[E1, B], trace: AnyRef)
+      extends IO[E1, B]
 
   /** Internal [[IO]] state that is the result of applying `map`. */
   private[bio] final case class Map[S, +E, +A](source: IO[E, S], f: S => A, trace: AnyRef)
@@ -5119,8 +5100,7 @@ object IO extends TaskInstancesLevel0 {
 
   private[monix] final case class Trace[E, A](source: IO[E, A], trace: IOEvent) extends IO[E, A]
 
-  /**
-    * Internal API — starts the execution of a Task with a guaranteed
+  /** Internal API — starts the execution of a Task with a guaranteed
     * asynchronous boundary.
     */
   private[monix] def unsafeStartAsync[E, A](source: IO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
@@ -5141,8 +5121,7 @@ object IO extends TaskInstancesLevel0 {
       unsafeStartAsync(source, context, cb)
   }
 
-  /**
-    * Internal API — starts the execution of a Task with a guaranteed
+  /** Internal API — starts the execution of a Task with a guaranteed
     * trampolined async boundary.
     */
   private[monix] def unsafeStartTrampolined[E, A](source: IO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
@@ -5152,8 +5131,7 @@ object IO extends TaskInstancesLevel0 {
         TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
     })
 
-  /**
-    * Internal API - starts the immediate execution of a Task.
+  /** Internal API - starts the immediate execution of a Task.
     */
   private[monix] def unsafeStartNow[E, A](source: IO[E, A], context: Context[E], cb: BiCallback[E, A]): Unit =
     TaskRunLoop.startFull(source, context, cb, null, null, null, context.frameRef())
@@ -5379,8 +5357,7 @@ private[bio] abstract class TaskParallelNewtype extends TaskContextShift {
 
 private[bio] abstract class TaskContextShift extends TaskTimers {
 
-  /**
-    * Default, pure, globally visible `cats.effect.ContextShift`
+  /** Default, pure, globally visible `cats.effect.ContextShift`
     * implementation that shifts the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[IO.runToFuture]]).
@@ -5422,8 +5399,7 @@ private[bio] abstract class TaskContextShift extends TaskTimers {
 
 private[bio] abstract class TaskTimers extends TaskClocks {
 
-  /**
-    * Default, pure, globally visible `cats.effect.Timer`
+  /** Default, pure, globally visible `cats.effect.Timer`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[IO.runToFuture]]).
@@ -5457,8 +5433,7 @@ private[bio] abstract class TaskTimers extends TaskClocks {
 
 private[bio] abstract class TaskClocks extends IODeprecated.Companion {
 
-  /**
-    * Default, pure, globally visible `cats.effect.Clock`
+  /** Default, pure, globally visible `cats.effect.Clock`
     * implementation that defers the evaluation to `Task`'s default
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[IO.runToFuture]]).
@@ -5476,8 +5451,7 @@ private[bio] abstract class TaskClocks extends IODeprecated.Companion {
         IO.deferAction(sc => IO.now(sc.clockMonotonic(unit)))
     }
 
-  /**
-    * Builds a `cats.effect.Clock` instance, given a
+  /** Builds a `cats.effect.Clock` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
   def clock[E](s: Scheduler): Clock[IO[E, *]] =

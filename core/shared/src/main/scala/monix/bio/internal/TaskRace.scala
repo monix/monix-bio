@@ -23,8 +23,7 @@ import monix.execution.atomic.Atomic
 
 private[bio] object TaskRace {
 
-  /**
-    * Implementation for `Task.race`.
+  /** Implementation for `Task.race`.
     */
   def apply[E, A, B](fa: IO[E, A], fb: IO[E, B]): IO[E, Either[A, B]] =
     IO.Async(

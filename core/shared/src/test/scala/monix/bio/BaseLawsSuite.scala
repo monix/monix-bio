@@ -30,13 +30,11 @@ import org.scalacheck.{Arbitrary, Cogen, Gen}
 
 import scala.util.Either
 
-/**
-  * Base trait to inherit in all `monix-bio` tests that use ScalaCheck.
+/** Base trait to inherit in all `monix-bio` tests that use ScalaCheck.
   */
 trait BaseLawsSuite extends monix.execution.BaseLawsSuite with ArbitraryInstances {
 
-  /**
-    * Customizes Cats-Effect's default params.
+  /** Customizes Cats-Effect's default params.
     *
     * At the moment of writing, these match the defaults, but it's
     * better to specify these explicitly.

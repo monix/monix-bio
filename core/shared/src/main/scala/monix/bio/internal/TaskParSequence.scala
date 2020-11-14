@@ -28,8 +28,7 @@ import scala.util.control.NonFatal
 
 private[bio] object TaskParSequence {
 
-  /**
-    * Implementation for `Task.parSequence`
+  /** Implementation for `Task.parSequence`
     */
   def apply[E, A](
     in: Iterable[IO[E, A]]

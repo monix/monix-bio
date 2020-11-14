@@ -99,8 +99,7 @@ private[bio] final class TaskConnectionRef[E] extends CancelableF[IO[E, *]] {
 
 private[bio] object TaskConnectionRef {
 
-  /**
-    * Returns a new `TaskForwardConnection` reference.
+  /** Returns a new `TaskForwardConnection` reference.
     */
   def apply[E](): TaskConnectionRef[E] = new TaskConnectionRef()
 

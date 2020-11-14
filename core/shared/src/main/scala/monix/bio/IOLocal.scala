@@ -32,7 +32,7 @@ import monix.execution.misc.Local
   * async boundaries (aka when threads get forked) by the `Task`
   * run-loop implementation, but only when the `Task` reference
   * gets executed with [[IO.Options.localContextPropagation]]
-  * set to `true`.
+  * set to `true`, or it uses a [[monix.execution.schedulers.TracingScheduler]].
   *
   * One way to achieve this is with [[IO.executeWithOptions]],
   * a single call is sufficient just before `runAsync`:
@@ -208,8 +208,7 @@ final class IOLocal[A] private (ref: Local[A]) {
     UIO(Local.setContext(value))
 }
 
-/**
-  * Builders for [[IOLocal]]
+/** Builders for [[IOLocal]]
   *
   * @define refTransparent [[IO]] returned by this operation
   *                        produces a new [[IOLocal]] each time it is evaluated.

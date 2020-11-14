@@ -112,12 +112,11 @@ object TaskTimedSuite extends BaseTestSuite {
 
   test("stack safety") { implicit sc =>
     def loop(n: Int, acc: Duration): IO[Nothing, Duration] =
-      IO.unit.delayResult(1.second).timed.flatMap {
-        case (duration, _) =>
-          if (n > 0)
-            loop(n - 1, acc + duration)
-          else
-            IO.now(acc)
+      IO.unit.delayResult(1.second).timed.flatMap { case (duration, _) =>
+        if (n > 0)
+          loop(n - 1, acc + duration)
+        else
+          IO.now(acc)
       }
 
     val f = loop(10000, 0.second).runToFuture

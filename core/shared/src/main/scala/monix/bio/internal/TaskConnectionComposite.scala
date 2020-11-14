@@ -88,8 +88,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     }
   }
 
-  /**
-    * Adds a whole collection of cancellation tokens, if the
+  /** Adds a whole collection of cancellation tokens, if the
     * connection is still active, or cancels the whole collection
     * otherwise.
     */
@@ -110,21 +109,18 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
     loop(that.toSeq)
   }
 
-  /**
-    * Removes the given token reference from the underlying collection.
+  /** Removes the given token reference from the underlying collection.
     */
   def remove(token: CancelToken[UIO]): Unit =
     removeAny(token)
 
-  /**
-    * Removes a specific [[monix.execution.Cancelable]] reference
+  /** Removes a specific [[monix.execution.Cancelable]] reference
     * from the underlying collection.
     */
   def remove(cancelable: Cancelable): Unit =
     removeAny(cancelable)
 
-  /**
-    * Removes a specific [[monix.catnap.CancelableF]] reference
+  /** Removes a specific [[monix.catnap.CancelableF]] reference
     * from the underlying collection.
     */
   def remove(conn: CancelableF[UIO]): Unit =
@@ -145,8 +141,7 @@ private[bio] final class TaskConnectionComposite[E] private (stateRef: AtomicAny
 
 private[bio] object TaskConnectionComposite {
 
-  /**
-    * Builder for [[TaskConnectionComposite]].
+  /** Builder for [[TaskConnectionComposite]].
     */
   def apply[E](initial: CancelToken[UIO]*): TaskConnectionComposite[E] =
     new TaskConnectionComposite(Atomic.withPadding(Active(Set(initial: _*)): State, LeftRight128))

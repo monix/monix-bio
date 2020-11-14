@@ -29,8 +29,7 @@ import scala.util.control.NonFatal
 
 private[bio] object TaskConversions {
 
-  /**
-    * Implementation for `IO.toIO`.
+  /** Implementation for `IO.toIO`.
     */
   def toIO[A](source: Task[A])(implicit eff: ConcurrentEffect[Task]): CIO[A] =
     source match {
@@ -45,8 +44,7 @@ private[bio] object TaskConversions {
         }
     }
 
-  /**
-    * Implementation for `IO.toConcurrent`.
+  /** Implementation for `IO.toConcurrent`.
     */
   def toConcurrent[F[_], A](source: Task[A])(implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): F[A] =
     source match {
@@ -62,8 +60,7 @@ private[bio] object TaskConversions {
         }
     }
 
-  /**
-    * Implementation for `IO.toAsync`.
+  /** Implementation for `IO.toAsync`.
     */
   def toAsync[F[_], A](source: Task[A])(implicit F: Async[F], eff: Effect[Task]): F[A] =
     source match {
@@ -75,8 +72,7 @@ private[bio] object TaskConversions {
       case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); CIO.unit }).unsafeRunSync())
     }
 
-  /**
-    * Implementation for `IO.fromEffect`.
+  /** Implementation for `IO.fromEffect`.
     */
   def fromEffect[F[_], A](fa: F[A])(implicit F: Effect[F]): Task[A] =
     fa.asInstanceOf[AnyRef] match {
@@ -99,8 +95,7 @@ private[bio] object TaskConversions {
     IO.Async(start, trampolineBefore = false, trampolineAfter = false)
   }
 
-  /**
-    * Implementation for `IO.fromConcurrentEffect`.
+  /** Implementation for `IO.fromConcurrentEffect`.
     */
   def fromConcurrentEffect[F[_], A](fa: F[A])(implicit F: ConcurrentEffect[F]): Task[A] =
     fa.asInstanceOf[AnyRef] match {
@@ -109,8 +104,7 @@ private[bio] object TaskConversions {
       case _ => fromConcurrentEffect0(fa)
     }
 
-  /**
-    * Implementation for `IO.fromReactivePublisher`.
+  /** Implementation for `IO.fromReactivePublisher`.
     */
   def fromReactivePublisher[A](source: Publisher[A]): Task[Option[A]] =
     Task.cancelable0 { (scheduler, cb) =>

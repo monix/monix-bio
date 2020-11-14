@@ -219,13 +219,11 @@ import java.io.{ByteArrayOutputStream, PrintStream}
 
 import scala.util.control.NonFatal
 
-/**
-  * INTERNAL API — test utilities.
+/** INTERNAL API — test utilities.
   */
 trait TestUtils {
 
-  /**
-    * Silences `System.err`, only printing the output in case exceptions are
+  /** Silences `System.err`, only printing the output in case exceptions are
     * thrown by the executed `thunk`.
     */
   def silenceSystemErr[A](thunk: => A): A =
@@ -250,8 +248,7 @@ trait TestUtils {
       }
     }
 
-  /**
-    * Catches `System.err` output, for testing purposes.
+  /** Catches `System.err` output, for testing purposes.
     */
   def catchSystemErr(thunk: => Unit): String =
     synchronized {

@@ -21,8 +21,7 @@ import monix.bio.{IO, UIO}
 
 private[bio] object UIODeprecated {
 
-  /**
-    * Extension methods describing deprecated `UIO` operations.
+  /** Extension methods describing deprecated `UIO` operations.
     */
   private[bio] abstract class Companion {
 

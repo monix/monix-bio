@@ -26,8 +26,7 @@ import scala.concurrent.ExecutionContext
 
 private[bio] object TaskShift {
 
-  /**
-    * Implementation for `Task.shift`
+  /** Implementation for `Task.shift`
     */
   def apply(ec: ExecutionContext): UIO[Unit] = {
     Async[Nothing, Unit](

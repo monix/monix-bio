@@ -29,16 +29,14 @@ import scala.util.control.NonFatal
 
 private[bio] object UnsafeCancelUtils {
 
-  /**
-    * Internal API.
+  /** Internal API.
     */
   def taskToCancelable(task: IO[Any, Unit])(implicit s: Scheduler): Cancelable = {
     if (task == IO.unit) Cancelable.empty
     else Cancelable(() => task.runAsyncAndForget(s))
   }
 
-  /**
-    * Internal API — very unsafe!
+  /** Internal API — very unsafe!
     */
   private[internal] def cancelAllUnsafe(
     cursor: Iterable[AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */ ]
@@ -53,8 +51,7 @@ private[bio] object UnsafeCancelUtils {
       }
   }
 
-  /**
-    * Internal API — very unsafe!
+  /** Internal API — very unsafe!
     */
   private[internal] def unsafeCancel(
     task: AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */
@@ -75,8 +72,7 @@ private[bio] object UnsafeCancelUtils {
     }
   }
 
-  /**
-    * Internal API — very unsafe!
+  /** Internal API — very unsafe!
     */
   private[internal] def getToken(
     task: AnyRef /* Cancelable | Task[Unit] | CancelableF[Task] */
@@ -94,8 +90,7 @@ private[bio] object UnsafeCancelUtils {
       // $COVERAGE-ON$
     }
 
-  /**
-    * Internal API — very unsafe!
+  /** Internal API — very unsafe!
     */
   private[internal] def triggerCancel(
     task: AnyRef /* Cancelable | UIO[Unit] | CancelableF[UIO] */

@@ -30,11 +30,16 @@ import scala.util.control.NonFatal
 
 private[bio] object TaskMapBoth {
 
-  /**
-    * Implementation for `Task.mapBoth`.
+  /** Implementation for `Task.mapBoth`.
     */
   def apply[E, A1, A2, R](fa1: IO[E, A1], fa2: IO[E, A2])(f: (A1, A2) => R): IO[E, R] = {
-    TracedAsync(new Register(fa1, fa2, f), trampolineBefore = true, trampolineAfter = true, restoreLocals = true, traceKey = f)
+    TracedAsync(
+      new Register(fa1, fa2, f),
+      trampolineBefore = true,
+      trampolineAfter = true,
+      restoreLocals = true,
+      traceKey = f
+    )
   }
 
   // Implementing Async's "start" via `ForkedStart` in order to signal

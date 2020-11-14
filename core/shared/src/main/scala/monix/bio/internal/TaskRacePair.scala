@@ -27,8 +27,7 @@ private[bio] object TaskRacePair {
   // Type aliasing the result only b/c it's a mouthful
   type RaceEither[E, A, B] = Either[(A, Fiber[E, B]), (Fiber[E, A], B)]
 
-  /**
-    * Implementation for `Task.racePair`.
+  /** Implementation for `Task.racePair`.
     */
   def apply[E, A, B](fa: IO[E, A], fb: IO[E, B]): IO[E, RaceEither[E, A, B]] =
     IO.Async(

@@ -32,8 +32,7 @@ import scala.util.control.NonFatal
   */
 private[bio] object TaskEffect {
 
-  /**
-    * `cats.effect.Effect#runAsync`
+  /** `cats.effect.Effect#runAsync`
     */
   def runAsync[A](fa: Task[A])(cb: Either[Throwable, A] => CIO[Unit])(implicit
     s: Scheduler,
@@ -43,8 +42,7 @@ private[bio] object TaskEffect {
       execute(fa, cb); ()
     }
 
-  /**
-    * `cats.effect.ConcurrentEffect#runCancelable`
+  /** `cats.effect.ConcurrentEffect#runCancelable`
     */
   def runCancelable[A](fa: Task[A])(cb: Either[Throwable, A] => CIO[Unit])(implicit
     s: Scheduler,

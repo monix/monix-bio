@@ -17,8 +17,7 @@
 
 package monix.bio.tracing
 
-/**
-  * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
+/** All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
 sealed abstract class IOEvent
 

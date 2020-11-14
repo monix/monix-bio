@@ -58,8 +58,7 @@ Building this implicit value might depend on having an implicit
 s.c.ExecutionContext in scope, a Scheduler or some equivalent type.""")
 trait IOLike[F[_]] extends (F ~> Task) {
 
-  /**
-    * Converts `F[A]` into a `Task[A]`, preserving referential
+  /** Converts `F[A]` into a `Task[A]`, preserving referential
     * transparency if `F[_]` is a pure data type and preserving
     * interruptibility if the source is cancelable.
     */
@@ -69,13 +68,11 @@ trait IOLike[F[_]] extends (F ~> Task) {
 
 object IOLike extends IOLikeImplicits0 {
 
-  /**
-    * Returns the available instance for `F`.
+  /** Returns the available instance for `F`.
     */
   def apply[F[_]](implicit F: IOLike[F]): IOLike[F] = F
 
-  /**
-    * Instance for `Task`, returning the same reference.
+  /** Instance for `Task`, returning the same reference.
     */
   implicit val fromTask: IOLike[Task] =
     new IOLike[Task] {
@@ -83,8 +80,7 @@ object IOLike extends IOLikeImplicits0 {
         fa
     }
 
-  /**
-    * Converts `scala.concurrent.Future` into a `monix.bio.Task`.
+  /** Converts `scala.concurrent.Future` into a `monix.bio.Task`.
     */
   implicit val fromFuture: IOLike[Future] =
     new IOLike[Future] {
@@ -92,8 +88,7 @@ object IOLike extends IOLikeImplicits0 {
         IO.fromFuture(fa)
     }
 
-  /**
-    * Converts `cats.Eval` into a `Task`.
+  /** Converts `cats.Eval` into a `Task`.
     */
   implicit val fromEval: IOLike[Eval] =
     new IOLike[Eval] {
@@ -101,8 +96,7 @@ object IOLike extends IOLikeImplicits0 {
         Concurrent.liftIO[Task, A](CIO.eval(fa))
     }
 
-  /**
-    * Converts [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]]
+  /** Converts [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]]
     * into a `Task`.
     */
   implicit val fromIO: IOLike[CIO] =
@@ -111,8 +105,7 @@ object IOLike extends IOLikeImplicits0 {
         Concurrent.liftIO[Task, A](fa)
     }
 
-  /**
-    * Converts [[cats.effect.SyncIO]] into a `Task`.
+  /** Converts [[cats.effect.SyncIO]] into a `Task`.
     */
   implicit val fromSyncIO: IOLike[SyncIO] =
     new IOLike[SyncIO] {
@@ -120,8 +113,7 @@ object IOLike extends IOLikeImplicits0 {
         Concurrent.liftIO[Task, A](fa.toIO)
     }
 
-  /**
-    * Converts [[scala.util.Try]] into a `Task`.
+  /** Converts [[scala.util.Try]] into a `Task`.
     */
   implicit val fromTry: IOLike[Try] =
     new IOLike[Try] {
@@ -129,8 +121,7 @@ object IOLike extends IOLikeImplicits0 {
         IO.fromTry(fa)
     }
 
-  /**
-    * Converts [[monix.execution.CancelablePromise]] into a `Task`.
+  /** Converts [[monix.execution.CancelablePromise]] into a `Task`.
     */
   implicit val fromCancelablePromise: IOLike[CancelablePromise] =
     new IOLike[CancelablePromise] {
@@ -138,8 +129,7 @@ object IOLike extends IOLikeImplicits0 {
         IO.fromCancelablePromise(p)
     }
 
-  /**
-    * Converts `Function0` (parameter-less function, also called a thunk)
+  /** Converts `Function0` (parameter-less function, also called a thunk)
     * into a `Task`.
     */
   implicit val fromFunction0: IOLike[Function0] =
@@ -148,8 +138,7 @@ object IOLike extends IOLikeImplicits0 {
         IO.Eval(thunk)
     }
 
-  /**
-    * Converts `scala.util.Either` into a `Task`.
+  /** Converts `scala.util.Either` into a `Task`.
     */
   implicit def fromEither[E <: Throwable]: IOLike[Either[E, *]] =
     new IOLike[Either[E, *]] {
@@ -161,8 +150,7 @@ object IOLike extends IOLikeImplicits0 {
 
 private[bio] abstract class IOLikeImplicits0 extends IOLikeImplicits1 {
 
-  /**
-    * Converts [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
+  /** Converts [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.ConcurrentEffect]]
     * into a `Task`.
     */
   implicit def fromConcurrentEffect[F[_]](implicit F: ConcurrentEffect[F]): IOLike[F] =
@@ -175,8 +163,7 @@ private[bio] abstract class IOLikeImplicits0 extends IOLikeImplicits1 {
 
 private[bio] abstract class IOLikeImplicits1 extends IOLikeImplicits2 {
 
-  /**
-    * Converts [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.Async]]
+  /** Converts [[https://typelevel.org/cats-effect/typeclasses/concurrent-effect.html cats.effect.Async]]
     * into a `Task`.
     */
   implicit def fromEffect[F[_]](implicit F: Effect[F]): IOLike[F] =
@@ -189,8 +176,7 @@ private[bio] abstract class IOLikeImplicits1 extends IOLikeImplicits2 {
 
 private[bio] abstract class IOLikeImplicits2 {
 
-  /**
-    * Converts any Future-like datatype into a `Task`, via [[monix.catnap.FutureLift]].
+  /** Converts any Future-like datatype into a `Task`, via [[monix.catnap.FutureLift]].
     */
   implicit def fromFutureLift[F[_]](implicit F: FutureLift[Task, F]): IOLike[F] =
     new IOLike[F] {

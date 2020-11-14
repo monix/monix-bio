@@ -23,8 +23,7 @@ import monix.bio.internal.TaskConversions
 
 import scala.annotation.implicitNotFound
 
-/**
-  * A lawless type class that specifies conversions from `IO`
+/** A lawless type class that specifies conversions from `IO`
   * to similar data types (i.e. pure, asynchronous, preferably
   * cancelable).
   */
@@ -33,8 +32,7 @@ Building this implicit value might depend on having an implicit
 s.c.ExecutionContext in scope, a Scheduler or some equivalent type.""")
 trait IOLift[F[_]] extends (Task ~> F) {
 
-  /**
-    * Converts `Task[A]` into `F[A]`.
+  /** Converts `Task[A]` into `F[A]`.
     *
     * The operation should preserve referential transparency and if
     * possible runtime characteristics (e.g. the result should not
@@ -48,21 +46,18 @@ trait IOLift[F[_]] extends (Task ~> F) {
 
 object IOLift extends IOLiftImplicits0 {
 
-  /**
-    * Returns the available [[IOLift]] instance for `F`.
+  /** Returns the available [[IOLift]] instance for `F`.
     */
   def apply[F[_]](implicit F: IOLift[F]): IOLift[F] = F
 
-  /**
-    * Instance for converting into a `Task`, being the identity function.
+  /** Instance for converting into a `Task`, being the identity function.
     */
   implicit val toTask: IOLift[Task] =
     new IOLift[Task] {
       def apply[A](task: Task[A]): Task[A] = task
     }
 
-  /**
-    * Instance for converting to
+  /** Instance for converting to
     * [[https://typelevel.org/cats-effect/datatypes/io.html cats.effect.IO]].
     */
   implicit def toIO(implicit eff: ConcurrentEffect[Task]): IOLift[CIO] =
@@ -74,8 +69,7 @@ object IOLift extends IOLiftImplicits0 {
 
 private[bio] abstract class IOLiftImplicits0 extends IOLiftImplicits1 {
 
-  /**
-    * Instance for converting to any type implementing
+  /** Instance for converting to any type implementing
     * [[https://typelevel.org/cats-effect/typeclasses/concurrent.html cats.effect.Concurrent]].
     */
   implicit def toConcurrent[F[_]](implicit F: Concurrent[F], eff: ConcurrentEffect[Task]): IOLift[F] =
@@ -87,8 +81,7 @@ private[bio] abstract class IOLiftImplicits0 extends IOLiftImplicits1 {
 
 private[bio] abstract class IOLiftImplicits1 extends IOLiftImplicits2 {
 
-  /**
-    * Instance for converting to any type implementing
+  /** Instance for converting to any type implementing
     * [[https://typelevel.org/cats-effect/typeclasses/async.html cats.effect.Async]].
     */
   implicit def toAsync[F[_]](implicit F: Async[F], eff: Effect[Task]): IOLift[F] =
@@ -100,8 +93,7 @@ private[bio] abstract class IOLiftImplicits1 extends IOLiftImplicits2 {
 
 private[bio] abstract class IOLiftImplicits2 {
 
-  /**
-    * Instance for converting to any type implementing
+  /** Instance for converting to any type implementing
     * [[https://typelevel.org/cats-effect/typeclasses/liftio.html cats.effect.LiftIO]].
     */
   implicit def toAnyLiftIO[F[_]](implicit F: LiftIO[F], eff: ConcurrentEffect[Task]): IOLift[F] =

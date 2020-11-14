@@ -24,8 +24,7 @@ import monix.execution.schedulers.TrampolinedRunnable
 
 private[bio] object TaskDoOnCancel {
 
-  /**
-    * Implementation for `Task.doOnCancel`
+  /** Implementation for `Task.doOnCancel`
     */
   def apply[E, A](self: IO[E, A], callback: UIO[Unit]): IO[E, A] = {
     if (callback eq IO.unit) {
