@@ -119,7 +119,7 @@ object FullStackTracingSuite extends BaseTestSuite {
 
     val test =
       for (r <- traced(task)) yield {
-        assertEquals(r.captured, 13)
+        assertEquals(r.captured, 14)
         assertEquals(
           r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "bracket")),
@@ -135,7 +135,7 @@ object FullStackTracingSuite extends BaseTestSuite {
 
     val test =
       for (r <- traced(task)) yield {
-        assertEquals(r.captured, 13)
+        assertEquals(r.captured, 14)
         assertEquals(
           r.events.collect { case e: IOEvent.StackTrace => e }
             .count(_.stackTrace.exists(_.getMethodName == "bracketCase")),
