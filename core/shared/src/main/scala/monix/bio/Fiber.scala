@@ -54,8 +54,7 @@ import cats.effect.CancelToken
   */
 trait Fiber[E, A] extends cats.effect.Fiber[IO[E, *], A] {
 
-  /**
-    * Triggers the cancellation of the fiber.
+  /** Triggers the cancellation of the fiber.
     *
     * Returns a new task that will complete when the cancellation is
     * sent (but not when it is observed or acted upon).
@@ -75,8 +74,7 @@ trait Fiber[E, A] extends cats.effect.Fiber[IO[E, *], A] {
 
 object Fiber {
 
-  /**
-    * Builds a [[Fiber]] value out of a `task` and its cancelation token.
+  /** Builds a [[Fiber]] value out of a `task` and its cancelation token.
     */
   def apply[E, A](task: IO[E, A], cancel: CancelToken[UIO]): Fiber[E, A] =
     new Tuple(task, cancel)

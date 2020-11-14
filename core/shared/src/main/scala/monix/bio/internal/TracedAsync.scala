@@ -21,8 +21,7 @@ import monix.bio.IO
 import monix.bio.BiCallback
 import monix.bio.internal.TracingPlatform.{isCachedStackTracing, isFullStackTracing}
 
-/**
-  * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
+/** All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
 private[bio] object TracedAsync {
 
@@ -33,7 +32,8 @@ private[bio] object TracedAsync {
     trampolineBefore: Boolean = false,
     trampolineAfter: Boolean = false,
     restoreLocals: Boolean = true,
-    traceKey: AnyRef): IO[E, A] = {
+    traceKey: AnyRef
+  ): IO[E, A] = {
 
     val trace = if (isCachedStackTracing) {
       IOTracing.cached(traceKey.getClass)

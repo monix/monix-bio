@@ -29,8 +29,7 @@ import scala.util.{Failure, Success, Try}
 
 private[bio] object TaskMemoize {
 
-  /**
-    * Implementation for `.memoize` and `.memoizeOnSuccess`.
+  /** Implementation for `.memoize` and `.memoizeOnSuccess`.
     */
   def apply[E, A](source: IO[E, A], cacheErrors: Boolean): IO[E, A] =
     source match {
@@ -142,8 +141,7 @@ private[bio] object TaskMemoize {
       }
     }
 
-    /**
-      * Starts execution, eventually caching the value on completion.
+    /** Starts execution, eventually caching the value on completion.
       */
     @tailrec private def start(context: Context[E], cb: BiCallback[E, A]): Unit = {
       implicit val sc: Scheduler = context.scheduler
@@ -180,8 +178,7 @@ private[bio] object TaskMemoize {
     }
   }
 
-  /**
-    * Separates success case from expected and terminal error case.
+  /** Separates success case from expected and terminal error case.
     */
   private def isSuccess[E, A](result: Try[Either[E, A]]): Boolean =
     result match {

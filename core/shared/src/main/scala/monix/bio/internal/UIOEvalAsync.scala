@@ -23,8 +23,7 @@ import scala.util.control.NonFatal
 
 private[bio] object UIOEvalAsync {
 
-  /**
-    * Implementation for `UIO.evalAsync`.
+  /** Implementation for `UIO.evalAsync`.
     */
   def apply[A](a: () => A): UIO[A] =
     IO.Async[Nothing, A](

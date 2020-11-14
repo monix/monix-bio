@@ -21,8 +21,7 @@ import monix.bio.Task
 
 private[bio] object TaskDeprecated {
 
-  /**
-    * Extension methods describing deprecated `Task` operations.
+  /** Extension methods describing deprecated `Task` operations.
     */
   private[bio] abstract class Companion {
 

@@ -26,9 +26,8 @@ object TaskTraverseSuite extends BaseTestSuite {
   test("IO.traverse should not execute in parallel") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = IO
-      .traverse(seq) {
-        case (i, d) =>
-          UIO.evalAsync(i + 1).delayExecution(d.seconds)
+      .traverse(seq) { case (i, d) =>
+        UIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -46,11 +45,10 @@ object TaskTraverseSuite extends BaseTestSuite {
     val ex = 1111
     val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
     val f = IO
-      .traverse(seq) {
-        case (i, d) =>
-          IO
-            .suspendTotal(if (i < 0) IO.raiseError(ex) else IO.now(i + 1))
-            .delayExecution(d.seconds)
+      .traverse(seq) { case (i, d) =>
+        IO
+          .suspendTotal(if (i < 0) IO.raiseError(ex) else IO.now(i + 1))
+          .delayExecution(d.seconds)
       }
       .attempt
       .runToFuture
@@ -67,11 +65,10 @@ object TaskTraverseSuite extends BaseTestSuite {
     val ex = DummyException("dummy")
     val seq = Seq((1, 2), (-1, 0), (3, 3), (3, 1))
     val f = IO
-      .traverse(seq) {
-        case (i, d) =>
-          UIO
-            .evalAsync(if (i < 0) throw ex else i + 1)
-            .delayExecution(d.seconds)
+      .traverse(seq) { case (i, d) =>
+        UIO
+          .evalAsync(if (i < 0) throw ex else i + 1)
+          .delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -86,8 +83,8 @@ object TaskTraverseSuite extends BaseTestSuite {
   test("IO.traverse should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = IO
-      .traverse(seq) {
-        case (i, d) => UIO.evalAsync(i + 1).delayExecution(d.seconds)
+      .traverse(seq) { case (i, d) =>
+        UIO.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 

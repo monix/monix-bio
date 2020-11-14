@@ -26,7 +26,7 @@ import monix.execution.{BufferCapacity, Scheduler}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-object TaskLocalSuite extends SimpleIOTestSuite {
+object IOLocalSuite extends SimpleIOTestSuite {
   implicit val ec: Scheduler = monix.execution.Scheduler.Implicits.global
   implicit val opts = IO.defaultOptions.enableLocalContextPropagation
 

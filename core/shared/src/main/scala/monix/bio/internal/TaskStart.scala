@@ -23,8 +23,7 @@ import monix.execution.CancelablePromise
 
 private[bio] object TaskStart {
 
-  /**
-    * Implementation for `Task.fork`.
+  /** Implementation for `Task.fork`.
     */
   def forked[E, A](fa: IO[E, A]): UIO[Fiber[E, A]] =
     fa match {

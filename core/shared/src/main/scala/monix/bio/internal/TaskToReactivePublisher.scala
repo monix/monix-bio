@@ -24,8 +24,7 @@ import org.reactivestreams.{Publisher, Subscriber}
 
 private[bio] object TaskToReactivePublisher {
 
-  /**
-    * Implementation for `IO.toReactivePublisher`
+  /** Implementation for `IO.toReactivePublisher`
     */
   def apply[A](self: Task[A])(implicit s: Scheduler): Publisher[A] =
     new Publisher[A] {
@@ -35,7 +34,8 @@ private[bio] object TaskToReactivePublisher {
           new Subscription {
             private[this] var isActive = true
             private[this] val conn = TaskConnection[Throwable]()
-            private[this] val context = IO.Context(s, IO.defaultOptions.withSchedulerFeatures, conn, new StackTracedContext)
+            private[this] val context =
+              IO.Context(s, IO.defaultOptions.withSchedulerFeatures, conn, new StackTracedContext)
 
             def request(n: Long): Unit = {
               require(n > 0, "n must be strictly positive, according to the Reactive Streams contract, rule 3.9")

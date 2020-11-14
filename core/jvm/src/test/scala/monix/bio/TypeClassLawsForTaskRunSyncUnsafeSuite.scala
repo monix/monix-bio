@@ -28,8 +28,7 @@ import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 import scala.util.Try
 
-/**
-  * Type class tests for Task that use an alternative `Eq`, making
+/** Type class tests for Task that use an alternative `Eq`, making
   * use of Task's `runSyncUnsafe`.
   */
 object TypeClassLawsForTaskRunSyncUnsafeSuite
@@ -37,8 +36,7 @@ object TypeClassLawsForTaskRunSyncUnsafeSuite
       IO.defaultOptions.disableAutoCancelableRunLoops
     )
 
-/**
-  * Type class tests for Task that use an alternative `Eq`, making
+/** Type class tests for Task that use an alternative `Eq`, making
   * use of Task's `runSyncUnsafe`, with the tasks being evaluated
   * in auto-cancelable mode.
   */

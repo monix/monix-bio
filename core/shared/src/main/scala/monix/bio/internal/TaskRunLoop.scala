@@ -631,7 +631,16 @@ private[bio] object TaskRunLoop {
           case async =>
             if (tracingCtx eq null) tracingCtx = new StackTracedContext
 
-            return goAsync4Step(async, scheduler, opts, bFirst, bRest, frameIndex, forceFork = false, tracingCtx = tracingCtx)
+            return goAsync4Step(
+              async,
+              scheduler,
+              opts,
+              bFirst,
+              bRest,
+              frameIndex,
+              forceFork = false,
+              tracingCtx = tracingCtx
+            )
         }
 
         if (hasUnboxed) {
@@ -654,7 +663,16 @@ private[bio] object TaskRunLoop {
       } else {
         if (tracingCtx eq null) tracingCtx = new StackTracedContext
         // Force async boundary
-        return goAsync4Step(current, scheduler, opts, bFirst, bRest, frameIndex, forceFork = true, tracingCtx = tracingCtx)
+        return goAsync4Step(
+          current,
+          scheduler,
+          opts,
+          bFirst,
+          bRest,
+          frameIndex,
+          forceFork = true,
+          tracingCtx = tracingCtx
+        )
       }
     } while (true)
     // $COVERAGE-OFF$
@@ -761,6 +779,7 @@ private[bio] object TaskRunLoop {
                 augmentException(error.asInstanceOf[Throwable], tracingCtx)
               }
             }
+
             findErrorHandler[Any](bFirst, bRest) match {
               case null =>
                 return CancelableFuture.failed(UncaughtErrorException.wrap(error))
@@ -830,7 +849,16 @@ private[bio] object TaskRunLoop {
       } else {
         if (tracingCtx eq null) tracingCtx = new StackTracedContext
         // Force async boundary
-        return goAsync4Future(current, scheduler, opts, bFirst, bRest, frameIndex, forceFork = true, tracingCtx = tracingCtx)
+        return goAsync4Future(
+          current,
+          scheduler,
+          opts,
+          bFirst,
+          bRest,
+          frameIndex,
+          forceFork = true,
+          tracingCtx = tracingCtx
+        )
       }
     } while (true)
     // $COVERAGE-OFF$
@@ -920,7 +948,6 @@ private[bio] object TaskRunLoop {
     val p = Promise[A]()
     val cb = BiCallback.fromTry(p.complete).asInstanceOf[BiCallback[Any, Any]]
     val context = Context(scheduler, opts, TaskConnection[Any](), tracingCtx)
-    val current = source.asInstanceOf[IO[E, A]]
 
     if (!forceFork) source match {
       case async: Async[Any, Any] =>
@@ -929,7 +956,7 @@ private[bio] object TaskRunLoop {
         startFull(source, context, cb, null, bFirst, bRest, nextFrame)
     }
     else {
-      restartAsync(current, context, cb, null, bFirst, bRest)
+      restartAsync(source.asInstanceOf[IO[E, A]], context, cb, null, bFirst, bRest)
     }
 
     CancelableFuture(p.future, context.connection.toCancelable(scheduler))
@@ -945,7 +972,6 @@ private[bio] object TaskRunLoop {
     nextFrame: FrameIndex,
     forceFork: Boolean,
     tracingCtx: StackTracedContext
-
   ): Either[IO[E, A], A] = {
 
     val ctx = Context(scheduler, opts, TaskConnection[E](), tracingCtx)
@@ -1028,7 +1054,7 @@ private[bio] object TaskRunLoop {
     // $COVERAGE-ON$
   }
 
-  private def frameStart(em: ExecutionModel): FrameIndex =
+  private[internal] def frameStart(em: ExecutionModel): FrameIndex =
     em.nextFrameIndex(0)
 
   private final class RestoreContext(old: Context[Any], restore: (Any, Any, Context[Any], Context[Any]) => Context[Any])
@@ -1041,8 +1067,7 @@ private[bio] object TaskRunLoop {
       ContextSwitch[Any, Any](Error(e), current => restore(null, e, old, current), null)
   }
 
-  /**
-    * If stack tracing and contextual exceptions are enabled, this
+  /** If stack tracing and contextual exceptions are enabled, this
     * function will rewrite the stack trace of a captured exception
     * to include the async stack trace.
     */
@@ -1055,14 +1080,15 @@ private[bio] object TaskRunLoop {
         val suffix = ctx
           .getStackTraces()
           .flatMap(t => IOTrace.getOpAndCallSite(t.stackTrace))
-          .map {
-            case (methodSite, callSite) =>
-              val op = NameTransformer.decode(methodSite.getMethodName)
+          .map { case (methodSite, callSite) =>
+            val op = NameTransformer.decode(methodSite.getMethodName)
 
-              new StackTraceElement(op + " @ " + callSite.getClassName,
-                callSite.getMethodName,
-                callSite.getFileName,
-                callSite.getLineNumber)
+            new StackTraceElement(
+              op + " @ " + callSite.getClassName,
+              callSite.getMethodName,
+              callSite.getFileName,
+              callSite.getLineNumber
+            )
           }
           .toArray
         ex.setStackTrace(prefix ++ suffix)

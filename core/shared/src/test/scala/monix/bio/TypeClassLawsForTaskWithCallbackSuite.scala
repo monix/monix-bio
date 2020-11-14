@@ -28,15 +28,13 @@ import monix.execution.schedulers.TestScheduler
 import scala.concurrent.{Future, Promise}
 import scala.util.Either
 
-/**
-  * Type class tests for Task that use an alternative `Eq`, making
+/** Type class tests for Task that use an alternative `Eq`, making
   * use of Task's `runAsync(callback)`.
   */
 object TypeClassLawsForTaskWithCallbackSuite
     extends BaseTypeClassLawsForTaskWithCallbackSuite()(IO.defaultOptions.disableAutoCancelableRunLoops)
 
-/**
-  * Type class tests for Task that use an alternative `Eq`, making
+/** Type class tests for Task that use an alternative `Eq`, making
   * use of Task's `runAsync(callback)` and that evaluate the tasks
   * in auto-cancelable mode.
   */

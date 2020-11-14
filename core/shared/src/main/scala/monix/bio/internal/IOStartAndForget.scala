@@ -22,8 +22,7 @@ import monix.bio.IO.Context
 
 private[bio] object IOStartAndForget {
 
-  /**
-    *  Implementation for `IO.startAndForget`
+  /**  Implementation for `IO.startAndForget`
     */
   def apply[E, A](fa: IO[E, A]): UIO[Unit] = {
     val start = (ctx: Context[Nothing], cb: BiCallback[Nothing, Unit]) => {

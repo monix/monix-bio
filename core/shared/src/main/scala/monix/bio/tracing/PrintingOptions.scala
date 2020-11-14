@@ -17,8 +17,7 @@
 
 package monix.bio.tracing
 
-/**
-  * @param showFullStackTraces Whether or not to show the entire stack trace
+/** @param showFullStackTraces Whether or not to show the entire stack trace
   * @param maxStackTraceLines When `showFullStackTraces` is `true`, the maximum number of stack trace
   *                           elements to print
   * @param ignoreStackTraceLines When `showFullStackTraces` is `true`, the number of stack trace elements
@@ -26,9 +25,11 @@ package monix.bio.tracing
   *
   * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
-final case class PrintingOptions private (showFullStackTraces: Boolean,
+final case class PrintingOptions private (
+  showFullStackTraces: Boolean,
   maxStackTraceLines: Int,
-  ignoreStackTraceLines: Int) {
+  ignoreStackTraceLines: Int
+) {
   def withShowFullStackTraces(showFullStackTraces: Boolean): PrintingOptions =
     copy(showFullStackTraces = showFullStackTraces)
 

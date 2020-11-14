@@ -24,8 +24,7 @@ import monix.bio.IO.Trace
 import monix.bio.tracing.IOEvent
 import monix.bio.internal.TracingPlatform.{isCachedStackTracing, isFullStackTracing}
 
-/**
-  * All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
+/** All Credits to https://github.com/typelevel/cats-effect and https://github.com/RaasAhsan
   */
 private[bio] object IOTracing {
 
@@ -68,8 +67,7 @@ private[bio] object IOTracing {
   private def buildFrame(): IOEvent =
     IOEvent.StackTrace(new Throwable().getStackTrace.toList)
 
-  /**
-    * Global cache for trace frames. Keys are references to lambda classes.
+  /** Global cache for trace frames. Keys are references to lambda classes.
     * Should converge to the working set of traces very quickly for hot code paths.
     */
   private[this] val frameCache: ConcurrentHashMap[Class[_], IOEvent] = new ConcurrentHashMap()

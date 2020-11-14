@@ -23,8 +23,7 @@ import monix.execution.Scheduler
 
 private[bio] object TaskExecuteOn {
 
-  /**
-    * Implementation for `Task.executeOn`.
+  /** Implementation for `Task.executeOn`.
     */
   def apply[E, A](source: IO[E, A], s: Scheduler, forceAsync: Boolean): IO[E, A] = {
     val withTrampoline = !forceAsync

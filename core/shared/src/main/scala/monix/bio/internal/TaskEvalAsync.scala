@@ -23,8 +23,7 @@ import scala.util.control.NonFatal
 
 private[bio] object TaskEvalAsync {
 
-  /**
-    * Implementation for `IO.evalAsync`.
+  /** Implementation for `IO.evalAsync`.
     */
   def apply[A](a: () => A): Task[A] =
     IO.Async(

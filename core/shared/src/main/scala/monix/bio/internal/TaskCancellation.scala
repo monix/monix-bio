@@ -28,14 +28,12 @@ import monix.execution.schedulers.TrampolinedRunnable
 
 private[bio] object TaskCancellation {
 
-  /**
-    * Implementation for `Task.uncancelable`.
+  /** Implementation for `Task.uncancelable`.
     */
   def uncancelable[E, A](fa: IO[E, A]): IO[E, A] =
     IO.ContextSwitch[E, A](fa, withConnectionUncancelable.asInstanceOf[Context[E] => Context[E]], restoreConnection)
 
-  /**
-    * Implementation for `Task.onCancelRaiseError`.
+  /** Implementation for `Task.onCancelRaiseError`.
     */
   def raiseError[E, A](fa: IO[E, A], e: E): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {

@@ -27,8 +27,7 @@ import monix.execution.{Cancelable, Scheduler}
 import scala.annotation.tailrec
 import scala.concurrent.Promise
 
-/**
-  * INTERNAL API — Represents a composite of functions
+/** INTERNAL API — Represents a composite of functions
   * (meant for cancellation) that are stacked.
   *
   * Implementation notes:
@@ -41,8 +40,7 @@ import scala.concurrent.Promise
   */
 private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
 
-  /**
-    * Cancels the unit of work represented by this reference.
+  /** Cancels the unit of work represented by this reference.
     *
     * Guaranteed idempotency - calling it multiple times should have the
     * same side-effect as calling it only once. Implementations
@@ -50,14 +48,12 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
     */
   def cancel: CancelToken[UIO]
 
-  /**
-    * @return true in case this cancelable hasn't been canceled,
+  /** @return true in case this cancelable hasn't been canceled,
     *         or false otherwise.
     */
   def isCanceled: Boolean
 
-  /**
-    * Pushes a cancelable token on the stack, to be
+  /** Pushes a cancelable token on the stack, to be
     * popped or canceled later in FIFO order.
     *
     * The function needs a [[monix.execution.Scheduler Scheduler]]
@@ -66,8 +62,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
     */
   def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit
 
-  /**
-    * Pushes a [[monix.execution.Cancelable]] on the stack, to be
+  /** Pushes a [[monix.execution.Cancelable]] on the stack, to be
     * popped or canceled later in FIFO order.
     *
     * The function needs a [[monix.execution.Scheduler Scheduler]]
@@ -76,8 +71,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
     */
   def push(cancelable: Cancelable)(implicit s: Scheduler): Unit
 
-  /**
-    * Pushes a [[monix.catnap.CancelableF]] on the stack, to be
+  /** Pushes a [[monix.catnap.CancelableF]] on the stack, to be
     * popped or canceled later in FIFO order.
     *
     * The function needs a [[monix.execution.Scheduler Scheduler]]
@@ -86,8 +80,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
     */
   def push(connection: CancelableF[UIO])(implicit s: Scheduler): Unit
 
-  /**
-    * Pushes multiple connections on the stack.
+  /** Pushes multiple connections on the stack.
     *
     * The function needs a [[monix.execution.Scheduler Scheduler]]
     * to work because in case the connection was already cancelled,
@@ -95,15 +88,13 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
     */
   def pushConnections(seq: CancelableF[UIO]*)(implicit s: Scheduler): Unit
 
-  /**
-    * Removes a cancelable reference from the stack in FIFO order.
+  /** Removes a cancelable reference from the stack in FIFO order.
     *
     * @return the cancelable reference that was removed.
     */
   def pop(): CancelToken[UIO]
 
-  /**
-    * Tries to reset an `TaskConnection`, from a cancelled state,
+  /** Tries to reset an `TaskConnection`, from a cancelled state,
     * back to a pristine state, but only if possible.
     *
     * Returns `true` on success, or `false` if there was a race
@@ -112,8 +103,7 @@ private[bio] sealed abstract class TaskConnection[E] extends CancelableF[UIO] {
     */
   def tryReactivate(): Boolean
 
-  /**
-    * Transforms this `TaskConnection` into a
+  /** Transforms this `TaskConnection` into a
     * [[monix.execution.Cancelable Cancelable]] reference.
     */
   def toCancelable(implicit s: Scheduler): Cancelable
@@ -125,8 +115,7 @@ private[bio] object TaskConnection {
   def apply[E](): TaskConnection[E] =
     new Impl
 
-  /**
-    * Reusable [[TaskConnection]] reference that cannot
+  /** Reusable [[TaskConnection]] reference that cannot
     * be canceled.
     */
   def uncancelable[E]: TaskConnection[E] = Uncancelable.asInstanceOf[TaskConnection[E]]

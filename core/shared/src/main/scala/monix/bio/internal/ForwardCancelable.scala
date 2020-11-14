@@ -28,8 +28,7 @@ import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-/**
-  * A placeholder for a [[cats.effect.CancelToken]] that will be set at a later time,
+/** A placeholder for a [[cats.effect.CancelToken]] that will be set at a later time,
   * the equivalent of a `Deferred[Task, CancelToken]`.
   *
   * Used in the implementation of `bracket`, see [[TaskBracket]].
@@ -79,14 +78,12 @@ final private[internal] class ForwardCancelable private () {
 }
 
 private[internal] object ForwardCancelable {
-  /**
-    * Builds reference.
+  /** Builds reference.
     */
   def apply(): ForwardCancelable =
     new ForwardCancelable
 
-  /**
-    * Models the internal state of [[ForwardCancelable]]:
+  /** Models the internal state of [[ForwardCancelable]]:
     *
     *  - on start, the state is [[Empty]] of `Nil`, aka [[init]]
     *  - on `cancel`, if no token was assigned yet, then the state will

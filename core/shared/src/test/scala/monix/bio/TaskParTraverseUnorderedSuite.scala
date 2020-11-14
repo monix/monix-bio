@@ -28,9 +28,8 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
   test("IO.parTraverseUnordered should execute in parallel") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = Task
-      .parTraverseUnordered(seq) {
-        case (i, d) =>
-          Task.evalAsync(i + 1).delayExecution(d.seconds)
+      .parTraverseUnordered(seq) { case (i, d) =>
+        Task.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -46,11 +45,10 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
     val ex = DummyException("dummy")
     val seq = Seq((1, 3), (-1, 1), (3, 2), (3, 1))
     val f = Task
-      .parTraverseUnordered(seq) {
-        case (i, d) =>
-          Task
-            .evalAsync(if (i < 0) throw ex else i + 1)
-            .delayExecution(d.seconds)
+      .parTraverseUnordered(seq) { case (i, d) =>
+        Task
+          .evalAsync(if (i < 0) throw ex else i + 1)
+          .delayExecution(d.seconds)
       }
       .runToFuture
 
@@ -63,8 +61,8 @@ object TaskParTraverseUnorderedSuite extends BaseTestSuite {
   test("IO.parTraverseUnordered should be canceled") { implicit s =>
     val seq = Seq((1, 2), (2, 1), (3, 3))
     val f = Task
-      .parTraverseUnordered(seq) {
-        case (i, d) => Task.evalAsync(i + 1).delayExecution(d.seconds)
+      .parTraverseUnordered(seq) { case (i, d) =>
+        Task.evalAsync(i + 1).delayExecution(d.seconds)
       }
       .runToFuture
 

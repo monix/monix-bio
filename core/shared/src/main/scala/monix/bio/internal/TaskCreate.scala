@@ -31,14 +31,12 @@ import monix.execution.{Cancelable, Scheduler, UncaughtExceptionReporter}
 
 private[bio] object TaskCreate {
 
-  /**
-    * Implementation for `cats.effect.Concurrent#cancelable`.
+  /** Implementation for `cats.effect.Concurrent#cancelable`.
     */
   def cancelableEffect[A](k: (Either[Throwable, A] => Unit) => CancelToken[Task]): Task[A] =
     cancelable0[Throwable, A]((_, cb) => k(BiCallback.toEither(cb)))
 
-  /**
-    * Implementation for `Task.cancelable`
+  /** Implementation for `Task.cancelable`
     */
   def cancelable0[E, A](fn: (Scheduler, BiCallback[E, A]) => CancelToken[IO[E, *]]): IO[E, A] = {
     val start = new Cancelable0Start[E, A, CancelToken[IO[E, *]]](fn) {
@@ -48,14 +46,12 @@ private[bio] object TaskCreate {
     TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = fn)
   }
 
-  /**
-    * Implementation for `Task.create`, used via `TaskBuilder`.
+  /** Implementation for `Task.create`, used via `TaskBuilder`.
     */
   def cancelableIO[E, A](start: (Scheduler, BiCallback[E, A]) => CancelToken[CIO]): IO[E, A] =
     cancelable0[E, A]((sc, cb) => Task.from(start(sc, cb)).hideErrors)
 
-  /**
-    * Implementation for `Task.create`, used via `TaskBuilder`.
+  /** Implementation for `Task.create`, used via `TaskBuilder`.
     */
   def cancelableCancelable[E, A](fn: (Scheduler, BiCallback[E, A]) => Cancelable): IO[E, A] = {
     val start = new Cancelable0Start[E, A, Cancelable](fn) {
@@ -65,8 +61,7 @@ private[bio] object TaskCreate {
     TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = fn)
   }
 
-  /**
-    * Implementation for `Task.async0`
+  /** Implementation for `Task.async0`
     */
   def async0[E, A](fn: (Scheduler, BiCallback[E, A]) => Any): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {
@@ -78,8 +73,7 @@ private[bio] object TaskCreate {
     TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = fn)
   }
 
-  /**
-    * Implementation for `cats.effect.Async#async`.
+  /** Implementation for `cats.effect.Async#async`.
     *
     * It duplicates the implementation of `Task.async0` with the purpose
     * of avoiding extraneous callback allocations.
@@ -92,8 +86,7 @@ private[bio] object TaskCreate {
     TracedAsync[E, A](start, trampolineBefore = false, trampolineAfter = false, traceKey = k)
   }
 
-  /**
-    * Implementation for `Task.asyncF`.
+  /** Implementation for `Task.asyncF`.
     */
   def asyncF[E, A](k: BiCallback[E, A] => IO[E, Unit]): IO[E, A] = {
     val start = (ctx: Context[E], cb: BiCallback[E, A]) => {

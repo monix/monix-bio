@@ -46,18 +46,17 @@ private[bio] object TaskParSequenceN {
         pairs <- IO.traverse(in.toList)(task => Deferred[Task, A].map(p => (p, task)).hideErrors)
         _     <- queue.offerMany(pairs).hideErrors
         workers = UIO.parSequence(List.fill(parallelism.min(itemSize)) {
-          queue.poll.hideErrors.flatMap {
-            case (p, task) =>
-              task.redeemCauseWith(
-                err =>
-                  error
-                    .complete(err)
-                    // error already registered, needs to report others so they are not lost
-                    .onErrorHandleWith(_ =>
-                      IO.deferAction(s => UIO(s.reportFailure(err.fold(identity, UncaughtErrorException.wrap))))
-                    ),
-                a => p.complete(a).hideErrors
-              )
+          queue.poll.hideErrors.flatMap { case (p, task) =>
+            task.redeemCauseWith(
+              err =>
+                error
+                  .complete(err)
+                  // error already registered, needs to report others so they are not lost
+                  .onErrorHandleWith(_ =>
+                    IO.deferAction(s => UIO(s.reportFailure(err.fold(identity, UncaughtErrorException.wrap))))
+                  ),
+              a => p.complete(a).hideErrors
+            )
           }.loopForever.start
         })
         res <- workers.bracketCase { _ =>
@@ -75,12 +74,11 @@ private[bio] object TaskParSequenceN {
               case Right(values) =>
                 IO.pure(values)
             }
-        } {
-          case (fiber, exit) =>
-            exit match {
-              case ExitCase.Completed => UIO.unit
-              case _ => IO.traverse(fiber)(_.cancel).void
-            }
+        } { case (fiber, exit) =>
+          exit match {
+            case ExitCase.Completed => UIO.unit
+            case _ => IO.traverse(fiber)(_.cancel).void
+          }
         }
       } yield res
     }

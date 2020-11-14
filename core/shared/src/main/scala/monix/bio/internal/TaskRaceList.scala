@@ -26,8 +26,7 @@ import monix.execution.exceptions.{CompositeException, UncaughtErrorException}
 
 private[bio] object TaskRaceList {
 
-  /**
-    * Implementation for `IO.raceMany`
+  /** Implementation for `IO.raceMany`
     */
   def apply[E, A](tasks: Iterable[IO[E, A]]): IO[E, A] =
     IO.Async(new Register(tasks), trampolineBefore = true, trampolineAfter = true)

@@ -83,8 +83,7 @@ private[monix] object TaskBracket {
   // Task.bracketE
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-  /**
-    * [[monix.bio.IO.bracket]] and [[monix.bio.IO.bracketCase]]
+  /** [[monix.bio.IO.bracket]] and [[monix.bio.IO.bracketCase]]
     */
   def either[E, A, B](
     acquire: IO[E, A],
@@ -131,8 +130,7 @@ private[monix] object TaskBracket {
   // Task.bracketCase
   // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-  /**
-    * [[monix.bio.IO.bracketE]]
+  /** [[monix.bio.IO.bracketE]]
     */
   def exitCase[E, A, B](
     acquire: IO[E, A],
