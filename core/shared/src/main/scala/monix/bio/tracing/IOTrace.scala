@@ -36,7 +36,7 @@ final case class IOTrace(events: List[IOEvent], captured: Int, omitted: Int) {
     val Junction = "├"
     val Line = "│"
 
-    val acc0 = s"TaskTrace: $captured frames captured\n"
+    val acc0 = s"IOTrace: $captured frames captured\n"
     if (options.showFullStackTraces) {
       val stackTraces = events.collect { case e: IOEvent.StackTrace => e }
 
