@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Asynchronous Stack Traces · Monix BIO</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Monix IO comes with a support for more readable stack traces."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Asynchronous Stack Traces · Monix BIO"/><meta property="og:type" content="website"/><meta property="og:url" content="https://bio.monix.io/"/><meta property="og:description" content="Monix IO comes with a support for more readable stack traces."/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://bio.monix.io/img/monix-logo.png"/><link rel="shortcut icon" href="/img/monix-logo.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"/><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/monix-logo.svg" alt="Monix BIO"/><h2 class="headerTitleWithLogo">Monix BIO</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/api/monix/bio/index.html" target="_self">API Docs</a></li><li class="siteNavGroupActive"><a href="/docs/introduction" target="_self">Documentation</a></li><li class=""><a href="https://github.com/monix/monix-bio" target="_self">GitHub</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Documentation</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/docs/getting-started">Getting Started</a></li><li class="navListItem"><a class="navItem" href="/docs/creating">Creating IO</a></li><li class="navListItem"><a class="navItem" href="/docs/execution">Executing IO</a></li><li class="navListItem"><a class="navItem" href="/docs/error-handling">Error Handling</a></li><li class="navListItem"><a class="navItem" href="/docs/resource-safety">Resource Safety</a></li><li class="navListItem"><a class="navItem" href="/docs/cats-effect">Cats-Effect Integration</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/stack-traces">Asynchronous Stack Traces</a></li><li class="navListItem"><a class="navItem" href="/docs/comparison">Other Effects</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Asynchronous Stack Traces</h1></header><article><div><span><p>Monix IO comes with a support for more readable stack traces.</p>
+<p>A notable pain point of working with asynchronous code on the JVM is that stack traces no longer provide a valuable context of the execution path that a program takes.
+This limitation is even more pronounced with Scala's Future (pre- 2.13), where an asynchronous boundary is inserted after each operation.
+Task suffers a similar problem, but even a synchronous <code>IO</code> program's stack trace is polluted with the run-loop details.</p>
+<h2><a class="anchor" aria-hidden="true" id="configuration"></a><a href="#configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration</h2>
+<p>There are three stack tracing modes:</p>
+<ul>
+<li><code>NONE</code></li>
+<li><code>CACHED</code></li>
+<li><code>FULL</code></li>
+</ul>
+<p>Each tracing mode comes with a different stack traces detail at the cost of the performance penalty.
+We've found <code>CACHED</code> mode to be the best middle-ground, and it is set by default.</p>
+<p>To prevent unbounded memory usage, stack traces for fiber are accumulated in an internal buffer as execution proceeds.
+If more traces are collected than the buffer can retain, then the older traces will be overwritten.
+The default size for the buffer is 16 but can be changed via the system property <code>monix.bio.traceBufferLogSize</code>.
+Note that this property is expressed as a logarithm of a power of two!</p>
+<p>For example, to enable full-stack tracing and a trace buffer size of 32, specify the following system properties:</p>
+<p><code>-Dmonix.bio.stackTracingMode=full -Dmonix.bio.traceBufferLogSize=5</code></p>
+<p>Note that the <code>stackTracingMode</code> option is case insensitive.</p>
+<p>Another option is <code>monix.bio.enhancedExceptions</code> that is <code>true</code> by default and says whether exceptions caught by <code>IO</code> should include enriched stack trace information.</p>
+<h3><a class="anchor" aria-hidden="true" id="none"></a><a href="#none" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>NONE</h3>
+<p>No tracing is instrumented by the program and so incurs a negligible impact to performance. If a trace is requested, it will be empty.</p>
+<h3><a class="anchor" aria-hidden="true" id="cached"></a><a href="#cached" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>CACHED</h3>
+<p>When cached stack tracing is enabled, a stack trace is captured and cached for selected operations, such as every <code>map</code>, <code>flatMap</code>, <code>create</code>, and <code>parMap2</code> call.</p>
+<p>The stack trace cache is indexed by the lambda class reference, so cached tracing may produce inaccurate fiber traces under several scenarios:</p>
+<ul>
+<li>Monad transformer composition</li>
+<li>A named function is supplied to map, async, or flatMap at multiple call-sites</li>
+</ul>
+<p>We measured about 10-30% performance hit when cached tracing is enabled in micro-benchmarks, but it will most likely be much less for any real application.</p>
+<p>We strongly recommend benchmarking applications that use tracing and would appreciate any (good or bad!) reports.</p>
+<p>This is the recommended mode to run in most production applications and is enabled by default.</p>
+<h3><a class="anchor" aria-hidden="true" id="full"></a><a href="#full" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FULL</h3>
+<p>When full stack tracing is enabled, a stack trace is captured for most combinators, including <code>now</code>, <code>eval</code>, <code>suspend</code>, <code>raiseError</code> as well as those traced in cached mode.</p>
+<p>Stack traces are collected on every invocation, so naturally, most programs will experience a significant performance hit.
+This mode is mainly useful for debugging in development environments.</p>
+<h2><a class="anchor" aria-hidden="true" id="showing-stack-traces"></a><a href="#showing-stack-traces" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Showing Stack Traces</h2>
+<p>If <code>monix.bio.enhancedExceptions</code> is set to <code>true</code>, all exceptions caught by <code>IO</code> will include extra information in their stack trace.</p>
+<p>Another option is to call <code>IO.trace</code> to expose stack trace information at will.</p>
+<h2><a class="anchor" aria-hidden="true" id="example"></a><a href="#example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h2>
+<pre><code class="hljs css language-scala"><span class="hljs-keyword">package</span> test.app
+
+<span class="hljs-keyword">import</span> monix.bio.{<span class="hljs-type">IO</span>, <span class="hljs-type">Task</span>, <span class="hljs-type">UIO</span>}
+<span class="hljs-keyword">import</span> monix.execution.<span class="hljs-type">Scheduler</span>
+<span class="hljs-keyword">import</span> cats.implicits._
+
+<span class="hljs-keyword">import</span> scala.concurrent.duration._
+
+<span class="hljs-class"><span class="hljs-keyword">object</span> <span class="hljs-title">TestTracingApp</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">App</span> </span>{
+  <span class="hljs-keyword">implicit</span> <span class="hljs-keyword">val</span> s = <span class="hljs-type">Scheduler</span>.global
+
+  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">customMethod</span></span>: <span class="hljs-type">UIO</span>[<span class="hljs-type">Unit</span>] =
+    <span class="hljs-type">IO</span>.now(()).guarantee(<span class="hljs-type">IO</span>.sleep(<span class="hljs-number">10.</span>millis))
+
+  <span class="hljs-keyword">val</span> tracingTestApp: <span class="hljs-type">Task</span>[<span class="hljs-type">Unit</span>] = <span class="hljs-keyword">for</span> {
+    _ &lt;- <span class="hljs-type">IO</span>.shift
+    _ &lt;- <span class="hljs-type">IO</span>.unit.attempt
+    _ &lt;- (<span class="hljs-type">Task</span>(println(<span class="hljs-string">"Started the program"</span>)), <span class="hljs-type">IO</span>.unit).parTupled
+    _ &lt;- customMethod
+    _ &lt;- <span class="hljs-keyword">if</span> (<span class="hljs-literal">true</span>) <span class="hljs-type">IO</span>.raiseError(<span class="hljs-keyword">new</span> <span class="hljs-type">Exception</span>(<span class="hljs-string">"boom"</span>)) <span class="hljs-keyword">else</span> <span class="hljs-type">IO</span>.unit
+  } <span class="hljs-keyword">yield</span> ()
+
+  tracingTestApp.onErrorHandleWith(ex =&gt; <span class="hljs-type">UIO</span>(ex.printStackTrace())).runSyncUnsafe()
+}
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="none-1"></a><a href="#none-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>NONE</h3>
+<pre><code class="hljs">java<span class="hljs-selector-class">.lang</span><span class="hljs-selector-class">.Exception</span>: boom
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span>.TaskRunLoop$.startFull(TaskRunLoop<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">242</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.TaskRestartCallback</span>.syncOnSuccess(TaskRestartCallback<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">125</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span>.TaskRestartCallback$<span class="hljs-variable">$anon</span>$<span class="hljs-number">1</span>.run(TaskRestartCallback<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">159</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.Trampoline</span>.monix<span class="hljs-variable">$execution</span><span class="hljs-variable">$internal</span><span class="hljs-variable">$Trampoline</span>$<span class="hljs-variable">$immediateLoop</span>(Trampoline<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">66</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.Trampoline</span>.startLoop(Trampoline<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">32</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span>.TrampolineExecutionContext<span class="hljs-variable">$JVMNormalTrampoline</span>.super<span class="hljs-variable">$startLoop</span>(TrampolineExecutionContext<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">142</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span>.TrampolineExecutionContext<span class="hljs-variable">$JVMNormalTrampoline</span>.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$startLoop</span>$<span class="hljs-number">1</span>(TrampolineExecutionContext<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">142</span>)
+        at scala<span class="hljs-selector-class">.runtime</span><span class="hljs-selector-class">.java8</span>.JFunction0<span class="hljs-variable">$mcV</span><span class="hljs-variable">$sp</span>.apply(JFunction0<span class="hljs-variable">$mcV</span><span class="hljs-variable">$sp</span><span class="hljs-selector-class">.scala</span>:<span class="hljs-number">18</span>)
+        at scala<span class="hljs-selector-class">.concurrent</span>.BlockContext$.withBlockContext(BlockContext<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">94</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span>.TrampolineExecutionContext<span class="hljs-variable">$JVMNormalTrampoline</span>.startLoop(TrampolineExecutionContext<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">142</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.Trampoline</span>.execute(Trampoline<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">40</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span><span class="hljs-selector-class">.TrampolineExecutionContext</span>.execute(TrampolineExecutionContext<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">57</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span><span class="hljs-selector-class">.BatchingScheduler</span>.execute(BatchingScheduler<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">50</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span><span class="hljs-selector-class">.BatchingScheduler</span>.execute$(BatchingScheduler<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">47</span>)
+        at monix<span class="hljs-selector-class">.execution</span><span class="hljs-selector-class">.schedulers</span><span class="hljs-selector-class">.AsyncScheduler</span>.execute(AsyncScheduler<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">31</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.TaskRestartCallback</span>.onSuccess(TaskRestartCallback<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">81</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span>.TaskRunLoop$.startFull(TaskRunLoop<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">237</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.TaskRestartCallback</span>.syncOnSuccess(TaskRestartCallback<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">125</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span><span class="hljs-selector-class">.TaskRestartCallback</span>.onSuccess(TaskRestartCallback<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">83</span>)
+        at monix<span class="hljs-selector-class">.bio</span><span class="hljs-selector-class">.internal</span>.TaskSleep<span class="hljs-variable">$SleepRunnable</span>.run(TaskSleep<span class="hljs-selector-class">.scala</span>:<span class="hljs-number">67</span>)
+        at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span>.ForkJoinTask<span class="hljs-variable">$RunnableExecuteAction</span>.exec(ForkJoinTask<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1402</span>)
+        at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.ForkJoinTask</span>.doExec(ForkJoinTask<span class="hljs-selector-class">.java</span>:<span class="hljs-number">289</span>)
+        at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span>.ForkJoinPool<span class="hljs-variable">$WorkQueue</span>.runTask(ForkJoinPool<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1056</span>)
+        at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.ForkJoinPool</span>.runWorker(ForkJoinPool<span class="hljs-selector-class">.java</span>:<span class="hljs-number">1692</span>)
+        at java<span class="hljs-selector-class">.util</span><span class="hljs-selector-class">.concurrent</span><span class="hljs-selector-class">.ForkJoinWorkerThread</span>.run(ForkJoinWorkerThread<span class="hljs-selector-class">.java</span>:<span class="hljs-number">157</span>)
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="cached-1"></a><a href="#cached-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>CACHED</h3>
+<pre><code class="hljs">java.lang.Exception: boom
+        at <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$5</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:37)
+        at map @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$5</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:37)
+        at guarantee @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.customMethod(TestTracingApp.<span class="hljs-keyword">scala</span>:30)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$4</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:36)
+        at parTupled @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at parTupled @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$1</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:34)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.delayedEndpoint<span class="hljs-variable">$test</span><span class="hljs-variable">$app</span><span class="hljs-variable">$TestTracingApp</span><span class="hljs-variable">$1</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:33)
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="full-1"></a><a href="#full-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>FULL</h3>
+<pre><code class="hljs">java.lang.Exception: boom
+        at <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$5</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:37)
+        at raiseError @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$5</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:37)
+        at map @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$5</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:37)
+        at now @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.customMethod(TestTracingApp.<span class="hljs-keyword">scala</span>:30)
+        at guarantee @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.customMethod(TestTracingApp.<span class="hljs-keyword">scala</span>:30)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$4</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:36)
+        at &lt;clinit&gt; @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.delayedEndpoint<span class="hljs-variable">$test</span><span class="hljs-variable">$app</span><span class="hljs-variable">$TestTracingApp</span><span class="hljs-variable">$1</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:33)
+        at apply @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at parTupled @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at parTupled @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$2</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:35)
+        at &lt;clinit&gt; @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.delayedEndpoint<span class="hljs-variable">$test</span><span class="hljs-variable">$app</span><span class="hljs-variable">$TestTracingApp</span><span class="hljs-variable">$1</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:33)
+        at flatMap @ <span class="hljs-keyword">test</span>.<span class="hljs-keyword">app</span>.TestTracingApp$.<span class="hljs-variable">$anonfun</span><span class="hljs-variable">$tracingTestApp</span><span class="hljs-variable">$1</span>(TestTracingApp.<span class="hljs-keyword">scala</span>:34)
+</code></pre>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/cats-effect"><span class="arrow-prev">← </span><span>Cats-Effect Integration</span></a><a class="docs-next button" href="/docs/comparison"><span>Other Effects</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#configuration">Configuration</a><ul class="toc-headings"><li><a href="#none">NONE</a></li><li><a href="#cached">CACHED</a></li><li><a href="#full">FULL</a></li></ul></li><li><a href="#showing-stack-traces">Showing Stack Traces</a></li><li><a href="#example">Example</a><ul class="toc-headings"><li><a href="#none-1">NONE</a></li><li><a href="#cached-1">CACHED</a></li><li><a href="#full-1">FULL</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><hr class="separator"/><section class="copyright">Copyright © 2019-2020 The Monix Project Developers.</section></footer></div></body></html>
