@@ -114,7 +114,6 @@ Published for ScalaJS 0.6.x, 1.x, Scala ${scalaPublishVersions}.
 - Complete documentation (see [#133](https://github.com/monix/monix-bio/issues/113) for current progress)
 - \`reactive\` module to use \`monix.reactive.Observable\` with \`monix.bio.IO\`
 - built-in interop with \`monix.eval.Task\` without any imports
-- better stack traces
 - (?) \`UIO\`-friendy builders for \`cats.effect.concurrent\` and \`monix-catnap\`
 - (?) \`Coeval\` with typed errors
 
