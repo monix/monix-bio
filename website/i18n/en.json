@@ -28,6 +28,9 @@
       },
       "resource-safety": {
         "title": "Resource Safety"
+      },
+      "stack-traces": {
+        "title": "Asynchronous Stack Traces"
       }
     },
     "links": {

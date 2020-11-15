@@ -1,5 +1,5 @@
 {
   "docs": {
-    "Documentation": ["introduction", "getting-started", "creating", "execution", "error-handling", "resource-safety", "cats-effect", "comparison"]
+    "Documentation": ["introduction", "getting-started", "creating", "execution", "error-handling", "resource-safety", "cats-effect", "stack-traces", "comparison"]
   }
 }
