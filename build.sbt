@@ -46,7 +46,7 @@ lazy val coreJS = project.in(file("core/js"))
   .enablePlugins(ScalaJSPlugin)
   .settings(scalaJSSettings)
   .settings(name := "monix-bio")
-
+ 
 lazy val benchmarks = project.in(file("benchmarks"))
   .dependsOn(coreJVM)
   .enablePlugins(JmhPlugin)
