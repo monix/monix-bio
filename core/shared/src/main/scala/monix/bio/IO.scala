@@ -2951,6 +2951,10 @@ object IO extends TaskInstancesLevel0 {
   def deferFutureAction[A](f: Scheduler => Future[A]): Task[A] =
     TaskFromFuture.deferAction(f)
 
+  /** Promote a non-strict Scala `Future` wrapping a Scala `Either[E, A]` to a `IO[E, A]`. */
+  def deferFutureEither[E, A](fa: => Future[Either[E, A]]): IO[E, A] =
+    deferTotal(fromFutureEither(fa))
+
   /** Alias for [[defer]]. */
   def suspend[A](fa: => Task[A]): Task[A] =
     IOTracing.decorateIfNeeded(Suspend(() => fa))
@@ -3664,6 +3668,10 @@ object IO extends TaskInstancesLevel0 {
     */
   def fromFuture[A](f: Future[A]): Task[A] =
     TaskFromFuture.strict(f)
+
+  /** Builds a [[IO]] instance out of a Scala `Either` wrapped in a Scala `Future` */
+  def fromFutureEither[E, A](a: Future[Either[E, A]]): IO[E, A] =
+    TaskFromFutureEither.strict(a)
 
   /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
