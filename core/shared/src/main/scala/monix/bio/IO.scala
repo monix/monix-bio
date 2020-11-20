@@ -3665,6 +3665,10 @@ object IO extends TaskInstancesLevel0 {
   def fromFuture[A](f: Future[A]): Task[A] =
     TaskFromFuture.strict(f)
 
+  /** Builds a [[IO]] instance out of a Scala `Either` wrapped in a Scala `Future` */
+  def fromFutureEither[E, A](a: => Future[Either[E, A]]): IO[E, A] =
+    IO.deferFuture(a).hideErrors.rethrow
+
   /** Wraps a [[monix.execution.CancelablePromise]] into `Task`. */
   def fromCancelablePromise[A](p: CancelablePromise[A]): Task[A] =
     TaskFromFuture.fromCancelablePromise(p)
