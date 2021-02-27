@@ -180,8 +180,8 @@ lazy val doNotPublishArtifact = Seq(
 
 // General Settings
 lazy val sharedSettings = Seq(
-  scalaVersion := "2.13.5",
-  crossScalaVersions := Seq("2.12.10", "2.13.5"),
+  scalaVersion := "2.13.1",
+  crossScalaVersions := Seq("2.12.13", "2.13.1"),
   scalacOptions ++= Seq(
     // warnings
     "-unchecked", // able additional warnings where generated code depends on assumptions
