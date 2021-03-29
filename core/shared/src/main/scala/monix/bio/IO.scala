@@ -2071,7 +2071,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *   sealed trait DomainError
     *   case class ErrorA(message: String) extends DomainError
     *
-    *   val io: IO[DomainError, String] = IO("1".).mapErrorPartial {
+    *   val io: IO[DomainError, String] = IO("1").mapErrorPartial {
     *     case ex: NumberFormatException => IO.raiseError(ErrorA(s"Invalid input: \\${ex.getMessage}"))
     *   }
     * }}}
