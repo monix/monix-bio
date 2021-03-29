@@ -23,3 +23,9 @@ project/plugins/project/
 /website/static/api/
 /website/variables.js
 /website/yarn.lock
+
+.bloop
+.metals
+.vscode
+.bsp
+metals.sbt
