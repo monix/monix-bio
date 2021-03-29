@@ -2059,6 +2059,9 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, IO[E1, B]]): IO[E1, B] =
     onErrorHandleWith(ex => pf.applyOrElse(ex, raiseConstructor[E]))
 
+  final def mapErrorPartial[E1, B >: A](pf: PartialFunction[E, IO[E1, B]])(implicit E: E <:< Throwable): IO[E1, B] =
+    onErrorHandleWith(ex => pf.applyOrElse(ex, (ex: E) => IO.terminate(E(ex))))
+
   /** Creates a new task that will handle any matching throwable that
     * this task might emit by executing another task.
     *
