@@ -2072,7 +2072,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *   case class ErrorA(message: String) extends DomainError
     *
     *   val io: IO[DomainError, String] = IO("1").mapErrorPartial {
-    *     case ex: NumberFormatException => IO.raiseError(ErrorA(s"Invalid input: \\${ex.getMessage}"))
+    *     case ex: NumberFormatException => ErrorA(s"Invalid input: \\${ex.getMessage}")
     *   }
     * }}}
     * See [[mapErrorPartial]] for the version that takes a pure partial function
