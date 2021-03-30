@@ -2060,7 +2060,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     onErrorHandleWith(ex => pf.applyOrElse(ex, raiseConstructor[E]))
 
   /** Use this method to lift a subset of errors into domain-specific errors.
-    * Unmatched errors will be considered non-recoverable and will terminate IO.
+    * Not matched errors will be considered non-recoverable and will terminate IO.
     *
     * Example:
     * {{{
@@ -2259,7 +2259,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
   }
 
   /** Use this method to lift a subset of errors into domain-specific errors.
-    * Unmatched errors will be considered non-recoverable and will terminate IO.
+    * Not matched errors will be considered non-recoverable and will terminate IO.
     *
     * Example:
     * {{{
