@@ -2059,12 +2059,8 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, IO[E1, B]]): IO[E1, B] =
     onErrorHandleWith(ex => pf.applyOrElse(ex, raiseConstructor[E]))
 
-  /** Creates a new task that will will transform recoverable errors
-    * using supplied partial function `pf`.
-    *
-    * Use this method to lift recoverable errors into domain specific error ADT
-    *
-    * Exceptions matched by pf are raised in the typed error channel. All other exceptions are raised in the internal error channel.
+  /** Use this method to lift a subset of errors into domain-specific errors.
+    * Unmatched errors will be considered non-recoverable and will terminate IO.
     *
     * Example:
     * {{{
@@ -2075,7 +2071,6 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *     case ex: NumberFormatException => ErrorA(s"Invalid input: \\${ex.getMessage}")
     *   }
     * }}}
-    * See [[mapErrorPartial]] for the version that takes a pure partial function
     */
   final def mapErrorPartialWith[E1, B >: A](pf: PartialFunction[E, IO[E1, B]])(implicit E: E <:< Throwable): IO[E1, B] =
     onErrorHandleWith(ex => pf.applyOrElse(ex, (ex: E) => IO.terminate(E(ex))))
@@ -2263,12 +2258,8 @@ sealed abstract class IO[+E, +A] extends Serializable {
     IO.FlatMap(this, IO.MapError[E, E1, A](f), trace)
   }
 
-  /** Creates a new task that will will transform recoverable errors
-    * using supplied partial function `pf`.
-    *
-    * Use this method to lift recoverable errors into domain specific error ADT
-    *
-    * Exceptions matched by pf are raised in the typed error channel. All other exceptions are raised in the internal error channel.
+  /** Use this method to lift a subset of errors into domain-specific errors.
+    * Unmatched errors will be considered non-recoverable and will terminate IO.
     *
     * Example:
     * {{{
@@ -2279,7 +2270,7 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *     case ex: NumberFormatException => ErrorA(s"Invalid input: \\${ex.getMessage}")
     *   }
     * }}}
-    * See [[mapErrorPartialWith]] for the version that takes an [[IO]] in it's partial function
+    * See [[mapError]] for the version that takes a total function.
     */
   final def mapErrorPartial[E1](pf: PartialFunction[E, E1])(implicit E: E <:< Throwable): IO[E1, A] = {
     val trace = IOTracing.getTrace(pf.getClass)
