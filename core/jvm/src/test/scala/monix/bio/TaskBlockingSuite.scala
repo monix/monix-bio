@@ -53,6 +53,22 @@ object TaskBlockingSuite extends SimpleTestSuite {
     }
   }
 
+  test("blocking with Termination result") {
+    val typed: IO[Int, Unit] = IO.terminate(DummyException("dummy"))
+    val result = typed
+      .redeemCauseWith(
+        recover = {
+          case Cause.Error(value) => IO.raiseError(value)
+          case Cause.Termination(value) => IO.terminate(value)
+        },
+        bind = _ => IO.unit
+      )
+      .attempt
+      .void
+    val throwable = intercept[DummyException](result.runSyncUnsafe())
+    assert(throwable.getMessage == "dummy")
+  }
+
   test("IO.eval(throw ex).attempt.runSyncUnsafe") {
     for (_ <- 0 until 1000) {
       val dummy = DummyException("dummy")

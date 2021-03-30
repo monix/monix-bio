@@ -157,7 +157,7 @@ private[bio] object TaskRunSyncUnsafe {
             case bind =>
               // Try/catch described as statement to prevent ObjectRef ;-)
               try {
-                current = bind.recover(error)
+                current = bind.recoverFatal(error)
               } catch { case e if NonFatal(e) => current = Termination(e) }
               bFirst = null
           }
