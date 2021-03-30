@@ -2059,6 +2059,22 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def onErrorRecoverWith[E1 >: E, B >: A](pf: PartialFunction[E, IO[E1, B]]): IO[E1, B] =
     onErrorHandleWith(ex => pf.applyOrElse(ex, raiseConstructor[E]))
 
+  /** Use this method to lift a subset of errors into domain-specific errors.
+    * Not matched errors will be considered non-recoverable and will terminate IO.
+    *
+    * Example:
+    * {{{
+    *   sealed trait DomainError
+    *   case class ErrorA(message: String) extends DomainError
+    *
+    *   val io: IO[DomainError, Int] = IO("1".toInt).mapErrorPartial {
+    *     case ex: NumberFormatException => ErrorA(s"Invalid input: \\${ex.getMessage}")
+    *   }
+    * }}}
+    */
+  final def mapErrorPartialWith[E1, B >: A](pf: PartialFunction[E, IO[E1, B]])(implicit E: E <:< Throwable): IO[E1, B] =
+    onErrorHandleWith(ex => pf.applyOrElse(ex, (ex: E) => IO.terminate(E(ex))))
+
   /** Creates a new task that will handle any matching throwable that
     * this task might emit by executing another task.
     *
@@ -2240,6 +2256,25 @@ sealed abstract class IO[+E, +A] extends Serializable {
   final def mapError[E1](f: E => E1): IO[E1, A] = {
     val trace = IOTracing.getTrace(f.getClass)
     IO.FlatMap(this, IO.MapError[E, E1, A](f), trace)
+  }
+
+  /** Use this method to lift a subset of errors into domain-specific errors.
+    * Not matched errors will be considered non-recoverable and will terminate IO.
+    *
+    * Example:
+    * {{{
+    *   sealed trait DomainError
+    *   case class ErrorA(message: String) extends DomainError
+    *
+    *   val io: IO[DomainError, Int] = IO("1".toInt).mapErrorPartial {
+    *     case ex: NumberFormatException => ErrorA(s"Invalid input: \\${ex.getMessage}")
+    *   }
+    * }}}
+    * See [[mapError]] for the version that takes a total function.
+    */
+  final def mapErrorPartial[E1](pf: PartialFunction[E, E1])(implicit E: E <:< Throwable): IO[E1, A] = {
+    val trace = IOTracing.getTrace(pf.getClass)
+    IO.FlatMap(this, IO.MapErrorPartial[E, E1, A](pf), trace)
   }
 
   /** Creates a new task that will handle any matching throwable that
@@ -5179,6 +5214,12 @@ object IO extends TaskInstancesLevel0 {
   private final case class MapError[E, E1, A](fe: E => E1) extends StackFrame[E, A, IO[E1, A]] {
     def apply(a: A) = Now(a)
     def recover(e: E) = Error(fe(e))
+  }
+
+  private final case class MapErrorPartial[E, E1, A](pf: PartialFunction[E, E1])(implicit E: E <:< Throwable)
+      extends StackFrame[E, A, IO[E1, A]] {
+    def apply(a: A) = Now(a)
+    def recover(e: E) = if (pf.isDefinedAt(e)) Error(pf(e)) else Termination(E(e))
   }
 
   /** Used as optimization by [[IO.redeem]]. */

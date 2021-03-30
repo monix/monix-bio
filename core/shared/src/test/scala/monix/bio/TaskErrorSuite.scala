@@ -335,6 +335,50 @@ object TaskErrorSuite extends BaseTestSuite {
     assertEquals(f.value, Some(Success(99)))
   }
 
+  test("IO#mapErrorPartial should handle recoverable exceptions") { implicit s =>
+    val ex = DummyException("dummy")
+    val io: IO[String, Int] = IO(throw ex).mapErrorPartial { case e: DummyException =>
+      e.message
+    }
+
+    val f = io.attempt.runToFuture
+    s.tick()
+    assertEquals(f.value, Some(Success(Left("dummy"))))
+  }
+
+  test("IO#mapErrorPartial should terminate on non-recoverable exceptions") { implicit s =>
+    val ex = DummyException("dummy")
+    val io: IO[String, Int] = IO(throw ex).mapErrorPartial { case e: IllegalArgumentException =>
+      "not found"
+    }
+
+    val f = io.attempt.runToFuture
+    s.tick()
+    assertEquals(f.value, Some(Failure(ex)))
+  }
+
+  test("IO#mapErrorPartialWith should handle recoverable exceptions") { implicit s =>
+    val ex = DummyException("dummy")
+    val io: IO[String, Int] = IO(throw ex).mapErrorPartialWith { case e: DummyException =>
+      IO.raiseError(e.message)
+    }
+
+    val f = io.attempt.runToFuture
+    s.tick()
+    assertEquals(f.value, Some(Success(Left("dummy"))))
+  }
+
+  test("IO#mapErrorPartialWith should terminate on non-recoverable exceptions") { implicit s =>
+    val ex = DummyException("dummy")
+    val io: IO[String, Int] = IO(throw ex).mapErrorPartialWith { case e: IllegalArgumentException =>
+      IO.raiseError("not found")
+    }
+
+    val f = io.attempt.runToFuture
+    s.tick()
+    assertEquals(f.value, Some(Failure(ex)))
+  }
+
   test("IO#onErrorRecoverWith should protect against user code") { implicit s =>
     val ex1 = DummyException("one")
     val ex2 = DummyException("two")
