@@ -180,8 +180,8 @@ lazy val doNotPublishArtifact = Seq(
 
 // General Settings
 lazy val sharedSettings = Seq(
-  scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.12.13", "2.13.1"),
+  scalaVersion := "2.13.5",
+  crossScalaVersions := Seq("2.12.13", "2.13.5"),
   scalacOptions ++= Seq(
     // warnings
     "-unchecked", // able additional warnings where generated code depends on assumptions
@@ -238,14 +238,10 @@ lazy val sharedSettings = Seq(
     case _ =>
       Seq.empty
   }),
-
-  // Silence all warnings from src_managed files
-  scalacOptions += "-P:silencer:pathFilters=.*[/]src_managed[/].*",
   // Turning off fatal warnings for ScalaDoc, otherwise we can't release.
   scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
 
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full),
-  addCompilerPlugin("com.github.ghik" % "silencer-plugin" % "1.6.0" cross CrossVersion.full),
 
   libraryDependencies ++= Seq(
     "io.monix" %%% "monix-catnap" % monixVersion,
