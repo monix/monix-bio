@@ -157,7 +157,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.sequence]]
     */
   def sequence[A](in: Iterable[UIO[A]]): UIO[List[A]] =
-   IO.sequence(in)
+    IO.sequence(in)
 
   /** @see See [[monix.bio.IO.traverse]]
     */
