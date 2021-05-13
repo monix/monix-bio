@@ -241,7 +241,7 @@ lazy val sharedSettings = Seq(
   // Turning off fatal warnings for ScalaDoc, otherwise we can't release.
   scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
 
-  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.3" cross CrossVersion.full),
+  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.12.0" cross CrossVersion.full),
 
   libraryDependencies ++= Seq(
     "io.monix" %%% "monix-catnap" % monixVersion,
