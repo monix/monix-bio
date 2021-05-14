@@ -18,7 +18,7 @@ inThisBuild(List(
 ))
 
 val monixVersion = "3.3.0"
-val minitestVersion = "2.8.2"
+val minitestVersion = "2.9.6"
 val catsEffectVersion = "2.1.4"
 
 // The Monix version with which we must keep binary compatibility.
