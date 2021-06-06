@@ -93,14 +93,14 @@ object TaskMapBothSuite extends BaseTestSuite {
   }
 
   test("sum random synchronous tasks") { implicit s =>
-    check1 { numbers: List[Int] =>
+    check1 { (numbers: List[Int]) =>
       val sum = numbers.foldLeft(Task.now(0))((acc, t) => IO.mapBoth(acc, IO.eval(t))(_ + _))
       sum <-> Task.now(numbers.sum)
     }
   }
 
   test("sum random asynchronous tasks") { implicit s =>
-    check1 { numbers: List[Int] =>
+    check1 { (numbers: List[Int]) =>
       val sum = numbers.foldLeft(Task.evalAsync(0))((acc, t) => IO.mapBoth(acc, IO.evalAsync(t))(_ + _))
       sum <-> Task.evalAsync(numbers.sum)
     }

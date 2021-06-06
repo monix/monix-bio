@@ -17,13 +17,14 @@
 
 package monix.bio
 
-import cats.effect.{IO => CIO}
+import cats.effect.{ContextShift, IO => CIO}
 import cats.effect.laws.discipline._
 import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
 import cats.kernel.laws.discipline.MonoidTests
 import cats.{Applicative, Eq}
 import monix.bio.instances.CatsParallelForTask
 import monix.execution.{Scheduler, UncaughtExceptionReporter}
+
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration._
 import scala.util.Try
@@ -48,8 +49,8 @@ object TypeClassLawsForTaskAutoCancelableRunSyncUnsafeSuite
 class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: IO.Options)
     extends monix.execution.BaseLawsSuite with ArbitraryInstancesBase {
 
-  implicit val sc = Scheduler(global, UncaughtExceptionReporter(_ => ()))
-  implicit val cs = IO.contextShift(sc)
+  implicit val sc: Scheduler = Scheduler(global, UncaughtExceptionReporter(_ => ()))
+  implicit val cs: ContextShift[IO[Throwable, *]] = IO.contextShift[Throwable](sc)
   implicit val ap: Applicative[IO.Par[Throwable, *]] = new CatsParallelForTask[Throwable].applicative
 
   val timeout = {
@@ -59,7 +60,7 @@ class BaseTypeClassLawsForTaskRunSyncUnsafeSuite(implicit opts: IO.Options)
       5.seconds
   }
 
-  implicit val params = Parameters(
+  implicit val params: Parameters = Parameters(
     // Disabling non-terminating tests (that test equivalence with Task.never)
     // because they'd behave really badly with an Eq[Task] that depends on
     // blocking threads
