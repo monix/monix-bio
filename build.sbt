@@ -51,7 +51,7 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .settings(doNotPublishArtifact)
   .settings(crossSettings)
   .settings(
-    scalaVersion := "2.12.13",
+    scalaVersion := "2.12.14",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "1.0.0",
       "io.monix" %% "monix-eval" % monixVersion
@@ -187,8 +187,8 @@ lazy val isDotty =
 
 // General Settings
 lazy val sharedSettings = Seq(
-  scalaVersion := "2.13.6",
-  crossScalaVersions := Seq("2.12.13", "2.13.6", "3.0.0"),
+  scalaVersion := "2.13.5",
+  crossScalaVersions := Seq("2.12.14", "2.13.5", "3.0.0"),
   scalacOptions ++= Seq(
     // warnings
     "-unchecked", // able additional warnings where generated code depends on assumptions
@@ -263,7 +263,7 @@ lazy val sharedSettings = Seq(
       Seq()
     else
       Seq(
-        compilerPlugin("org.typelevel" % "kind-projector" % "0.12.0" cross CrossVersion.full)
+        compilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full)
       )
   },
 
