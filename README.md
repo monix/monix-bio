@@ -15,9 +15,9 @@ An enhanced version of [monix.eval.Task](https://monix.io/api/3.1/monix/eval/Tas
 The latest stable version, compatible with Monix 3.x, Cats 2.x and Cats-Effect 2.x:
 
 ```scala
-libraryDependencies += "io.monix" %% "monix-bio" % "1.1.0"
+libraryDependencies += "io.monix" %% "monix-bio" % "1.2.0"
 ```
-Published for ScalaJS 0.6.x, 1.x, Scala 2.12 and 2.13.
+Published for ScalaJS1.x, Scala 2.12, 2.13, and 3.0.0.
 
 ## Roadmap
 
