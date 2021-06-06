@@ -66,7 +66,7 @@ private[bio] object TaskParSequenceUnordered {
           else {
             // Needs to force async execution in case we had no tasks,
             // due to the contract of ForkedStart
-            s.executeAsync(() => finalCallback.onSuccess(list))
+            s.execute(() => finalCallback.onSuccess(list))
           }
         case _ =>
           () // invalid state
@@ -113,7 +113,7 @@ private[bio] object TaskParSequenceUnordered {
         finalCallback: BiCallback[E, List[A]]
       )(implicit s: Scheduler): Unit = {
 
-        stateRef.get match {
+        stateRef.get() match {
           case current @ State.Initializing(_, _) =>
             val update = current.activate(count)
             if (!stateRef.compareAndSet(current, update))
@@ -151,7 +151,7 @@ private[bio] object TaskParSequenceUnordered {
         while (cursor.hasNext && continue) {
           val task = cursor.next()
           count += 1
-          continue = count % batchSize != 0 || stateRef.get.isActive
+          continue = count % batchSize != 0 || stateRef.get().isActive
 
           val stacked = TaskConnection[E]()
           val childCtx = context.withConnection(stacked)
@@ -164,7 +164,7 @@ private[bio] object TaskParSequenceUnordered {
             new BiCallback[E, A] {
               @tailrec
               def onSuccess(value: A): Unit = {
-                val current = stateRef.get
+                val current = stateRef.get()
                 if (current.isActive) {
                   val update = current.enqueue(value)
                   if (!stateRef.compareAndSet(current, update))

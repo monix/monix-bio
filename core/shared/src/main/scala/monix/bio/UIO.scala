@@ -84,7 +84,7 @@ object UIO extends UIODeprecated.Companion {
   /** @see See [[monix.bio.IO.evalAsync]]
     */
   def evalAsync[A](a: => A): UIO[A] =
-    IOTracing.decorateIfNeeded(UIOEvalAsync(a _))
+    IOTracing.decorateIfNeeded(UIOEvalAsync(() => a))
 
   /** @see See [[monix.bio.IO.delay]]
     */

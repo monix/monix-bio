@@ -39,7 +39,7 @@ object TaskFlatMapSuite extends BaseTestSuite {
     val f = loop(atomic).runToFutureOpt
 
     f.cancel(); s.tick()
-    assertEquals(atomic.get, maxCount)
+    assertEquals(atomic.get(), maxCount)
     assertEquals(f.value, Some(Success(())))
   }
 
@@ -57,13 +57,13 @@ object TaskFlatMapSuite extends BaseTestSuite {
       .executeWithOptions(_.enableAutoCancelableRunLoops)
       .runToFuture
 
-    assertEquals(atomic.get, expected)
+    assertEquals(atomic.get(), expected)
     f.cancel()
     s.tickOne()
-    assertEquals(atomic.get, expected)
+    assertEquals(atomic.get(), expected)
 
     s.tick()
-    assertEquals(atomic.get, expected)
+    assertEquals(atomic.get(), expected)
     assertEquals(f.value, None)
   }
 
@@ -96,10 +96,10 @@ object TaskFlatMapSuite extends BaseTestSuite {
 
     c.cancel()
     s.tickOne()
-    assertEquals(atomic.get, expected)
+    assertEquals(atomic.get(), expected)
 
     s.tick()
-    assertEquals(atomic.get, expected)
+    assertEquals(atomic.get(), expected)
   }
 
   test("redeemWith derives flatMap") { implicit s =>

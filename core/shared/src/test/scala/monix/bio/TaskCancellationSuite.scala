@@ -138,7 +138,7 @@ object TaskCancellationSuite extends BaseTestSuite {
 
   test("fa.onCancelRaiseError <-> fa") { implicit ec =>
     val dummy = "dummy"
-    check1 { fa: IO[String, Int] =>
+    check1 { (fa: IO[String, Int]) =>
       fa.onCancelRaiseError(dummy) <-> fa
     }
   }
@@ -156,7 +156,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("cancelBoundary happy path") { implicit ec =>
-    check1 { task: IO[Int, Int] =>
+    check1 { (task: IO[Int, Int]) =>
       task.flatMap { i =>
         UIO.cancelBoundary.map(_ => i)
       } <-> task
@@ -180,7 +180,7 @@ object TaskCancellationSuite extends BaseTestSuite {
   }
 
   test("cancelBoundary cancels") { implicit ec =>
-    check1 { task: UIO[Int] =>
+    check1 { (task: UIO[Int]) =>
       (IO.cancelBoundary >> task).start
         .flatMap(f => f.cancel >> f.join) <-> IO.never
     }

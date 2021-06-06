@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.{IO => CIO}
+import cats.effect.{ContextShift, IO => CIO}
 import monix.catnap.SchedulerEffect
 
 import scala.util.Success
@@ -42,7 +42,7 @@ object TaskConversionsKSuite extends BaseTestSuite {
   }
 
   test("Task.liftToConcurrent[IO]") { implicit s =>
-    implicit val cs = SchedulerEffect.contextShift[CIO](s)
+    implicit val cs: ContextShift[CIO] = SchedulerEffect.contextShift[CIO](s)(CIO.ioEffect)
     var effect = 0
     val task = Task { effect += 1; effect }
     val io = Task.liftToConcurrent[CIO].apply(task)
@@ -74,7 +74,7 @@ object TaskConversionsKSuite extends BaseTestSuite {
   }
 
   test("Task.liftFromConcurrentEffect[IO]") { implicit s =>
-    implicit val cs = SchedulerEffect.contextShift[CIO](s)
+    implicit val cs: ContextShift[CIO] = SchedulerEffect.contextShift[CIO](s)(CIO.ioEffect)
 
     var effect = 0
     val io0 = CIO { effect += 1; effect }

@@ -290,7 +290,7 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     val f = traverse.attempt.runToFuture
 
     s.tick()
-    assertEquals(counter.get, 5)
+    assertEquals(counter.get(), 5)
     assertEquals(f.value, Some(Success(Right(List(4, 25, 100, 400, 1600)))))
   }
 
@@ -304,7 +304,7 @@ object TaskParTraverseNSuite extends BaseTestSuite {
     val f = traverse.attempt.runToFuture
 
     s.tick()
-    assertEquals(counter.get, 1)
+    assertEquals(counter.get(), 1)
     assertEquals(f.value, Some(Success(Right(List(4, 25, 100, 400, 1600)))))
   }
 

@@ -1367,10 +1367,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *         // side-effects are suspended though
     *         var line: String = null
     *         val buff = new StringBuilder()
-    *         do {
+    *         while (line != null) {
     *           line = in.readLine()
     *           if (line != null) buff.append(line)
-    *         } while (line != null)
+    *         }
     *         buff.toString()
     *       }
     *     } { in =>
@@ -1616,10 +1616,10 @@ sealed abstract class IO[+E, +A] extends Serializable {
     *
     *     val buffer = new StringBuffer()
     *     var line: String = null
-    *     do {
+    *     while (line != null) {
     *       line = in.readLine()
     *       if (line != null) buffer.append(line)
-    *     } while (line != null)
+    *     }
     *
     *     buffer.toString
     *   }
@@ -2900,7 +2900,7 @@ object IO extends TaskInstancesLevel0 {
     *      like to expose them as typed errors.
     */
   def deferTotal[E, A](fa: => IO[E, A]): IO[E, A] =
-    IOTracing.decorateIfNeeded(SuspendTotal(fa _))
+    IOTracing.decorateIfNeeded(SuspendTotal(() => fa))
 
   /** Defers the creation of a `Task` by using the provided
     * function, which has the ability to inject a needed
@@ -2996,7 +2996,7 @@ object IO extends TaskInstancesLevel0 {
 
   /** Alias for [[deferTotal]]. */
   def suspendTotal[E, A](fa: => IO[E, A]): IO[E, A] =
-    IOTracing.decorateIfNeeded(SuspendTotal(fa _))
+    IOTracing.decorateIfNeeded(SuspendTotal(() => fa))
 
   /** Promote a non-strict value to a `IO` that is memoized on the first
     * evaluation, the result being then available on subsequent evaluations.
@@ -3028,7 +3028,7 @@ object IO extends TaskInstancesLevel0 {
     *      in a typed error channel.
     */
   def evalTotal[A](a: => A): UIO[A] =
-    IOTracing.decorateIfNeeded(EvalTotal(a _))
+    IOTracing.decorateIfNeeded(EvalTotal(() => a))
 
   /** Lifts a non-strict value, a thunk, to a `Task` that will trigger a logical
     * fork before evaluation.
@@ -3440,7 +3440,7 @@ object IO extends TaskInstancesLevel0 {
     *
     *       // Returning the cancelation token that is able to cancel the
     *       // scheduling in case the active computation hasn't finished yet
-    *       Task(future.cancel(false))
+    *       Task { future.cancel(false); () }
     *     }
     *   }
     * }}}
@@ -3519,7 +3519,7 @@ object IO extends TaskInstancesLevel0 {
     *
     *       // Returning the cancel token that is able to cancel the
     *       // scheduling in case the active computation hasn't finished yet
-    *       Task(future.cancel(false))
+    *       Task { future.cancel(false); () }
     *     }
     *   }
     * }}}

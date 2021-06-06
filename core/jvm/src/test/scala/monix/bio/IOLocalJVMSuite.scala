@@ -493,9 +493,9 @@ object IOLocalJVMSuite extends SimpleIOTestSuite {
   }
 
   testAsync("Task.runToFuture resulting future can be reused") {
-    import cats.implicits.catsStdInstancesForList
-    import cats.syntax.foldable._
     implicit val s: Scheduler = Scheduler.Implicits.traced
+    import cats.syntax.all._
+    import monix.execution.cancelableFutureCatsInstances
 
     val local = Local(0)
 
