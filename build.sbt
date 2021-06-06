@@ -1,7 +1,8 @@
 import sbt.url
 
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
-addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test ;tracingTests/test")
+// TODO: restore benchmarks/compile
+addCommandAlias("ci-jvm",      s";clean ;coreJVM/test ;tracingTests/test")
 addCommandAlias("ci-jvm-mima", s";coreJVM/mimaReportBinaryIssues")
 
 inThisBuild(List(
