@@ -1,7 +1,8 @@
 import sbt.url
 
 addCommandAlias("ci-js",       s";clean ;coreJS/test")
-addCommandAlias("ci-jvm",      s";clean ;benchmarks/compile ;coreJVM/test ;tracingTests/test")
+// TODO: restore benchmarks/compile
+addCommandAlias("ci-jvm",      s";clean ;coreJVM/test ;tracingTests/test")
 addCommandAlias("ci-jvm-mima", s";coreJVM/mimaReportBinaryIssues")
 
 inThisBuild(List(
@@ -17,9 +18,9 @@ inThisBuild(List(
     ))
 ))
 
-val monixVersion = "3.3.0"
-val minitestVersion = "2.8.2"
-val catsEffectVersion = "2.1.4"
+val monixVersion = "3.4.0"
+val minitestVersion = "2.9.6"
+val catsEffectVersion = "2.5.1"
 
 // The Monix version with which we must keep binary compatibility.
 // https://github.com/typesafehub/migration-manager/wiki/Sbt-plugin
@@ -31,17 +32,14 @@ lazy val `monix-bio` = project.in(file("."))
   .settings(sharedSettings)
 
 lazy val coreJVM = project.in(file("core/jvm"))
-  .settings(crossSettings ++ crossVersionSharedSources)
+  .settings(crossSettings ++ crossVersionSourcesSettings)
   .settings(name := "monix-bio")
   .enablePlugins(AutomateHeaderPlugin)
   .settings(doctestTestSettings)
   .settings(mimaSettings)
-  .settings(
-    skip.in(publish) := Option(System.getenv("SCALAJS_VERSION")).isDefined
-  )
 
 lazy val coreJS = project.in(file("core/js"))
-  .settings(crossSettings ++ crossVersionSharedSources)
+  .settings(crossSettings ++ crossVersionSourcesSettings)
   .enablePlugins(AutomateHeaderPlugin)
   .enablePlugins(ScalaJSPlugin)
   .settings(scalaJSSettings)
@@ -53,8 +51,9 @@ lazy val benchmarks = project.in(file("benchmarks"))
   .settings(doNotPublishArtifact)
   .settings(crossSettings)
   .settings(
+    scalaVersion := "2.12.14",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC21-1",
+      "dev.zio" %% "zio" % "1.0.0",
       "io.monix" %% "monix-eval" % monixVersion
     ))
 
@@ -178,10 +177,18 @@ lazy val doNotPublishArtifact = Seq(
   publishArtifact in (Compile, packageBin) := false
 )
 
+lazy val isDotty =
+  Def.setting {
+    scalaPartV.value match {
+      case Some((3, _)) => true
+      case _ => false
+    }
+  }
+
 // General Settings
 lazy val sharedSettings = Seq(
-  scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.12.13", "2.13.1"),
+  scalaVersion := "2.13.5",
+  crossScalaVersions := Seq("2.12.14", "2.13.5", "3.0.0"),
   scalacOptions ++= Seq(
     // warnings
     "-unchecked", // able additional warnings where generated code depends on assumptions
@@ -201,32 +208,38 @@ lazy val sharedSettings = Seq(
         "-Yno-adapted-args",
         "-Ywarn-unused-import"
       )
-    case _ =>
+    case Some((2, v)) =>
       Seq(
         "-Ywarn-unused:imports",
         // Replaces macro-paradise in Scala 2.13
-        "-Ymacro-annotations"
+        "-Ymacro-annotations",
+
       )
+    case _ => Seq()
   }),
 
   // Linter
-  scalacOptions ++= Seq(
-    // Turns all warnings into errors ;-)
-//    "-Xfatal-warnings",
-    // Enables linter options
-    "-Xlint:adapted-args", // warn if an argument list is modified to match the receiver
-    "-Xlint:nullary-unit", // warn when nullary methods return Unit
-    "-Xlint:nullary-override", // warn when non-nullary `def f()' overrides nullary `def f'
-    "-Xlint:infer-any", // warn when a type argument is inferred to be `Any`
-    "-Xlint:missing-interpolator", // a string literal appears to be missing an interpolator id
-    "-Xlint:doc-detached", // a ScalaDoc comment appears to be detached from its element
-    "-Xlint:private-shadow", // a private field (or class parameter) shadows a superclass field
-    "-Xlint:type-parameter-shadow", // a local type parameter shadows a type already in scope
-    "-Xlint:poly-implicit-overload", // parameterized overloaded implicit methods are not visible as view bounds
-    "-Xlint:option-implicit", // Option.apply used implicit view
-    "-Xlint:delayedinit-select", // Selecting member of DelayedInit
-    "-Xlint:package-object-classes", // Class or object defined in package object
-  ),
+  scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, _)) =>
+      Seq(
+        // Turns all warnings into errors ;-)
+        //    "-Xfatal-warnings",
+        // Enables linter options
+        "-Xlint:adapted-args", // warn if an argument list is modified to match the receiver
+        "-Xlint:nullary-unit", // warn when nullary methods return Unit
+        "-Xlint:nullary-override", // warn when non-nullary `def f()' overrides nullary `def f'
+        "-Xlint:infer-any", // warn when a type argument is inferred to be `Any`
+        "-Xlint:missing-interpolator", // a string literal appears to be missing an interpolator id
+        "-Xlint:doc-detached", // a ScalaDoc comment appears to be detached from its element
+        "-Xlint:private-shadow", // a private field (or class parameter) shadows a superclass field
+        "-Xlint:type-parameter-shadow", // a local type parameter shadows a type already in scope
+        "-Xlint:poly-implicit-overload", // parameterized overloaded implicit methods are not visible as view bounds
+        "-Xlint:option-implicit", // Option.apply used implicit view
+        "-Xlint:delayedinit-select", // Selecting member of DelayedInit
+        "-Xlint:package-object-classes", // Class or object defined in package object
+      )
+    case _ => Seq()
+  }),
 
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, majorVersion)) if majorVersion <= 12 =>
@@ -235,13 +248,24 @@ lazy val sharedSettings = Seq(
         "-Xlint:by-name-right-associative", // By-name parameter of right associative operator
         "-Xlint:unsound-match" // Pattern match may not be typesafe
       )
+    case Some((3, _)) =>
+      Seq(
+        "-Ykind-projector"
+      )
     case _ =>
       Seq.empty
   }),
   // Turning off fatal warnings for ScalaDoc, otherwise we can't release.
   scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
 
-  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.12.0" cross CrossVersion.full),
+  libraryDependencies ++= {
+    if (isDotty.value)
+      Seq()
+    else
+      Seq(
+        compilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full)
+      )
+  },
 
   libraryDependencies ++= Seq(
     "io.monix" %%% "monix-catnap" % monixVersion,
@@ -331,40 +355,31 @@ lazy val crossSettings = sharedSettings ++ Seq(
 
 def scalaPartV = Def setting (CrossVersion partialVersion scalaVersion.value)
 
-lazy val crossVersionSharedSources: Seq[Setting[_]] =
+lazy val crossVersionSourcesSettings: Seq[Setting[_]] =
   Seq(Compile, Test).map { sc =>
-    (unmanagedSourceDirectories in sc) ++= {
-      (unmanagedSourceDirectories in sc).value.flatMap { dir =>
-        Seq(
-          scalaPartV.value match {
-            case Some((2, y)) if y == 11 => new File(dir.getPath + "_2.11")
-            case Some((2, y)) if y == 12 => new File(dir.getPath + "_2.12")
-            case Some((2, y)) if y >= 13 => new File(dir.getPath + "_2.13")
-          },
-
-          scalaPartV.value match {
-            case Some((2, n)) if n >= 12 => new File(dir.getPath + "_2.12+")
-            case _                       => new File(dir.getPath + "_2.12-")
-          },
-
-          scalaPartV.value match {
-            case Some((2, n)) if n >= 13 => new File(dir.getPath + "_2.13+")
-            case _                       => new File(dir.getPath + "_2.13-")
-          },
-        )
+    (sc / unmanagedSourceDirectories) ++= {
+      (sc / unmanagedSourceDirectories).value.flatMap { dir =>
+        scalaPartV.value match {
+          case Some((2, 12)) => Seq(new File(dir.getPath + "_2.13-"), new File(dir.getPath + "_3.0-"))
+          case Some((3, _))  => Seq(new File(dir.getPath + "_3.0"))
+          case _             => Seq(new File(dir.getPath + "_2.13+"), new File(dir.getPath + "_3.0-"))
+        }
       }
     }
   }
 
 lazy val scalaJSSettings = Seq(
   // Use globally accessible (rather than local) source paths in JS source maps
-  scalacOptions += {
-    val tagOrHash =
-      if (isSnapshot.value) git.gitHeadCommit.value.get
-      else s"v${git.baseVersion.value}"
-    val l = (baseDirectory in LocalRootProject).value.toURI.toString
-    val g = s"https://raw.githubusercontent.com/monix/monix-bio/$tagOrHash/"
-    s"-P:scalajs:mapSourceURI:$l->$g"
+  scalacOptions ++= {
+    if (isDotty.value) Seq()
+    else {
+      val tagOrHash =
+        if (isSnapshot.value) git.gitHeadCommit.value.get
+        else s"v${git.baseVersion.value}"
+      val l = (baseDirectory in LocalRootProject).value.toURI.toString
+      val g = s"https://raw.githubusercontent.com/monix/monix-bio/$tagOrHash/"
+      Seq(s"-P:scalajs:mapSourceURI:$l->$g")
+    }
   }
 )
 

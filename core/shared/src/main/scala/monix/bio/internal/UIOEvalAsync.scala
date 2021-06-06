@@ -37,7 +37,7 @@ private[bio] object UIOEvalAsync {
   // that this is a task that forks on evaluation
   private final class EvalAsyncRegister[A](a: () => A) extends ForkedRegister[Nothing, A] {
     def apply(ctx: IO.Context[Nothing], cb: BiCallback[Nothing, A]): Unit =
-      ctx.scheduler.executeAsync(() => {
+      ctx.scheduler.execute(() => {
         ctx.frameRef.reset()
         var streamError = true
         try {

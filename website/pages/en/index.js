@@ -107,7 +107,7 @@ The latest stable version, compatible with Monix 3.x, Cats 2.x and Cats-Effect 2
 libraryDependencies += "${organization}" %% "${coreModuleName}" % "${latestVersion}"
 \`\`\`
 
-Published for ScalaJS 0.6.x, 1.x, Scala ${scalaPublishVersions}.
+Published for ScalaJS 1.x, Scala ${scalaPublishVersions}.
 
 ### Roadmap
 

@@ -156,19 +156,19 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("IO.fromEffect(task)) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromEffect(task) <-> task
     }
   }
 
   test("IO.fromEffect(task.toAsync[Task]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromEffect(task.toAsync[Task]) <-> task
     }
   }
 
   test("IO.fromEffect(task.toAsync[CIO]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromEffect(task.toAsync[CIO]) <-> task
     }
   }
@@ -177,7 +177,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
     implicit val effect: CustomEffect = new CustomEffect
 
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromEffect(task.toAsync[CEIO]) <-> task
     }
   }
@@ -254,13 +254,13 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("IO.fromConcurrentEffect(task) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromConcurrentEffect(task) <-> task
     }
   }
 
   test("IO.fromConcurrentEffect(task.toConcurrent[Task]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromConcurrentEffect(task.toConcurrent[Task]) <-> task
     }
   }
@@ -268,7 +268,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   test("IO.fromConcurrentEffect(task.toConcurrent[IO]) <-> task") { implicit s =>
     implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
 
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromConcurrentEffect(task.toConcurrent[CIO]) <-> task
     }
   }
@@ -277,7 +277,7 @@ object TaskConversionsSuite extends BaseTestSuite {
     implicit val cs: ContextShift[CIO] = CIO.contextShift(s)
     implicit val effect: CustomConcurrentEffect = new CustomConcurrentEffect
 
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromConcurrentEffect(task.toConcurrent[CEIO]) <-> task
     }
   }
@@ -543,7 +543,7 @@ object TaskConversionsSuite extends BaseTestSuite {
   }
 
   test("IO.fromReactivePublisher <-> Task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.fromReactivePublisher(task.toReactivePublisher) <-> task.map(Some(_))
     }
   }

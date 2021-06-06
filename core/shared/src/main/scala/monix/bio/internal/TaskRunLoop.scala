@@ -80,7 +80,7 @@ private[bio] object TaskRunLoop {
     var context = contextInit.asInstanceOf[Context[Any]]
     var em = context.scheduler.executionModel
 
-    do {
+    while (true) {
       if (currentIndex != 0) {
         current match {
           case bind @ FlatMap(fa, bindNext, _) =>
@@ -185,24 +185,24 @@ private[bio] object TaskRunLoop {
                 bFirstRef = null
             }
 
-          case async @ Async(_, _, _, _, _) =>
+          case async : Async[Any, Any] @unchecked =>
             executeAsyncTask(async, context, cba, rcb, bFirstRef, bRestRef, currentIndex)
             return
 
-          case ContextSwitch(next, modify, restore) =>
+          case cs: ContextSwitch[Any, Any] @unchecked =>
             // Construct for catching errors only from `modify`
             var catchError = true
             try {
               val old = context
-              context = modify(context)
+              context = cs.modify(context)
               catchError = false
-              current = next
+              current = cs.source
               if (context ne old) {
                 em = context.scheduler.executionModel
                 if (rcb ne null) rcb.contextSwitch(context)
-                if (restore ne null) {
+                if (cs.restore ne null) {
                   /*_*/
-                  current = FlatMap(next, new RestoreContext(old, restore), null)
+                  current = FlatMap(cs.source, new RestoreContext(old, cs.restore), null)
                   /*_*/
                 }
               }
@@ -254,7 +254,7 @@ private[bio] object TaskRunLoop {
         restartAsync(current, context, cba, rcb, bFirstRef, bRestRef)
         return
       }
-    } while (true)
+    }
   }
 
   /** Internal utility, for forcing an asynchronous boundary in the
@@ -273,7 +273,7 @@ private[bio] object TaskRunLoop {
       if (context.options.localContextPropagation) Local.getContext()
       else null
 
-    context.scheduler.executeAsync { () =>
+    context.scheduler.execute { () =>
       // Checking for the cancellation status after the async boundary;
       // This is consistent with the behavior on `Async` tasks, i.e. check
       // is done *after* the evaluation and *before* signaling the result
@@ -329,7 +329,7 @@ private[bio] object TaskRunLoop {
     // we might not need to initialize full Task.Context
     var tracingCtx: StackTracedContext = null
 
-    do {
+    while (true) {
       if (frameIndex != 0) {
         current match {
           case bind @ FlatMap(fa, bindNext, _) =>
@@ -494,7 +494,7 @@ private[bio] object TaskRunLoop {
           tracingCtx = tracingCtx
         )
       }
-    } while (true)
+    }
     // $COVERAGE-OFF$
     null
     // $COVERAGE-ON$
@@ -517,7 +517,7 @@ private[bio] object TaskRunLoop {
     // we might not need to initialize full Task.Context
     var tracingCtx: StackTracedContext = null
 
-    do {
+    while (true) {
       if (frameIndex != 0) {
         current match {
           case bind @ FlatMap(fa, bindNext, _) =>
@@ -531,7 +531,7 @@ private[bio] object TaskRunLoop {
               bRest.push(bFirst)
             }
             /*_*/
-            bFirst = bindNext /*_*/
+            bFirst = bindNext.asInstanceOf[Bind] /*_*/
             current = fa
 
           case Now(value) =>
@@ -569,7 +569,7 @@ private[bio] object TaskRunLoop {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
             }
-            bFirst = bindNext
+            bFirst = bindNext.asInstanceOf[Bind]
             current = fa
 
           case Suspend(thunk) =>
@@ -674,7 +674,7 @@ private[bio] object TaskRunLoop {
           tracingCtx = tracingCtx
         )
       }
-    } while (true)
+    }
     // $COVERAGE-OFF$
     null
     // $COVERAGE-ON$
@@ -700,7 +700,7 @@ private[bio] object TaskRunLoop {
     // we might not need to initialize full Task.Context
     var tracingCtx: StackTracedContext = null
 
-    do {
+    while (true) {
       if (frameIndex != 0) {
         current match {
           case bind @ FlatMap(fa, bindNext, _) =>
@@ -714,7 +714,7 @@ private[bio] object TaskRunLoop {
               bRest.push(bFirst)
             }
             /*_*/
-            bFirst = bindNext /*_*/
+            bFirst = bindNext.asInstanceOf[Bind] /*_*/
             current = fa
 
           case Now(value) =>
@@ -752,7 +752,7 @@ private[bio] object TaskRunLoop {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
             }
-            bFirst = bindNext
+            bFirst = bindNext.asInstanceOf[Bind]
             current = fa
 
           case Suspend(thunk) =>
@@ -860,7 +860,7 @@ private[bio] object TaskRunLoop {
           tracingCtx = tracingCtx
         )
       }
-    } while (true)
+    }
     // $COVERAGE-OFF$
     null
     // $COVERAGE-ON$
@@ -922,7 +922,7 @@ private[bio] object TaskRunLoop {
     )
 
     if (!forceFork) source match {
-      case async: Async[Any, Any] =>
+      case async: Async[Any, Any] @unchecked =>
         executeAsyncTask(async, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context.asInstanceOf[Context[Any]], cb, null, bFirst, bRest, nextFrame)
@@ -950,7 +950,7 @@ private[bio] object TaskRunLoop {
     val context = Context(scheduler, opts, TaskConnection[Any](), tracingCtx)
 
     if (!forceFork) source match {
-      case async: Async[Any, Any] =>
+      case async: Async[Any, Any] @unchecked =>
         executeAsyncTask(async, context, cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context, cb, null, bFirst, bRest, nextFrame)
@@ -980,7 +980,7 @@ private[bio] object TaskRunLoop {
         ctx.frameRef := nextFrame
         (ctx, cb) => startFull(source, ctx, cb, null, bFirst, bRest, ctx.frameRef())
       } else { (ctx, cb) =>
-        ctx.scheduler.executeAsync(() => startFull(source, ctx, cb, null, bFirst, bRest, 1))
+        ctx.scheduler.execute(() => startFull(source, ctx, cb, null, bFirst, bRest, 1))
       }
 
     Left(
@@ -999,13 +999,13 @@ private[bio] object TaskRunLoop {
       case _ =>
         if (bRest eq null) null
         else {
-          do {
+          while (true) {
             val ref = bRest.pop()
             if (ref eq null)
               return null
             else if (ref.isInstanceOf[StackFrame[_, _, _]])
               return ref.asInstanceOf[StackFrame[E, Any, IO[E, Any]]]
-          } while (true)
+          }
           // $COVERAGE-OFF$
           null
           // $COVERAGE-ON$
@@ -1022,13 +1022,13 @@ private[bio] object TaskRunLoop {
       case _ =>
         if (bRest eq null) null
         else {
-          do {
+          while (true) {
             val ref = bRest.pop()
             if (ref eq null)
               return null
             else if (ref.isInstanceOf[StackFrame.FatalStackFrame[_, _, _]])
               return ref.asInstanceOf[StackFrame.FatalStackFrame[E, Any, IO[E, Any]]]
-          } while (true)
+          }
           // $COVERAGE-OFF$
           null
           // $COVERAGE-ON$
@@ -1041,14 +1041,14 @@ private[bio] object TaskRunLoop {
       return bFirst
 
     if (bRest eq null) return null
-    do {
+    while (true) {
       val next = bRest.pop()
       if (next eq null) {
         return null
       } else if (!next.isInstanceOf[StackFrame.ErrorHandler[_, _, _]]) {
         return next
       }
-    } while (true)
+    }
     // $COVERAGE-OFF$
     null
     // $COVERAGE-ON$

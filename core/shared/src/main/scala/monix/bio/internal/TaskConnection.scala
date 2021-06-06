@@ -153,7 +153,7 @@ private[bio] object TaskConnection {
             .cancelAllUnsafe(list)
             .redeemCauseWith[Nothing, Unit](
               cause => UIO.suspend { p.success(()); cause.fold(IO.terminate, _ => IO.unit) },
-              _ => UIO(p.success(()))
+              _ => UIO{p.success(()); ()}
             )
 
           (task, (null, p))
@@ -161,7 +161,7 @@ private[bio] object TaskConnection {
     }
 
     def isCanceled: Boolean =
-      state.get._1 eq null
+      state.get()._1 eq null
 
     def push(token: CancelToken[UIO])(implicit s: Scheduler): Unit =
       pushAny(token)
