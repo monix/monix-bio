@@ -378,7 +378,7 @@ lazy val scalaJSSettings = Seq(
         else s"v${git.baseVersion.value}"
       val l = (baseDirectory in LocalRootProject).value.toURI.toString
       val g = s"https://raw.githubusercontent.com/monix/monix-bio/$tagOrHash/"
-      s"-P:scalajs:mapSourceURI:$l->$g"
+      Seq(s"-P:scalajs:mapSourceURI:$l->$g")
     }
   }
 )
