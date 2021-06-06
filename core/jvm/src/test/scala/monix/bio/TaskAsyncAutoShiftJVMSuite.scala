@@ -503,7 +503,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     repeatTest(1000) {
       val r = Task
         .async[Unit] { cb =>
-          s2.executeAsync(() => cb.onSuccess(()))
+          s2.execute(() => cb.onSuccess(()))
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
@@ -537,7 +537,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val dummy = DummyException("dummy")
       val r = Task
         .async[Unit] { cb =>
-          s2.executeAsync(() => cb.onError(dummy))
+          s2.execute(() => cb.onError(dummy))
         }
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
@@ -573,7 +573,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     repeatTest(1000) {
       val r = Task
         .async0[Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onSuccess(()))
+          s2.execute(() => cb.onSuccess(()))
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
@@ -607,7 +607,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val dummy = DummyException("dummy")
       val r = Task
         .async0[Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onError(dummy))
+          s2.execute(() => cb.onError(dummy))
         }
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
@@ -643,7 +643,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     repeatTest(1000) {
       val r = Task
         .cancelable[Unit] { cb =>
-          s2.executeAsync(() => cb.onSuccess(()))
+          s2.execute(() => cb.onSuccess(()))
           Task(())
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
@@ -681,7 +681,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val dummy = DummyException("dummy")
       val r = Task
         .cancelable[Unit] { cb =>
-          s2.executeAsync(() => cb.onError(dummy))
+          s2.execute(() => cb.onError(dummy))
           Task(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
@@ -721,7 +721,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     repeatTest(1000) {
       val r = Task
         .cancelable0[Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onSuccess(()))
+          s2.execute(() => cb.onSuccess(()))
           Task(())
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
@@ -759,7 +759,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val dummy = DummyException("dummy")
       val r = Task
         .cancelable0[Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onError(dummy))
+          s2.execute(() => cb.onError(dummy))
           Task(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
@@ -799,7 +799,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     repeatTest(1000) {
       val r = IO
         .cancelable0[Throwable, Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onSuccess(()))
+          s2.execute(() => cb.onSuccess(()))
           Task(())
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
@@ -837,7 +837,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val dummy = DummyException("dummy")
       val r = IO
         .cancelable0[Throwable, Unit] { (_, cb) =>
-          s2.executeAsync(() => cb.onError(dummy))
+          s2.execute(() => cb.onError(dummy))
           Task(())
         }
         .onErrorHandle(e => assertEquals(e, dummy))
@@ -878,7 +878,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
     repeatTest(1000) {
       val r = Task
         .asyncF[Unit] { cb =>
-          Task(s2.executeAsync(() => cb.onSuccess(())))
+          Task(s2.execute(() => cb.onSuccess(())))
         }
         .flatMap(_ => Task(Thread.currentThread().getName))
         .executeAsync
@@ -912,7 +912,7 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       val dummy = DummyException("dummy")
       val r = Task
         .asyncF[Unit] { cb =>
-          Task(s2.executeAsync(() => cb.onError(dummy)))
+          Task(s2.execute(() => cb.onError(dummy)))
         }
         .onErrorHandle(e => assertEquals(e, dummy))
         .flatMap(_ => Task(Thread.currentThread().getName))
@@ -939,32 +939,6 @@ object TaskAsyncAutoShiftJVMSuite extends TestSuite[SchedulerService] {
       for (name <- r) yield {
         assert(!name.startsWith(ThreadName), s"'$name' should not start with '$ThreadName'")
       }
-    }
-  }
-
-  testAsync("Task.async should propagate RejectedExecutionException ") { implicit s =>
-    @volatile var shouldReject = false
-
-    implicit val s2 = Scheduler(new ExecutionContext {
-      override def execute(r: Runnable): Unit =
-        if (shouldReject) {
-          throw new RejectedExecutionException("Rejected: " + r.toString)
-        } else {
-          shouldReject = true
-          ExecutionContext.global.execute(r)
-        }
-      override def reportFailure(cause: Throwable): Unit = ()
-    })
-
-    val f = IO
-      .async0[Nothing, Int]((s, cb) => s.executeAsync(() => cb.onSuccess(1)))
-      .executeOn(s2)
-      .redeem(_ => 2, identity)
-      .redeemCause(_ => 3, identity)
-      .runToFuture(s, implicitly[<:<[Throwable, Throwable]])
-
-    for (result <- f) yield {
-      assertEquals(result, 3)
     }
   }
 }

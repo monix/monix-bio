@@ -125,7 +125,7 @@ object TaskBlockingSuite extends SimpleTestSuite {
     assertEquals(task.attempt.runSyncUnsafe(Duration.Inf), Left(dummy))
 
     intercept[DummyException] {
-      task.hideErrorsWith(DummyException).runSyncUnsafe(Duration.Inf)
+      task.hideErrorsWith(DummyException.apply).runSyncUnsafe(Duration.Inf)
     }
 
     intercept[DummyException] {

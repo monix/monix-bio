@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 
 object IOLocalSuite extends SimpleIOTestSuite {
   implicit val ec: Scheduler = monix.execution.Scheduler.Implicits.global
-  implicit val opts = IO.defaultOptions.enableLocalContextPropagation
+  implicit val opts: IO.Options = IO.defaultOptions.enableLocalContextPropagation
 
   testAsync("IOLocal.apply") {
     val test =

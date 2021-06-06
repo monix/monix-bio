@@ -271,7 +271,7 @@ private[monix] object TaskBracket {
         if (waitsForResult.compareAndSet(expect = true, update = false))
           releaseOnCancel(a).redeemCauseWith(
             c => UIO.suspend { p.success(()); c.fold(IO.terminate, _ => IO.unit) },
-            _ => UIO(p.success(()))
+            _ => UIO{p.success(()); ()}
           )
         else {
           TaskFromFuture.strict(p.future).hideErrors

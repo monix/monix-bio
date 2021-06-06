@@ -58,7 +58,7 @@ object TaskFlipSuite extends BaseTestSuite with ArbitraryInstances {
   test("F.flip.map(f) <-> F.mapError(f).flip") { implicit ec =>
     val f = (_: String) => "dummy1"
 
-    check1 { F: IO[String, Int] =>
+    check1 { (F: IO[String, Int]) =>
       F.flip.map(f) <-> F.mapError(f).flip
     }
   }
@@ -67,7 +67,7 @@ object TaskFlipSuite extends BaseTestSuite with ArbitraryInstances {
     val f0 = (ex: IO[Int, String]) => ex.map(_ => "dummy1")
     val f1 = (_: String) => "dummy1"
 
-    check1 { F: IO[String, Int] =>
+    check1 { (F: IO[String, Int]) =>
       F.flipWith(f0) <-> F.mapError(f1)
     }
   }

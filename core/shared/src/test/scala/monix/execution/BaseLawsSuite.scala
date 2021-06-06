@@ -179,7 +179,7 @@ trait ArbitraryInstancesBase extends cats.instances.AllInstances with TestUtils 
       }
     }
 
-  implicit lazy val equalityThrowable = new Eq[Throwable] {
+  implicit lazy val equalityThrowable: Eq[Throwable] = new Eq[Throwable] {
 
     override def eqv(x: Throwable, y: Throwable): Boolean = {
       val ex1 = extractEx(x)
