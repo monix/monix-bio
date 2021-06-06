@@ -59,7 +59,7 @@ object TaskEvalOnceSuite extends BaseTestSuite {
   }
 
   test("IO.evalOnce.map should work") { implicit s =>
-    check1 { a: Int =>
+    check1 { (a: Int) =>
       IO.evalOnce(a).map(_ + 1) <-> IO.evalOnce(a + 1)
     }
   }

@@ -34,7 +34,7 @@ import scala.util.{Failure, Success, Try}
 object TaskLikeConversionsSuite extends BaseTestSuite {
 
   test("IO.from(task.to[IO]) <-> task") { implicit s =>
-    check1 { task: Task[Int] =>
+    check1 { (task: Task[Int]) =>
       IO.from(task.to[CIO]) <-> task
     }
   }

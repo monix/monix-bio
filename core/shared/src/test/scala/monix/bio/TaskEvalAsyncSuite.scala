@@ -59,7 +59,7 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
   }
 
   test("IO.evalAsync is equivalent with IO.eval") { implicit s =>
-    check1 { a: Int =>
+    check1 { (a: Int) =>
       val t1 = {
         var effect = 100
         IO.evalAsync { effect += 100; effect + a }
@@ -75,7 +75,7 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
   }
 
   test("IO.evalAsync is equivalent with IO.evalOnce on first run") { implicit s =>
-    check1 { a: Int =>
+    check1 { (a: Int) =>
       val t1 = {
         var effect = 100
         IO.evalAsync { effect += 100; effect + a }
@@ -112,7 +112,7 @@ object TaskEvalAsyncSuite extends BaseTestSuite {
   }
 
   test("IO.evalAsync.flatten is equivalent with flatMap") { implicit s =>
-    check1 { a: Int =>
+    check1 { (a: Int) =>
       val t = IO.evalAsync(IO.eval(a))
       t.flatMap(identity) <-> t.flatten
     }

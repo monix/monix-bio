@@ -25,7 +25,7 @@ import scala.util.Success
 
 object TaskStartSuite extends BaseTestSuite {
   test("task.start.flatMap(_.join) <-> task") { implicit sc =>
-    check1 { task: IO[Long, Int] =>
+    check1 { (task: IO[Long, Int]) =>
       task.start.flatMap(_.join) <-> task
     }
   }

@@ -8,11 +8,10 @@ jobs:
     name: scala-${{ matrix.scala }} jdk-${{ matrix.java }} tests
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         java: [ 8, 11 ]
-        scala: [ 2.12.11, 2.13.1 ]
-        command: [ci-jvm]
+        scala: [ 2.12.13, 2.13.5, 3.0.0 ]
     
     steps:
       - uses: actions/checkout@v2
@@ -20,11 +19,7 @@ jobs:
         with:
           java-version: "adopt@1.${{ matrix.java }}"     
       - name: Run Tests for Java ${{ matrix.java }}, Scala ${{ matrix.scala }}
-        run: |
-          ./.github/scripts/build.sh
-        env:
-          SCALA_VERSION: ${{ matrix.scala }}
-          SBT_COMMAND: ${{ matrix.command }}
+        run: sbt ci-jvm
               
   js-tests:
     name: scalajs-${{ matrix.scalajs }} scala-${{ matrix.scala }} jdk-${{ matrix.java }} tests
@@ -34,9 +29,8 @@ jobs:
       fail-fast: true
       matrix:
         java: [8, 11]
-        scala: [ 2.12.11, 2.13.1]
-        scalajs: [0.6.33, 1.5.1]
-        command: [ci-js]
+        scala: [ 2.12.13, 2.13.5, 3.0.0 ]
+        scalajs: [1.5.1]
     
     steps:
       - uses: actions/checkout@v2
@@ -44,12 +38,7 @@ jobs:
         with:
           java-version: "adopt@1.${{ matrix.java }}"
       - name: Run Tests for Java ${{ matrix.java }}, Scala ${{ matrix.scala }}, ScalaJS ${{ matrix.scalajs }}
-        run: |
-          ./.github/scripts/build.sh
-        env:
-          SCALA_VERSION: ${{ matrix.scala }}
-          SCALAJS_VERSION: ${{ matrix.scalaJS }}
-          SBT_COMMAND: ${{ matrix.command }}
+        run: sbt ci-js
 
   mima:
     name: Mima binary compatibility test
@@ -73,8 +62,7 @@ jobs:
       - uses: olafurpg/setup-scala@v10
       - uses: olafurpg/setup-gpg@v3
       - name: Publish release ${{ github.ref }}
-        run: |
-          ./.github/scripts/release.sh
+        run: sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}

@@ -116,7 +116,7 @@ object TaskErrorSuite extends BaseTestSuite {
   }
 
   test("IO#onErrorHandle should mirror source on success") { implicit s =>
-    val task = (UIO.evalAsync(1): IO[String, Int]).onErrorHandle { _: String =>
+    val task = (UIO.evalAsync(1): IO[String, Int]).onErrorHandle { (_: String) =>
       99
     }
     val f = task.runToFuture
@@ -126,7 +126,7 @@ object TaskErrorSuite extends BaseTestSuite {
 
   test("IO#onErrorHandle should recover typed error") { implicit s =>
     val ex = "dummy"
-    val task = (IO.raiseError(ex): IO[String, Int]).onErrorHandle { _: String =>
+    val task = (IO.raiseError(ex): IO[String, Int]).onErrorHandle { (_: String) =>
       99
     }
 

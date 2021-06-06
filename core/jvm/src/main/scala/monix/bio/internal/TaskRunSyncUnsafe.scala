@@ -62,7 +62,7 @@ private[bio] object TaskRunSyncUnsafe {
     // we might not need to initialize full Task.Context
     var tracingCtx: StackTracedContext = null
 
-    do {
+    while (true) {
       current match {
         case bind @ FlatMap(fa, bindNext, _) =>
           if (isStackTracing) {
@@ -76,7 +76,7 @@ private[bio] object TaskRunSyncUnsafe {
             bRest.push(bFirst)
           }
           /*_*/
-          bFirst = bindNext /*_*/
+          bFirst = bindNext.asInstanceOf[Bind] /*_*/
           current = fa
 
         case Now(value) =>
@@ -111,7 +111,7 @@ private[bio] object TaskRunSyncUnsafe {
             if (bRest eq null) bRest = ChunkedArrayStack()
             bRest.push(bFirst)
           }
-          bFirst = bindNext
+          bFirst = bindNext.asInstanceOf[Bind]
           current = fa
 
         case Suspend(thunk) =>
@@ -188,7 +188,7 @@ private[bio] object TaskRunSyncUnsafe {
             bFirst = null
         }
       }
-    } while (true)
+    }
     // $COVERAGE-OFF$
     throw new IllegalStateException("out of loop")
     // $COVERAGE-ON$

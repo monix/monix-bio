@@ -67,7 +67,7 @@ private[bio] object IORunToFutureWithLocal {
     val prev = Local.getContext()
     val isolated = prev.isolate()
 
-    do {
+    while (true) {
       if (frameIndex != 0) {
         current match {
           case bind @ FlatMap(fa, bindNext, _) =>
@@ -82,7 +82,7 @@ private[bio] object IORunToFutureWithLocal {
               bRest.push(bFirst)
             }
             /*_*/
-            bFirst = bindNext /*_*/
+            bFirst = bindNext.asInstanceOf[Bind] /*_*/
             current = fa
 
           case Now(value) =>
@@ -121,7 +121,7 @@ private[bio] object IORunToFutureWithLocal {
               if (bRest eq null) bRest = ChunkedArrayStack()
               bRest.push(bFirst)
             }
-            bFirst = bindNext
+            bFirst = bindNext.asInstanceOf[Bind]
             current = fa
 
           case Suspend(thunk) =>
@@ -237,7 +237,7 @@ private[bio] object IORunToFutureWithLocal {
           tracingCtx = tracingCtx
         )
       }
-    } while (true)
+    }
     // $COVERAGE-OFF$
     null
     // $COVERAGE-ON$
@@ -264,7 +264,7 @@ private[bio] object IORunToFutureWithLocal {
     val context = Context(scheduler, opts, TaskConnection[Any](), tracingCtx)
 
     if (!forceFork) source match {
-      case async: Async[Any, Any] =>
+      case async: Async[Any, Any] @unchecked =>
         executeAsyncTask(async, context, cb, null, bFirst, bRest, 1)
       case _ =>
         startFull(source, context, cb, null, bFirst, bRest, nextFrame)

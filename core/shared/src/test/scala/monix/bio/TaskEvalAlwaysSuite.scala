@@ -45,7 +45,7 @@ object TaskEvalAlwaysSuite extends BaseTestSuite {
   }
 
   test("IO.eval is equivalent with IO.evalOnce on first run") { implicit s =>
-    check1 { a: Int =>
+    check1 { (a: Int) =>
       val t1 = {
         var effect = 100
         IO.eval { effect += 100; effect + a }

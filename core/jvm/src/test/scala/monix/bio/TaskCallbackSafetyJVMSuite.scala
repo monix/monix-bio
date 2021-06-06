@@ -145,7 +145,7 @@ object TaskCallbackSafetyJVMSuite extends SimpleTestSuite {
     val latchWorkersFinished = new CountDownLatch(WORKERS)
 
     for (_ <- 0 until WORKERS) {
-      sc.executeAsync { () =>
+      sc.execute { () =>
         latchWorkersStart.countDown()
         try {
           f

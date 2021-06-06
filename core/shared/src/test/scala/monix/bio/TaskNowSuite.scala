@@ -143,7 +143,7 @@ object TaskNowSuite extends BaseTestSuite {
   }
 
   test("IO.now.map should work") { implicit s =>
-    check1 { a: Int =>
+    check1 { (a: Int) =>
       IO.now(a).map(_ + 1) <-> IO.now(a + 1)
     }
   }

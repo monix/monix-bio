@@ -75,7 +75,7 @@ private[bio] object TaskMapBoth {
 
       // Guarding the contract of the callback, as we cannot send an error
       // if an error has already happened because of the other task
-      state.get match {
+      state.get() match {
         case Stop =>
           // We've got nowhere to send the error, so report it
           s.reportFailure(UncaughtErrorException.wrap(ex))
@@ -98,7 +98,7 @@ private[bio] object TaskMapBoth {
 
       // Guarding the contract of the callback, as we cannot send an error
       // if an error has already happened because of the other task
-      state.get match {
+      state.get() match {
         case Stop =>
           // We've got nowhere to send the error, so report it
           s.reportFailure(ex)
@@ -131,7 +131,7 @@ private[bio] object TaskMapBoth {
         context1,
         new BiCallback[E, A1] {
           @tailrec def onSuccess(a1: A1): Unit =
-            state.get match {
+            state.get() match {
               case null => // null means this is the first task to complete
                 if (!state.compareAndSet(null, Left(a1))) onSuccess(a1)
               case Right(a2) => // the other task completed, so we can send
@@ -159,7 +159,7 @@ private[bio] object TaskMapBoth {
         context2,
         new BiCallback[E, A2] {
           @tailrec def onSuccess(a2: A2): Unit =
-            state.get match {
+            state.get() match {
               case null => // null means this is the first task to complete
                 if (!state.compareAndSet(null, Right(a2))) onSuccess(a2)
               case Left(a1) => // the other task completed, so we can send
