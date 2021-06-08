@@ -30,7 +30,7 @@ jobs:
       matrix:
         java: [8, 11]
         scala: [ 2.12.14, 2.13.6, 3.0.0 ]
-        scalajs: [1.5.1]
+        scalajs: [1.6.0]
     
     steps:
       - uses: actions/checkout@v2
