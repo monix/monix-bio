@@ -18,11 +18,11 @@
 package monix.bio.internal
 
 import cats.effect.ExitCase
-import cats.effect.concurrent.Deferred
 import monix.bio.{Cause, IO, Task, UIO}
 import monix.catnap.ConcurrentQueue
 import monix.execution.exceptions.UncaughtErrorException
 import monix.execution.{BufferCapacity, ChannelType}
+import cats.effect.Deferred
 
 private[bio] object TaskParSequenceN {
 

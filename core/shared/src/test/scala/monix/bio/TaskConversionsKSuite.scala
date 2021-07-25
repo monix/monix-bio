@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.{ContextShift, IO => CIO}
+import cats.effect.{IO => CIO}
 import monix.catnap.SchedulerEffect
 
 import scala.util.Success

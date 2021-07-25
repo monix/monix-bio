@@ -69,7 +69,7 @@ private[bio] object TaskConversions {
       case IO.Termination(e) => F.raiseError(e)
       case IO.Eval(thunk) => F.delay(thunk())
       case IO.EvalTotal(thunk) => F.delay(thunk())
-      case _ => F.async(cb => eff.runAsync(source)(r => { cb(r); CIO.unit }).unsafeRunSync())
+      case _ => F.async_(cb => eff.runAsync(source)(r => { cb(r); CIO.unit }).unsafeRunSync())
     }
 
   /** Implementation for `IO.fromEffect`.

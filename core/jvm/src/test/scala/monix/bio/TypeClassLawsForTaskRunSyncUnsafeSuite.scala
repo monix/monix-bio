@@ -17,7 +17,7 @@
 
 package monix.bio
 
-import cats.effect.{ContextShift, IO => CIO}
+import cats.effect.{IO => CIO}
 import cats.effect.laws.discipline._
 import cats.laws.discipline.{ApplicativeTests, BifunctorTests, CoflatMapTests, ParallelTests}
 import cats.kernel.laws.discipline.MonoidTests

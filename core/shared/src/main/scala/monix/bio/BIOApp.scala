@@ -17,10 +17,11 @@
 
 package monix.bio
 
-import cats.effect.{ConcurrentEffect, ContextShift, ExitCode, IOApp, Timer}
+import cats.effect.{ConcurrentEffect, ExitCode, IOApp}
 import monix.catnap.SchedulerEffect
 import monix.bio.instances.CatsConcurrentEffectForTask
 import monix.execution.Scheduler
+import cats.effect.Temporal
 
 /** Safe `App` type that executes a [[IO]].  Shutdown occurs after
   * the `IO` completes, as follows:
@@ -88,7 +89,7 @@ trait BIOApp {
     val app = new IOApp {
       override implicit lazy val contextShift: ContextShift[cats.effect.IO] =
         SchedulerEffect.contextShift[cats.effect.IO](scheduler)(cats.effect.IO.ioEffect)
-      override implicit lazy val timer: Timer[cats.effect.IO] =
+      override implicit lazy val timer: Temporal[cats.effect.IO] =
         SchedulerEffect.timerLiftIO[cats.effect.IO](scheduler)(cats.effect.IO.ioEffect)
       def run(args: List[String]): cats.effect.IO[ExitCode] =
         self.run(args).to[cats.effect.IO]

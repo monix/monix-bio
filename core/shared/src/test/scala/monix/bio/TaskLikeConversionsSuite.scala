@@ -18,7 +18,7 @@
 package monix.bio
 
 import cats.Eval
-import cats.effect.{ContextShift, IO => CIO, SyncIO}
+import cats.effect.{IO => CIO, SyncIO}
 import cats.laws._
 import cats.laws.discipline._
 import cats.syntax.all._
