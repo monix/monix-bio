@@ -18,7 +18,7 @@ inThisBuild(List(
     ))
 ))
 
-val monixVersion = "3.4.0"
+val monixVersion = "3.4.1"
 val minitestVersion = "2.9.6"
 val catsEffectVersion = "2.5.1"
 
