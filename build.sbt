@@ -187,8 +187,8 @@ lazy val isDotty =
 
 // General Settings
 lazy val sharedSettings = Seq(
-  scalaVersion := "2.13.6",
-  crossScalaVersions := Seq("2.12.14", "2.13.6", "3.0.0"),
+  scalaVersion := "2.13.10",
+  crossScalaVersions := Seq("2.12.14", "2.13.10", "3.0.0"),
   scalacOptions ++= Seq(
     // warnings
     "-unchecked", // able additional warnings where generated code depends on assumptions
