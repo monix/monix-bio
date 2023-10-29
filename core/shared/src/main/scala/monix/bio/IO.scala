@@ -22,11 +22,9 @@ import cats.effect.{
   Clock,
   Concurrent,
   ConcurrentEffect,
-  ContextShift,
   Effect,
   ExitCase,
   IO => CIO,
-  Timer,
   Fiber => _
 }
 import cats.{~>, CommutativeApplicative, Monoid, Parallel, Semigroup}
@@ -48,6 +46,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 import monix.bio.tracing.{IOEvent, IOTrace}
+import cats.effect.Temporal
 
 /** `Task` represents a specification for a possibly lazy or
   * asynchronous computation, which when executed will produce an `A`
@@ -5453,11 +5452,11 @@ private[bio] abstract class TaskTimers extends TaskClocks {
     * [[monix.execution.Scheduler Scheduler]]
     * (that's being injected in [[IO.runToFuture]]).
     */
-  implicit def timer[E]: Timer[IO[E, *]] =
-    timerAny.asInstanceOf[Timer[IO[E, *]]]
+  implicit def timer[E]: Temporal[IO[E, *]] =
+    timerAny.asInstanceOf[Temporal[IO[E, *]]]
 
-  private[this] final val timerAny: Timer[IO[Any, *]] =
-    new Timer[IO[Any, *]] {
+  private[this] final val timerAny: Temporal[IO[Any, *]] =
+    new Temporal[IO[Any, *]] {
 
       override def sleep(duration: FiniteDuration): IO[Any, Unit] =
         IO.sleep(duration)
@@ -5469,8 +5468,8 @@ private[bio] abstract class TaskTimers extends TaskClocks {
   /** Builds a `cats.effect.Timer` instance, given a
     * [[monix.execution.Scheduler Scheduler]] reference.
     */
-  def timer[E](s: Scheduler): Timer[IO[E, *]] =
-    new Timer[IO[E, *]] {
+  def timer[E](s: Scheduler): Temporal[IO[E, *]] =
+    new Temporal[IO[E, *]] {
 
       override def sleep(duration: FiniteDuration): IO[E, Unit] =
         IO.sleep(duration).executeOn(s)

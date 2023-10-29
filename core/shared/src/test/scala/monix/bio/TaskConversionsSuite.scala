@@ -556,13 +556,13 @@ object TaskConversionsSuite extends BaseTestSuite {
       fa.io.runAsync(cb)
 
     override def async[A](k: (Either[Throwable, A] => Unit) => Unit): CEIO[A] =
-      CEIO(CIO.async(k))
+      CEIO(CIO.async_(k))
 
     override def asyncF[A](k: (Either[Throwable, A] => Unit) => CEIO[Unit]): CEIO[A] =
       CEIO(CIO.asyncF(cb => k(cb).io))
 
     override def suspend[A](thunk: => CEIO[A]): CEIO[A] =
-      CEIO(CIO.suspend(thunk.io))
+      CEIO(CIO.defer(thunk.io))
 
     override def flatMap[A, B](fa: CEIO[A])(f: A => CEIO[B]): CEIO[B] =
       CEIO(fa.io.flatMap(a => f(a).io))
